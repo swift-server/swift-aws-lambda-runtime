@@ -1,0 +1,109 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the SwiftAwsLambda open source project
+//
+// Copyright (c) 2017-2018 Apple Inc. and the SwiftAwsLambda project authors
+// Licensed under Apache License v2.0
+//
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftAwsLambda project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
+
+import Foundation
+
+extension Lambda {
+    public class func run<In: Decodable, Out: Encodable>(_ closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
+        return run(LambdaClosureWrapper(closure))
+    }
+
+    public class func run<T>(_ handler: T) -> LambdaLifecycleResult where T: LambdaCodableHandler {
+        return run(handler as LambdaHandler)
+    }
+
+    // for testing
+    internal class func run<In: Decodable, Out: Encodable>(closure: @escaping LambdaCodableClosure<In, Out>, maxTimes: Int) -> LambdaLifecycleResult {
+        return run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes)
+    }
+
+    // for testing
+    internal class func run<T>(handler: T, maxTimes: Int) -> LambdaLifecycleResult where T: LambdaCodableHandler {
+        return run(handler: handler as LambdaHandler, maxTimes: maxTimes)
+    }
+}
+
+public enum LambdaCodableResult<Out> {
+    case success(Out)
+    case failure(String)
+}
+
+public typealias LambdaCodableCallback<Out> = (LambdaCodableResult<Out>) -> Void
+
+public typealias LambdaCodableClosure<In, Out> = (LambdaContext, In, LambdaCodableCallback<Out>) -> Void
+
+public protocol LambdaCodableHandler: LambdaHandler {
+    associatedtype In: Decodable
+    associatedtype Out: Encodable
+
+    func handle(context: LambdaContext, payload: In, callback: @escaping LambdaCodableCallback<Out>)
+    var codec: LambdaCodableCodec<In, Out> { get }
+}
+
+// default uses json codec. advanced users that want to inject their own codec can do it here
+public extension LambdaCodableHandler {
+    var codec: LambdaCodableCodec<In, Out> {
+        return LambdaCodableJsonCodec<In, Out>()
+    }
+}
+
+// TODO: would be nicer to use a protocol instead of this "abstract class", but generics get in the way
+public class LambdaCodableCodec<In: Decodable, Out: Encodable> {
+    func encode(_: Out) -> [UInt8]? { return nil }
+    func decode(_: [UInt8]) -> In? { return nil }
+}
+
+public extension LambdaCodableHandler {
+    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping (LambdaResult) -> Void) {
+        guard let payloadAsCodable = codec.decode(payload) else {
+            return callback(.failure("failed decoding payload (in)"))
+        }
+        handle(context: context, payload: payloadAsCodable, callback: { result in
+            switch result {
+            case let .success(encodable):
+                guard let codableAsBytes = self.codec.encode(encodable) else {
+                    return callback(.failure("failed encoding result (out)"))
+                }
+                return callback(.success(codableAsBytes))
+            case let .failure(error):
+                return callback(.failure(error))
+            }
+        })
+    }
+}
+
+private class LambdaCodableJsonCodec<In: Decodable, Out: Encodable>: LambdaCodableCodec<In, Out> {
+    private let encoder = JSONEncoder()
+    private let decoder = JSONDecoder()
+    public override func encode(_ value: Out) -> [UInt8]? {
+        return try? [UInt8](encoder.encode(value))
+    }
+
+    public override func decode(_ data: [UInt8]) -> In? {
+        return try? decoder.decode(In.self, from: Data(data))
+    }
+}
+
+private class LambdaClosureWrapper<In: Decodable, Out: Encodable>: LambdaCodableHandler {
+    typealias Codec = LambdaCodableJsonCodec<In, Out>
+
+    private let closure: LambdaCodableClosure<In, Out>
+    init(_ closure: @escaping LambdaCodableClosure<In, Out>) {
+        self.closure = closure
+    }
+
+    public func handle(context: LambdaContext, payload: In, callback: @escaping LambdaCodableCallback<Out>) {
+        closure(context, payload, callback)
+    }
+}
