@@ -38,7 +38,7 @@ internal class HTTPClient {
     }
 
     func execute(_ request: HTTPRequest) -> EventLoopFuture<HTTPResponse> {
-        let bootstrap = ClientBootstrap(group: SingleEventLoopGroup(eventLoop))
+        let bootstrap = ClientBootstrap(group: eventLoop)
             .channelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().then {
@@ -244,20 +244,6 @@ private class UnaryHTTPHandler: ChannelInboundHandler, ChannelOutboundHandler {
         promise.fail(error: error)
         ctx.close(promise: nil)
     }
-}
-
-// TODO: is there a more elegant way to bootstrap?
-private class SingleEventLoopGroup: EventLoopGroup {
-    let eventLoop: EventLoop
-    public init(_ eventLoop: EventLoop) {
-        self.eventLoop = eventLoop
-    }
-
-    func next() -> EventLoop {
-        return eventLoop
-    }
-
-    func shutdownGracefully(queue _: DispatchQueue, _: @escaping (Error?) -> Void) {}
 }
 
 private enum HTTPClientError: Error {
