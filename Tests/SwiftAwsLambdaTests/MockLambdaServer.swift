@@ -32,7 +32,7 @@ internal class MockLambdaServer {
         assert(shutdown)
     }
 
-    func start(host: String = Defaults.Host, port: Int = Defaults.Port) -> EventLoopFuture<MockLambdaServer> {
+    func start(host: String = Defaults.host, port: Int = Defaults.port) -> EventLoopFuture<MockLambdaServer> {
         let bootstrap = ServerBootstrap(group: group)
             // Specify backlog and enable SO_REUSEADDR for the server itself
             .serverChannelOption(ChannelOptions.backlog, value: 256)
@@ -115,36 +115,27 @@ internal final class HTTPHandler: ChannelInboundHandler {
         }
         print("\(self) processing \(requestHead.uri)")
 
-        // FIXME:
-        /* let requestBody:String? = self.requestBody.map { buffer in
-         return buffer.getBytes(at: buffer.readerIndex, length: buffer.readableBytes).map { bytes in
-         return String(bytes: bytes, encoding: .utf8)
-         }
-         } */
-        var requestBody: String?
-        if let buffer = self.requestBody {
-            if let bytes = buffer.getBytes(at: buffer.readerIndex, length: buffer.readableBytes) {
-                requestBody = String(bytes: bytes, encoding: .utf8)
-            }
+        let requestBody = self.requestBody.flatMap { (buffer: ByteBuffer) -> String? in
+            var buffer = buffer
+            return buffer.readString(length: buffer.readableBytes)
         }
 
         var responseStatus: HTTPResponseStatus
         var responseBody: String?
         var responseHeaders: [(String, String)]?
-        if requestHead.uri.hasSuffix(Consts.RequestWorkUrlSuffix) {
+        if requestHead.uri.hasSuffix(Consts.requestWorkURLSuffix) {
             switch behavior.getWork() {
             case let .success(requestId, result):
                 responseStatus = .ok
                 responseBody = result
-                responseHeaders = [(AmazonHeaders.RequestId, requestId)]
+                responseHeaders = [(AmazonHeaders.requestID, requestId)]
             case let .failure(error):
                 responseStatus = .init(statusCode: error.rawValue)
             }
-        } else if requestHead.uri.hasSuffix(Consts.PostResponseUrlSuffix) {
-            guard let requestId = requestHead.uri.split(separator: "/")[safe: 2] else {
-                return writeResponse(ctx: ctx, version: requestHead.version, status: .badRequest)
-            }
-            guard let response = requestBody else {
+        } else if requestHead.uri.hasSuffix(Consts.postResponseURLSuffix) {
+            guard let requestId = requestHead.uri.split(separator: "/").dropFirst(2).first,
+                let response = requestBody
+                else {
                 return writeResponse(ctx: ctx, version: requestHead.version, status: .badRequest)
             }
             switch behavior.processResponse(requestId: String(requestId), response: response) {
@@ -153,14 +144,11 @@ internal final class HTTPHandler: ChannelInboundHandler {
             case let .failure(error):
                 responseStatus = .init(statusCode: error.rawValue)
             }
-        } else if requestHead.uri.hasSuffix(Consts.PostErrorUrlSuffix) {
-            guard let requestId = requestHead.uri.split(separator: "/")[safe: 2] else {
-                return writeResponse(ctx: ctx, version: requestHead.version, status: .badRequest)
-            }
-            guard let json = requestBody else {
-                return writeResponse(ctx: ctx, version: requestHead.version, status: .badRequest)
-            }
-            guard let error = ErrorResponse.fromJson(json) else {
+        } else if requestHead.uri.hasSuffix(Consts.postErrorURLSuffix) {
+            guard let requestId = requestHead.uri.split(separator: "/").dropFirst(2).first,
+                let json = requestBody,
+                let error = ErrorResponse.fromJson(json)
+                else {
                 return writeResponse(ctx: ctx, version: requestHead.version, status: .badRequest)
             }
             switch behavior.processError(requestId: String(requestId), error: error) {
@@ -188,10 +176,8 @@ internal final class HTTPHandler: ChannelInboundHandler {
             ctx.write(wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
         }
 
-        let promise: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
-        ctx.writeAndFlush(wrapOutboundOut(.end(nil)), promise: promise)
-        // no keep alive
-        promise.futureResult.whenComplete {
+        ctx.writeAndFlush(wrapOutboundOut(.end(nil))).whenComplete {
+            // no keep alive
             ctx.close(promise: nil)
         }
     }
@@ -203,15 +189,12 @@ internal protocol LambdaServerBehavior {
     func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult
 }
 
-internal enum GetWorkResult {
-    case success(requestId: String, payload: String)
-    case failure(GetWorkError)
-}
+internal typealias GetWorkResult = LambdaResult<(String, String), GetWorkError>
 
 internal enum GetWorkError: Int {
-    case BadRequest = 400
-    case TooManyRequests = 429
-    case InternalServerError = 500
+    case badRequest = 400
+    case tooManyRequests = 429
+    case internalServerError = 500
 }
 
 internal enum ProcessResponseResult {
@@ -220,21 +203,18 @@ internal enum ProcessResponseResult {
 }
 
 internal enum ProcessResponseError: Int {
-    case BadRequest = 400
-    case PayloadTooLarge = 413
-    case TooManyRequests = 429
-    case InternalServerError = 500
+    case badRequest = 400
+    case payloadTooLarge = 413
+    case tooManyRequests = 429
+    case internalServerError = 500
 }
 
-internal enum ProcessErrorResult {
-    case success()
-    case failure(ProcessErrorError)
-}
+internal typealias ProcessErrorResult = LambdaResult<(), ProcessError>
 
-internal enum ProcessErrorError: Int {
-    case InvalidErrorShape = 299
-    case BadRequest = 400
-    case InternalServerError = 500
+internal enum ProcessError: Int, Error {
+    case invalidErrorShape = 299
+    case badRequest = 400
+    case internalServerError = 500
 }
 
 internal enum ServerError: Error {

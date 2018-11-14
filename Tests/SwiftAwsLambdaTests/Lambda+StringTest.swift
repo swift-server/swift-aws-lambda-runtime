@@ -72,7 +72,7 @@ private class GoodBehavior: LambdaServerBehavior {
     let requestId = NSUUID().uuidString
     let payload = "hello"
     func getWork() -> GetWorkResult {
-        return .success(requestId: requestId, payload: payload)
+        return .success((requestId: requestId, payload: payload))
     }
 
     func processResponse(requestId: String, response: String) -> ProcessResponseResult {
@@ -83,21 +83,21 @@ private class GoodBehavior: LambdaServerBehavior {
 
     func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
         XCTFail("should not report error")
-        return .failure(.InternalServerError)
+        return .failure(.internalServerError)
     }
 }
 
 private class BadBehavior: LambdaServerBehavior {
     func getWork() -> GetWorkResult {
-        return .failure(.InternalServerError)
+        return .failure(.internalServerError)
     }
 
     func processResponse(requestId _: String, response _: String) -> ProcessResponseResult {
-        return .failure(.InternalServerError)
+        return .failure(.internalServerError)
     }
 
     func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
-        return .failure(.InternalServerError)
+        return .failure(.internalServerError)
     }
 }
 

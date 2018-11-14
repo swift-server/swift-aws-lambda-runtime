@@ -21,7 +21,7 @@ class LambdaRunnerTest: XCTestCase {
             let requestId = NSUUID().uuidString
             let payload = "hello"
             func getWork() -> GetWorkResult {
-                return .success(requestId: requestId, payload: payload)
+                return .success((requestId, payload))
             }
 
             func processResponse(requestId: String, response: String) -> ProcessResponseResult {
@@ -32,7 +32,7 @@ class LambdaRunnerTest: XCTestCase {
 
             func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
                 XCTFail("should not report error")
-                return .failure(.InternalServerError)
+                return .failure(.internalServerError)
             }
         }
         let result = try runLambda(behavior: Behavior(), handler: EchoHandler()) // .wait()
@@ -44,18 +44,18 @@ class LambdaRunnerTest: XCTestCase {
             static let error = "boom"
             let requestId = NSUUID().uuidString
             func getWork() -> GetWorkResult {
-                return .success(requestId: requestId, payload: "hello")
+                return .success((requestId: requestId, payload: "hello"))
             }
 
             func processResponse(requestId _: String, response _: String) -> ProcessResponseResult {
                 XCTFail("should report error")
-                return .failure(.InternalServerError)
+                return .failure(.internalServerError)
             }
 
             func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
                 XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
                 XCTAssertEqual(Behavior.error, error.errorMessage, "expecting error to match")
-                return .success()
+                return .success(())
             }
         }
         let result = try runLambda(behavior: Behavior(), handler: FailedHandler(Behavior.error)) // .wait()

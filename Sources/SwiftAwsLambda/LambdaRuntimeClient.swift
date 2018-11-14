@@ -29,7 +29,7 @@ internal class LambdaRuntimeClient {
     }
 
     func requestWork() -> EventLoopFuture<RequestWorkResult> {
-        let url = baseUrl + Consts.InvokationUrlPrefix + Consts.RequestWorkUrlSuffix
+        let url = baseUrl + Consts.invokationURLPrefix + Consts.requestWorkURLSuffix
         print("requesting work from lambda runtime engine using \(url)")
         return httpClient.get(url: url).map { response in
             if .ok != response.status {
@@ -38,23 +38,23 @@ internal class LambdaRuntimeClient {
             guard let payload = response.readWholeBody() else {
                 return .failure(.noBody)
             }
-            guard let context = LambdaContext.from(response) else {
+            guard let context = LambdaContext(response: response) else {
                 return .failure(.noContext)
             }
-            return .success(context: context, payload: payload)
+            return .success((context, payload))
         }
     }
 
-    func reportResults(context: LambdaContext, result: LambdaResult) -> EventLoopFuture<PostResultsResult> {
-        var url = baseUrl + Consts.InvokationUrlPrefix + "/" + context.requestId
+    func reportResults(context: LambdaContext, result: LambdaResult<[UInt8], String>) -> EventLoopFuture<PostResultsResult> {
+        var url = baseUrl + Consts.invokationURLPrefix + "/" + context.requestId
         var body: ByteBuffer
         switch result {
         case let .success(data):
-            url += Consts.PostResponseUrlSuffix
+            url += Consts.postResponseURLSuffix
             body = allocator.buffer(capacity: data.count)
             body.write(bytes: data)
         case let .failure(error):
-            url += Consts.PostErrorUrlSuffix
+            url += Consts.postErrorURLSuffix
             // TODO: make FunctionError a const
             // FIXME: error
             let error = ErrorResponse(errorType: "FunctionError", errorMessage: "\(error)")
@@ -67,20 +67,13 @@ internal class LambdaRuntimeClient {
 
         print("reporting results to lambda runtime engine using \(url)")
         return httpClient.post(url: url, body: body).map { response in
-            .accepted != response.status ? .failure(.badStatusCode) : .success()
+            .accepted != response.status ? .failure(.badStatusCode) : .success(())
         }
     }
 }
 
-internal enum RequestWorkResult {
-    case success(context: LambdaContext, payload: [UInt8])
-    case failure(LambdaRuntimeClientError)
-}
-
-internal enum PostResultsResult {
-    case success()
-    case failure(LambdaRuntimeClientError)
-}
+internal typealias RequestWorkResult = LambdaResult<(LambdaContext, [UInt8]), LambdaRuntimeClientError>
+internal typealias PostResultsResult = LambdaResult<(), LambdaRuntimeClientError>
 
 internal enum LambdaRuntimeClientError: Error {
     case badStatusCode
@@ -107,8 +100,8 @@ private extension ErrorResponse {
 }
 
 private extension HTTPResponse {
-    func getHeaderValue(_ name: String) -> String? {
-        return headers[name][safe: 0]
+    func headerValue(_ name: String) -> String? {
+        return headers[name].first
     }
 
     func readWholeBody() -> [UInt8]? {
@@ -123,19 +116,19 @@ private extension HTTPResponse {
 }
 
 private extension LambdaContext {
-    static func from(_ response: HTTPResponse) -> LambdaContext? {
-        guard let requestId = response.getHeaderValue(AmazonHeaders.RequestId) else {
+    init?(response: HTTPResponse) {
+        guard let requestId = response.headerValue(AmazonHeaders.requestID) else {
             return nil
         }
         if requestId.isEmpty {
             return nil
         }
-        let traceId = response.getHeaderValue(AmazonHeaders.TraceId)
-        let invokedFunctionArn = response.getHeaderValue(AmazonHeaders.InvokedFunctionArn)
-        let cognitoIdentity = response.getHeaderValue(AmazonHeaders.CognitoIdentity)
-        let clientContext = response.getHeaderValue(AmazonHeaders.ClientContext)
-        let deadlineNs = response.getHeaderValue(AmazonHeaders.DeadlineNs)
-        return LambdaContext(requestId: requestId,
+        let traceId = response.headerValue(AmazonHeaders.traceID)
+        let invokedFunctionArn = response.headerValue(AmazonHeaders.invokedFunctionARN)
+        let cognitoIdentity = response.headerValue(AmazonHeaders.cognitoIdentity)
+        let clientContext = response.headerValue(AmazonHeaders.clientContext)
+        let deadlineNs = response.headerValue(AmazonHeaders.deadlineNS)
+        self = LambdaContext(requestId: requestId,
                              traceId: traceId,
                              invokedFunctionArn: invokedFunctionArn,
                              cognitoIdentity: cognitoIdentity,
@@ -145,9 +138,9 @@ private extension LambdaContext {
 }
 
 private func getRuntimeEndpoint() -> String {
-    if let hostPort = Environment.getString(Consts.HostPortEnvVariableName) {
+    if let hostPort = Environment.string(Consts.hostPortEnvVariableName) {
         return "http://\(hostPort)"
     } else {
-        return "http://\(Defaults.Host):\(Defaults.Port)"
+        return "http://\(Defaults.host):\(Defaults.port)"
     }
 }
