@@ -66,17 +66,14 @@ public final class Lambda {
     }
 }
 
-public enum LambdaLifecycleResult {
-    case success(Int)
+public enum LambdaResult<Value, Error> {
+    case success(Value)
     case failure(Error)
 }
 
-public enum LambdaResult {
-    case success([UInt8])
-    case failure(String)
-}
+public typealias LambdaLifecycleResult = LambdaResult<Int, Error>
 
-public typealias LambdaCallback = (LambdaResult) -> Void
+public typealias LambdaCallback = (LambdaResult<[UInt8], String>) -> Void
 
 public typealias LambdaClosure = (LambdaContext, [UInt8], LambdaCallback) -> Void
 

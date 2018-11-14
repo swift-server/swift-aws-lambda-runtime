@@ -39,7 +39,7 @@ internal final class LambdaRunner {
             case let .success(context, payload):
                 // 2. send work to handler
                 print("sending work to lambda handler \(self.lambdaHandler)")
-                let promise: EventLoopPromise<LambdaResult> = self.eventLoop.newPromise()
+                let promise: EventLoopPromise<LambdaResult<[UInt8], String>> = self.eventLoop.newPromise()
                 self.lambdaHandler.handle(context: context, payload: payload, promise: promise)
                 return promise.futureResult.then { lambdaResult in
                     // 3. report results to runtime engine
@@ -51,7 +51,7 @@ internal final class LambdaRunner {
                         case .success():
                             // we are done!
                             print("lambda invocation sequence completed successfully")
-                            return self.newSucceededFuture(result: .success())
+                            return self.newSucceededFuture(result: .success(()))
                         }
                     }
                 }
@@ -64,16 +64,13 @@ internal final class LambdaRunner {
     }
 }
 
-internal enum RunLambdaResult {
-    case success()
-    case failure(Error)
-}
+internal typealias RunLambdaResult = LambdaResult<(), Error>
 
 private extension LambdaHandler {
-    func handle(context: LambdaContext, payload: [UInt8], promise: EventLoopPromise<LambdaResult>) {
+    func handle(context: LambdaContext, payload: [UInt8], promise: EventLoopPromise<LambdaResult<[UInt8], String>>) {
         // offloading so user code never blocks the eventloop
         DispatchQueue(label: "lambda-\(context.requestId)").async {
-            self.handle(context: context, payload: payload, callback: { (result: LambdaResult) in
+            self.handle(context: context, payload: payload, callback: { (result: LambdaResult<[UInt8], String>) in
                 promise.succeed(result: result)
             })
         }

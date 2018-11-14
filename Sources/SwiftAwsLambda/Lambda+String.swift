@@ -32,11 +32,7 @@ extension Lambda {
     }
 }
 
-public enum LambdaStringResult {
-    case success(String)
-    case failure(String)
-}
-
+public typealias LambdaStringResult = LambdaResult<String, String>
 public typealias LambdaStringCallback = (LambdaStringResult) -> Void
 
 public typealias LambdaStringClosure = (LambdaContext, String, LambdaStringCallback) -> Void

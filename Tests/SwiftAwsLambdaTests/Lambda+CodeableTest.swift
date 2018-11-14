@@ -77,23 +77,23 @@ private class GoodBehavior: LambdaServerBehavior {
     func getWork() -> GetWorkResult {
         guard let payload = try? JSONEncoder().encode(Req(requestId: requestId)) else {
             XCTFail("encoding error")
-            return .failure(.InternalServerError)
+            return .failure(.internalServerError)
         }
         guard let payloadAsString = String(data: payload, encoding: .utf8) else {
             XCTFail("encoding error")
-            return .failure(.InternalServerError)
+            return .failure(.internalServerError)
         }
-        return .success(requestId: requestId, payload: payloadAsString)
+        return .success((requestId: requestId, payload: payloadAsString))
     }
 
     func processResponse(requestId _: String, response: String) -> ProcessResponseResult {
         guard let data = response.data(using: .utf8) else {
             XCTFail("decoding error")
-            return .failure(.InternalServerError)
+            return .failure(.internalServerError)
         }
         guard let response = try? JSONDecoder().decode(Res.self, from: data) else {
             XCTFail("decoding error")
-            return .failure(.InternalServerError)
+            return .failure(.internalServerError)
         }
         XCTAssertEqual(requestId, response.requestId, "expecting requestId to match")
         return .success()
@@ -101,21 +101,21 @@ private class GoodBehavior: LambdaServerBehavior {
 
     func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
         XCTFail("should not report error")
-        return .failure(.InternalServerError)
+        return .failure(.internalServerError)
     }
 }
 
 private class BadBehavior: LambdaServerBehavior {
     func getWork() -> GetWorkResult {
-        return .failure(.InternalServerError)
+        return .failure(.internalServerError)
     }
 
     func processResponse(requestId _: String, response _: String) -> ProcessResponseResult {
-        return .failure(.InternalServerError)
+        return .failure(.internalServerError)
     }
 
     func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
-        return .failure(.InternalServerError)
+        return .failure(.internalServerError)
     }
 }
 
