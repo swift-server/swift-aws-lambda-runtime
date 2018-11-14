@@ -32,7 +32,8 @@ extension Lambda {
     }
 }
 
-public typealias LambdaStringResult = LambdaResult<String, String>
+public typealias LambdaStringResult = Result<String, String>
+
 public typealias LambdaStringCallback = (LambdaStringResult) -> Void
 
 public typealias LambdaStringClosure = (LambdaContext, String, LambdaStringCallback) -> Void

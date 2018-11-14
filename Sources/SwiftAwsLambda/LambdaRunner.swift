@@ -28,7 +28,7 @@ internal final class LambdaRunner {
     }
 
     // TODO: should we move the event loop as an argument instead of instance variable?
-    func run() -> EventLoopFuture<RunLambdaResult> {
+    func run() -> EventLoopFuture<LambdaRunResult> {
         print("lambda invocation sequence starting")
         // 1. request work from lambda runtime engine
         return runtimeClient.requestWork().then { workRequestResult in
@@ -39,7 +39,7 @@ internal final class LambdaRunner {
             case let .success(context, payload):
                 // 2. send work to handler
                 print("sending work to lambda handler \(self.lambdaHandler)")
-                let promise: EventLoopPromise<LambdaResult<[UInt8], String>> = self.eventLoop.newPromise()
+                let promise: EventLoopPromise<LambdaResult> = self.eventLoop.newPromise()
                 self.lambdaHandler.handle(context: context, payload: payload, promise: promise)
                 return promise.futureResult.then { lambdaResult in
                     // 3. report results to runtime engine
@@ -64,13 +64,13 @@ internal final class LambdaRunner {
     }
 }
 
-internal typealias RunLambdaResult = LambdaResult<(), Error>
+internal typealias LambdaRunResult = Result<(), Error>
 
 private extension LambdaHandler {
-    func handle(context: LambdaContext, payload: [UInt8], promise: EventLoopPromise<LambdaResult<[UInt8], String>>) {
+    func handle(context: LambdaContext, payload: [UInt8], promise: EventLoopPromise<LambdaResult>) {
         // offloading so user code never blocks the eventloop
         DispatchQueue(label: "lambda-\(context.requestId)").async {
-            self.handle(context: context, payload: payload, callback: { (result: LambdaResult<[UInt8], String>) in
+            self.handle(context: context, payload: payload, callback: { (result: LambdaResult) in
                 promise.succeed(result: result)
             })
         }

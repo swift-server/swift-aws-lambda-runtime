@@ -50,21 +50,6 @@ class LambdaTest: XCTestCase {
         try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode)
     }
-
-    // FIXME: seepraet test class?
-
-    func testStringSuceess() throws {
-        class EchoStringHandler: LambdaStringHandler {
-            func handle(context _: LambdaContext, payload: String, callback: @escaping LambdaStringCallback) {
-                callback(.success(payload))
-            }
-        }
-        let maxTimes = Int.random(in: 1 ... 10)
-        let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
-        let result = Lambda.run(handler: EchoStringHandler(), maxTimes: maxTimes) // blocking
-        try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
-    }
 }
 
 private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil) {

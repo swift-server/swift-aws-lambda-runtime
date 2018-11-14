@@ -30,7 +30,6 @@ extension LambdaTest {
                 ("testFailure", testFailure),
                 ("testClosureSuccess", testClosureSuccess),
                 ("testClosureFailure", testClosureFailure),
-                ("testStringSuceess", testStringSuceess),
            ]
    }
 }
