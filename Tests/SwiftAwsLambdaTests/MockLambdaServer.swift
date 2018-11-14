@@ -135,7 +135,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
         } else if requestHead.uri.hasSuffix(Consts.postResponseURLSuffix) {
             guard let requestId = requestHead.uri.split(separator: "/").dropFirst(2).first,
                 let response = requestBody
-                else {
+            else {
                 return writeResponse(ctx: ctx, version: requestHead.version, status: .badRequest)
             }
             switch behavior.processResponse(requestId: String(requestId), response: response) {
@@ -148,7 +148,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
             guard let requestId = requestHead.uri.split(separator: "/").dropFirst(2).first,
                 let json = requestBody,
                 let error = ErrorResponse.fromJson(json)
-                else {
+            else {
                 return writeResponse(ctx: ctx, version: requestHead.version, status: .badRequest)
             }
             switch behavior.processError(requestId: String(requestId), error: error) {
@@ -189,7 +189,7 @@ internal protocol LambdaServerBehavior {
     func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult
 }
 
-internal typealias GetWorkResult = LambdaResult<(String, String), GetWorkError>
+internal typealias GetWorkResult = Result<(String, String), GetWorkError>
 
 internal enum GetWorkError: Int {
     case badRequest = 400
@@ -209,7 +209,7 @@ internal enum ProcessResponseError: Int {
     case internalServerError = 500
 }
 
-internal typealias ProcessErrorResult = LambdaResult<(), ProcessError>
+internal typealias ProcessErrorResult = Result<(), ProcessError>
 
 internal enum ProcessError: Int, Error {
     case invalidErrorShape = 299

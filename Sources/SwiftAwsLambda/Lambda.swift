@@ -66,19 +66,25 @@ public final class Lambda {
     }
 }
 
-public enum LambdaResult<Value, Error> {
-    case success(Value)
-    case failure(Error)
-}
+public typealias LambdaResult = Result<[UInt8], String>
 
-public typealias LambdaLifecycleResult = LambdaResult<Int, Error>
+public typealias LambdaLifecycleResult = Result<Int, Error>
 
-public typealias LambdaCallback = (LambdaResult<[UInt8], String>) -> Void
+public typealias LambdaCallback = (LambdaResult) -> Void
 
 public typealias LambdaClosure = (LambdaContext, [UInt8], LambdaCallback) -> Void
 
 public protocol LambdaHandler {
     func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback)
+}
+
+public struct LambdaContext {
+    public let requestId: String
+    public let traceId: String?
+    public let invokedFunctionArn: String?
+    public let cognitoIdentity: String?
+    public let clientContext: String?
+    public let deadlineNs: String?
 }
 
 private class LambdaClosureWrapper: LambdaHandler {

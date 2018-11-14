@@ -34,7 +34,7 @@ extension Lambda {
     }
 }
 
-public typealias LambdaCodableResult<Out> = LambdaResult<Out, String>
+public typealias LambdaCodableResult<Out> = Result<Out, String>
 
 public typealias LambdaCodableCallback<Out> = (LambdaCodableResult<Out>) -> Void
 
@@ -62,7 +62,7 @@ public class LambdaCodableCodec<In: Decodable, Out: Encodable> {
 }
 
 public extension LambdaCodableHandler {
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping (LambdaResult<[UInt8], String>) -> Void) {
+    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping (LambdaResult) -> Void) {
         guard let payloadAsCodable = codec.decode(payload) else {
             return callback(.failure("failed decoding payload (in)"))
         }

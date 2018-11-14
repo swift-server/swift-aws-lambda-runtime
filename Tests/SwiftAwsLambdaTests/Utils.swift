@@ -16,19 +16,7 @@ import NIO
 @testable import SwiftAwsLambda
 import XCTest
 
-func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws -> RunLambdaResult {
-    /* let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
-     let server = MockLambdaServer(behavior: behavior)
-     return server.start().hopTo(eventLoop: eventLoop).then { _ in
-     let runner = LambdaRunner(eventLoop: eventLoop, lambdaHandler: handler)
-     return runner.run().then { result in
-     server.stop().hopTo(eventLoop: eventLoop).then { _ in
-     print("\(server) stopped")
-     return eventLoop.newSucceededFuture(result: result)
-     }
-     }
-     } */
-
+func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws -> LambdaRunResult {
     let runner = LambdaRunner(handler)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     let result = try runner.run().wait()
@@ -36,7 +24,7 @@ func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws ->
     return result
 }
 
-func assertRunLambdaResult(result: RunLambdaResult, shouldFailWithError: Error? = nil) {
+func assertRunLambdaResult(result: LambdaRunResult, shouldFailWithError: Error? = nil) {
     switch result {
     case .success:
         if nil != shouldFailWithError {

@@ -14,6 +14,11 @@
 
 import NIO
 
+public enum Result<Value, Error> {
+    case success(Value)
+    case failure(Error)
+}
+
 internal enum Consts {
     static let hostPortEnvVariableName = "AWS_LAMBDA_RUNTIME_API"
 

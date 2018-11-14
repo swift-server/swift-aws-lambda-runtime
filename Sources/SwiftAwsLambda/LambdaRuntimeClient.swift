@@ -45,7 +45,7 @@ internal class LambdaRuntimeClient {
         }
     }
 
-    func reportResults(context: LambdaContext, result: LambdaResult<[UInt8], String>) -> EventLoopFuture<PostResultsResult> {
+    func reportResults(context: LambdaContext, result: LambdaResult) -> EventLoopFuture<PostResultsResult> {
         var url = baseUrl + Consts.invokationURLPrefix + "/" + context.requestId
         var body: ByteBuffer
         switch result {
@@ -72,8 +72,8 @@ internal class LambdaRuntimeClient {
     }
 }
 
-internal typealias RequestWorkResult = LambdaResult<(LambdaContext, [UInt8]), LambdaRuntimeClientError>
-internal typealias PostResultsResult = LambdaResult<(), LambdaRuntimeClientError>
+internal typealias RequestWorkResult = Result<(LambdaContext, [UInt8]), LambdaRuntimeClientError>
+internal typealias PostResultsResult = Result<(), LambdaRuntimeClientError>
 
 internal enum LambdaRuntimeClientError: Error {
     case badStatusCode
