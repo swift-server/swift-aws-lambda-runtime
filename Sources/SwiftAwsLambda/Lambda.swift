@@ -14,22 +14,22 @@
 
 import NIO
 
-public final class Lambda {
-    public class func run(_ closure: @escaping LambdaClosure) -> LambdaLifecycleResult {
+public enum Lambda {
+    public static func run(_ closure: @escaping LambdaClosure) -> LambdaLifecycleResult {
         return run(LambdaClosureWrapper(closure))
     }
 
-    public class func run(_ handler: LambdaHandler) -> LambdaLifecycleResult {
+    public static func run(_ handler: LambdaHandler) -> LambdaLifecycleResult {
         return Lifecycle(handler: handler).start()
     }
 
     // for testing
-    internal class func run(closure: @escaping LambdaClosure, maxTimes: Int) -> LambdaLifecycleResult {
+    internal static func run(closure: @escaping LambdaClosure, maxTimes: Int) -> LambdaLifecycleResult {
         return run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes)
     }
 
     // for testing
-    internal class func run(handler: LambdaHandler, maxTimes: Int) -> LambdaLifecycleResult {
+    internal static func run(handler: LambdaHandler, maxTimes: Int) -> LambdaLifecycleResult {
         return Lifecycle(handler: handler, maxTimes: maxTimes).start()
     }
 
@@ -38,7 +38,7 @@ public final class Lambda {
         private let max: Int
         private var counter: Int = 0
 
-        public init(handler: LambdaHandler, maxTimes: Int = 0) {
+        init(handler: LambdaHandler, maxTimes: Int = 0) {
             self.handler = handler
             max = maxTimes
             assert(max >= 0)
@@ -87,7 +87,7 @@ public struct LambdaContext {
     public let deadlineNs: String?
 }
 
-private class LambdaClosureWrapper: LambdaHandler {
+private struct LambdaClosureWrapper: LambdaHandler {
     private let closure: LambdaClosure
     init(_ closure: @escaping LambdaClosure) {
         self.closure = closure
