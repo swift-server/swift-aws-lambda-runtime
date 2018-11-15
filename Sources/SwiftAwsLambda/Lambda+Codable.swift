@@ -15,21 +15,21 @@
 import Foundation
 
 extension Lambda {
-    public class func run<In: Decodable, Out: Encodable>(_ closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
+    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
         return run(LambdaClosureWrapper(closure))
     }
 
-    public class func run<T>(_ handler: T) -> LambdaLifecycleResult where T: LambdaCodableHandler {
+    public static func run<T>(_ handler: T) -> LambdaLifecycleResult where T: LambdaCodableHandler {
         return run(handler as LambdaHandler)
     }
 
     // for testing
-    internal class func run<In: Decodable, Out: Encodable>(closure: @escaping LambdaCodableClosure<In, Out>, maxTimes: Int) -> LambdaLifecycleResult {
+    internal static func run<In: Decodable, Out: Encodable>(closure: @escaping LambdaCodableClosure<In, Out>, maxTimes: Int) -> LambdaLifecycleResult {
         return run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes)
     }
 
     // for testing
-    internal class func run<T>(handler: T, maxTimes: Int) -> LambdaLifecycleResult where T: LambdaCodableHandler {
+    internal static func run<T>(handler: T, maxTimes: Int) -> LambdaLifecycleResult where T: LambdaCodableHandler {
         return run(handler: handler as LambdaHandler, maxTimes: maxTimes)
     }
 }
@@ -80,6 +80,7 @@ public extension LambdaCodableHandler {
     }
 }
 
+// This is a class as encoder amd decoder are a class, which means its cheaper to hold a reference to both in a class then a struct. 
 private class LambdaCodableJsonCodec<In: Decodable, Out: Encodable>: LambdaCodableCodec<In, Out> {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -92,7 +93,7 @@ private class LambdaCodableJsonCodec<In: Decodable, Out: Encodable>: LambdaCodab
     }
 }
 
-private class LambdaClosureWrapper<In: Decodable, Out: Encodable>: LambdaCodableHandler {
+private struct LambdaClosureWrapper<In: Decodable, Out: Encodable>: LambdaCodableHandler {
     typealias Codec = LambdaCodableJsonCodec<In, Out>
 
     private let closure: LambdaCodableClosure<In, Out>

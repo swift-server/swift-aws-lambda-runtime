@@ -240,12 +240,26 @@ private class UnaryHTTPHandler: ChannelInboundHandler, ChannelOutboundHandler {
     }
 
     func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-        let promise = buffer.removeFirst()
-        promise.fail(error: error)
+        // In HTTP we should fail all promises as we close the Channel.
+        self.failAllPromises(error: error)
         ctx.close(promise: nil)
+    }
+    
+    func channelInactive(ctx: ChannelHandlerContext) {
+        // Fail all promises
+        self.failAllPromises(error: HTTPClientError.connectionClosed)
+        ctx.fireChannelInactive()
+    }
+    
+    private func failAllPromises(error: Error) {
+        while let promise = buffer.first {
+            promise.fail(error: error)
+            buffer.removeFirst()
+        }
     }
 }
 
 private enum HTTPClientError: Error {
     case invalidRequest
+    case connectionClosed
 }
