@@ -12,26 +12,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
 @testable import SwiftAwsLambda
 import XCTest
-
-import Foundation
 
 class CodableLambdaTest: XCTestCase {
     func testSuceess() throws {
         let maxTimes = Int.random(in: 1 ... 10)
         let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
-        let result = Lambda.run(handler: CodableEchoHandler(), maxTimes: maxTimes) // blocking
+        let result = Lambda.run(handler: CodableEchoHandler(), maxTimes: maxTimes)
         try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
     }
 
     func testFailure() throws {
         let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
-        let result = Lambda.run(CodableEchoHandler()) // blocking
+        let result = Lambda.run(CodableEchoHandler())
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode)
+        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
     }
 
     func testClosureSuccess() throws {
@@ -50,7 +47,7 @@ class CodableLambdaTest: XCTestCase {
             callback(.success(Res(requestId: payload.requestId)))
         }
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode)
+        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
     }
 }
 
@@ -83,7 +80,7 @@ private class GoodBehavior: LambdaServerBehavior {
             XCTFail("encoding error")
             return .failure(.internalServerError)
         }
-        return .success((requestId: requestId, payload: payloadAsString))
+        return .success((requestId: self.requestId, payload: payloadAsString))
     }
 
     func processResponse(requestId _: String, response: String) -> ProcessResponseResult {
@@ -95,7 +92,7 @@ private class GoodBehavior: LambdaServerBehavior {
             XCTFail("decoding error")
             return .failure(.internalServerError)
         }
-        XCTAssertEqual(requestId, response.requestId, "expecting requestId to match")
+        XCTAssertEqual(self.requestId, response.requestId, "expecting requestId to match")
         return .success()
     }
 

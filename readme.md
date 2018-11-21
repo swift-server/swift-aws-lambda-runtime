@@ -7,6 +7,8 @@ This library is designed to allow writing AWS Lambdas using the Swift programmin
   1. Create a SwiftPM project and pull SwiftAwsLambda as dependency into your project
 
   ```
+  // swift-tools-version:4.0
+
   import PackageDescription
 
   let package = Package(
@@ -17,8 +19,8 @@ This library is designed to allow writing AWS Lambdas using the Swift programmin
       dependencies: [
           .package(url: "https://github.com/apple/swift-aws-lambda.git", .upToNextMajor(from: "0.1.0")),
       ],
-      targets: [PackageDescription.Target] = [
-          .target(name: "MyLambda", dependencies: ["SwiftAwsLambda"]),    
+      targets: [
+          .target(name: "MyLambda", dependencies: ["SwiftAwsLambda"]),
       ]
   )
   ```
@@ -40,5 +42,9 @@ note you can implement 3 types of lambdas:
 3. `Codable` based: see `SwiftAwsLambdaCodableExample`
 
 ## Architecture
+
+TODO
+
+## Deploying
 
 TODO

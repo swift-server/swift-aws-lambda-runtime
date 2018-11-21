@@ -21,12 +21,12 @@ class LambdaRunnerTest: XCTestCase {
             let requestId = NSUUID().uuidString
             let payload = "hello"
             func getWork() -> GetWorkResult {
-                return .success((requestId, payload))
+                return .success((self.requestId, self.payload))
             }
 
             func processResponse(requestId: String, response: String) -> ProcessResponseResult {
                 XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
-                XCTAssertEqual(payload, response, "expecting response to match")
+                XCTAssertEqual(self.payload, response, "expecting response to match")
                 return .success()
             }
 
@@ -44,7 +44,7 @@ class LambdaRunnerTest: XCTestCase {
             static let error = "boom"
             let requestId = NSUUID().uuidString
             func getWork() -> GetWorkResult {
-                return .success((requestId: requestId, payload: "hello"))
+                return .success((requestId: self.requestId, payload: "hello"))
             }
 
             func processResponse(requestId _: String, response _: String) -> ProcessResponseResult {

@@ -25,16 +25,16 @@ internal class HTTPClient {
 
     func get(url: String) -> EventLoopFuture<HTTPResponse> {
         guard let request = HTTPRequest(url: url, method: .GET) else {
-            return eventLoop.newFailedFuture(error: HTTPClientError.invalidRequest)
+            return self.eventLoop.newFailedFuture(error: HTTPClientError.invalidRequest)
         }
-        return execute(request)
+        return self.execute(request)
     }
 
     func post(url: String, body: ByteBuffer? = nil) -> EventLoopFuture<HTTPResponse> {
         guard let request = HTTPRequest(url: url, method: .POST, body: body) else {
-            return eventLoop.newFailedFuture(error: HTTPClientError.invalidRequest)
+            return self.eventLoop.newFailedFuture(error: HTTPClientError.invalidRequest)
         }
-        return execute(request)
+        return self.execute(request)
     }
 
     func execute(_ request: HTTPRequest) -> EventLoopFuture<HTTPResponse> {
@@ -83,9 +83,9 @@ internal struct HTTPRequest: Equatable {
 
         self.version = version
         self.method = method
-        target = url.path + (url.query.map { "?" + $0 } ?? "")
+        self.target = url.path + (url.query.map { "?" + $0 } ?? "")
         self.host = host
-        port = url.port ?? 80
+        self.port = url.port ?? 80
         self.headers = headers
         self.body = body
     }
@@ -118,9 +118,9 @@ private struct HTTPResponseAccumulator {
     var state = State.idle
 
     mutating func handle(_ head: HTTPResponseHead) {
-        switch state {
+        switch self.state {
         case .idle:
-            state = .head(head)
+            self.state = .head(head)
         case .head:
             preconditionFailure("head already set")
         case .body:
@@ -131,11 +131,11 @@ private struct HTTPResponseAccumulator {
     }
 
     mutating func handle(_ part: ByteBuffer) {
-        switch state {
+        switch self.state {
         case .idle:
             preconditionFailure("no head received before body")
         case let .head(head):
-            state = .body(head, part)
+            self.state = .body(head, part)
         case .body(let head, var body):
             var part = part
             body.write(buffer: &part)
@@ -197,19 +197,19 @@ private class HTTPPartsHandler: ChannelInboundHandler, ChannelOutboundHandler {
 
         switch response {
         case let .head(head):
-            accumulator.handle(head)
+            self.accumulator.handle(head)
         case let .body(body):
-            accumulator.handle(body)
+            self.accumulator.handle(body)
         case .end:
-            switch accumulator.state {
+            switch self.accumulator.state {
             case .idle:
                 preconditionFailure("no head received before end")
             case let .head(head):
                 ctx.fireChannelRead(wrapInboundOut(HTTPResponse(status: head.status, headers: head.headers, body: nil)))
-                accumulator.state = .end
+                self.accumulator.state = .end
             case let .body(head, body):
                 ctx.fireChannelRead(wrapInboundOut(HTTPResponse(status: head.status, headers: head.headers, body: body)))
-                accumulator.state = .end
+                self.accumulator.state = .end
             case .end:
                 preconditionFailure("request already processed")
             }
@@ -244,17 +244,17 @@ private class UnaryHTTPHandler: ChannelInboundHandler, ChannelOutboundHandler {
         self.failAllPromises(error: error)
         ctx.close(promise: nil)
     }
-    
+
     func channelInactive(ctx: ChannelHandlerContext) {
         // Fail all promises
         self.failAllPromises(error: HTTPClientError.connectionClosed)
         ctx.fireChannelInactive()
     }
-    
+
     private func failAllPromises(error: Error) {
         while let promise = buffer.first {
             promise.fail(error: error)
-            buffer.removeFirst()
+            self.buffer.removeFirst()
         }
     }
 }

@@ -14,21 +14,21 @@
 
 extension Lambda {
     public static func run(_ closure: @escaping LambdaStringClosure) -> LambdaLifecycleResult {
-        return run(LambdaClosureWrapper(closure))
+        return self.run(LambdaClosureWrapper(closure))
     }
 
     public static func run(_ handler: LambdaStringHandler) -> LambdaLifecycleResult {
-        return run(handler as LambdaHandler)
+        return self.run(handler as LambdaHandler)
     }
 
     // for testing
     internal static func run(closure: @escaping LambdaStringClosure, maxTimes: Int) -> LambdaLifecycleResult {
-        return run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes)
+        return self.run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes)
     }
 
     // for testing
     internal static func run(handler: LambdaStringHandler, maxTimes: Int) -> LambdaLifecycleResult {
-        return run(handler: handler as LambdaHandler, maxTimes: maxTimes)
+        return self.run(handler: handler as LambdaHandler, maxTimes: maxTimes)
     }
 }
 
@@ -47,7 +47,7 @@ public extension LambdaStringHandler {
         guard let payloadAsString = String(bytes: payload, encoding: .utf8) else {
             return callback(.failure("failed casting payload to String"))
         }
-        handle(context: context, payload: payloadAsString, callback: { result in
+        self.handle(context: context, payload: payloadAsString, callback: { result in
             switch result {
             case let .success(string):
                 return callback(.success([UInt8](string.utf8)))
@@ -65,6 +65,6 @@ private struct LambdaClosureWrapper: LambdaStringHandler {
     }
 
     func handle(context: LambdaContext, payload: String, callback: @escaping LambdaStringCallback) {
-        closure(context, payload, callback)
+        self.closure(context, payload, callback)
     }
 }

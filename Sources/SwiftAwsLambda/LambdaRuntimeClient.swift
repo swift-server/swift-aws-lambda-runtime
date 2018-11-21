@@ -14,6 +14,7 @@
 
 import Foundation
 import NIO
+import NIOHTTP1
 
 internal class LambdaRuntimeClient {
     private let baseUrl: String
@@ -22,18 +23,18 @@ internal class LambdaRuntimeClient {
     private let allocator: ByteBufferAllocator
 
     init(eventLoop: EventLoop) {
-        baseUrl = getRuntimeEndpoint()
-        httpClient = HTTPClient(eventLoop: eventLoop)
+        self.baseUrl = getRuntimeEndpoint()
+        self.httpClient = HTTPClient(eventLoop: eventLoop)
         self.eventLoop = eventLoop
-        allocator = ByteBufferAllocator()
+        self.allocator = ByteBufferAllocator()
     }
 
     func requestWork() -> EventLoopFuture<RequestWorkResult> {
         let url = baseUrl + Consts.invokationURLPrefix + Consts.requestWorkURLSuffix
         print("requesting work from lambda runtime engine using \(url)")
-        return httpClient.get(url: url).map { response in
+        return self.httpClient.get(url: url).map { response in
             if .ok != response.status {
-                return .failure(.badStatusCode)
+                return .failure(.badStatusCode(response.status))
             }
             guard let payload = response.readWholeBody() else {
                 return .failure(.noBody)
@@ -51,23 +52,22 @@ internal class LambdaRuntimeClient {
         switch result {
         case let .success(data):
             url += Consts.postResponseURLSuffix
-            body = allocator.buffer(capacity: data.count)
+            body = self.allocator.buffer(capacity: data.count)
             body.write(bytes: data)
         case let .failure(error):
             url += Consts.postErrorURLSuffix
             // TODO: make FunctionError a const
-            // FIXME: error
             let error = ErrorResponse(errorType: "FunctionError", errorMessage: "\(error)")
             guard let json = error.toJson() else {
-                return eventLoop.newSucceededFuture(result: .failure(.json))
+                return self.eventLoop.newSucceededFuture(result: .failure(.json))
             }
-            body = allocator.buffer(capacity: json.utf8.count)
+            body = self.allocator.buffer(capacity: json.utf8.count)
             body.write(string: json)
         }
 
         print("reporting results to lambda runtime engine using \(url)")
-        return httpClient.post(url: url, body: body).map { response in
-            .accepted != response.status ? .failure(.badStatusCode) : .success(())
+        return self.httpClient.post(url: url, body: body).map { response in
+            .accepted != response.status ? .failure(.badStatusCode(response.status)) : .success(())
         }
     }
 }
@@ -76,7 +76,7 @@ internal typealias RequestWorkResult = Result<(LambdaContext, [UInt8]), LambdaRu
 internal typealias PostResultsResult = Result<(), LambdaRuntimeClientError>
 
 internal enum LambdaRuntimeClientError: Error {
-    case badStatusCode
+    case badStatusCode(HTTPResponseStatus)
     case noBody
     case noContext
     case json
@@ -127,13 +127,13 @@ private extension LambdaContext {
         let invokedFunctionArn = response.headerValue(AmazonHeaders.invokedFunctionARN)
         let cognitoIdentity = response.headerValue(AmazonHeaders.cognitoIdentity)
         let clientContext = response.headerValue(AmazonHeaders.clientContext)
-        let deadlineNs = response.headerValue(AmazonHeaders.deadlineNS)
+        let deadline = response.headerValue(AmazonHeaders.deadline)
         self = LambdaContext(requestId: requestId,
                              traceId: traceId,
                              invokedFunctionArn: invokedFunctionArn,
                              cognitoIdentity: cognitoIdentity,
                              clientContext: clientContext,
-                             deadlineNs: deadlineNs)
+                             deadline: deadline)
     }
 }
 

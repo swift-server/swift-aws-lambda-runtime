@@ -16,21 +16,21 @@ import Foundation
 
 extension Lambda {
     public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
-        return run(LambdaClosureWrapper(closure))
+        return self.run(LambdaClosureWrapper(closure))
     }
 
     public static func run<T>(_ handler: T) -> LambdaLifecycleResult where T: LambdaCodableHandler {
-        return run(handler as LambdaHandler)
+        return self.run(handler as LambdaHandler)
     }
 
     // for testing
     internal static func run<In: Decodable, Out: Encodable>(closure: @escaping LambdaCodableClosure<In, Out>, maxTimes: Int) -> LambdaLifecycleResult {
-        return run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes)
+        return self.run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes)
     }
 
     // for testing
     internal static func run<T>(handler: T, maxTimes: Int) -> LambdaLifecycleResult where T: LambdaCodableHandler {
-        return run(handler: handler as LambdaHandler, maxTimes: maxTimes)
+        return self.run(handler: handler as LambdaHandler, maxTimes: maxTimes)
     }
 }
 
@@ -66,7 +66,7 @@ public extension LambdaCodableHandler {
         guard let payloadAsCodable = codec.decode(payload) else {
             return callback(.failure("failed decoding payload (in)"))
         }
-        handle(context: context, payload: payloadAsCodable, callback: { result in
+        self.handle(context: context, payload: payloadAsCodable, callback: { result in
             switch result {
             case let .success(encodable):
                 guard let codableAsBytes = self.codec.encode(encodable) else {
@@ -80,16 +80,16 @@ public extension LambdaCodableHandler {
     }
 }
 
-// This is a class as encoder amd decoder are a class, which means its cheaper to hold a reference to both in a class then a struct. 
+// This is a class as encoder amd decoder are a class, which means its cheaper to hold a reference to both in a class then a struct.
 private class LambdaCodableJsonCodec<In: Decodable, Out: Encodable>: LambdaCodableCodec<In, Out> {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
     public override func encode(_ value: Out) -> [UInt8]? {
-        return try? [UInt8](encoder.encode(value))
+        return try? [UInt8](self.encoder.encode(value))
     }
 
     public override func decode(_ data: [UInt8]) -> In? {
-        return try? decoder.decode(In.self, from: Data(data))
+        return try? self.decoder.decode(In.self, from: Data(data))
     }
 }
 
@@ -102,6 +102,6 @@ private struct LambdaClosureWrapper<In: Decodable, Out: Encodable>: LambdaCodabl
     }
 
     public func handle(context: LambdaContext, payload: In, callback: @escaping LambdaCodableCallback<Out>) {
-        closure(context, payload, callback)
+        self.closure(context, payload, callback)
     }
 }
