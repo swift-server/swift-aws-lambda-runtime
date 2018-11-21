@@ -17,10 +17,12 @@ import NIO
 import XCTest
 
 func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws -> LambdaRunResult {
-    let runner = LambdaRunner(handler)
+    let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
+    let runner = LambdaRunner(eventLoop: eventLoop, lambdaHandler: handler)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     let result = try runner.run().wait()
     try server.stop().wait()
+    try eventLoop.syncShutdownGracefully()
     return result
 }
 
@@ -53,6 +55,6 @@ class FailedHandler: LambdaHandler {
     }
 
     func handle(context _: LambdaContext, payload _: [UInt8], callback: @escaping LambdaCallback) {
-        callback(.failure(reason))
+        callback(.failure(self.reason))
     }
 }

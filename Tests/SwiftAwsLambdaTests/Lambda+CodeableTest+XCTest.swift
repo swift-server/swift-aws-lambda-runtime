@@ -23,14 +23,12 @@ import XCTest
 ///
 
 extension CodableLambdaTest {
-
-   static var allTests : [(String, (CodableLambdaTest) -> () throws -> Void)] {
-      return [
-                ("testSuceess", testSuceess),
-                ("testFailure", testFailure),
-                ("testClosureSuccess", testClosureSuccess),
-                ("testClosureFailure", testClosureFailure),
-           ]
-   }
+    static var allTests: [(String, (CodableLambdaTest) -> () throws -> Void)] {
+        return [
+            ("testSuceess", testSuceess),
+            ("testFailure", testFailure),
+            ("testClosureSuccess", testClosureSuccess),
+            ("testClosureFailure", testClosureFailure),
+        ]
+    }
 }
-

@@ -20,18 +20,16 @@ internal final class LambdaRunner {
     private let runtimeClient: LambdaRuntimeClient
     private let eventLoop: EventLoop
 
-    // TODO: more elegant way to create an event loop?
-    init(eventLoop: EventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next(), _ lambdaHandler: LambdaHandler) {
+    init(eventLoop: EventLoop, lambdaHandler: LambdaHandler) {
         self.eventLoop = eventLoop
         self.lambdaHandler = lambdaHandler
-        runtimeClient = LambdaRuntimeClient(eventLoop: eventLoop)
+        self.runtimeClient = LambdaRuntimeClient(eventLoop: eventLoop)
     }
 
-    // TODO: should we move the event loop as an argument instead of instance variable?
     func run() -> EventLoopFuture<LambdaRunResult> {
         print("lambda invocation sequence starting")
         // 1. request work from lambda runtime engine
-        return runtimeClient.requestWork().then { workRequestResult in
+        return self.runtimeClient.requestWork().then { workRequestResult in
             switch workRequestResult {
             case let .failure(error):
                 print("could not fetch work from lambda runtime engine: \(error)")
@@ -60,7 +58,7 @@ internal final class LambdaRunner {
     }
 
     private func newSucceededFuture<T>(result: T) -> EventLoopFuture<T> {
-        return eventLoop.newSucceededFuture(result: result)
+        return self.eventLoop.newSucceededFuture(result: result)
     }
 }
 

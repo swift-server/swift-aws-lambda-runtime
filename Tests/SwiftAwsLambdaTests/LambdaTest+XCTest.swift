@@ -23,14 +23,13 @@ import XCTest
 ///
 
 extension LambdaTest {
-
-   static var allTests : [(String, (LambdaTest) -> () throws -> Void)] {
-      return [
-                ("testSuceess", testSuceess),
-                ("testFailure", testFailure),
-                ("testClosureSuccess", testClosureSuccess),
-                ("testClosureFailure", testClosureFailure),
-           ]
-   }
+    static var allTests: [(String, (LambdaTest) -> () throws -> Void)] {
+        return [
+            ("testSuceess", testSuceess),
+            ("testFailure", testFailure),
+            ("testClosureSuccess", testClosureSuccess),
+            ("testClosureFailure", testClosureFailure),
+            ("testStartStop", testStartStop),
+        ]
+    }
 }
-

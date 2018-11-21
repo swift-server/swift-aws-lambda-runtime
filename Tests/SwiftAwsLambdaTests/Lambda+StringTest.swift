@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
 @testable import SwiftAwsLambda
 import XCTest
 
@@ -20,16 +19,16 @@ class StringLambdaTest: XCTestCase {
     func testSuceess() throws {
         let maxTimes = Int.random(in: 1 ... 10)
         let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
-        let result = Lambda.run(handler: StringEchoHandler(), maxTimes: maxTimes) // blocking
+        let result = Lambda.run(handler: StringEchoHandler(), maxTimes: maxTimes)
         try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
     }
 
     func testFailure() throws {
         let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
-        let result = Lambda.run(StringEchoHandler()) // blocking
+        let result = Lambda.run(StringEchoHandler())
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode)
+        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
     }
 
     func testClosureSuccess() throws {
@@ -48,7 +47,7 @@ class StringLambdaTest: XCTestCase {
             callback(.success(payload))
         }
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode)
+        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
     }
 }
 
@@ -72,12 +71,12 @@ private class GoodBehavior: LambdaServerBehavior {
     let requestId = NSUUID().uuidString
     let payload = "hello"
     func getWork() -> GetWorkResult {
-        return .success((requestId: requestId, payload: payload))
+        return .success((requestId: self.requestId, payload: self.payload))
     }
 
     func processResponse(requestId: String, response: String) -> ProcessResponseResult {
         XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
-        XCTAssertEqual(payload, response, "expecting response to match")
+        XCTAssertEqual(self.payload, response, "expecting response to match")
         return .success()
     }
 

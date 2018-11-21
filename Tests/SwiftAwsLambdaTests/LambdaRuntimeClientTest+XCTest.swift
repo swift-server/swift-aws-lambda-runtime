@@ -23,15 +23,13 @@ import XCTest
 ///
 
 extension LambdaRuntimeClientTest {
-
-   static var allTests : [(String, (LambdaRuntimeClientTest) -> () throws -> Void)] {
-      return [
-                ("testGetWorkServerInternalError", testGetWorkServerInternalError),
-                ("testGetWorkServerNoBodyError", testGetWorkServerNoBodyError),
-                ("testGetWorkServerNoContextError", testGetWorkServerNoContextError),
-                ("testProcessResponseInternalServerError", testProcessResponseInternalServerError),
-                ("testProcessErrorInternalServerError", testProcessErrorInternalServerError),
-           ]
-   }
+    static var allTests: [(String, (LambdaRuntimeClientTest) -> () throws -> Void)] {
+        return [
+            ("testGetWorkServerInternalError", testGetWorkServerInternalError),
+            ("testGetWorkServerNoBodyError", testGetWorkServerNoBodyError),
+            ("testGetWorkServerNoContextError", testGetWorkServerNoContextError),
+            ("testProcessResponseInternalServerError", testProcessResponseInternalServerError),
+            ("testProcessErrorInternalServerError", testProcessErrorInternalServerError),
+        ]
+    }
 }
-

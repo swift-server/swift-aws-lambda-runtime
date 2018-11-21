@@ -19,7 +19,7 @@ let package = Package(
         .executable(name: "SwiftAwsLambdaCodableSample", targets: ["SwiftAwsLambdaCodableSample"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "1.9.5")),
+        .package(url: "https://github.com/apple/swift-nio.git", .branch("master")),
     ],
     targets: targets
 )
