@@ -155,6 +155,15 @@ public struct LambdaContext {
     public let cognitoIdentity: String?
     public let clientContext: String?
     public let deadline: String?
+
+    public init(requestId: String, traceId: String? = nil, invokedFunctionArn: String? = nil, cognitoIdentity: String? = nil, clientContext: String? = nil, deadline: String? = nil) {
+        self.requestId = requestId
+        self.traceId = traceId
+        self.invokedFunctionArn = invokedFunctionArn
+        self.cognitoIdentity = cognitoIdentity
+        self.clientContext = clientContext
+        self.deadline = deadline
+    }
 }
 
 private struct LambdaClosureWrapper: LambdaHandler {
