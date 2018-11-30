@@ -16,33 +16,29 @@ import Foundation
 import NIO
 
 public enum Lambda {
-    public static func run(_ closure: @escaping LambdaClosure) -> LambdaLifecycleResult {
-        return self._run(handler: LambdaClosureWrapper(closure))
+    public static func run(_ closure: @escaping LambdaClosure) {
+        let _: LambdaLifecycleResult = run(closure)
     }
 
-    public static func run(_ handler: LambdaHandler) -> LambdaLifecycleResult {
-        return self._run(handler: handler)
-    }
-
-    // for testing
-    internal static func run(closure: @escaping LambdaClosure, maxTimes: Int) -> LambdaLifecycleResult {
-        return self._run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes)
+    public static func run(_ handler: LambdaHandler) {
+        let _: LambdaLifecycleResult = run(handler: handler)
     }
 
     // for testing
-    internal static func run(handler: LambdaHandler, maxTimes: Int) -> LambdaLifecycleResult {
-        return self._run(handler: handler, maxTimes: maxTimes)
+    internal static func run(maxTimes: Int = 0, stopSignal: Signal = .INT, _ closure: @escaping LambdaClosure) -> LambdaLifecycleResult {
+        return self.run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes, stopSignal: stopSignal)
     }
 
-    internal static func _run(handler: LambdaHandler, maxTimes: Int = 0, stopSignal: Signal = .INT) -> LambdaLifecycleResult {
+    // for testing
+    internal static func run(handler: LambdaHandler, maxTimes: Int = 0, stopSignal: Signal = .INT) -> LambdaLifecycleResult {
         do {
-            return try self._run(handler: handler, maxTimes: maxTimes, stopSignal: stopSignal).wait()
+            return try self.runAsync(handler: handler, maxTimes: maxTimes, stopSignal: stopSignal).wait()
         } catch {
             return .failure(error)
         }
     }
 
-    internal static func _run(handler: LambdaHandler, maxTimes: Int = 0, stopSignal: Signal = .INT) -> EventLoopFuture<LambdaLifecycleResult> {
+    internal static func runAsync(handler: LambdaHandler, maxTimes: Int = 0, stopSignal: Signal = .INT) -> EventLoopFuture<LambdaLifecycleResult> {
         let lifecycle = Lifecycle(handler: handler, maxTimes: maxTimes)
         let signalSource = trap(signal: stopSignal) { signal in
             print("intercepted signal: \(signal)")
@@ -138,8 +134,6 @@ public enum Lambda {
 
 public typealias LambdaResult = Result<[UInt8], String>
 
-public typealias LambdaLifecycleResult = Result<Int, Error>
-
 public typealias LambdaCallback = (LambdaResult) -> Void
 
 public typealias LambdaClosure = (LambdaContext, [UInt8], LambdaCallback) -> Void
@@ -165,6 +159,8 @@ public struct LambdaContext {
         self.deadline = deadline
     }
 }
+
+internal typealias LambdaLifecycleResult = Result<Int, Error>
 
 private struct LambdaClosureWrapper: LambdaHandler {
     private let closure: LambdaClosure

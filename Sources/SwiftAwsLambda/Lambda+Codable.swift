@@ -15,21 +15,21 @@
 import Foundation
 
 extension Lambda {
-    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
-        return self.run(LambdaClosureWrapper(closure))
+    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping LambdaCodableClosure<In, Out>) {
+        self.run(LambdaClosureWrapper(closure))
     }
 
-    public static func run<T>(_ handler: T) -> LambdaLifecycleResult where T: LambdaCodableHandler {
-        return self.run(handler as LambdaHandler)
+    public static func run<T>(_ handler: T) where T: LambdaCodableHandler {
+        self.run(handler as LambdaHandler)
     }
 
     // for testing
-    internal static func run<In: Decodable, Out: Encodable>(closure: @escaping LambdaCodableClosure<In, Out>, maxTimes: Int) -> LambdaLifecycleResult {
+    internal static func run<In: Decodable, Out: Encodable>(maxTimes: Int = 0, _ closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
         return self.run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes)
     }
 
     // for testing
-    internal static func run<T>(handler: T, maxTimes: Int) -> LambdaLifecycleResult where T: LambdaCodableHandler {
+    internal static func run<T>(handler: T, maxTimes: Int = 0) -> LambdaLifecycleResult where T: LambdaCodableHandler {
         return self.run(handler: handler as LambdaHandler, maxTimes: maxTimes)
     }
 }

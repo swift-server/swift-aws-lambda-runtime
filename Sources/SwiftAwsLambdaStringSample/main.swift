@@ -15,10 +15,9 @@
 import SwiftAwsLambda
 
 // in this example we are receiving and responding with strings
-let result = Lambda.run { (_: LambdaContext, payload: String, callback: LambdaStringCallback) in
+Lambda.run { (_: LambdaContext, payload: String, callback: LambdaStringCallback) in
     // as an example, respond with the reverse the input payload
     callback(.success(String(payload.reversed())))
 }
 
-print(result)
 print("Bye!")

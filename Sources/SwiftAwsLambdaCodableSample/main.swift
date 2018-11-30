@@ -19,9 +19,8 @@ private class Res: Codable {}
 
 // in this example we are receiving and responding with codables. Req and Res above are examples of how to use
 // codables to model your reqeuest and response objects
-let result = Lambda.run { (_: LambdaContext, _: Req, callback: LambdaCodableCallback<Res>) in
+Lambda.run { (_: LambdaContext, _: Req, callback: LambdaCodableCallback<Res>) in
     callback(.success(Res()))
 }
 
-print(result)
 print("Bye!")
