@@ -15,9 +15,15 @@
 import Dispatch
 import NIO
 
+/// Genric result type, that is used throught the library.
 public enum Result<Value, Error> {
     case success(Value)
     case failure(Error)
+}
+
+internal enum Defaults {
+    static let host = "127.0.0.1"
+    static let port = 8080
 }
 
 internal enum Consts {
@@ -30,6 +36,7 @@ internal enum Consts {
     static let postErrorURLSuffix = "/error"
 }
 
+/// AWS Lambda HTTP Headers, used to populate the `LambdaContext` object.
 internal enum AmazonHeaders {
     static let requestID = "Lambda-Runtime-Aws-Request-Id"
     static let traceID = "Lambda-Runtime-Trace-Id"
@@ -39,11 +46,7 @@ internal enum AmazonHeaders {
     static let invokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
 }
 
-internal enum Defaults {
-    static let host = "127.0.0.1"
-    static let port = 8080
-}
-
+/// Utility to read environment variables
 internal enum Environment {
     static func string(name: String, defaultValue: String) -> String {
         return self.string(name) ?? defaultValue
@@ -68,16 +71,7 @@ internal enum Environment {
     }
 }
 
-internal enum Signal: Int32 {
-    case HUP = 1
-    case INT = 2
-    case QUIT = 3
-    case ABRT = 6
-    case KILL = 9
-    case ALRM = 14
-    case TERM = 15
-}
-
+/// Helper function to trap signals
 internal func trap(signal sig: Signal, handler: @escaping (Signal) -> Void) -> DispatchSourceSignal {
     let signalSource = DispatchSource.makeSignalSource(signal: sig.rawValue, queue: DispatchQueue.global())
     signal(sig.rawValue, SIG_IGN)
@@ -87,4 +81,14 @@ internal func trap(signal sig: Signal, handler: @escaping (Signal) -> Void) -> D
     })
     signalSource.resume()
     return signalSource
+}
+
+internal enum Signal: Int32 {
+    case HUP = 1
+    case INT = 2
+    case QUIT = 3
+    case ABRT = 6
+    case KILL = 9
+    case ALRM = 14
+    case TERM = 15
 }

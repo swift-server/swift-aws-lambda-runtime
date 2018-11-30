@@ -14,11 +14,19 @@
 
 import Foundation
 
+/// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` payloads.
+/// This is the most common way to use this library in AWS Lambda, since its JSON based.
 extension Lambda {
+    /// Run a Lambda defined by implementing the `LambdaCodableClosure` closure, having `In` and `Out` extending `Decodable` and `Encodable` respectively.
+    ///
+    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping LambdaCodableClosure<In, Out>) {
         self.run(LambdaClosureWrapper(closure))
     }
 
+    /// Run a Lambda defined by implementing the `LambdaCodableHandler` protocol, having `In` and `Out` are `Decodable` and `Encodable` respectively.
+    ///
+    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run<T>(_ handler: T) where T: LambdaCodableHandler {
         self.run(handler as LambdaHandler)
     }
@@ -34,12 +42,18 @@ extension Lambda {
     }
 }
 
+/// A result type for a Lambda that returns a generic `Out`, having `Out` extend `Encodable`.
 public typealias LambdaCodableResult<Out> = Result<Out, String>
 
+/// A callback for a Lambda that returns a `LambdaCodableResult<Out>` result type, having `Out` extend `Encodable`.
 public typealias LambdaCodableCallback<Out> = (LambdaCodableResult<Out>) -> Void
 
+/// A processing closure for a Lambda that takes an `In` and returns an `Out` via `LambdaCodableCallback<Out>` asynchronously,
+/// having `In` and `Out` extending `Decodable` and `Encodable` respectively.
 public typealias LambdaCodableClosure<In, Out> = (LambdaContext, In, LambdaCodableCallback<Out>) -> Void
 
+/// A processing protocol for a Lambda that takes an `In` and returns an `Out` via `LambdaCodableCallback<Out>` asynchronously,
+/// having `In` and `Out` extending `Decodable` and `Encodable` respectively.
 public protocol LambdaCodableHandler: LambdaHandler {
     associatedtype In: Decodable
     associatedtype Out: Encodable
@@ -48,19 +62,22 @@ public protocol LambdaCodableHandler: LambdaHandler {
     var codec: LambdaCodableCodec<In, Out> { get }
 }
 
-// default uses json codec. advanced users that want to inject their own codec can do it here
+/// Default implementation for `LambdaCodableHandler` codec which uses JSON via `LambdaCodableJsonCodec`.
+/// Advanced users that want to inject their own codec can do it by overriding this.
 public extension LambdaCodableHandler {
     var codec: LambdaCodableCodec<In, Out> {
         return LambdaCodableJsonCodec<In, Out>()
     }
 }
 
+/// LambdaCodableCodec is an abstract/empty implementation for codec which does `Encodable` -> `[UInt8]` encoding and `[UInt8]` -> `Decodable' decoding.
 // TODO: would be nicer to use a protocol instead of this "abstract class", but generics get in the way
 public class LambdaCodableCodec<In: Decodable, Out: Encodable> {
     func encode(_: Out) -> [UInt8]? { return nil }
     func decode(_: [UInt8]) -> In? { return nil }
 }
 
+/// Default implementation of `Encodable` -> `[UInt8]` encoding and `[UInt8]` -> `Decodable' decoding
 public extension LambdaCodableHandler {
     func handle(context: LambdaContext, payload: [UInt8], callback: @escaping (LambdaResult) -> Void) {
         guard let payloadAsCodable = codec.decode(payload) else {
@@ -80,6 +97,8 @@ public extension LambdaCodableHandler {
     }
 }
 
+/// LambdaCodableJsonCodec is an implementation of `LambdaCodableCodec` which does `Encodable` -> `[UInt8]` encoding and `[UInt8]` -> `Decodable' decoding
+/// using JSONEncoder and JSONDecoder respectively.
 // This is a class as encoder amd decoder are a class, which means its cheaper to hold a reference to both in a class then a struct.
 private class LambdaCodableJsonCodec<In: Decodable, Out: Encodable>: LambdaCodableCodec<In, Out> {
     private let encoder = JSONEncoder()

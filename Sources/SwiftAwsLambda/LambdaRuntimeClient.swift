@@ -16,6 +16,10 @@ import Foundation
 import NIO
 import NIOHTTP1
 
+/// An HTTP based client for AWS Runtime Engine. This encapsulates the RESTful methods exposed by the Runtime Engine:
+/// * /runtime/invocation/next
+/// * /runtime/invocation/response
+/// * /runtime/invocation/error
 internal class LambdaRuntimeClient {
     private let baseUrl: String
     private let httpClient: HTTPClient

@@ -12,11 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `String` payloads.
 extension Lambda {
+    /// Run a Lambda defined by implementing the `LambdaStringClosure` protocol.
+    ///
+    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ closure: @escaping LambdaStringClosure) {
         self.run(LambdaClosureWrapper(closure))
     }
 
+    /// Run a Lambda defined by implementing the `LambdaStringHandler` protocol.
+    ///
+    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ handler: LambdaStringHandler) {
         self.run(handler as LambdaHandler)
     }
@@ -32,16 +39,21 @@ extension Lambda {
     }
 }
 
+/// A result type for a Lambda that returns a `String`.
 public typealias LambdaStringResult = Result<String, String>
 
+/// A callback for a Lambda that returns a `LambdaStringResult` result type.
 public typealias LambdaStringCallback = (LambdaStringResult) -> Void
 
+/// A processing closure for a Lambda that takes a `String` and returns a `LambdaStringResult` via `LambdaStringCallback` asynchronously.
 public typealias LambdaStringClosure = (LambdaContext, String, LambdaStringCallback) -> Void
 
+/// A processing protocol for a Lambda that takes a `String` and returns a `LambdaStringResult` via `LambdaStringCallback` asynchronously.
 public protocol LambdaStringHandler: LambdaHandler {
     func handle(context: LambdaContext, payload: String, callback: @escaping LambdaStringCallback)
 }
 
+/// Default implementation of `String` -> `[UInt8]` encoding and `[UInt8]` -> `String' decoding 
 public extension LambdaStringHandler {
     func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
         guard let payloadAsString = String(bytes: payload, encoding: .utf8) else {

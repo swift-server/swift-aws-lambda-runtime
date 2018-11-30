@@ -15,6 +15,7 @@
 import Foundation
 import NIO
 
+/// LambdaRunner manages the Lambda runtime workflow, or business logic.
 internal final class LambdaRunner {
     private let lambdaHandler: LambdaHandler
     private let runtimeClient: LambdaRuntimeClient
