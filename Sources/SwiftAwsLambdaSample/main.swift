@@ -15,10 +15,9 @@
 import SwiftAwsLambda
 
 // in this example we are receiving and responding with bytes (default)
-let result = Lambda.run { (_: LambdaContext, payload: [UInt8], callback: LambdaCallback) in
+Lambda.run { (_: LambdaContext, payload: [UInt8], callback: LambdaCallback) in
     // as an example, respond with the reverse the input payload
     callback(.success(payload.reversed()))
 }
 
-print(result)
 print("Bye!")

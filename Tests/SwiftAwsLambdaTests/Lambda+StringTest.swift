@@ -26,7 +26,7 @@ class StringLambdaTest: XCTestCase {
 
     func testFailure() throws {
         let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
-        let result = Lambda.run(StringEchoHandler())
+        let result = Lambda.run(handler: StringEchoHandler())
         try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
     }
@@ -34,16 +34,16 @@ class StringLambdaTest: XCTestCase {
     func testClosureSuccess() throws {
         let maxTimes = Int.random(in: 1 ... 10)
         let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
-        let result = Lambda.run(closure: { (_: LambdaContext, payload: String, callback: LambdaStringCallback) in
+        let result = Lambda.run(maxTimes: maxTimes) { (_: LambdaContext, payload: String, callback: LambdaStringCallback) in
             callback(.success(payload))
-        }, maxTimes: maxTimes)
+        }
         try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
     }
 
     func testClosureFailure() throws {
         let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
-        let result = Lambda.run { (_: LambdaContext, payload: String, callback: LambdaStringCallback) in
+        let result: LambdaLifecycleResult = Lambda.run { (_: LambdaContext, payload: String, callback: LambdaStringCallback) in
             callback(.success(payload))
         }
         try server.stop().wait()
