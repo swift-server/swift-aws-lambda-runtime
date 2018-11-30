@@ -16,10 +16,16 @@ import Foundation
 import NIO
 
 public enum Lambda {
+    /// Run a Lambda defined by implementing the `LambdaClosure` closure.
+    ///
+    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ closure: @escaping LambdaClosure) {
         let _: LambdaLifecycleResult = run(closure)
     }
 
+    /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
+    ///
+    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ handler: LambdaHandler) {
         let _: LambdaLifecycleResult = run(handler: handler)
     }
@@ -132,12 +138,15 @@ public enum Lambda {
     }
 }
 
+/// A result type for a Lambda that returns a `[UInt8]`.
 public typealias LambdaResult = Result<[UInt8], String>
 
 public typealias LambdaCallback = (LambdaResult) -> Void
 
+/// A processing closure for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously.
 public typealias LambdaClosure = (LambdaContext, [UInt8], LambdaCallback) -> Void
 
+/// A processing protocol for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously.
 public protocol LambdaHandler {
     func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback)
 }

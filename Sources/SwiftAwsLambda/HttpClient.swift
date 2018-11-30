@@ -16,6 +16,7 @@ import Foundation
 import NIO
 import NIOHTTP1
 
+/// A barebone HTTP client to interact with AWS Runtime Engine which is an HTTP server.
 internal class HTTPClient {
     let eventLoop: EventLoop
 

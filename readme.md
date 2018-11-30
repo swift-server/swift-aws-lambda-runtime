@@ -1,6 +1,6 @@
 # Swift AWS Lambda
 
-This library is designed to allow writing AWS Lambdas using the Swift programming language.
+This library is designed to simplify implementing an AWS Lambda using the Swift programming language.
 
 ## Getting started
 
@@ -25,26 +25,45 @@ This library is designed to allow writing AWS Lambdas using the Swift programmin
   )
   ```
 
-  2. Create a main.swift and implement you lambda. typically a lambda is implemented as a closure. For example, a simple lambda for a closure that receives a string payload and replies with the reverse version:
+  2. Create a main.swift and implement your Lambda. Typically a Lambda is implemented as a closure. For example, a simple closure that receives a string payload and replies with the reverse version:
 
   ```
   import SwiftAwsLambda
 
-  _ = Lambda.run { (context: LambdaContext, payload: String, callback: LambdaStringCallback) in
+  Lambda.run { (context: LambdaContext, payload: String, callback: LambdaStringCallback) in
       callback(.success(String(payload.reversed())))
   }
   ```
 
-note you can implement 3 types of lambdas:
+  SwiftAwsLambda supports three types of Lambdas:
+    1. `[UInt8]` (byte array) based (default): see `SwiftAwsLambdaExample`
+    2. `String` based: see `SwiftAwsLambdaStringExample`
+    3. `Codable` based: see `SwiftAwsLambdaCodableExample`. This is the most pragmatic mode of operation, since AWS Lambda is JSON based.
 
-1. `[UInt8]` (byte array) based (default): see `SwiftAwsLambdaExample`
-2. `String` based: see `SwiftAwsLambdaStringExample`
-3. `Codable` based: see `SwiftAwsLambdaCodableExample`
+    See more on [SwiftAwsLambda Sample](https://github.com/swift-server/swift-aws-lambda-sample).
+
+  3. Deploy to AWS Lambda. To do so, you need to compile your Application for EC2 Linux, package it as a Zip file, and upload to AWS. You can find sample build and deployment scripts in [SwiftAwsLambda Sample](https://github.com/swift-server/swift-aws-lambda-sample).
 
 ## Architecture
 
-TODO
+The library is designed to integrate with AWS Lambda Runtime Engine, via the BYOL Native Runtime API.
+The latter is an HTTP server that exposes three main RESTful endpoint:
+* /runtime/invocation/next
+* /runtime/invocation/response
+* /runtime/invocation/error
 
-## Deploying
+The library encapsulates these endpoints and the expected lifecycle via `LambdaRuntimeClient` and `LambdaRunner` respectively.
 
-TODO
+**Single Lambda Execution Workflow**
+
+1. The library calls AWS Lambda Runtime Engine `/next` endpoint to retrieve the next invocation request.
+2. The library parses the response HTTP headers and populate the `LambdaContext` object.
+3. The library reads the response body and attempt to decode it, if required. Typically it decodes to user provided type which extends  `Decodable`, but users may choose to write Lambdas that receive the input as `String` or `[UInt8]` byte array which require less, or no decoding.
+4. The library hands off the `Context` and `Request` to the user provided handler on a dedicated `Dispatch` queue, providing isolation between user's and the library's code.
+5. User's code processes the request asynchronously, invoking a callback upon completion, which returns a result type with the `Response` or `Error` populated.
+6. In case of error, the library posts to AWS Lambda Runtime Engine `/error` endpoint to provide the error details, which will show up on AWS Lambda logs.
+7. In case of success, the library will attempt to encode the response, if required. Typically it encodes from user provided type which extends `Encodable`, but users may choose to write Lambdas that return a `String` or `[UInt8]` byte array, which require less, or no encoding. The library then posts to AWS Lambda Runtime Engine `/response` endpoint to provide the response.
+
+**Lifecycle Management**
+
+AWS Runtime Engine controls the Application lifecycle and in the happy case never terminates the application, only suspends it's execution when no work is avaialble. As such, the library main entry point is designed to run forever in a blocking fashion, performing the workflow described above in an endless loop. That loop is broken if/when an internal error occurs, such as a failure to communicate with AWS Runtime Engine API, or under other unexpected conditions.
