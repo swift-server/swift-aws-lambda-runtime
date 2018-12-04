@@ -76,8 +76,8 @@ internal class LambdaRuntimeClient {
     }
 }
 
-internal typealias RequestWorkResult = Result<(LambdaContext, [UInt8]), LambdaRuntimeClientError>
-internal typealias PostResultsResult = Result<(), LambdaRuntimeClientError>
+internal typealias RequestWorkResult = ResultType<(LambdaContext, [UInt8]), LambdaRuntimeClientError>
+internal typealias PostResultsResult = ResultType<(), LambdaRuntimeClientError>
 
 internal enum LambdaRuntimeClientError: Error {
     case badStatusCode(HTTPResponseStatus)

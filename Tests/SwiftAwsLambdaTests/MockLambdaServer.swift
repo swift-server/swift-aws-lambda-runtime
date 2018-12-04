@@ -189,7 +189,7 @@ internal protocol LambdaServerBehavior {
     func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult
 }
 
-internal typealias GetWorkResult = Result<(String, String), GetWorkError>
+internal typealias GetWorkResult = ResultType<(String, String), GetWorkError>
 
 internal enum GetWorkError: Int {
     case badRequest = 400
@@ -209,7 +209,7 @@ internal enum ProcessResponseError: Int {
     case internalServerError = 500
 }
 
-internal typealias ProcessErrorResult = Result<(), ProcessError>
+internal typealias ProcessErrorResult = ResultType<(), ProcessError>
 
 internal enum ProcessError: Int, Error {
     case invalidErrorShape = 299
