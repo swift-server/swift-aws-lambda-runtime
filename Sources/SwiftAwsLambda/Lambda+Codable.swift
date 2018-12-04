@@ -27,7 +27,7 @@ extension Lambda {
     /// Run a Lambda defined by implementing the `LambdaCodableHandler` protocol, having `In` and `Out` are `Decodable` and `Encodable` respectively.
     ///
     /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<T>(_ handler: T) where T: LambdaCodableHandler {
+    public static func run<Handler>(_ handler: Handler) where Handler: LambdaCodableHandler {
         self.run(handler as LambdaHandler)
     }
 
@@ -37,13 +37,13 @@ extension Lambda {
     }
 
     // for testing
-    internal static func run<T>(handler: T, maxTimes: Int = 0) -> LambdaLifecycleResult where T: LambdaCodableHandler {
+    internal static func run<Handler>(handler: Handler, maxTimes: Int = 0) -> LambdaLifecycleResult where Handler: LambdaCodableHandler {
         return self.run(handler: handler as LambdaHandler, maxTimes: maxTimes)
     }
 }
 
 /// A result type for a Lambda that returns a generic `Out`, having `Out` extend `Encodable`.
-public typealias LambdaCodableResult<Out> = Result<Out, String>
+public typealias LambdaCodableResult<Out> = ResultType<Out, String>
 
 /// A callback for a Lambda that returns a `LambdaCodableResult<Out>` result type, having `Out` extend `Encodable`.
 public typealias LambdaCodableCallback<Out> = (LambdaCodableResult<Out>) -> Void

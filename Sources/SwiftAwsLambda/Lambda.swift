@@ -139,7 +139,7 @@ public enum Lambda {
 }
 
 /// A result type for a Lambda that returns a `[UInt8]`.
-public typealias LambdaResult = Result<[UInt8], String>
+public typealias LambdaResult = ResultType<[UInt8], String>
 
 public typealias LambdaCallback = (LambdaResult) -> Void
 
@@ -169,7 +169,7 @@ public struct LambdaContext {
     }
 }
 
-internal typealias LambdaLifecycleResult = Result<Int, Error>
+internal typealias LambdaLifecycleResult = ResultType<Int, Error>
 
 private struct LambdaClosureWrapper: LambdaHandler {
     private let closure: LambdaClosure

@@ -63,7 +63,7 @@ internal final class LambdaRunner {
     }
 }
 
-internal typealias LambdaRunResult = Result<(), Error>
+internal typealias LambdaRunResult = ResultType<(), Error>
 
 private extension LambdaHandler {
     func handle(context: LambdaContext, payload: [UInt8], promise: EventLoopPromise<LambdaResult>) {

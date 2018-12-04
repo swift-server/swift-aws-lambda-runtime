@@ -16,7 +16,7 @@ import Dispatch
 import NIO
 
 /// Genric result type, that is used throught the library.
-public enum Result<Value, Error> {
+public enum ResultType<Value, Error> {
     case success(Value)
     case failure(Error)
 }
