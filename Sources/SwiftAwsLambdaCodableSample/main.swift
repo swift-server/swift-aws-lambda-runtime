@@ -14,13 +14,13 @@
 
 import SwiftAwsLambda
 
-private class Req: Codable {}
-private class Res: Codable {}
+private class Request: Codable {}
+private class Response: Codable {}
 
-// in this example we are receiving and responding with codables. Req and Res above are examples of how to use
+// in this example we are receiving and responding with codables. Request and Response above are examples of how to use
 // codables to model your reqeuest and response objects
-Lambda.run { (_: LambdaContext, _: Req, callback: LambdaCodableCallback<Res>) in
-    callback(.success(Res()))
+Lambda.run { (_, _: Request, callback) in
+    callback(.success(Response()))
 }
 
 print("Bye!")

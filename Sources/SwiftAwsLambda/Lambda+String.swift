@@ -40,7 +40,7 @@ extension Lambda {
 }
 
 /// A result type for a Lambda that returns a `String`.
-public typealias LambdaStringResult = ResultType<String, String>
+public typealias LambdaStringResult = Result<String, Error>
 
 /// A callback for a Lambda that returns a `LambdaStringResult` result type.
 public typealias LambdaStringCallback = (LambdaStringResult) -> Void
@@ -56,14 +56,14 @@ public protocol LambdaStringHandler: LambdaHandler {
 /// Default implementation of `String` -> `[UInt8]` encoding and `[UInt8]` -> `String' decoding
 public extension LambdaStringHandler {
     func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
-        self.handle(context: context, payload: String(decoding: payload, as: UTF8.self), callback: { result in
+        self.handle(context: context, payload: String(decoding: payload, as: UTF8.self)) { result in
             switch result {
-            case let .success(string):
+            case .success(let string):
                 return callback(.success([UInt8](string.utf8)))
-            case let .failure(error):
+            case .failure(let error):
                 return callback(.failure(error))
             }
-        })
+        }
     }
 }
 

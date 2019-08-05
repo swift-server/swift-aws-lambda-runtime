@@ -54,7 +54,7 @@ class LambdaTest: XCTestCase {
     func testStartStop() throws {
         let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
         struct MyHandler: LambdaHandler {
-            func handle(context _: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
+            func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
                 callback(.success(payload))
             }
         }
@@ -62,14 +62,16 @@ class LambdaTest: XCTestCase {
         let max = 50
         let future = Lambda.runAsync(handler: MyHandler(), maxTimes: max, stopSignal: signal)
         DispatchQueue(label: "test").async {
+            usleep(100_000)
             kill(getpid(), signal.rawValue)
         }
         let result = try future.wait()
         try server.stop().wait()
         switch result {
-        case let .success(count):
-            XCTAssertNotEqual(max, count, "should have stopped before \(max)")
-        case let .failure(error):
+        case .success(let count):
+            XCTAssertGreaterThan(count, 0, "should have stopped before any reuqetsst made")
+            XCTAssertLessThan(count, max, "should have stopped before \(max)")
+        case .failure(let error):
             XCTFail("should succeed, but failed with \(error)")
         }
     }
@@ -77,13 +79,13 @@ class LambdaTest: XCTestCase {
 
 private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil) {
     switch result {
-    case let .success(count):
-        if nil != shouldFailWithError {
+    case .success(let count):
+        if shouldFailWithError != nil {
             XCTFail("should fail with \(shouldFailWithError!)")
         }
         XCTAssertEqual(shoudHaveRun, count, "should have run \(shoudHaveRun) times")
-    case let .failure(error):
-        if nil == shouldFailWithError {
+    case .failure(let error):
+        if shouldFailWithError == nil {
             XCTFail("should succeed, but failed with \(error)")
             break // TODO: not sure why the assertion does not break
         }
@@ -101,10 +103,10 @@ private class GoodBehavior: LambdaServerBehavior {
     func processResponse(requestId: String, response: String) -> ProcessResponseResult {
         XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
         XCTAssertEqual(self.payload, response, "expecting response to match")
-        return .success()
+        return .success
     }
 
-    func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
+    func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
         XCTFail("should not report error")
         return .failure(.internalServerError)
     }
@@ -115,11 +117,11 @@ private class BadBehavior: LambdaServerBehavior {
         return .failure(.internalServerError)
     }
 
-    func processResponse(requestId _: String, response _: String) -> ProcessResponseResult {
+    func processResponse(requestId: String, response: String) -> ProcessResponseResult {
         return .failure(.internalServerError)
     }
 
-    func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
+    func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
         return .failure(.internalServerError)
     }
 }

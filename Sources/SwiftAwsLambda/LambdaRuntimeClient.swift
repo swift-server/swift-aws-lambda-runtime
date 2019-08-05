@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import Logging
 import NIO
 import NIOHTTP1
 
@@ -23,67 +24,68 @@ import NIOHTTP1
 internal class LambdaRuntimeClient {
     private let baseUrl: String
     private let httpClient: HTTPClient
-    private let eventLoop: EventLoop
+    private let eventLoopGroup: EventLoopGroup
     private let allocator: ByteBufferAllocator
 
-    init(eventLoop: EventLoop) {
+    init(eventLoopGroup: EventLoopGroup) {
+        self.eventLoopGroup = eventLoopGroup
         self.baseUrl = getRuntimeEndpoint()
-        self.httpClient = HTTPClient(eventLoop: eventLoop)
-        self.eventLoop = eventLoop
+        self.httpClient = HTTPClient(eventLoop: eventLoopGroup.next())
         self.allocator = ByteBufferAllocator()
     }
 
-    func requestWork() -> EventLoopFuture<RequestWorkResult> {
-        let url = baseUrl + Consts.invokationURLPrefix + Consts.requestWorkURLSuffix
-        print("requesting work from lambda runtime engine using \(url)")
+    func requestWork(logger: Logger) -> EventLoopFuture<RequestWorkResult> {
+        let url = self.baseUrl + Consts.invokationURLPrefix + Consts.requestWorkURLSuffix
+        logger.info("requesting work from lambda runtime engine using \(url)")
         return self.httpClient.get(url: url).map { response in
-            if .ok != response.status {
+            guard response.status == .ok else {
                 return .failure(.badStatusCode(response.status))
             }
             guard let payload = response.readWholeBody() else {
                 return .failure(.noBody)
             }
-            guard let context = LambdaContext(response: response) else {
+            guard let context = LambdaContext(logger: logger, response: response) else {
                 return .failure(.noContext)
             }
             return .success((context, payload))
         }
     }
 
-    func reportResults(context: LambdaContext, result: LambdaResult) -> EventLoopFuture<PostResultsResult> {
-        var url = baseUrl + Consts.invokationURLPrefix + "/" + context.requestId
+    func reportResults(logger: Logger, context: LambdaContext, result: LambdaResult) -> EventLoopFuture<PostResultsResult> {
+        var url = self.baseUrl + Consts.invokationURLPrefix + "/" + context.requestId
         var body: ByteBuffer
         switch result {
-        case let .success(data):
+        case .success(let data):
             url += Consts.postResponseURLSuffix
             body = self.allocator.buffer(capacity: data.count)
-            body.write(bytes: data)
-        case let .failure(error):
+            body.writeBytes(data)
+        case .failure(let error):
             url += Consts.postErrorURLSuffix
             // TODO: make FunctionError a const
             let error = ErrorResponse(errorType: "FunctionError", errorMessage: "\(error)")
-            guard let json = error.toJson() else {
-                return self.eventLoop.newSucceededFuture(result: .failure(.json))
+            switch error.toJson() {
+            case .failure(let jsonError):
+                return self.eventLoopGroup.next().makeSucceededFuture(.failure(.json(jsonError)))
+            case .success(let json):
+                body = self.allocator.buffer(capacity: json.utf8.count)
+                body.writeString(json)
             }
-            body = self.allocator.buffer(capacity: json.utf8.count)
-            body.write(string: json)
         }
-
-        print("reporting results to lambda runtime engine using \(url)")
+        logger.info("reporting results to lambda runtime engine using \(url)")
         return self.httpClient.post(url: url, body: body).map { response in
-            .accepted != response.status ? .failure(.badStatusCode(response.status)) : .success(())
+            response.status != .accepted ? .failure(.badStatusCode(response.status)) : .success(())
         }
     }
 }
 
-internal typealias RequestWorkResult = ResultType<(LambdaContext, [UInt8]), LambdaRuntimeClientError>
-internal typealias PostResultsResult = ResultType<(), LambdaRuntimeClientError>
+internal typealias RequestWorkResult = Result<(LambdaContext, [UInt8]), LambdaRuntimeClientError>
+internal typealias PostResultsResult = Result<Void, LambdaRuntimeClientError>
 
 internal enum LambdaRuntimeClientError: Error {
     case badStatusCode(HTTPResponseStatus)
     case noBody
     case noContext
-    case json
+    case json(Error)
 }
 
 internal struct ErrorResponse: Codable {
@@ -92,13 +94,13 @@ internal struct ErrorResponse: Codable {
 }
 
 private extension ErrorResponse {
-    func toJson() -> String? {
+    func toJson() -> Result<String, Error> {
         let encoder = JSONEncoder()
         do {
             let data = try encoder.encode(self)
-            return String(data: data, encoding: .utf8)
+            return .success(String(data: data, encoding: .utf8) ?? "unknown error")
         } catch {
-            return nil
+            return .failure(error)
         }
     }
 }
@@ -120,7 +122,7 @@ private extension HTTPResponse {
 }
 
 private extension LambdaContext {
-    init?(response: HTTPResponse) {
+    init?(logger: Logger, response: HTTPResponse) {
         guard let requestId = response.headerValue(AmazonHeaders.requestID) else {
             return nil
         }
@@ -137,7 +139,8 @@ private extension LambdaContext {
                              invokedFunctionArn: invokedFunctionArn,
                              cognitoIdentity: cognitoIdentity,
                              clientContext: clientContext,
-                             deadline: deadline)
+                             deadline: deadline,
+                             logger: logger)
     }
 }
 

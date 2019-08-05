@@ -27,10 +27,10 @@ class LambdaRunnerTest: XCTestCase {
             func processResponse(requestId: String, response: String) -> ProcessResponseResult {
                 XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
                 XCTAssertEqual(self.payload, response, "expecting response to match")
-                return .success()
+                return .success
             }
 
-            func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
+            func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
                 XCTFail("should not report error")
                 return .failure(.internalServerError)
             }
@@ -47,7 +47,7 @@ class LambdaRunnerTest: XCTestCase {
                 return .success((requestId: self.requestId, payload: "hello"))
             }
 
-            func processResponse(requestId _: String, response _: String) -> ProcessResponseResult {
+            func processResponse(requestId: String, response: String) -> ProcessResponseResult {
                 XCTFail("should report error")
                 return .failure(.internalServerError)
             }

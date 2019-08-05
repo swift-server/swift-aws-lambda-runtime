@@ -34,7 +34,7 @@ class StringLambdaTest: XCTestCase {
     func testClosureSuccess() throws {
         let maxTimes = Int.random(in: 1 ... 10)
         let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
-        let result = Lambda.run(maxTimes: maxTimes) { (_: LambdaContext, payload: String, callback: LambdaStringCallback) in
+        let result = Lambda.run(maxTimes: maxTimes) { (_, payload: String, callback) in
             callback(.success(payload))
         }
         try server.stop().wait()
@@ -43,7 +43,7 @@ class StringLambdaTest: XCTestCase {
 
     func testClosureFailure() throws {
         let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
-        let result: LambdaLifecycleResult = Lambda.run { (_: LambdaContext, payload: String, callback: LambdaStringCallback) in
+        let result: LambdaLifecycleResult = Lambda.run { (_, payload: String, callback) in
             callback(.success(payload))
         }
         try server.stop().wait()
@@ -53,13 +53,13 @@ class StringLambdaTest: XCTestCase {
 
 private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil) {
     switch result {
-    case let .success(count):
-        if nil != shouldFailWithError {
+    case .success(let count):
+        if shouldFailWithError != nil {
             XCTFail("should fail with \(shouldFailWithError!)")
         }
         XCTAssertEqual(shoudHaveRun, count, "should have run \(shoudHaveRun) times")
-    case let .failure(error):
-        if nil == shouldFailWithError {
+    case .failure(let error):
+        if shouldFailWithError == nil {
             XCTFail("should succeed, but failed with \(error)")
             break // TODO: not sure why the assertion does not break
         }
@@ -77,10 +77,10 @@ private class GoodBehavior: LambdaServerBehavior {
     func processResponse(requestId: String, response: String) -> ProcessResponseResult {
         XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
         XCTAssertEqual(self.payload, response, "expecting response to match")
-        return .success()
+        return .success
     }
 
-    func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
+    func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
         XCTFail("should not report error")
         return .failure(.internalServerError)
     }
@@ -91,17 +91,17 @@ private class BadBehavior: LambdaServerBehavior {
         return .failure(.internalServerError)
     }
 
-    func processResponse(requestId _: String, response _: String) -> ProcessResponseResult {
+    func processResponse(requestId: String, response: String) -> ProcessResponseResult {
         return .failure(.internalServerError)
     }
 
-    func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
+    func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
         return .failure(.internalServerError)
     }
 }
 
 private class StringEchoHandler: LambdaStringHandler {
-    func handle(context _: LambdaContext, payload: String, callback: @escaping LambdaStringCallback) {
+    func handle(context: LambdaContext, payload: String, callback: @escaping LambdaStringCallback) {
         callback(.success(payload))
     }
 }

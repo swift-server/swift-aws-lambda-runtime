@@ -43,7 +43,7 @@ extension Lambda {
 }
 
 /// A result type for a Lambda that returns a generic `Out`, having `Out` extend `Encodable`.
-public typealias LambdaCodableResult<Out> = ResultType<Out, String>
+public typealias LambdaCodableResult<Out> = Result<Out, Error>
 
 /// A callback for a Lambda that returns a `LambdaCodableResult<Out>` result type, having `Out` extend `Encodable`.
 public typealias LambdaCodableCallback<Out> = (LambdaCodableResult<Out>) -> Void
@@ -73,27 +73,31 @@ public extension LambdaCodableHandler {
 /// LambdaCodableCodec is an abstract/empty implementation for codec which does `Encodable` -> `[UInt8]` encoding and `[UInt8]` -> `Decodable' decoding.
 // TODO: would be nicer to use a protocol instead of this "abstract class", but generics get in the way
 public class LambdaCodableCodec<In: Decodable, Out: Encodable> {
-    func encode(_: Out) -> [UInt8]? { return nil }
-    func decode(_: [UInt8]) -> In? { return nil }
+    func encode(_: Out) -> Result<[UInt8], Error> { fatalError("not implmented") }
+    func decode(_: [UInt8]) -> Result<In, Error> { fatalError("not implmented") }
 }
 
 /// Default implementation of `Encodable` -> `[UInt8]` encoding and `[UInt8]` -> `Decodable' decoding
 public extension LambdaCodableHandler {
     func handle(context: LambdaContext, payload: [UInt8], callback: @escaping (LambdaResult) -> Void) {
-        guard let payloadAsCodable = codec.decode(payload) else {
-            return callback(.failure("failed decoding payload (in)"))
-        }
-        self.handle(context: context, payload: payloadAsCodable, callback: { result in
-            switch result {
-            case let .success(encodable):
-                guard let codableAsBytes = self.codec.encode(encodable) else {
-                    return callback(.failure("failed encoding result (out)"))
+        switch self.codec.decode(payload) {
+        case .failure(let error):
+            return callback(.failure(Errors.requestDecoding(error)))
+        case .success(let payloadAsCodable):
+            self.handle(context: context, payload: payloadAsCodable) { result in
+                switch result {
+                case .failure(let error):
+                    return callback(.failure(error))
+                case .success(let encodable):
+                    switch self.codec.encode(encodable) {
+                    case .failure(let error):
+                        return callback(.failure(Errors.responseEncoding(error)))
+                    case .success(let codableAsBytes):
+                        return callback(.success(codableAsBytes))
+                    }
                 }
-                return callback(.success(codableAsBytes))
-            case let .failure(error):
-                return callback(.failure(error))
             }
-        })
+        }
     }
 }
 
@@ -103,12 +107,20 @@ public extension LambdaCodableHandler {
 private class LambdaCodableJsonCodec<In: Decodable, Out: Encodable>: LambdaCodableCodec<In, Out> {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
-    public override func encode(_ value: Out) -> [UInt8]? {
-        return try? [UInt8](self.encoder.encode(value))
+    public override func encode(_ value: Out) -> Result<[UInt8], Error> {
+        do {
+            return .success(try [UInt8](self.encoder.encode(value)))
+        } catch {
+            return .failure(error)
+        }
     }
 
-    public override func decode(_ data: [UInt8]) -> In? {
-        return try? self.decoder.decode(In.self, from: Data(data))
+    public override func decode(_ data: [UInt8]) -> Result<In, Error> {
+        do {
+            return .success(try self.decoder.decode(In.self, from: Data(data)))
+        } catch {
+            return .failure(error)
+        }
     }
 }
 
@@ -123,4 +135,9 @@ private struct LambdaClosureWrapper<In: Decodable, Out: Encodable>: LambdaCodabl
     public func handle(context: LambdaContext, payload: In, callback: @escaping LambdaCodableCallback<Out>) {
         self.closure(context, payload, callback)
     }
+}
+
+private enum Errors: Error {
+    case responseEncoding(Error)
+    case requestDecoding(Error)
 }

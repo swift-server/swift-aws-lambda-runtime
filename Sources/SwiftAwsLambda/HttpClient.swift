@@ -26,14 +26,14 @@ internal class HTTPClient {
 
     func get(url: String) -> EventLoopFuture<HTTPResponse> {
         guard let request = HTTPRequest(url: url, method: .GET) else {
-            return self.eventLoop.newFailedFuture(error: HTTPClientError.invalidRequest)
+            return self.eventLoop.makeFailedFuture(HTTPClientError.invalidRequest)
         }
         return self.execute(request)
     }
 
     func post(url: String, body: ByteBuffer? = nil) -> EventLoopFuture<HTTPResponse> {
         guard let request = HTTPRequest(url: url, method: .POST, body: body) else {
-            return self.eventLoop.newFailedFuture(error: HTTPClientError.invalidRequest)
+            return self.eventLoop.makeFailedFuture(HTTPClientError.invalidRequest)
         }
         return self.execute(request)
     }
@@ -42,18 +42,16 @@ internal class HTTPClient {
         let bootstrap = ClientBootstrap(group: eventLoop)
             .channelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().then {
-                    channel.pipeline.add(handler: HTTPPartsHandler())
-                }.then {
-                    channel.pipeline.add(handler: UnaryHTTPHandler())
+                channel.pipeline.addHTTPClientHandlers().flatMap {
+                    channel.pipeline.addHandlers([HTTPPartsHandler(), UnaryHTTPHandler()])
                 }
             }
 
-        return bootstrap.connect(host: request.host, port: request.port).then { channel in
-            let promise: EventLoopPromise<HTTPResponse> = channel.eventLoop.newPromise()
+        return bootstrap.connect(host: request.host, port: request.port).flatMap { channel in
+            let promise = channel.eventLoop.makePromise(of: HTTPResponse.self)
             let requestWrapper = HTTPRequestWrapper(request: request, promise: promise)
 
-            return channel.writeAndFlush(requestWrapper).then { _ in
+            return channel.writeAndFlush(NIOAny(requestWrapper)).flatMap { _ in
                 promise.futureResult
             }
         }
@@ -135,12 +133,12 @@ private struct HTTPResponseAccumulator {
         switch self.state {
         case .idle:
             preconditionFailure("no head received before body")
-        case let .head(head):
+        case .head(let head):
             self.state = .body(head, part)
         case .body(let head, var body):
             var part = part
-            body.write(buffer: &part)
-            state = .body(head, body)
+            body.writeBuffer(&part)
+            self.state = .body(head, body)
         case .end:
             preconditionFailure("request already processed")
         }
@@ -155,13 +153,13 @@ private class HTTPPartsHandler: ChannelInboundHandler, ChannelOutboundHandler {
 
     var accumulator = HTTPResponseAccumulator()
 
-    func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let request = unwrapOutboundIn(data)
 
         var head = HTTPRequestHead(version: request.version, method: request.method, uri: request.target)
         var headers = request.headers
 
-        if request.version.major == 1 && request.version.minor == 1 && !request.headers.contains(name: "Host") {
+        if request.version.major == 1, request.version.minor == 1, !request.headers.contains(name: "Host") {
             headers.add(name: "Host", value: request.host)
         }
 
@@ -173,43 +171,43 @@ private class HTTPPartsHandler: ChannelInboundHandler, ChannelOutboundHandler {
 
         let part = HTTPClientRequestPart.head(head)
 
-        let headPromise: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
-        let bodyPromise: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
+        let headPromise = context.eventLoop.makePromise(of: Void.self)
+        let bodyPromise = context.eventLoop.makePromise(of: Void.self)
 
-        ctx.write(wrapOutboundOut(part), promise: headPromise)
+        context.write(wrapOutboundOut(part), promise: headPromise)
 
         if let body = request.body {
             let part = HTTPClientRequestPart.body(.byteBuffer(body))
 
-            ctx.write(wrapOutboundOut(part), promise: bodyPromise)
+            context.write(wrapOutboundOut(part), promise: bodyPromise)
         } else {
-            bodyPromise.succeed(result: ())
+            bodyPromise.succeed(())
         }
 
         if let promise = promise {
-            headPromise.futureResult.then { bodyPromise.futureResult }.cascade(promise: promise)
+            headPromise.futureResult.flatMap { bodyPromise.futureResult }.cascade(to: promise)
         }
 
-        ctx.flush()
+        context.flush()
     }
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let response = unwrapInboundIn(data)
 
         switch response {
-        case let .head(head):
+        case .head(let head):
             self.accumulator.handle(head)
-        case let .body(body):
+        case .body(let body):
             self.accumulator.handle(body)
         case .end:
             switch self.accumulator.state {
             case .idle:
                 preconditionFailure("no head received before end")
-            case let .head(head):
-                ctx.fireChannelRead(wrapInboundOut(HTTPResponse(status: head.status, headers: head.headers, body: nil)))
+            case .head(let head):
+                context.fireChannelRead(wrapInboundOut(HTTPResponse(status: head.status, headers: head.headers, body: nil)))
                 self.accumulator.state = .end
-            case let .body(head, body):
-                ctx.fireChannelRead(wrapInboundOut(HTTPResponse(status: head.status, headers: head.headers, body: body)))
+            case .body(let head, let body):
+                context.fireChannelRead(wrapInboundOut(HTTPResponse(status: head.status, headers: head.headers, body: body)))
                 self.accumulator.state = .end
             case .end:
                 preconditionFailure("request already processed")
@@ -225,36 +223,38 @@ private class UnaryHTTPHandler: ChannelInboundHandler, ChannelOutboundHandler {
 
     var buffer = CircularBuffer<EventLoopPromise<HTTPResponse>>()
 
-    func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let wrapper = unwrapOutboundIn(data)
         buffer.append(wrapper.promise)
         var request = wrapper.request
         request.headers.add(name: "Connection", value: "close")
-        ctx.writeAndFlush(wrapOutboundOut(request), promise: promise)
+        context.writeAndFlush(wrapOutboundOut(request), promise: promise)
     }
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let response = unwrapInboundIn(data)
-        let promise = buffer.removeFirst()
-        promise.succeed(result: response)
-        ctx.close(promise: nil)
+        let promise = self.buffer.removeFirst()
+        context.close().whenComplete { _ in
+            promise.succeed(response)
+        }
     }
 
-    func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-        // In HTTP we should fail all promises as we close the Channel.
-        self.failAllPromises(error: error)
-        ctx.close(promise: nil)
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        context.close().whenComplete { _ in
+            // In HTTP we should fail all promises as we close the Channel.
+            self.failAllPromises(error: error)
+        }
     }
 
-    func channelInactive(ctx: ChannelHandlerContext) {
+    func channelInactive(context: ChannelHandlerContext) {
         // Fail all promises
         self.failAllPromises(error: HTTPClientError.connectionClosed)
-        ctx.fireChannelInactive()
+        context.fireChannelInactive()
     }
 
     private func failAllPromises(error: Error) {
         while let promise = buffer.first {
-            promise.fail(error: error)
+            promise.fail(error)
             self.buffer.removeFirst()
         }
     }

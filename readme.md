@@ -6,51 +6,65 @@ This library is designed to simplify implementing an AWS Lambda using the Swift 
 
   1. Create a SwiftPM project and pull SwiftAwsLambda as dependency into your project
 
-  ```
-  // swift-tools-version:4.0
-
+  ```swift
+  // swift-tools-version:5.0
   import PackageDescription
 
   let package = Package(
-      name: "my-lambda",
-      products: [
-          .executable(name: "MyLambda", targets: ["MyLambda"]),
-      ],
-      dependencies: [
-          .package(url: "https://github.com/apple/swift-aws-lambda.git", .upToNextMajor(from: "0.1.0")),
-      ],
-      targets: [
-          .target(name: "MyLambda", dependencies: ["SwiftAwsLambda"]),
-      ]
+    name: "my-lambda",
+    products: [
+        .executable(name: "MyLambda", targets: ["MyLambda"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.pie.apple.com/tomerd/swift-aws-lambda.git", .upToNextMajor(from: "0.1.0")),
+    ],
+    targets: [
+        .target(name: "MyLambda", dependencies: ["SwiftAwsLambda"]),
+    ]
   )
   ```
 
   2. Create a main.swift and implement your Lambda. Typically a Lambda is implemented as a closure. For example, a simple closure that receives a string payload and replies with the reverse version:
 
-  ```
+  ```swift
   import SwiftAwsLambda
 
-  Lambda.run { (context: LambdaContext, payload: String, callback: LambdaStringCallback) in
+  // in this example we are receiving and responding with strings
+  Lambda.run { (context, payload: String, callback) in
       callback(.success(String(payload.reversed())))
   }
   ```
 
-  SwiftAwsLambda supports three types of Lambdas:
-    1. `[UInt8]` (byte array) based (default): see `SwiftAwsLambdaExample`
-    2. `String` based: see `SwiftAwsLambdaStringExample`
-    3. `Codable` based: see `SwiftAwsLambdaCodableExample`. This is the most pragmatic mode of operation, since AWS Lambda is JSON based.
+  Or more typically, a simple closure that receives a json payload and replies with a json response via `Codable`:
 
-    See more on [SwiftAwsLambda Sample](https://github.com/apple/swift-aws-lambda-sample).
+  ```swift
+  private class Request: Codable {}
+  private class Response: Codable {}
 
-  3. Deploy to AWS Lambda. To do so, you need to compile your Application for EC2 Linux, package it as a Zip file, and upload to AWS. You can find sample build and deployment scripts in [SwiftAwsLambda Sample](https://github.com/apple/swift-aws-lambda-sample).
+  // in this example we are receiving and responding with codables. Request and Response above are examples of how to use
+  // codables to model your reqeuest and response objects
+  Lambda.run { (_, _: Request, callback) in
+      callback(.success(Response()))
+  }
+  ```
+
+  See a complete example in [SwiftAwsLambdaSample](https://github.pie.apple.com/tomerd/swift-aws-lambda-sample).
+
+  3. Deploy to AWS Lambda. To do so, you need to compile your Application for EC2 Linux, package it as a Zip file, and upload to AWS. You can find sample build and deployment scripts in [SwiftAwsLambdaSample](https://github.com/tomerd/swift-aws-lambda-sample).
 
 ## Architecture
 
+The library supports three types of Lambdas:
+1. `[UInt8]` (byte array) based (default): see `SwiftAwsLambdaExample`
+2. `String` based: see `SwiftAwsLambdaStringExample`
+3. `Codable` based: see `SwiftAwsLambdaCodableExample`. This is the most pragmatic mode of operation, since AWS Lambda is JSON based.
+
+
 The library is designed to integrate with AWS Lambda Runtime Engine, via the BYOL Native Runtime API.
 The latter is an HTTP server that exposes three main RESTful endpoint:
-* /runtime/invocation/next
-* /runtime/invocation/response
-* /runtime/invocation/error
+* `/runtime/invocation/next`
+* `/runtime/invocation/response`
+* `/runtime/invocation/error`
 
 The library encapsulates these endpoints and the expected lifecycle via `LambdaRuntimeClient` and `LambdaRunner` respectively.
 
