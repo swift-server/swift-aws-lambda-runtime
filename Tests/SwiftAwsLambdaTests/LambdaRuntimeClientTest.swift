@@ -22,12 +22,12 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
 
-            func processResponse(requestId _: String, response _: String) -> ProcessResponseResult {
+            func processResponse(requestId: String, response: String) -> ProcessResponseResult {
                 XCTFail("should not report results")
                 return .failure(.internalServerError)
             }
 
-            func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
+            func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
                 XCTFail("should not report error")
                 return .failure(.internalServerError)
             }
@@ -42,12 +42,12 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .success(("1", ""))
             }
 
-            func processResponse(requestId _: String, response _: String) -> ProcessResponseResult {
+            func processResponse(requestId: String, response: String) -> ProcessResponseResult {
                 XCTFail("should not report results")
                 return .failure(.internalServerError)
             }
 
-            func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
+            func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
                 XCTFail("should not report error")
                 return .failure(.internalServerError)
             }
@@ -63,12 +63,12 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .success(("", "hello"))
             }
 
-            func processResponse(requestId _: String, response _: String) -> ProcessResponseResult {
+            func processResponse(requestId: String, response: String) -> ProcessResponseResult {
                 XCTFail("should not report results")
                 return .failure(.internalServerError)
             }
 
-            func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
+            func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
                 XCTFail("should not report error")
                 return .failure(.internalServerError)
             }
@@ -83,11 +83,11 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .success((requestId: "1", payload: "payload"))
             }
 
-            func processResponse(requestId _: String, response _: String) -> ProcessResponseResult {
+            func processResponse(requestId: String, response: String) -> ProcessResponseResult {
                 return .failure(.internalServerError)
             }
 
-            func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
+            func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
                 XCTFail("should not report error")
                 return .failure(.internalServerError)
             }
@@ -102,12 +102,12 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .success((requestId: "1", payload: "payload"))
             }
 
-            func processResponse(requestId _: String, response _: String) -> ProcessResponseResult {
+            func processResponse(requestId: String, response: String) -> ProcessResponseResult {
                 XCTFail("should not report results")
                 return .failure(.internalServerError)
             }
 
-            func processError(requestId _: String, error _: ErrorResponse) -> ProcessErrorResult {
+            func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
                 return .failure(.internalServerError)
             }
         }

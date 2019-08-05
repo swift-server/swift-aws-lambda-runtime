@@ -12,28 +12,30 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
 import NIO
 @testable import SwiftAwsLambda
 import XCTest
 
 func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws -> LambdaRunResult {
-    let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
-    let runner = LambdaRunner(eventLoop: eventLoop, lambdaHandler: handler)
+    let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+    let logger = Logger(label: "TestLogger")
+    let runner = LambdaRunner(eventLoopGroup: eventLoopGroup, lambdaHandler: handler)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
-    let result = try runner.run().wait()
+    let result = try runner.run(logger: logger).wait()
     try server.stop().wait()
-    try eventLoop.syncShutdownGracefully()
+    try eventLoopGroup.syncShutdownGracefully()
     return result
 }
 
 func assertRunLambdaResult(result: LambdaRunResult, shouldFailWithError: Error? = nil) {
     switch result {
     case .success:
-        if nil != shouldFailWithError {
+        if shouldFailWithError != nil {
             XCTFail("should fail with \(shouldFailWithError!)")
         }
-    case let .failure(error):
-        if nil == shouldFailWithError {
+    case .failure(let error):
+        if shouldFailWithError == nil {
             XCTFail("should succeed, but failed with \(error)")
             break // TODO: not sure why the assertion does not break
         }
@@ -42,7 +44,7 @@ func assertRunLambdaResult(result: LambdaRunResult, shouldFailWithError: Error? 
 }
 
 class EchoHandler: LambdaHandler {
-    func handle(context _: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
+    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
         callback(.success(payload))
     }
 }
@@ -54,7 +56,11 @@ class FailedHandler: LambdaHandler {
         self.reason = reason
     }
 
-    func handle(context _: LambdaContext, payload _: [UInt8], callback: @escaping LambdaCallback) {
-        callback(.failure(self.reason))
+    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
+        callback(.failure(FailedHandlerError(description: self.reason)))
+    }
+
+    struct FailedHandlerError: Error, CustomStringConvertible {
+        let description: String
     }
 }

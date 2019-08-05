@@ -15,12 +15,6 @@
 import Dispatch
 import NIO
 
-/// Genric result type, that is used throught the library.
-public enum ResultType<Value, Error> {
-    case success(Value)
-    case failure(Error)
-}
-
 internal enum Defaults {
     static let host = "127.0.0.1"
     static let port = 8080

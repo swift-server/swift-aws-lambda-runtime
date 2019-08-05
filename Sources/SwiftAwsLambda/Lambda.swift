@@ -12,31 +12,40 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Linux)
+    import Glibc
+#else
+    import Darwin.C
+#endif
+
+import Backtrace
 import Foundation
+import Logging
 import NIO
+import NIOConcurrencyHelpers
 
 public enum Lambda {
     /// Run a Lambda defined by implementing the `LambdaClosure` closure.
     ///
     /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ closure: @escaping LambdaClosure) {
-        let _: LambdaLifecycleResult = run(closure)
+        let _: LambdaLifecycleResult = self.run(closure)
     }
 
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
     ///
     /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ handler: LambdaHandler) {
-        let _: LambdaLifecycleResult = run(handler: handler)
+        let _: LambdaLifecycleResult = self.run(handler: handler)
     }
 
     // for testing
-    internal static func run(maxTimes: Int = 0, stopSignal: Signal = .INT, _ closure: @escaping LambdaClosure) -> LambdaLifecycleResult {
+    internal static func run(maxTimes: Int = 0, stopSignal: Signal = .TERM, _ closure: @escaping LambdaClosure) -> LambdaLifecycleResult {
         return self.run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes, stopSignal: stopSignal)
     }
 
     // for testing
-    internal static func run(handler: LambdaHandler, maxTimes: Int = 0, stopSignal: Signal = .INT) -> LambdaLifecycleResult {
+    internal static func run(handler: LambdaHandler, maxTimes: Int = 0, stopSignal: Signal = .TERM) -> LambdaLifecycleResult {
         do {
             return try self.runAsync(handler: handler, maxTimes: maxTimes, stopSignal: stopSignal).wait()
         } catch {
@@ -44,47 +53,52 @@ public enum Lambda {
         }
     }
 
-    internal static func runAsync(handler: LambdaHandler, maxTimes: Int = 0, stopSignal: Signal = .INT) -> EventLoopFuture<LambdaLifecycleResult> {
-        let lifecycle = Lifecycle(handler: handler, maxTimes: maxTimes)
+    internal static func runAsync(handler: LambdaHandler, maxTimes: Int = 0, stopSignal: Signal = .TERM) -> EventLoopFuture<LambdaLifecycleResult> {
+        let logger = Logger(label: "Lambda")
+        let lifecycle = Lifecycle(logger: logger, handler: handler, maxTimes: maxTimes)
+        Backtrace.install()
         let signalSource = trap(signal: stopSignal) { signal in
-            print("intercepted signal: \(signal)")
+            logger.info("intercepted signal: \(signal)")
             lifecycle.stop()
         }
         let future = lifecycle.start()
-        future.whenComplete {
+        future.whenComplete { _ in
+            lifecycle.stop()
             signalSource.cancel()
         }
         return future
     }
 
     private class Lifecycle {
-        private let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
+        private let logger: Logger
+        private let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         private let handler: LambdaHandler
         private let max: Int
 
         private var _state = LifecycleState.initialized
-        private let stateQueue = DispatchQueue(label: "LifecycleState")
+        private let stateLock = Lock()
 
-        init(handler: LambdaHandler, maxTimes: Int) {
-            print("lambda lifecycle init")
+        init(logger: Logger, handler: LambdaHandler, maxTimes: Int) {
+            assert(maxTimes >= 0, "maxTimes must be larger than 0")
+            self.logger = logger
             self.handler = handler
             self.max = maxTimes
-            assert(self.max >= 0)
+            self.logger.info("lambda lifecycle init")
         }
 
         deinit {
-            print("lambda lifecycle deinit")
+            self.logger.info("lambda lifecycle deinit")
             assert(state == .shutdown)
         }
 
         private var state: LifecycleState {
             get {
-                return self.stateQueue.sync {
+                return self.stateLock.withLock {
                     self._state
                 }
             }
             set {
-                self.stateQueue.sync {
+                self.stateLock.withLockVoid {
                     assert(newValue.rawValue > _state.rawValue, "invalid state \(newValue) after \(_state)")
                     self._state = newValue
                 }
@@ -93,39 +107,51 @@ public enum Lambda {
 
         func start() -> EventLoopFuture<LambdaLifecycleResult> {
             self.state = .active
-            let runner = LambdaRunner(eventLoop: eventLoop, lambdaHandler: handler)
-            let promise: EventLoopPromise<LambdaLifecycleResult> = eventLoop.newPromise()
-            print("lambda lifecycle statring")
+            let runner = LambdaRunner(eventLoopGroup: eventLoopGroup, lambdaHandler: handler)
+            let promise = self.eventLoopGroup.next().makePromise(of: LambdaLifecycleResult.self)
+            var logger = self.logger
+            logger[metadataKey: "lifecycleId"] = .string(NSUUID().uuidString)
+            self.logger.info("lambda lifecycle statring")
             DispatchQueue.global().async {
-                var err: Error?
+                var lastError: Error?
                 var counter = 0
-                while .active == self.state && nil == err && (0 == self.max || counter < self.max) {
+                while self.state == .active, lastError == nil, self.max == 0 || counter < self.max {
                     do {
+                        logger[metadataKey: "lifecycleIteration"] = "\(counter)"
                         // blocking! per aws lambda runtime spec the polling requets are to be done one at a time
-                        let result = try runner.run().wait()
-                        switch result {
+                        switch try runner.run(logger: logger).wait() {
                         case .success:
                             counter = counter + 1
-                        case let .failure(e):
-                            err = e
+                        case .failure(let error):
+                            if self.state == .active {
+                                lastError = error
+                            }
                         }
                     } catch {
-                        err = error
+                        if self.state == .active {
+                            lastError = error
+                        }
                     }
+                    // flush the log streams so entries are printed with a single invocation
+                    // TODO: should we suuport a flush API in swift-log's default logger?
+                    fflush(stdout)
+                    fflush(stderr)
                 }
-                promise.succeed(result: err.map { _ in .failure(err!) } ?? .success(counter))
-                self.shutdown()
+                promise.succeed(lastError.map { .failure($0) } ?? .success(counter))
             }
             return promise.futureResult
         }
 
         func stop() {
-            print("lambda lifecycle stopping")
+            if self.state == .stopping {
+                return self.logger.info("lambda lifecycle aready stopping")
+            }
+            if self.state == .shutdown {
+                return self.logger.info("lambda lifecycle aready shutdown")
+            }
+            self.logger.info("lambda lifecycle stopping")
             self.state = .stopping
-        }
-
-        private func shutdown() {
-            try! self.eventLoop.syncShutdownGracefully()
+            try! self.eventLoopGroup.syncShutdownGracefully()
             self.state = .shutdown
         }
     }
@@ -139,7 +165,7 @@ public enum Lambda {
 }
 
 /// A result type for a Lambda that returns a `[UInt8]`.
-public typealias LambdaResult = ResultType<[UInt8], String>
+public typealias LambdaResult = Result<[UInt8], Error>
 
 public typealias LambdaCallback = (LambdaResult) -> Void
 
@@ -152,24 +178,34 @@ public protocol LambdaHandler {
 }
 
 public struct LambdaContext {
+    // from aws
     public let requestId: String
     public let traceId: String?
     public let invokedFunctionArn: String?
     public let cognitoIdentity: String?
     public let clientContext: String?
     public let deadline: String?
+    // utliity
+    public let logger: Logger
 
-    public init(requestId: String, traceId: String? = nil, invokedFunctionArn: String? = nil, cognitoIdentity: String? = nil, clientContext: String? = nil, deadline: String? = nil) {
+    public init(requestId: String,
+                traceId: String? = nil,
+                invokedFunctionArn: String? = nil,
+                cognitoIdentity: String? = nil,
+                clientContext: String? = nil,
+                deadline: String? = nil,
+                logger: Logger) {
         self.requestId = requestId
         self.traceId = traceId
         self.invokedFunctionArn = invokedFunctionArn
         self.cognitoIdentity = cognitoIdentity
         self.clientContext = clientContext
         self.deadline = deadline
+        self.logger = logger
     }
 }
 
-internal typealias LambdaLifecycleResult = ResultType<Int, Error>
+internal typealias LambdaLifecycleResult = Result<Int, Error>
 
 private struct LambdaClosureWrapper: LambdaHandler {
     private let closure: LambdaClosure
