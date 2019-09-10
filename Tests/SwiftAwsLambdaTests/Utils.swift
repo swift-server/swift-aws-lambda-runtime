@@ -22,9 +22,16 @@ func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws ->
     let logger = Logger(label: "TestLogger")
     let runner = LambdaRunner(eventLoopGroup: eventLoopGroup, lambdaHandler: handler)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
+    defer {
+        XCTAssertNoThrow(try server.stop().wait())
+        XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+    }
+    do {
+        try runner.initialize(logger: logger).wait()
+    } catch {
+        return .failure(error)
+    }
     let result = try runner.run(logger: logger).wait()
-    try server.stop().wait()
-    try eventLoopGroup.syncShutdownGracefully()
     return result
 }
 
@@ -44,6 +51,13 @@ func assertRunLambdaResult(result: LambdaRunResult, shouldFailWithError: Error? 
 }
 
 class EchoHandler: LambdaHandler {
+    var initializeCalls = 0
+
+    func initialize(callback: @escaping LambdaInitCallBack) {
+        self.initializeCalls += 1
+        callback(.success(()))
+    }
+
     func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
         callback(.success(payload))
     }
@@ -61,6 +75,26 @@ class FailedHandler: LambdaHandler {
     }
 
     struct FailedHandlerError: Error, CustomStringConvertible {
+        let description: String
+    }
+}
+
+class FailedInitializerHandler: LambdaHandler {
+    let initError: FailedInitializerError
+
+    public init(_ reason: String) {
+        self.initError = FailedInitializerError(description: reason)
+    }
+
+    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
+        callback(.success(payload))
+    }
+
+    func initialize(callback: @escaping LambdaInitCallBack) {
+        callback(.failure(self.initError))
+    }
+
+    public struct FailedInitializerError: Error, CustomStringConvertible {
         let description: String
     }
 }

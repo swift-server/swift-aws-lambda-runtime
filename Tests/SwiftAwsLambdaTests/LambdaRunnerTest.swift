@@ -34,6 +34,11 @@ class LambdaRunnerTest: XCTestCase {
                 XCTFail("should not report error")
                 return .failure(.internalServerError)
             }
+
+            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+                XCTFail("should not report init error")
+                return .failure(.internalServerError)
+            }
         }
         let result = try runLambda(behavior: Behavior(), handler: EchoHandler()) // .wait()
         assertRunLambdaResult(result: result)
@@ -56,6 +61,11 @@ class LambdaRunnerTest: XCTestCase {
                 XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
                 XCTAssertEqual(Behavior.error, error.errorMessage, "expecting error to match")
                 return .success(())
+            }
+
+            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+                XCTFail("should not report init error")
+                return .failure(.internalServerError)
             }
         }
         let result = try runLambda(behavior: Behavior(), handler: FailedHandler(Behavior.error)) // .wait()

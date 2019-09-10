@@ -75,7 +75,7 @@ public enum Lambda {
         private let handler: LambdaHandler
         private let max: Int
 
-        private var _state = LifecycleState.initialized
+        private var _state = LifecycleState.idle
         private let stateLock = Lock()
 
         init(logger: Logger, handler: LambdaHandler, maxTimes: Int) {
@@ -106,38 +106,47 @@ public enum Lambda {
         }
 
         func start() -> EventLoopFuture<LambdaLifecycleResult> {
-            self.state = .active
-            let runner = LambdaRunner(eventLoopGroup: eventLoopGroup, lambdaHandler: handler)
-            let promise = self.eventLoopGroup.next().makePromise(of: LambdaLifecycleResult.self)
+            self.state = .initializing
             var logger = self.logger
             logger[metadataKey: "lifecycleId"] = .string(NSUUID().uuidString)
-            self.logger.info("lambda lifecycle statring")
-            DispatchQueue.global().async {
-                var lastError: Error?
-                var counter = 0
-                while self.state == .active, lastError == nil, self.max == 0 || counter < self.max {
-                    do {
-                        logger[metadataKey: "lifecycleIteration"] = "\(counter)"
-                        // blocking! per aws lambda runtime spec the polling requets are to be done one at a time
-                        switch try runner.run(logger: logger).wait() {
-                        case .success:
-                            counter = counter + 1
-                        case .failure(let error):
-                            if self.state == .active {
-                                lastError = error
+            let runner = LambdaRunner(eventLoopGroup: eventLoopGroup, lambdaHandler: handler)
+            let promise = self.eventLoopGroup.next().makePromise(of: LambdaLifecycleResult.self)
+            self.logger.info("lambda lifecycle starting")
+
+            runner.initialize(logger: logger).whenComplete { result in
+                switch result {
+                case .failure(let error):
+                    promise.succeed(.failure(error))
+                case .success:
+                    DispatchQueue.global().async {
+                        var lastError: Error?
+                        var counter = 0
+                        self.state = .active // initializtion completed successfully, we're good to go!
+                        while self.state == .active, lastError == nil, self.max == 0 || counter < self.max {
+                            do {
+                                logger[metadataKey: "lifecycleIteration"] = "\(counter)"
+                                // blocking! per aws lambda runtime spec the polling requests are to be done one at a time
+                                switch try runner.run(logger: logger).wait() {
+                                case .success:
+                                    counter = counter + 1
+                                case .failure(let error):
+                                    if self.state == .active {
+                                        lastError = error
+                                    }
+                                }
+                            } catch {
+                                if self.state == .active {
+                                    lastError = error
+                                }
                             }
+                            // flush the log streams so entries are printed with a single invocation
+                            // TODO: should we suuport a flush API in swift-log's default logger?
+                            fflush(stdout)
+                            fflush(stderr)
                         }
-                    } catch {
-                        if self.state == .active {
-                            lastError = error
-                        }
+                        promise.succeed(lastError.map { .failure($0) } ?? .success(counter))
                     }
-                    // flush the log streams so entries are printed with a single invocation
-                    // TODO: should we suuport a flush API in swift-log's default logger?
-                    fflush(stdout)
-                    fflush(stderr)
                 }
-                promise.succeed(lastError.map { .failure($0) } ?? .success(counter))
             }
             return promise.futureResult
         }
@@ -157,10 +166,11 @@ public enum Lambda {
     }
 
     private enum LifecycleState: Int {
-        case initialized = 0
-        case active = 1
-        case stopping = 2
-        case shutdown = 3
+        case idle
+        case initializing
+        case active
+        case stopping
+        case shutdown
     }
 }
 
@@ -172,9 +182,23 @@ public typealias LambdaCallback = (LambdaResult) -> Void
 /// A processing closure for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously.
 public typealias LambdaClosure = (LambdaContext, [UInt8], LambdaCallback) -> Void
 
+/// A result type for a Lambda initialization.
+public typealias LambdaInitResult = Result<Void, Error>
+
+/// A callback to provide the result of Lambda initialization.
+public typealias LambdaInitCallBack = (LambdaInitResult) -> Void
+
 /// A processing protocol for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously.
 public protocol LambdaHandler {
+    /// Initializes the `LambdaHandler`.
+    func initialize(callback: @escaping LambdaInitCallBack)
     func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback)
+}
+
+extension LambdaHandler {
+    public func initialize(callback: @escaping LambdaInitCallBack) {
+        callback(.success(()))
+    }
 }
 
 public struct LambdaContext {

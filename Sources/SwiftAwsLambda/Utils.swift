@@ -28,6 +28,7 @@ internal enum Consts {
     static let requestWorkURLSuffix = "/next"
     static let postResponseURLSuffix = "/response"
     static let postErrorURLSuffix = "/error"
+    static let postInitErrorURL = "\(apiPrefix)/runtime/init/error"
 }
 
 /// AWS Lambda HTTP Headers, used to populate the `LambdaContext` object.
