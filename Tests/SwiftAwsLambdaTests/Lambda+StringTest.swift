@@ -84,6 +84,11 @@ private class GoodBehavior: LambdaServerBehavior {
         XCTFail("should not report error")
         return .failure(.internalServerError)
     }
+
+    func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+        XCTFail("should not report init error")
+        return .failure(.internalServerError)
+    }
 }
 
 private class BadBehavior: LambdaServerBehavior {
@@ -96,6 +101,10 @@ private class BadBehavior: LambdaServerBehavior {
     }
 
     func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
+        return .failure(.internalServerError)
+    }
+
+    func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
         return .failure(.internalServerError)
     }
 }

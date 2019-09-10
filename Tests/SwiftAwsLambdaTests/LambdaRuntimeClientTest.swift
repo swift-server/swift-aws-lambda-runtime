@@ -31,6 +31,11 @@ class LambdaRuntimeClientTest: XCTestCase {
                 XCTFail("should not report error")
                 return .failure(.internalServerError)
             }
+
+            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+                XCTFail("should not report init error")
+                return .failure(.internalServerError)
+            }
         }
         let result = try runLambda(behavior: Behavior(), handler: EchoHandler())
         assertRunLambdaResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
@@ -49,6 +54,11 @@ class LambdaRuntimeClientTest: XCTestCase {
 
             func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
                 XCTFail("should not report error")
+                return .failure(.internalServerError)
+            }
+
+            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+                XCTFail("should not report init error")
                 return .failure(.internalServerError)
             }
         }
@@ -72,6 +82,11 @@ class LambdaRuntimeClientTest: XCTestCase {
                 XCTFail("should not report error")
                 return .failure(.internalServerError)
             }
+
+            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+                XCTFail("should not report init error")
+                return .failure(.internalServerError)
+            }
         }
         let result = try runLambda(behavior: Behavior(), handler: EchoHandler())
         assertRunLambdaResult(result: result, shouldFailWithError: LambdaRuntimeClientError.noContext)
@@ -89,6 +104,11 @@ class LambdaRuntimeClientTest: XCTestCase {
 
             func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
                 XCTFail("should not report error")
+                return .failure(.internalServerError)
+            }
+
+            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+                XCTFail("should not report init error")
                 return .failure(.internalServerError)
             }
         }
@@ -110,8 +130,39 @@ class LambdaRuntimeClientTest: XCTestCase {
             func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
                 return .failure(.internalServerError)
             }
+
+            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+                XCTFail("should not report init error")
+                return .failure(.internalServerError)
+            }
         }
         let result = try runLambda(behavior: Behavior(), handler: FailedHandler("boom"))
         assertRunLambdaResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
+    }
+
+    func testProcessInitErrorInternalServerError() throws {
+        class Behavior: LambdaServerBehavior {
+            func getWork() -> GetWorkResult {
+                XCTFail("should not get work")
+                return .failure(.internalServerError)
+            }
+
+            func processResponse(requestId: String, response: String) -> ProcessResponseResult {
+                XCTFail("should not report results")
+                return .failure(.internalServerError)
+            }
+
+            func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
+                XCTFail("should not report error")
+                return .failure(.internalServerError)
+            }
+
+            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+                return .failure(.internalServerError)
+            }
+        }
+        let handler = FailedInitializerHandler("boom")
+        let result = try runLambda(behavior: Behavior(), handler: handler)
+        assertRunLambdaResult(result: result, shouldFailWithError: handler.initError)
     }
 }

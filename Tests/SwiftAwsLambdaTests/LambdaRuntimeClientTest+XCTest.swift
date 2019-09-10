@@ -30,6 +30,7 @@ extension LambdaRuntimeClientTest {
             ("testGetWorkServerNoContextError", testGetWorkServerNoContextError),
             ("testProcessResponseInternalServerError", testProcessResponseInternalServerError),
             ("testProcessErrorInternalServerError", testProcessErrorInternalServerError),
+            ("testProcessInitErrorInternalServerError", testProcessInitErrorInternalServerError),
         ]
     }
 }

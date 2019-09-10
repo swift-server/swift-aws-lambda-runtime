@@ -28,6 +28,30 @@ internal final class LambdaRunner {
         self.lambdaHandler = lambdaHandler
     }
 
+    /// Run the user provided initializer. This *must* only be called once.
+    ///
+    /// - Returns: An `EventLoopFuture<Void>` fulfilled with the outcome of the initialization.
+    func initialize(logger: Logger) -> EventLoopFuture<Void> {
+        let initPromise = self.eventLoopGroup.next().makePromise(of: Void.self)
+        self.lambdaHandler.initialize(promise: initPromise)
+
+        // We need to use `flatMap` instead of `whenFailure` to ensure we complete reporting the result before stopping.
+        return initPromise.futureResult.flatMapError { error in
+            self.runtimeClient.reportInitError(logger: logger, error: error).flatMapResult { postResult -> Result<Void, Error> in
+                switch postResult {
+                case .failure(let postResultError):
+                    // We're going to bail out because the init failed, so there's not a lot we can do other than log
+                    // that we couldn't report this error back to the runtime.
+                    logger.error("could not report initialization error to lambda runtime engine: \(postResultError)")
+                case .success:
+                    logger.info("successfully reported initialization error")
+                }
+                // Always return the init error
+                return .failure(error)
+            }
+        }
+    }
+
     func run(logger: Logger) -> EventLoopFuture<LambdaRunResult> {
         var logger = logger
         logger.info("lambda invocation sequence starting")
@@ -77,6 +101,20 @@ private extension LambdaHandler {
         DispatchQueue(label: "lambda-\(context.requestId)").async {
             self.handle(context: context, payload: payload) { (result: LambdaResult) in
                 promise.succeed(result)
+            }
+        }
+    }
+
+    func initialize(promise: EventLoopPromise<Void>) {
+        // offloading so user code never blocks the eventloop
+        DispatchQueue(label: "lambda-initialize").async {
+            self.initialize { result in
+                switch result {
+                case .failure(let error):
+                    return promise.fail(error)
+                case .success:
+                    return promise.succeed(())
+                }
             }
         }
     }

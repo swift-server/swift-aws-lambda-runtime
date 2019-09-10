@@ -21,6 +21,7 @@ import NIOHTTP1
 /// * /runtime/invocation/next
 /// * /runtime/invocation/response
 /// * /runtime/invocation/error
+/// * /runtime/init/error
 internal class LambdaRuntimeClient {
     private let baseUrl: String
     private let httpClient: HTTPClient
@@ -76,10 +77,29 @@ internal class LambdaRuntimeClient {
             response.status != .accepted ? .failure(.badStatusCode(response.status)) : .success(())
         }
     }
+
+    /// Reports an initialization error to the Runtime Engine.
+    func reportInitError(logger: Logger, error: Error) -> EventLoopFuture<PostInitErrorResult> {
+        let url = self.baseUrl + Consts.postInitErrorURL
+        let errorResponse = ErrorResponse(errorType: "InitializationError", errorMessage: "\(error)")
+        var body: ByteBuffer
+        switch errorResponse.toJson() {
+        case .failure(let jsonError):
+            return self.eventLoopGroup.next().makeSucceededFuture(.failure(.json(jsonError)))
+        case .success(let json):
+            body = self.allocator.buffer(capacity: json.utf8.count)
+            body.writeString(json)
+            logger.info("reporting initialization error to lambda runtime engine using \(url)")
+            return self.httpClient.post(url: url, body: body).map { response in
+                response.status != .accepted ? .failure(.badStatusCode(response.status)) : .success(())
+            }
+        }
+    }
 }
 
 internal typealias RequestWorkResult = Result<(LambdaContext, [UInt8]), LambdaRuntimeClientError>
 internal typealias PostResultsResult = Result<Void, LambdaRuntimeClientError>
+internal typealias PostInitErrorResult = Result<Void, LambdaRuntimeClientError>
 
 internal enum LambdaRuntimeClientError: Error {
     case badStatusCode(HTTPResponseStatus)

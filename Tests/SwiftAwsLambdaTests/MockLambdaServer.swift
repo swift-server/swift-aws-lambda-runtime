@@ -127,7 +127,19 @@ internal final class HTTPHandler: ChannelInboundHandler {
         var responseStatus: HTTPResponseStatus
         var responseBody: String?
         var responseHeaders: [(String, String)]?
-        if requestHead.uri.hasSuffix(Consts.requestWorkURLSuffix) {
+
+        // Handle post-init-error first to avoid matching the less specific post-error suffix.
+        if requestHead.uri.hasSuffix(Consts.postInitErrorURL) {
+            guard let json = requestBody, let error = ErrorResponse.fromJson(json) else {
+                return self.writeResponse(context: context, version: requestHead.version, status: .badRequest)
+            }
+            switch self.behavior.processInitError(error: error) {
+            case .success:
+                responseStatus = .accepted
+            case .failure(let error):
+                responseStatus = .init(statusCode: error.rawValue)
+            }
+        } else if requestHead.uri.hasSuffix(Consts.requestWorkURLSuffix) {
             switch self.behavior.getWork() {
             case .success(let requestId, let result):
                 responseStatus = .ok
@@ -191,6 +203,7 @@ internal protocol LambdaServerBehavior {
     func getWork() -> GetWorkResult
     func processResponse(requestId: String, response: String) -> ProcessResponseResult
     func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult
+    func processInitError(error: ErrorResponse) -> ProcessInitErrorResult
 }
 
 internal typealias GetWorkResult = Result<(String, String), GetWorkError>
@@ -220,6 +233,8 @@ internal enum ProcessError: Int, Error {
     case badRequest = 400
     case internalServerError = 500
 }
+
+internal typealias ProcessInitErrorResult = Result<Void, ProcessError>
 
 internal enum ServerError: Error {
     case notReady
