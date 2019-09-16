@@ -17,37 +17,19 @@ import NIO
 @testable import SwiftAwsLambda
 import XCTest
 
-func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws -> LambdaRunResult {
-    let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws {
+    let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
     let logger = Logger(label: "TestLogger")
-    let runner = LambdaRunner(eventLoopGroup: eventLoopGroup, lambdaHandler: handler)
+    let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), lambdaHandler: handler, lifecycleId: "test")
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer {
+        // deferd in case initialize/run throw
         XCTAssertNoThrow(try server.stop().wait())
         XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
     }
-    do {
-        try runner.initialize(logger: logger).wait()
-    } catch {
-        return .failure(error)
-    }
-    let result = try runner.run(logger: logger).wait()
-    return result
-}
-
-func assertRunLambdaResult(result: LambdaRunResult, shouldFailWithError: Error? = nil) {
-    switch result {
-    case .success:
-        if shouldFailWithError != nil {
-            XCTFail("should fail with \(shouldFailWithError!)")
-        }
-    case .failure(let error):
-        if shouldFailWithError == nil {
-            XCTFail("should succeed, but failed with \(error)")
-            break // TODO: not sure why the assertion does not break
-        }
-        XCTAssertEqual(shouldFailWithError?.localizedDescription, error.localizedDescription, "expected error to mactch")
-    }
+    try runner.initialize(logger: logger).flatMap {
+        runner.run(logger: logger)
+    }.wait()
 }
 
 class EchoHandler: LambdaHandler {
@@ -71,19 +53,19 @@ class FailedHandler: LambdaHandler {
     }
 
     func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
-        callback(.failure(FailedHandlerError(description: self.reason)))
+        callback(.failure(Error(description: self.reason)))
     }
 
-    struct FailedHandlerError: Error, CustomStringConvertible {
+    struct Error: Swift.Error, Equatable, CustomStringConvertible {
         let description: String
     }
 }
 
 class FailedInitializerHandler: LambdaHandler {
-    let initError: FailedInitializerError
+    private let reason: String
 
     public init(_ reason: String) {
-        self.initError = FailedInitializerError(description: reason)
+        self.reason = reason
     }
 
     func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
@@ -91,10 +73,10 @@ class FailedInitializerHandler: LambdaHandler {
     }
 
     func initialize(callback: @escaping LambdaInitCallBack) {
-        callback(.failure(self.initError))
+        callback(.failure(Error(description: self.reason)))
     }
 
-    public struct FailedInitializerError: Error, CustomStringConvertible {
+    public struct Error: Swift.Error, Equatable, CustomStringConvertible {
         let description: String
     }
 }

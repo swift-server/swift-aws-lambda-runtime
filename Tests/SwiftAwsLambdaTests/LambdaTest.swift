@@ -39,7 +39,7 @@ class LambdaTest: XCTestCase {
         let handler = FailedInitializerHandler("kaboom")
         let result = Lambda.run(handler: handler)
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: handler.initError)
+        assertLambdaLifecycleResult(result: result, shouldFailWithError: FailedInitializerHandler.Error(description: "kaboom"))
     }
 
     func testInitFailureAndReportErrorFailure() throws {
@@ -47,7 +47,7 @@ class LambdaTest: XCTestCase {
         let handler = FailedInitializerHandler("kaboom")
         let result = Lambda.run(handler: handler)
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: handler.initError)
+        assertLambdaLifecycleResult(result: result, shouldFailWithError: FailedInitializerHandler.Error(description: "kaboom"))
     }
 
     func testClosureSuccess() throws {
@@ -84,14 +84,9 @@ class LambdaTest: XCTestCase {
             kill(getpid(), signal.rawValue)
         }
         let result = try future.wait()
+        XCTAssertGreaterThan(result, 0, "should have stopped before any reuqetsst made")
+        XCTAssertLessThan(result, max, "should have stopped before \(max)")
         try server.stop().wait()
-        switch result {
-        case .success(let count):
-            XCTAssertGreaterThan(count, 0, "should have stopped before any reuqetsst made")
-            XCTAssertLessThan(count, max, "should have stopped before \(max)")
-        case .failure(let error):
-            XCTFail("should succeed, but failed with \(error)")
-        }
     }
 }
 
@@ -105,7 +100,7 @@ private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHav
     case .failure(let error):
         if shouldFailWithError == nil {
             XCTFail("should succeed, but failed with \(error)")
-            break // TODO: not sure why the assertion does not break
+            break
         }
         XCTAssertEqual(shouldFailWithError?.localizedDescription, error.localizedDescription, "expected error to mactch")
     }

@@ -37,8 +37,9 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        let result = try runLambda(behavior: Behavior(), handler: EchoHandler())
-        assertRunLambdaResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
+            XCTAssertEqual(error as? LambdaRuntimeClientError, LambdaRuntimeClientError.badStatusCode(.internalServerError))
+        }
     }
 
     func testGetWorkServerNoBodyError() throws {
@@ -62,8 +63,9 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        let result = try runLambda(behavior: Behavior(), handler: EchoHandler())
-        assertRunLambdaResult(result: result, shouldFailWithError: LambdaRuntimeClientError.noBody)
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
+            XCTAssertEqual(error as? LambdaRuntimeClientError, LambdaRuntimeClientError.noBody)
+        }
     }
 
     func testGetWorkServerNoContextError() throws {
@@ -88,8 +90,9 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        let result = try runLambda(behavior: Behavior(), handler: EchoHandler())
-        assertRunLambdaResult(result: result, shouldFailWithError: LambdaRuntimeClientError.noContext)
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
+            XCTAssertEqual(error as? LambdaRuntimeClientError, LambdaRuntimeClientError.noContext)
+        }
     }
 
     func testProcessResponseInternalServerError() throws {
@@ -112,8 +115,9 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        let result = try runLambda(behavior: Behavior(), handler: EchoHandler())
-        assertRunLambdaResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
+            XCTAssertEqual(error as? LambdaRuntimeClientError, LambdaRuntimeClientError.badStatusCode(.internalServerError))
+        }
     }
 
     func testProcessErrorInternalServerError() throws {
@@ -136,8 +140,9 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        let result = try runLambda(behavior: Behavior(), handler: FailedHandler("boom"))
-        assertRunLambdaResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: FailedHandler("boom"))) { error in
+            XCTAssertEqual(error as? LambdaRuntimeClientError, LambdaRuntimeClientError.badStatusCode(.internalServerError))
+        }
     }
 
     func testProcessInitErrorInternalServerError() throws {
@@ -161,8 +166,8 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        let handler = FailedInitializerHandler("boom")
-        let result = try runLambda(behavior: Behavior(), handler: handler)
-        assertRunLambdaResult(result: result, shouldFailWithError: handler.initError)
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: FailedInitializerHandler("boom"))) { error in
+            XCTAssertEqual(error as? FailedInitializerHandler.Error, FailedInitializerHandler.Error(description: "boom"))
+        }
     }
 }
