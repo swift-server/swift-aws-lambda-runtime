@@ -40,8 +40,7 @@ class LambdaRunnerTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        let result = try runLambda(behavior: Behavior(), handler: EchoHandler()) // .wait()
-        assertRunLambdaResult(result: result)
+        XCTAssertNoThrow(try runLambda(behavior: Behavior(), handler: EchoHandler()))
     }
 
     func testFailure() throws {
@@ -68,7 +67,6 @@ class LambdaRunnerTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        let result = try runLambda(behavior: Behavior(), handler: FailedHandler(Behavior.error)) // .wait()
-        assertRunLambdaResult(result: result)
+        XCTAssertNoThrow(try runLambda(behavior: Behavior(), handler: FailedHandler(Behavior.error)))
     }
 }

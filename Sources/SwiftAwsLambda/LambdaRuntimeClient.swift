@@ -25,13 +25,13 @@ import NIOHTTP1
 internal class LambdaRuntimeClient {
     private let baseUrl: String
     private let httpClient: HTTPClient
-    private let eventLoopGroup: EventLoopGroup
+    private let eventLoop: EventLoop
     private let allocator: ByteBufferAllocator
 
-    init(eventLoopGroup: EventLoopGroup) {
-        self.eventLoopGroup = eventLoopGroup
+    init(eventLoop: EventLoop) {
+        self.eventLoop = eventLoop
         self.baseUrl = getRuntimeEndpoint()
-        self.httpClient = HTTPClient(eventLoop: eventLoopGroup.next())
+        self.httpClient = HTTPClient(eventLoop: eventLoop)
         self.allocator = ByteBufferAllocator()
     }
 
@@ -66,7 +66,7 @@ internal class LambdaRuntimeClient {
             let error = ErrorResponse(errorType: "FunctionError", errorMessage: "\(error)")
             switch error.toJson() {
             case .failure(let jsonError):
-                return self.eventLoopGroup.next().makeSucceededFuture(.failure(.json(jsonError)))
+                return self.eventLoop.makeSucceededFuture(.failure(.json(jsonError)))
             case .success(let json):
                 body = self.allocator.buffer(capacity: json.utf8.count)
                 body.writeString(json)
@@ -79,13 +79,13 @@ internal class LambdaRuntimeClient {
     }
 
     /// Reports an initialization error to the Runtime Engine.
-    func reportInitError(logger: Logger, error: Error) -> EventLoopFuture<PostInitErrorResult> {
+    func reportInitializationError(logger: Logger, error: Error) -> EventLoopFuture<PostInitializationErrorResult> {
         let url = self.baseUrl + Consts.postInitErrorURL
         let errorResponse = ErrorResponse(errorType: "InitializationError", errorMessage: "\(error)")
         var body: ByteBuffer
         switch errorResponse.toJson() {
         case .failure(let jsonError):
-            return self.eventLoopGroup.next().makeSucceededFuture(.failure(.json(jsonError)))
+            return self.eventLoop.makeSucceededFuture(.failure(.json(jsonError)))
         case .success(let json):
             body = self.allocator.buffer(capacity: json.utf8.count)
             body.writeString(json)
@@ -99,13 +99,25 @@ internal class LambdaRuntimeClient {
 
 internal typealias RequestWorkResult = Result<(LambdaContext, [UInt8]), LambdaRuntimeClientError>
 internal typealias PostResultsResult = Result<Void, LambdaRuntimeClientError>
-internal typealias PostInitErrorResult = Result<Void, LambdaRuntimeClientError>
+internal typealias PostInitializationErrorResult = Result<Void, LambdaRuntimeClientError>
 
-internal enum LambdaRuntimeClientError: Error {
+internal enum LambdaRuntimeClientError: Error, Equatable {
     case badStatusCode(HTTPResponseStatus)
     case noBody
     case noContext
-    case json(Error)
+    case json(JsonCodecError)
+}
+
+// FIXME: can we get rid of this?
+internal struct JsonCodecError: Error, Equatable {
+    let cause: Error
+    init(_ cause: Error) {
+        self.cause = cause
+    }
+
+    static func == (lhs: JsonCodecError, rhs: JsonCodecError) -> Bool {
+        return lhs.cause.localizedDescription == rhs.cause.localizedDescription
+    }
 }
 
 internal struct ErrorResponse: Codable {
@@ -114,13 +126,13 @@ internal struct ErrorResponse: Codable {
 }
 
 private extension ErrorResponse {
-    func toJson() -> Result<String, Error> {
+    func toJson() -> Result<String, JsonCodecError> {
         let encoder = JSONEncoder()
         do {
             let data = try encoder.encode(self)
             return .success(String(data: data, encoding: .utf8) ?? "unknown error")
         } catch {
-            return .failure(error)
+            return .failure(JsonCodecError(error))
         }
     }
 }

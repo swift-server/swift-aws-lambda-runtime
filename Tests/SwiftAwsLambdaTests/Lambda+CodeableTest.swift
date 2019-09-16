@@ -61,7 +61,7 @@ private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHav
     case .failure(let error):
         if shouldFailWithError == nil {
             XCTFail("should succeed, but failed with \(error)")
-            break // TODO: not sure why the assertion does not break
+            break
         }
         XCTAssertEqual(shouldFailWithError?.localizedDescription, error.localizedDescription, "expected error to mactch")
     }
