@@ -84,7 +84,7 @@ class LambdaTest: XCTestCase {
             kill(getpid(), signal.rawValue)
         }
         let result = try future.wait()
-        XCTAssertGreaterThan(result, 0, "should have stopped before any reuqetsst made")
+        XCTAssertGreaterThan(result, 0, "should have stopped before any request made")
         XCTAssertLessThan(result, max, "should have stopped before \(max)")
         try server.stop().wait()
     }

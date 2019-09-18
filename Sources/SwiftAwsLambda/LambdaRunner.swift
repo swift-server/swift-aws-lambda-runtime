@@ -36,15 +36,11 @@ internal final class LambdaRunner {
     func initialize(logger: Logger) -> EventLoopFuture<Void> {
         logger.info("initializing lambda")
         // We need to use `flatMap` instead of `whenFailure` to ensure we complete reporting the result before stopping.
-        return self.lambdaHandler.initialize(eventLoop: self.eventLoop, lifecycleId: self.lifecycleId).flatMapError { error in
-            self.runtimeClient.reportInitializationError(logger: logger, error: error).flatMapResult { result -> Result<Void, Error> in
-                if case .failure(let reportingError) = result {
-                    // We're going to bail out because the init failed, so there's not a lot we can do other than log
-                    // that we couldn't report this error back to the runtime.
-                    logger.error("failed reporting initialization error to lambda runtime engine: \(reportingError)")
-                }
-                // Always return the init error
-                return .failure(error)
+        return self.lambdaHandler.initialize(eventLoop: self.eventLoop, lifecycleId: self.lifecycleId).peekError { error in
+            self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
+                // We're going to bail out because the init failed, so there's not a lot we can do other than log
+                // that we couldn't report this error back to the runtime.
+                logger.error("failed reporting initialization error to lambda runtime engine: \(reportingError)")
             }
         }
     }
@@ -52,29 +48,20 @@ internal final class LambdaRunner {
     func run(logger: Logger) -> EventLoopFuture<Void> {
         logger.info("lambda invocation sequence starting")
         // 1. request work from lambda runtime engine
-        return self.runtimeClient.requestWork(logger: logger).flatMap { workRequestResult in
-            switch workRequestResult {
-            case .failure(let error):
-                logger.error("could not fetch work from lambda runtime engine: \(error)")
-                return self.eventLoop.makeFailedFuture(error)
-            case .success(let context, let payload):
-                // 2. send work to handler
-                logger.info("sending work to lambda handler \(self.lambdaHandler)")
-                return self.lambdaHandler.handle(eventLoop: self.eventLoop, lifecycleId: self.lifecycleId, context: context, payload: payload).flatMap { lambdaResult in
-                    // 3. report results to runtime engine
-                    self.runtimeClient.reportResults(logger: logger, context: context, result: lambdaResult).flatMap { postResultsResult in
-                        switch postResultsResult {
-                        case .failure(let error):
-                            logger.error("failed reporting results to lambda runtime engine: \(error)")
-                            return self.eventLoop.makeFailedFuture(error)
-                        case .success():
-                            // we are done!
-                            logger.info("lambda invocation sequence completed successfully")
-                            return self.eventLoop.makeSucceededFuture(())
-                        }
-                    }
-                }
-            }
+        return self.runtimeClient.requestWork(logger: logger).peekError { error in
+            logger.error("could not fetch work from lambda runtime engine: \(error)")
+        }.flatMap { context, payload in
+            // 2. send work to handler
+            logger.info("sending work to lambda handler \(self.lambdaHandler)")
+            return self.lambdaHandler.handle(eventLoop: self.eventLoop, lifecycleId: self.lifecycleId, context: context, payload: payload).map { (context, $0) }
+        }.flatMap { context, result in
+            // 3. report results to runtime engine
+            self.runtimeClient.reportResults(logger: logger, context: context, result: result)
+        }.peekError { error in
+            logger.error("failed reporting results to lambda runtime engine: \(error)")
+        }.always { result in
+            // we are done!
+            logger.info("lambda invocation sequence completed \(result.successful ? "successfully" : "with failure")")
         }
     }
 }
@@ -98,5 +85,38 @@ private extension LambdaHandler {
             }
         }
         return promise.futureResult
+    }
+}
+
+// TODO: move to nio?
+private extension EventLoopFuture {
+    // callback does not have side effects, failing with original result
+    func peekError(_ callback: @escaping (Error) -> Void) -> EventLoopFuture<Value> {
+        return self.flatMapError { error in
+            callback(error)
+            return self
+        }
+    }
+
+    // callback does not have side effects, failing with original result
+    func peekError(_ callback: @escaping (Error) -> EventLoopFuture<Void>) -> EventLoopFuture<Value> {
+        return self.flatMapError { error in
+            let promise = self.eventLoop.makePromise(of: Value.self)
+            callback(error).whenComplete { _ in
+                promise.completeWith(self)
+            }
+            return promise.futureResult
+        }
+    }
+}
+
+private extension Result {
+    var successful: Bool {
+        switch self {
+        case .success:
+            return true
+        default:
+            return false
+        }
     }
 }
