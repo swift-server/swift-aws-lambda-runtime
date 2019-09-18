@@ -35,24 +35,26 @@ internal class LambdaRuntimeClient {
         self.allocator = ByteBufferAllocator()
     }
 
-    func requestWork(logger: Logger) -> EventLoopFuture<RequestWorkResult> {
+    /// Requests work from the Runtime Engine.
+    func requestWork(logger: Logger) -> EventLoopFuture<(LambdaContext, [UInt8])> {
         let url = self.baseUrl + Consts.invokationURLPrefix + Consts.requestWorkURLSuffix
         logger.info("requesting work from lambda runtime engine using \(url)")
-        return self.httpClient.get(url: url).map { response in
+        return self.httpClient.get(url: url).flatMapThrowing { response in
             guard response.status == .ok else {
-                return .failure(.badStatusCode(response.status))
+                throw LambdaRuntimeClientError.badStatusCode(response.status)
             }
             guard let payload = response.readWholeBody() else {
-                return .failure(.noBody)
+                throw LambdaRuntimeClientError.noBody
             }
             guard let context = LambdaContext(logger: logger, response: response) else {
-                return .failure(.noContext)
+                throw LambdaRuntimeClientError.noContext
             }
-            return .success((context, payload))
+            return (context, payload)
         }
     }
 
-    func reportResults(logger: Logger, context: LambdaContext, result: LambdaResult) -> EventLoopFuture<PostResultsResult> {
+    /// Reports a result to the Runtime Engine.
+    func reportResults(logger: Logger, context: LambdaContext, result: LambdaResult) -> EventLoopFuture<Void> {
         var url = self.baseUrl + Consts.invokationURLPrefix + "/" + context.requestId
         var body: ByteBuffer
         switch result {
@@ -66,40 +68,42 @@ internal class LambdaRuntimeClient {
             let error = ErrorResponse(errorType: "FunctionError", errorMessage: "\(error)")
             switch error.toJson() {
             case .failure(let jsonError):
-                return self.eventLoop.makeSucceededFuture(.failure(.json(jsonError)))
+                return self.eventLoop.makeFailedFuture(LambdaRuntimeClientError.json(jsonError))
             case .success(let json):
                 body = self.allocator.buffer(capacity: json.utf8.count)
                 body.writeString(json)
             }
         }
         logger.info("reporting results to lambda runtime engine using \(url)")
-        return self.httpClient.post(url: url, body: body).map { response in
-            response.status != .accepted ? .failure(.badStatusCode(response.status)) : .success(())
+        return self.httpClient.post(url: url, body: body).flatMapThrowing { response in
+            guard response.status == .accepted else {
+                throw LambdaRuntimeClientError.badStatusCode(response.status)
+            }
+            return ()
         }
     }
 
     /// Reports an initialization error to the Runtime Engine.
-    func reportInitializationError(logger: Logger, error: Error) -> EventLoopFuture<PostInitializationErrorResult> {
+    func reportInitializationError(logger: Logger, error: Error) -> EventLoopFuture<Void> {
         let url = self.baseUrl + Consts.postInitErrorURL
         let errorResponse = ErrorResponse(errorType: "InitializationError", errorMessage: "\(error)")
         var body: ByteBuffer
         switch errorResponse.toJson() {
         case .failure(let jsonError):
-            return self.eventLoop.makeSucceededFuture(.failure(.json(jsonError)))
+            return self.eventLoop.makeFailedFuture(LambdaRuntimeClientError.json(jsonError))
         case .success(let json):
             body = self.allocator.buffer(capacity: json.utf8.count)
             body.writeString(json)
             logger.info("reporting initialization error to lambda runtime engine using \(url)")
-            return self.httpClient.post(url: url, body: body).map { response in
-                response.status != .accepted ? .failure(.badStatusCode(response.status)) : .success(())
+            return self.httpClient.post(url: url, body: body).flatMapThrowing { response in
+                guard response.status == .accepted else {
+                    throw LambdaRuntimeClientError.badStatusCode(response.status)
+                }
+                return ()
             }
         }
     }
 }
-
-internal typealias RequestWorkResult = Result<(LambdaContext, [UInt8]), LambdaRuntimeClientError>
-internal typealias PostResultsResult = Result<Void, LambdaRuntimeClientError>
-internal typealias PostInitializationErrorResult = Result<Void, LambdaRuntimeClientError>
 
 internal enum LambdaRuntimeClientError: Error, Equatable {
     case badStatusCode(HTTPResponseStatus)
