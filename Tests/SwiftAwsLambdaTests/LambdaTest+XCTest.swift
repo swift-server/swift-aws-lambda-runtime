@@ -32,6 +32,11 @@ extension LambdaTest {
             ("testClosureSuccess", testClosureSuccess),
             ("testClosureFailure", testClosureFailure),
             ("testStartStop", testStartStop),
+            ("testTimeout", testTimeout),
+            ("testDisconnect", testDisconnect),
+            ("testBigPayload", testBigPayload),
+            ("testKeepAliveServer", testKeepAliveServer),
+            ("testNoKeepAliveServer", testNoKeepAliveServer),
         ]
     }
 }

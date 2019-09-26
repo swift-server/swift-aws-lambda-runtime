@@ -32,7 +32,7 @@ extension Lambda {
     }
 
     // for testing
-    internal static func run<In: Decodable, Out: Encodable>(maxTimes: Int = 0, _ closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
+    internal static func run<In: Decodable, Out: Encodable>(maxTimes: Int = 0, closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
         return self.run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes)
     }
 

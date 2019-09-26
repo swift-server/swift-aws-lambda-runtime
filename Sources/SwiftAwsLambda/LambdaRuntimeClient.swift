@@ -23,21 +23,18 @@ import NIOHTTP1
 /// * /runtime/invocation/error
 /// * /runtime/init/error
 internal class LambdaRuntimeClient {
-    private let baseUrl: String
-    private let httpClient: HTTPClient
     private let eventLoop: EventLoop
-    private let allocator: ByteBufferAllocator
+    private let allocator = ByteBufferAllocator()
+    private let httpClient: HTTPClient
 
-    init(eventLoop: EventLoop) {
+    init(eventLoop: EventLoop, config: Lambda.Config.RuntimeEngine) {
         self.eventLoop = eventLoop
-        self.baseUrl = getRuntimeEndpoint()
-        self.httpClient = HTTPClient(eventLoop: eventLoop)
-        self.allocator = ByteBufferAllocator()
+        self.httpClient = HTTPClient(eventLoop: eventLoop, config: config)
     }
 
     /// Requests work from the Runtime Engine.
     func requestWork(logger: Logger) -> EventLoopFuture<(LambdaContext, [UInt8])> {
-        let url = self.baseUrl + Consts.invokationURLPrefix + Consts.requestWorkURLSuffix
+        let url = Consts.invocationURLPrefix + Consts.requestWorkURLSuffix
         logger.info("requesting work from lambda runtime engine using \(url)")
         return self.httpClient.get(url: url).flatMapThrowing { response in
             guard response.status == .ok else {
@@ -50,12 +47,21 @@ internal class LambdaRuntimeClient {
                 throw LambdaRuntimeClientError.noContext
             }
             return (context, payload)
+        }.flatMapErrorThrowing { error in
+            switch error {
+            case HTTPClient.Errors.timeout:
+                throw LambdaRuntimeClientError.upstreamError("timeout")
+            case HTTPClient.Errors.connectionResetByPeer:
+                throw LambdaRuntimeClientError.upstreamError("connectionResetByPeer")
+            default:
+                throw error
+            }
         }
     }
 
     /// Reports a result to the Runtime Engine.
     func reportResults(logger: Logger, context: LambdaContext, result: LambdaResult) -> EventLoopFuture<Void> {
-        var url = self.baseUrl + Consts.invokationURLPrefix + "/" + context.requestId
+        var url = Consts.invocationURLPrefix + "/" + context.requestId
         var body: ByteBuffer
         switch result {
         case .success(let data):
@@ -80,12 +86,21 @@ internal class LambdaRuntimeClient {
                 throw LambdaRuntimeClientError.badStatusCode(response.status)
             }
             return ()
+        }.flatMapErrorThrowing { error in
+            switch error {
+            case HTTPClient.Errors.timeout:
+                throw LambdaRuntimeClientError.upstreamError("timeout")
+            case HTTPClient.Errors.connectionResetByPeer:
+                throw LambdaRuntimeClientError.upstreamError("connectionResetByPeer")
+            default:
+                throw error
+            }
         }
     }
 
     /// Reports an initialization error to the Runtime Engine.
     func reportInitializationError(logger: Logger, error: Error) -> EventLoopFuture<Void> {
-        let url = self.baseUrl + Consts.postInitErrorURL
+        let url = Consts.postInitErrorURL
         let errorResponse = ErrorResponse(errorType: "InitializationError", errorMessage: "\(error)")
         var body: ByteBuffer
         switch errorResponse.toJson() {
@@ -100,6 +115,15 @@ internal class LambdaRuntimeClient {
                     throw LambdaRuntimeClientError.badStatusCode(response.status)
                 }
                 return ()
+            }.flatMapErrorThrowing { error in
+                switch error {
+                case HTTPClient.Errors.timeout:
+                    throw LambdaRuntimeClientError.upstreamError("timeout")
+                case HTTPClient.Errors.connectionResetByPeer:
+                    throw LambdaRuntimeClientError.upstreamError("connectionResetByPeer")
+                default:
+                    throw error
+                }
             }
         }
     }
@@ -107,12 +131,13 @@ internal class LambdaRuntimeClient {
 
 internal enum LambdaRuntimeClientError: Error, Equatable {
     case badStatusCode(HTTPResponseStatus)
+    case upstreamError(String)
     case noBody
     case noContext
     case json(JsonCodecError)
 }
 
-// FIXME: can we get rid of this?
+// FIXME: get rid of this. created to satisfy Equatable
 internal struct JsonCodecError: Error, Equatable {
     let cause: Error
     init(_ cause: Error) {
@@ -141,7 +166,7 @@ private extension ErrorResponse {
     }
 }
 
-private extension HTTPResponse {
+private extension HTTPClient.Response {
     func headerValue(_ name: String) -> String? {
         return headers[name].first
     }
@@ -158,7 +183,7 @@ private extension HTTPResponse {
 }
 
 private extension LambdaContext {
-    init?(logger: Logger, response: HTTPResponse) {
+    init?(logger: Logger, response: HTTPClient.Response) {
         guard let requestId = response.headerValue(AmazonHeaders.requestID) else {
             return nil
         }
@@ -177,13 +202,5 @@ private extension LambdaContext {
                              clientContext: clientContext,
                              deadline: deadline,
                              logger: logger)
-    }
-}
-
-private func getRuntimeEndpoint() -> String {
-    if let hostPort = Environment.string(Consts.hostPortEnvVariableName) {
-        return "http://\(hostPort)"
-    } else {
-        return "http://\(Defaults.host):\(Defaults.port)"
     }
 }

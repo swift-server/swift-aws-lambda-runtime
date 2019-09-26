@@ -49,46 +49,48 @@ public enum Lambda {
     @discardableResult
     internal static func run(handler: LambdaHandler, maxTimes: Int = 0, stopSignal: Signal = .TERM) -> LambdaLifecycleResult {
         do {
-            return try self.runAsync(handler: handler, maxTimes: maxTimes, stopSignal: stopSignal).map { .success($0) }.wait()
+            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+            defer { try! eventLoopGroup.syncShutdownGracefully() }
+            let result = try self.runAsync(eventLoopGroup: eventLoopGroup, handler: handler, maxTimes: maxTimes, stopSignal: stopSignal).wait()
+            return .success(result)
         } catch {
             return .failure(error)
         }
     }
 
-    internal static func runAsync(handler: LambdaHandler, maxTimes: Int = 0, stopSignal: Signal = .TERM) -> EventLoopFuture<Int> {
+    internal static func runAsync(eventLoopGroup: EventLoopGroup, handler: LambdaHandler, maxTimes: Int = 0, stopSignal: Signal = .TERM) -> EventLoopFuture<Int> {
         Backtrace.install()
         let logger = Logger(label: "Lambda")
-        let lifecycle = Lifecycle(logger: logger, handler: handler, maxTimes: maxTimes)
+        let config = Config(lifecycle: .init(maxTimes: maxTimes))
+        let lifecycle = Lifecycle(eventLoop: eventLoopGroup.next(), logger: logger, config: config, handler: handler)
         let signalSource = trap(signal: stopSignal) { signal in
             logger.info("intercepted signal: \(signal)")
             lifecycle.stop()
         }
         return lifecycle.start().always { _ in
-            lifecycle.stop()
+            lifecycle.shutdown()
             signalSource.cancel()
         }
     }
 
     private class Lifecycle {
+        private let eventLoop: EventLoop
         private let logger: Logger
-        private let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+        private let config: Lambda.Config
         private let handler: LambdaHandler
-        private let max: Int
 
         private var _state = LifecycleState.idle
         private let stateLock = Lock()
 
-        init(logger: Logger, handler: LambdaHandler, maxTimes: Int) {
-            assert(maxTimes >= 0, "maxTimes must be larger than 0")
+        init(eventLoop: EventLoop, logger: Logger, config: Lambda.Config, handler: LambdaHandler) {
+            self.eventLoop = eventLoop
             self.logger = logger
+            self.config = config
             self.handler = handler
-            self.max = maxTimes
-            self.logger.info("lambda lifecycle init")
         }
 
         deinit {
-            self.logger.info("lambda lifecycle deinit")
-            assert(self.state == .shutdown, "invalid state, expected shutdown")
+            precondition(self.state == .shutdown, "invalid state \(self.state)")
         }
 
         private var state: LifecycleState {
@@ -99,66 +101,139 @@ public enum Lambda {
             }
             set {
                 self.stateLock.withLockVoid {
-                    assert(newValue.rawValue > _state.rawValue, "invalid state \(newValue) after \(_state)")
+                    precondition(newValue.rawValue > _state.rawValue, "invalid state \(newValue) after \(_state)")
                     self._state = newValue
                 }
             }
         }
 
         func start() -> EventLoopFuture<Int> {
+            logger.info("lambda lifecycle starting with \(self.config)")
             self.state = .initializing
-            let lifecycleId = NSUUID().uuidString
-            let eventLoop = self.eventLoopGroup.next()
             var logger = self.logger
-            logger[metadataKey: "lifecycleId"] = .string(lifecycleId)
-            logger.info("lambda lifecycle starting")
-
-            let runner = LambdaRunner(eventLoop: eventLoop, lambdaHandler: handler, lifecycleId: lifecycleId)
+            logger[metadataKey: "lifecycleId"] = .string(self.config.lifecycle.id)
+            let runner = LambdaRunner(eventLoop: self.eventLoop, config: self.config, lambdaHandler: self.handler)
             return runner.initialize(logger: logger).flatMap { _ in
                 self.state = .active
-                return self.run(logger: logger, eventLoop: eventLoop, runner: runner, count: 0)
+                return self.run(logger: logger, runner: runner, count: 0)
             }
         }
 
         func stop() {
+            self.logger.info("lambda lifecycle stopping")
+            self.state = .stopping
+        }
+
+        func shutdown() {
+            self.logger.info("lambda lifecycle shutdown")
+            self.state = .shutdown
+        }
+
+        private func run(logger: Logger, runner: LambdaRunner, count: Int) -> EventLoopFuture<Int> {
             switch self.state {
-            case .stopping:
-                return self.logger.info("lambda lifecycle aready stopping")
-            case .shutdown:
-                return self.logger.info("lambda lifecycle aready shutdown")
+            case .active:
+                if self.config.lifecycle.maxTimes > 0, count >= self.config.lifecycle.maxTimes {
+                    return self.eventLoop.makeSucceededFuture(count)
+                }
+                var logger = logger
+                logger[metadataKey: "lifecycleIteration"] = "\(count)"
+                return runner.run(logger: logger).flatMap { _ in
+                    // recursive! per aws lambda runtime spec the polling requests are to be done one at a time
+                    self.run(logger: logger, runner: runner, count: count + 1)
+                }
+            case .stopping, .shutdown:
+                return self.eventLoop.makeSucceededFuture(count)
             default:
-                self.logger.info("lambda lifecycle stopping")
-                self.state = .stopping
-                try! self.eventLoopGroup.syncShutdownGracefully()
-                self.state = .shutdown
+                preconditionFailure("invalid run state: \(self.state)")
+            }
+        }
+    }
+
+    internal struct Config: CustomStringConvertible {
+        let lifecycle: Lifecycle
+        let runtimeEngine: RuntimeEngine
+
+        var description: String {
+            return "\(Config.self):\n  \(self.lifecycle)\n  \(self.runtimeEngine)"
+        }
+
+        init(lifecycle: Lifecycle = .init(), runtimeEngine: RuntimeEngine = .init()) {
+            self.lifecycle = lifecycle
+            self.runtimeEngine = runtimeEngine
+        }
+
+        struct Lifecycle: CustomStringConvertible {
+            let id: String
+            let maxTimes: Int
+
+            init(id: String? = nil, maxTimes: Int? = nil) {
+                self.id = id ?? NSUUID().uuidString
+                self.maxTimes = maxTimes ?? 0
+                precondition(self.maxTimes >= 0, "maxTimes must be equal or larger than 0")
+            }
+
+            var description: String {
+                return "\(Lifecycle.self)(id: \(self.id), maxTimes: \(self.maxTimes))"
             }
         }
 
-        private func run(logger: Logger, eventLoop: EventLoop, runner: LambdaRunner, count: Int) -> EventLoopFuture<Int> {
-            var logger = logger
-            logger[metadataKey: "lifecycleIteration"] = "\(count)"
-            return runner.run(logger: logger).flatMap { _ in
-                switch self.state {
-                case .idle, .initializing:
-                    preconditionFailure("invalid run state: \(self.state)")
-                case .active:
-                    if self.max > 0, count >= self.max {
-                        return eventLoop.makeSucceededFuture(count)
-                    }
-                    // recursive! per aws lambda runtime spec the polling requests are to be done one at a time
-                    return self.run(logger: logger, eventLoop: eventLoop, runner: runner, count: count + 1)
-                case .stopping, .shutdown:
-                    return eventLoop.makeSucceededFuture(count)
-                }
-            }.flatMapErrorThrowing { error in
-                // if we run into errors while shutting down, we ignore them
-                switch self.state {
-                case .stopping, .shutdown:
-                    return count
-                default:
-                    throw error
-                }
+        struct RuntimeEngine: CustomStringConvertible {
+            let baseURL: HTTPURL
+            let keepAlive: Bool
+            let requestTimeout: TimeAmount?
+
+            init(baseURL: String? = nil, keepAlive: Bool? = nil, requestTimeout: TimeAmount? = nil) {
+                self.baseURL = HTTPURL(baseURL ?? Environment.string(Consts.hostPortEnvVariableName).flatMap { "http://\($0)" } ?? "http://\(Defaults.host):\(Defaults.port)")
+                self.keepAlive = keepAlive ?? true
+                self.requestTimeout = requestTimeout ?? Environment.int(Consts.requestTimeoutEnvVariableName).flatMap { .milliseconds(Int64($0)) }
             }
+
+            var description: String {
+                return "\(RuntimeEngine.self)(baseURL: \(self.baseURL), keepAlive: \(self.keepAlive), requestTimeout: \(String(describing: self.requestTimeout)))"
+            }
+        }
+    }
+
+    internal struct HTTPURL: Equatable, CustomStringConvertible {
+        private let url: URL
+        let host: String
+        let port: Int
+
+        init(_ url: String) {
+            guard let url = Foundation.URL(string: url) else {
+                preconditionFailure("invalid url")
+            }
+            guard let host = url.host else {
+                preconditionFailure("invalid url host")
+            }
+            guard let port = url.port else {
+                preconditionFailure("invalid url port")
+            }
+            self.url = url
+            self.host = host
+            self.port = port
+        }
+
+        init(url: URL, host: String, port: Int) {
+            self.url = url
+            self.host = host
+            self.port = port
+        }
+
+        func appendingPathComponent(_ pathComponent: String) -> HTTPURL {
+            return .init(url: self.url.appendingPathComponent(pathComponent), host: self.host, port: self.port)
+        }
+
+        var path: String {
+            return self.url.path
+        }
+
+        var query: String? {
+            return self.url.query
+        }
+
+        var description: String {
+            return self.url.description
         }
     }
 
@@ -193,6 +268,7 @@ public protocol LambdaHandler {
 }
 
 extension LambdaHandler {
+    @inlinable
     public func initialize(callback: @escaping LambdaInitCallBack) {
         callback(.success(()))
     }

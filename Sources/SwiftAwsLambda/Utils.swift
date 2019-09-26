@@ -22,9 +22,10 @@ internal enum Defaults {
 
 internal enum Consts {
     static let hostPortEnvVariableName = "AWS_LAMBDA_RUNTIME_API"
+    static let requestTimeoutEnvVariableName = "REQUEST_TIMEOUT"
 
     private static let apiPrefix = "/2018-06-01"
-    static let invokationURLPrefix = "\(apiPrefix)/runtime/invocation"
+    static let invocationURLPrefix = "\(apiPrefix)/runtime/invocation"
     static let requestWorkURLSuffix = "/next"
     static let postResponseURLSuffix = "/response"
     static let postErrorURLSuffix = "/error"
