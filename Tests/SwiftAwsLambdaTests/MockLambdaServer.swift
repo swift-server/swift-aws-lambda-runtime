@@ -21,39 +21,34 @@ import NIOHTTP1
 internal class MockLambdaServer {
     private let logger = Logger(label: "MockLambdaServer")
     private let behavior: LambdaServerBehavior
+    private let host: String
+    private let port: Int
+    private let keepAlive: Bool
     private let group: EventLoopGroup
     private var channel: Channel?
     private var shutdown = false
 
-    public init(behavior: LambdaServerBehavior) {
+    public init(behavior: LambdaServerBehavior, host: String = Defaults.host, port: Int = Defaults.port, keepAlive: Bool = true) {
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         self.behavior = behavior
+        self.host = host
+        self.port = port
+        self.keepAlive = keepAlive
     }
 
     deinit {
         assert(shutdown)
     }
 
-    func start(host: String = Defaults.host, port: Int = Defaults.port) -> EventLoopFuture<MockLambdaServer> {
+    func start() -> EventLoopFuture<MockLambdaServer> {
         let bootstrap = ServerBootstrap(group: group)
-            // Specify backlog and enable SO_REUSEADDR for the server itself
-            .serverChannelOption(ChannelOptions.backlog, value: 256)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-
-            // Set the handlers that are applied to the accepted Channels
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap { _ in
-                    channel.pipeline.addHandler(HTTPHandler(logger: self.logger, behavior: self.behavior))
+                    channel.pipeline.addHandler(HTTPHandler(logger: self.logger, keepAlive: self.keepAlive, behavior: self.behavior))
                 }
             }
-
-            // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels
-            .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
-            .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: false)
-
-        return bootstrap.bind(host: host, port: port).flatMap { channel in
+        return bootstrap.bind(host: self.host, port: self.port).flatMap { channel in
             self.channel = channel
             guard let localAddress = channel.localAddress else {
                 return channel.eventLoop.makeFailedFuture(ServerError.cantBind)
@@ -68,12 +63,10 @@ internal class MockLambdaServer {
         guard let channel = self.channel else {
             return self.group.next().makeFailedFuture(ServerError.notReady)
         }
-        channel.closeFuture.whenComplete { _ in
+        return channel.close().always { _ in
             self.shutdown = true
             self.logger.info("\(self) stopped")
         }
-        channel.close(promise: nil)
-        return channel.closeFuture
     }
 }
 
@@ -82,13 +75,15 @@ internal final class HTTPHandler: ChannelInboundHandler {
     public typealias OutboundOut = HTTPServerResponsePart
 
     private let logger: Logger
+    private let keepAlive: Bool
     private let behavior: LambdaServerBehavior
 
-    private var requestHead: HTTPRequestHead?
+    private var requestHead: HTTPRequestHead!
     private var requestBody: ByteBuffer?
 
-    public init(logger: Logger, behavior: LambdaServerBehavior) {
+    public init(logger: Logger, keepAlive: Bool, behavior: LambdaServerBehavior) {
         self.logger = logger
+        self.keepAlive = keepAlive
         self.behavior = behavior
     }
 
@@ -99,25 +94,18 @@ internal final class HTTPHandler: ChannelInboundHandler {
         case .head(let head):
             self.requestHead = head
             self.requestBody?.clear()
-        case .body(var buf):
+        case .body(var buffer):
             if self.requestBody == nil {
-                self.requestBody = context.channel.allocator.buffer(capacity: buf.readableBytes)
+                self.requestBody = context.channel.allocator.buffer(capacity: buffer.readableBytes)
             }
-            self.requestBody?.writeBuffer(&buf)
+            self.requestBody!.writeBuffer(&buffer)
         case .end:
             self.processRequest(context: context)
         }
     }
 
-    func channelReadComplete(context: ChannelHandlerContext) {
-        context.flush()
-    }
-
     func processRequest(context: ChannelHandlerContext) {
-        guard let requestHead = self.requestHead else {
-            return self.writeResponse(context: context, version: HTTPVersion(major: 1, minor: 1), status: .badRequest)
-        }
-        self.logger.info("\(self) processing \(requestHead.uri)")
+        self.logger.info("\(self) processing \(self.requestHead.uri)")
 
         let requestBody = self.requestBody.flatMap { (buffer: ByteBuffer) -> String? in
             var buffer = buffer
@@ -129,9 +117,9 @@ internal final class HTTPHandler: ChannelInboundHandler {
         var responseHeaders: [(String, String)]?
 
         // Handle post-init-error first to avoid matching the less specific post-error suffix.
-        if requestHead.uri.hasSuffix(Consts.postInitErrorURL) {
+        if self.requestHead.uri.hasSuffix(Consts.postInitErrorURL) {
             guard let json = requestBody, let error = ErrorResponse.fromJson(json) else {
-                return self.writeResponse(context: context, version: requestHead.version, status: .badRequest)
+                return self.writeResponse(context: context, status: .badRequest)
             }
             switch self.behavior.processInitError(error: error) {
             case .success:
@@ -139,20 +127,23 @@ internal final class HTTPHandler: ChannelInboundHandler {
             case .failure(let error):
                 responseStatus = .init(statusCode: error.rawValue)
             }
-        } else if requestHead.uri.hasSuffix(Consts.requestWorkURLSuffix) {
+        } else if self.requestHead.uri.hasSuffix(Consts.requestWorkURLSuffix) {
             switch self.behavior.getWork() {
             case .success(let requestId, let result):
+                if requestId == "timeout" {
+                    usleep((UInt32(result) ?? 0) * 1000)
+                } else if requestId == "disconnect" {
+                    return context.close(promise: nil)
+                }
                 responseStatus = .ok
                 responseBody = result
                 responseHeaders = [(AmazonHeaders.requestID, requestId)]
             case .failure(let error):
                 responseStatus = .init(statusCode: error.rawValue)
             }
-        } else if requestHead.uri.hasSuffix(Consts.postResponseURLSuffix) {
-            guard let requestId = requestHead.uri.split(separator: "/").dropFirst(3).first,
-                let response = requestBody
-            else {
-                return self.writeResponse(context: context, version: requestHead.version, status: .badRequest)
+        } else if self.requestHead.uri.hasSuffix(Consts.postResponseURLSuffix) {
+            guard let requestId = requestHead.uri.split(separator: "/").dropFirst(3).first, let response = requestBody else {
+                return self.writeResponse(context: context, status: .badRequest)
             }
             switch self.behavior.processResponse(requestId: String(requestId), response: response) {
             case .success:
@@ -160,12 +151,12 @@ internal final class HTTPHandler: ChannelInboundHandler {
             case .failure(let error):
                 responseStatus = .init(statusCode: error.rawValue)
             }
-        } else if requestHead.uri.hasSuffix(Consts.postErrorURLSuffix) {
+        } else if self.requestHead.uri.hasSuffix(Consts.postErrorURLSuffix) {
             guard let requestId = requestHead.uri.split(separator: "/").dropFirst(3).first,
                 let json = requestBody,
                 let error = ErrorResponse.fromJson(json)
             else {
-                return self.writeResponse(context: context, version: requestHead.version, status: .badRequest)
+                return self.writeResponse(context: context, status: .badRequest)
             }
             switch self.behavior.processError(requestId: String(requestId), error: error) {
             case .success():
@@ -176,25 +167,36 @@ internal final class HTTPHandler: ChannelInboundHandler {
         } else {
             responseStatus = .notFound
         }
-        self.writeResponse(context: context, version: requestHead.version, status: responseStatus, headers: responseHeaders, body: responseBody)
+        self.writeResponse(context: context, status: responseStatus, headers: responseHeaders, body: responseBody)
     }
 
-    func writeResponse(context: ChannelHandlerContext, version: HTTPVersion, status: HTTPResponseStatus, headers: [(String, String)]? = nil, body: String? = nil) {
+    func writeResponse(context: ChannelHandlerContext, status: HTTPResponseStatus, headers: [(String, String)]? = nil, body: String? = nil) {
         var headers = HTTPHeaders(headers ?? [])
         headers.add(name: "Content-Length", value: "\(body?.utf8.count ?? 0)")
-        headers.add(name: "Connection", value: "close") // no keep alive
-        let head = HTTPResponseHead(version: version, status: status, headers: headers)
-        context.write(wrapOutboundOut(.head(head)), promise: nil)
+        headers.add(name: "Connection", value: self.keepAlive ? "keep-alive" : "close")
+        let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: status, headers: headers)
+
+        context.write(wrapOutboundOut(.head(head))).whenFailure { error in
+            self.logger.error("\(self) write error \(error)")
+        }
 
         if let b = body {
             var buffer = context.channel.allocator.buffer(capacity: b.utf8.count)
             buffer.writeString(b)
-            context.write(wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+            context.write(wrapOutboundOut(.body(.byteBuffer(buffer)))).whenFailure { error in
+                self.logger.error("\(self) write error \(error)")
+            }
         }
 
-        context.writeAndFlush(wrapOutboundOut(.end(nil))).whenComplete { _ in
-            // no keep alive
-            context.close(promise: nil)
+        context.writeAndFlush(wrapOutboundOut(.end(nil))).whenComplete { result in
+            if case .failure(let error) = result {
+                self.logger.error("\(self) write error \(error)")
+            }
+            if !self.self.keepAlive {
+                context.close().whenFailure { error in
+                    self.logger.error("\(self) close error \(error)")
+                }
+            }
         }
     }
 }

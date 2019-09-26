@@ -23,11 +23,11 @@ internal final class LambdaRunner {
     private let eventLoop: EventLoop
     private let lifecycleId: String
 
-    init(eventLoop: EventLoop, lambdaHandler: LambdaHandler, lifecycleId: String) {
+    init(eventLoop: EventLoop, config: Lambda.Config, lambdaHandler: LambdaHandler) {
         self.eventLoop = eventLoop
-        self.runtimeClient = LambdaRuntimeClient(eventLoop: self.eventLoop)
+        self.runtimeClient = LambdaRuntimeClient(eventLoop: self.eventLoop, config: config.runtimeEngine)
         self.lambdaHandler = lambdaHandler
-        self.lifecycleId = lifecycleId
+        self.lifecycleId = config.lifecycle.id
     }
 
     /// Run the user provided initializer. This *must* only be called once.
@@ -56,9 +56,9 @@ internal final class LambdaRunner {
             return self.lambdaHandler.handle(eventLoop: self.eventLoop, lifecycleId: self.lifecycleId, context: context, payload: payload).map { (context, $0) }
         }.flatMap { context, result in
             // 3. report results to runtime engine
-            self.runtimeClient.reportResults(logger: logger, context: context, result: result)
-        }.peekError { error in
-            logger.error("failed reporting results to lambda runtime engine: \(error)")
+            self.runtimeClient.reportResults(logger: logger, context: context, result: result).peekError { error in
+                logger.error("failed reporting results to lambda runtime engine: \(error)")
+            }
         }.always { result in
             // we are done!
             logger.info("lambda invocation sequence completed \(result.successful ? "successfully" : "with failure")")

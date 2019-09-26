@@ -19,14 +19,12 @@ import XCTest
 
 func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws {
     let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+    defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
-    let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), lambdaHandler: handler, lifecycleId: "test")
+    let config = Lambda.Config(lifecycle: .init(), runtimeEngine: .init(requestTimeout: .milliseconds(100)))
+    let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), config: config, lambdaHandler: handler)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
-    defer {
-        // deferd in case initialize/run throw
-        XCTAssertNoThrow(try server.stop().wait())
-        XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
-    }
+    defer { XCTAssertNoThrow(try server.stop().wait()) }
     try runner.initialize(logger: logger).flatMap {
         runner.run(logger: logger)
     }.wait()

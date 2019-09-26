@@ -18,7 +18,7 @@ import XCTest
 
 class LambdaTest: XCTestCase {
     func testSuceess() throws {
-        let maxTimes = Int.random(in: 1 ... 10)
+        let maxTimes = Int.random(in: 10 ... 20)
         let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
         let handler = EchoHandler()
         let result = Lambda.run(handler: handler, maxTimes: maxTimes)
@@ -51,9 +51,9 @@ class LambdaTest: XCTestCase {
     }
 
     func testClosureSuccess() throws {
-        let maxTimes = Int.random(in: 1 ... 10)
+        let maxTimes = Int.random(in: 10 ... 20)
         let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
-        let result = Lambda.run(maxTimes: maxTimes) { (_: LambdaContext, payload: [UInt8], callback: LambdaCallback) in
+        let result = Lambda.run(maxTimes: maxTimes) { (_, payload: [UInt8], callback: LambdaCallback) in
             callback(.success(payload))
         }
         try server.stop().wait()
@@ -62,7 +62,7 @@ class LambdaTest: XCTestCase {
 
     func testClosureFailure() throws {
         let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
-        let result: LambdaLifecycleResult = Lambda.run { (_: LambdaContext, payload: [UInt8], callback: LambdaCallback) in
+        let result: LambdaLifecycleResult = Lambda.run { (_, payload: [UInt8], callback: LambdaCallback) in
             callback(.success(payload))
         }
         try server.stop().wait()
@@ -78,7 +78,8 @@ class LambdaTest: XCTestCase {
         }
         let signal = Signal.ALRM
         let max = 50
-        let future = Lambda.runAsync(handler: MyHandler(), maxTimes: max, stopSignal: signal)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+        let future = Lambda.runAsync(eventLoopGroup: eventLoopGroup, handler: MyHandler(), maxTimes: max, stopSignal: signal)
         DispatchQueue(label: "test").async {
             usleep(100_000)
             kill(getpid(), signal.rawValue)
@@ -87,6 +88,46 @@ class LambdaTest: XCTestCase {
         XCTAssertGreaterThan(result, 0, "should have stopped before any request made")
         XCTAssertLessThan(result, max, "should have stopped before \(max)")
         try server.stop().wait()
+        try eventLoopGroup.syncShutdownGracefully()
+    }
+
+    func testTimeout() throws {
+        let timeout = 100
+        setenv(Consts.requestTimeoutEnvVariableName, "\(timeout)", 1)
+        let server = try MockLambdaServer(behavior: GoodBehavior(requestId: "timeout", payload: "\(timeout * 2)")).start().wait()
+        let result = Lambda.run(handler: EchoHandler(), maxTimes: 1)
+        try server.stop().wait()
+        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.upstreamError("timeout"))
+        unsetenv(Consts.requestTimeoutEnvVariableName)
+    }
+
+    func testDisconnect() throws {
+        let server = try MockLambdaServer(behavior: GoodBehavior(requestId: "disconnect")).start().wait()
+        let result = Lambda.run(handler: EchoHandler(), maxTimes: 1)
+        try server.stop().wait()
+        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.upstreamError("connectionResetByPeer"))
+    }
+
+    func testBigPayload() throws {
+        let payload = String(repeating: "*", count: 104_448)
+        let server = try MockLambdaServer(behavior: GoodBehavior(payload: payload)).start().wait()
+        let result = Lambda.run(handler: EchoHandler(), maxTimes: 1)
+        try server.stop().wait()
+        assertLambdaLifecycleResult(result: result, shoudHaveRun: 1)
+    }
+
+    func testKeepAliveServer() throws {
+        let server = try MockLambdaServer(behavior: GoodBehavior(), keepAlive: true).start().wait()
+        let result = Lambda.run(handler: EchoHandler(), maxTimes: 10)
+        try server.stop().wait()
+        assertLambdaLifecycleResult(result: result, shoudHaveRun: 10)
+    }
+
+    func testNoKeepAliveServer() throws {
+        let server = try MockLambdaServer(behavior: GoodBehavior(), keepAlive: false).start().wait()
+        let result = Lambda.run(handler: EchoHandler(), maxTimes: 10)
+        try server.stop().wait()
+        assertLambdaLifecycleResult(result: result, shoudHaveRun: 10)
     }
 }
 
@@ -95,6 +136,7 @@ private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHav
     case .success(let count):
         if shouldFailWithError != nil {
             XCTFail("should fail with \(shouldFailWithError!)")
+            break
         }
         XCTAssertEqual(shoudHaveRun, count, "should have run \(shoudHaveRun) times")
     case .failure(let error):
@@ -107,8 +149,14 @@ private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHav
 }
 
 private class GoodBehavior: LambdaServerBehavior {
-    let requestId = NSUUID().uuidString
-    let payload = "hello"
+    let requestId: String
+    let payload: String
+
+    init(requestId: String = NSUUID().uuidString, payload: String = NSUUID().uuidString) {
+        self.requestId = requestId
+        self.payload = payload
+    }
+
     func getWork() -> GetWorkResult {
         return .success((requestId: self.requestId, payload: self.payload))
     }
@@ -144,6 +192,7 @@ private class BadBehavior: LambdaServerBehavior {
     }
 
     func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+        XCTFail("should not report init error")
         return .failure(.internalServerError)
     }
 }
