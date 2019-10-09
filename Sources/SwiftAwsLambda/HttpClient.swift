@@ -60,8 +60,7 @@ internal class HTTPClient {
                 return self.execute(request)
             }
             let promise = channel.eventLoop.makePromise(of: Response.self)
-            // FIXME: NIOAny() wrapper required due to amazon linux 2 build issue
-            let wrapper = NIOAny(HTTPRequestWrapper(request: request, promise: promise))
+            let wrapper = HTTPRequestWrapper(request: request, promise: promise)
             return channel.writeAndFlush(wrapper).flatMap {
                 promise.futureResult
             }
