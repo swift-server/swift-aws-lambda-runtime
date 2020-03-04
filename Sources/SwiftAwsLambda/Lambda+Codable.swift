@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
+import Foundation // for JSON
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` payloads.
 /// This is the most common way to use this library in AWS Lambda, since its JSON based.
@@ -32,13 +32,13 @@ extension Lambda {
     }
 
     // for testing
-    internal static func run<In: Decodable, Out: Encodable>(maxTimes: Int = 0, closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
-        return self.run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes)
+    internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
+        return self.run(handler: LambdaClosureWrapper(closure), configuration: configuration)
     }
 
     // for testing
-    internal static func run<Handler>(handler: Handler, maxTimes: Int = 0) -> LambdaLifecycleResult where Handler: LambdaCodableHandler {
-        return self.run(handler: handler as LambdaHandler, maxTimes: maxTimes)
+    internal static func run<Handler>(handler: Handler, configuration: Configuration = .init()) -> LambdaLifecycleResult where Handler: LambdaCodableHandler {
+        return self.run(handler: handler as LambdaHandler, configuration: configuration)
     }
 }
 
@@ -104,9 +104,10 @@ public extension LambdaCodableHandler {
 /// LambdaCodableJsonCodec is an implementation of `LambdaCodableCodec` which does `Encodable` -> `[UInt8]` encoding and `[UInt8]` -> `Decodable' decoding
 /// using JSONEncoder and JSONDecoder respectively.
 // This is a class as encoder amd decoder are a class, which means its cheaper to hold a reference to both in a class then a struct.
-private class LambdaCodableJsonCodec<In: Decodable, Out: Encodable>: LambdaCodableCodec<In, Out> {
+private final class LambdaCodableJsonCodec<In: Decodable, Out: Encodable>: LambdaCodableCodec<In, Out> {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+
     public override func encode(_ value: Out) -> Result<[UInt8], Error> {
         do {
             return .success(try [UInt8](self.encoder.encode(value)))

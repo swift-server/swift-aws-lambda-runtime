@@ -29,13 +29,13 @@ extension Lambda {
     }
 
     // for testing
-    internal static func run(maxTimes: Int = 0, _ closure: @escaping LambdaStringClosure) -> LambdaLifecycleResult {
-        return self.run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes)
+    internal static func run(configuration: Configuration = .init(), _ closure: @escaping LambdaStringClosure) -> LambdaLifecycleResult {
+        return self.run(handler: LambdaClosureWrapper(closure), configuration: configuration)
     }
 
     // for testing
-    internal static func run(handler: LambdaStringHandler, maxTimes: Int = 0) -> LambdaLifecycleResult {
-        return self.run(handler: handler as LambdaHandler, maxTimes: maxTimes)
+    internal static func run(handler: LambdaStringHandler, configuration: Configuration = .init()) -> LambdaLifecycleResult {
+        return self.run(handler: handler as LambdaHandler, configuration: configuration)
     }
 }
 

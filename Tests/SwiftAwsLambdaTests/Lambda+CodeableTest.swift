@@ -18,8 +18,9 @@ import XCTest
 class CodableLambdaTest: XCTestCase {
     func testSuceess() throws {
         let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
-        let result = Lambda.run(handler: CodableEchoHandler(), maxTimes: maxTimes)
+        let result = Lambda.run(handler: CodableEchoHandler(), configuration: configuration)
         try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
     }
@@ -33,8 +34,9 @@ class CodableLambdaTest: XCTestCase {
 
     func testClosureSuccess() throws {
         let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
-        let result = Lambda.run(maxTimes: maxTimes) { (_, payload: Request, callback) in
+        let result = Lambda.run(configuration: configuration) { (_, payload: Request, callback) in
             callback(.success(Response(requestId: payload.requestId)))
         }
         try server.stop().wait()
@@ -68,7 +70,7 @@ private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHav
 }
 
 // TODO: taking advantage of the fact we know the serialization is json
-private class GoodBehavior: LambdaServerBehavior {
+private struct GoodBehavior: LambdaServerBehavior {
     let requestId = NSUUID().uuidString
 
     func getWork() -> GetWorkResult {
@@ -107,7 +109,7 @@ private class GoodBehavior: LambdaServerBehavior {
     }
 }
 
-private class BadBehavior: LambdaServerBehavior {
+private struct BadBehavior: LambdaServerBehavior {
     func getWork() -> GetWorkResult {
         return .failure(.internalServerError)
     }
@@ -125,21 +127,21 @@ private class BadBehavior: LambdaServerBehavior {
     }
 }
 
-private class Request: Codable {
+private struct Request: Codable {
     let requestId: String
     init(requestId: String) {
         self.requestId = requestId
     }
 }
 
-private class Response: Codable {
+private struct Response: Codable {
     let requestId: String
     init(requestId: String) {
         self.requestId = requestId
     }
 }
 
-private class CodableEchoHandler: LambdaCodableHandler {
+private struct CodableEchoHandler: LambdaCodableHandler {
     func handle(context: LambdaContext, payload: Request, callback: @escaping LambdaCodableCallback<Response>) {
         callback(.success(Response(requestId: payload.requestId)))
     }

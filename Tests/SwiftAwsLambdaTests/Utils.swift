@@ -21,8 +21,8 @@ func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws {
     let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
-    let config = Lambda.Config(lifecycle: .init(), runtimeEngine: .init(requestTimeout: .milliseconds(100)))
-    let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), config: config, lambdaHandler: handler)
+    let configuration = Lambda.Configuration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
+    let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration, lambdaHandler: handler)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer { XCTAssertNoThrow(try server.stop().wait()) }
     try runner.initialize(logger: logger).flatMap {
@@ -43,7 +43,7 @@ class EchoHandler: LambdaHandler {
     }
 }
 
-class FailedHandler: LambdaHandler {
+struct FailedHandler: LambdaHandler {
     private let reason: String
 
     public init(_ reason: String) {
@@ -59,7 +59,7 @@ class FailedHandler: LambdaHandler {
     }
 }
 
-class FailedInitializerHandler: LambdaHandler {
+struct FailedInitializerHandler: LambdaHandler {
     private let reason: String
 
     public init(_ reason: String) {

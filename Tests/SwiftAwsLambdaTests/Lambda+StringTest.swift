@@ -18,8 +18,9 @@ import XCTest
 class StringLambdaTest: XCTestCase {
     func testSuceess() throws {
         let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
-        let result = Lambda.run(handler: StringEchoHandler(), maxTimes: maxTimes)
+        let result = Lambda.run(handler: StringEchoHandler(), configuration: configuration)
         try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
     }
@@ -33,8 +34,9 @@ class StringLambdaTest: XCTestCase {
 
     func testClosureSuccess() throws {
         let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
-        let result = Lambda.run(maxTimes: maxTimes) { (_, payload: String, callback) in
+        let result = Lambda.run(configuration: configuration) { (_, payload: String, callback) in
             callback(.success(payload))
         }
         try server.stop().wait()
@@ -67,7 +69,7 @@ private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHav
     }
 }
 
-private class GoodBehavior: LambdaServerBehavior {
+private struct GoodBehavior: LambdaServerBehavior {
     let requestId = NSUUID().uuidString
     let payload = "hello"
     func getWork() -> GetWorkResult {
@@ -91,7 +93,7 @@ private class GoodBehavior: LambdaServerBehavior {
     }
 }
 
-private class BadBehavior: LambdaServerBehavior {
+private struct BadBehavior: LambdaServerBehavior {
     func getWork() -> GetWorkResult {
         return .failure(.internalServerError)
     }
@@ -109,7 +111,7 @@ private class BadBehavior: LambdaServerBehavior {
     }
 }
 
-private class StringEchoHandler: LambdaStringHandler {
+private struct StringEchoHandler: LambdaStringHandler {
     func handle(context: LambdaContext, payload: String, callback: @escaping LambdaStringCallback) {
         callback(.success(payload))
     }

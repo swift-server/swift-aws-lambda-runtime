@@ -23,13 +23,13 @@ import XCTest
 ///
 
 #if os(Linux) || os(FreeBSD)
-    @testable import SwiftAwsLambdaTests
+@testable import SwiftAwsLambdaTests
 
-    XCTMain([
-        testCase(CodableLambdaTest.allTests),
-        testCase(LambdaRunnerTest.allTests),
-        testCase(LambdaRuntimeClientTest.allTests),
-        testCase(LambdaTest.allTests),
-        testCase(StringLambdaTest.allTests),
-    ])
+XCTMain([
+    testCase(CodableLambdaTest.allTests),
+    testCase(LambdaRunnerTest.allTests),
+    testCase(LambdaRuntimeClientTest.allTests),
+    testCase(LambdaTest.allTests),
+    testCase(StringLambdaTest.allTests),
+])
 #endif

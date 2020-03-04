@@ -15,15 +15,7 @@
 import Dispatch
 import NIO
 
-internal enum Defaults {
-    static let host = "127.0.0.1"
-    static let port = 8080
-}
-
 internal enum Consts {
-    static let hostPortEnvVariableName = "AWS_LAMBDA_RUNTIME_API"
-    static let requestTimeoutEnvVariableName = "REQUEST_TIMEOUT"
-
     private static let apiPrefix = "/2018-06-01"
     static let invocationURLPrefix = "\(apiPrefix)/runtime/invocation"
     static let requestWorkURLSuffix = "/next"
@@ -43,28 +35,11 @@ internal enum AmazonHeaders {
 }
 
 /// Utility to read environment variables
-internal enum Environment {
-    static func string(name: String, defaultValue: String) -> String {
-        return self.string(name) ?? defaultValue
+internal func env(_ name: String) -> String? {
+    guard let value = getenv(name) else {
+        return nil
     }
-
-    static func string(_ name: String) -> String? {
-        guard let value = getenv(name) else {
-            return nil
-        }
-        return String(validatingUTF8: value)
-    }
-
-    static func int(name: String, defaultValue: Int) -> Int {
-        return self.int(name) ?? defaultValue
-    }
-
-    static func int(_ name: String) -> Int? {
-        guard let value = string(name) else {
-            return nil
-        }
-        return Int(value)
-    }
+    return String(utf8String: value)
 }
 
 /// Helper function to trap signals
@@ -79,6 +54,7 @@ internal func trap(signal sig: Signal, handler: @escaping (Signal) -> Void) -> D
     return signalSource
 }
 
+@usableFromInline
 internal enum Signal: Int32 {
     case HUP = 1
     case INT = 2

@@ -12,23 +12,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
+import Foundation // for JSON
 import Logging
 import NIO
 import NIOHTTP1
 @testable import SwiftAwsLambda
 
-internal class MockLambdaServer {
+internal final class MockLambdaServer {
     private let logger = Logger(label: "MockLambdaServer")
     private let behavior: LambdaServerBehavior
     private let host: String
     private let port: Int
     private let keepAlive: Bool
     private let group: EventLoopGroup
+
     private var channel: Channel?
     private var shutdown = false
 
-    public init(behavior: LambdaServerBehavior, host: String = Defaults.host, port: Int = Defaults.port, keepAlive: Bool = true) {
+    public init(behavior: LambdaServerBehavior, host: String = "127.0.0.1", port: Int = 7000, keepAlive: Bool = true) {
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         self.behavior = behavior
         self.host = host
@@ -96,9 +97,10 @@ internal final class HTTPHandler: ChannelInboundHandler {
             self.requestBody?.clear()
         case .body(var buffer):
             if self.requestBody == nil {
-                self.requestBody = context.channel.allocator.buffer(capacity: buffer.readableBytes)
+                self.requestBody = buffer
+            } else {
+                self.requestBody!.writeBuffer(&buffer)
             }
-            self.requestBody!.writeBuffer(&buffer)
         case .end:
             self.processRequest(context: context)
         }
@@ -129,7 +131,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
             }
         } else if self.requestHead.uri.hasSuffix(Consts.requestWorkURLSuffix) {
             switch self.behavior.getWork() {
-            case .success(let requestId, let result):
+            case .success(let (requestId, result)):
                 if requestId == "timeout" {
                     usleep((UInt32(result) ?? 0) * 1000)
                 } else if requestId == "disconnect" {

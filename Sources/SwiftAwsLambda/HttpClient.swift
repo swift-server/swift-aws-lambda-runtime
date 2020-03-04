@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import NIO
 import NIOConcurrencyHelpers
 import NIOHTTP1
@@ -20,45 +19,40 @@ import NIOHTTP1
 /// A barebone HTTP client to interact with AWS Runtime Engine which is an HTTP server.
 internal class HTTPClient {
     private let eventLoop: EventLoop
-    private let config: Lambda.Config.RuntimeEngine
+    private let configuration: Lambda.Configuration.RuntimeEngine
 
-    private var _state = State.disconnected
+    private var state = State.disconnected
     private let lock = Lock()
 
-    init(eventLoop: EventLoop, config: Lambda.Config.RuntimeEngine) {
+    init(eventLoop: EventLoop, configuration: Lambda.Configuration.RuntimeEngine) {
         self.eventLoop = eventLoop
-        self.config = config
-    }
-
-    private var state: State {
-        get {
-            return self.lock.withLock {
-                self._state
-            }
-        }
-        set {
-            self.lock.withLockVoid {
-                self._state = newValue
-            }
-        }
+        self.configuration = configuration
     }
 
     func get(url: String, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
-        return self.execute(Request(url: self.config.baseURL.appendingPathComponent(url), method: .GET, timeout: timeout ?? self.config.requestTimeout))
+        return self.execute(Request(url: self.configuration.baseURL.appendingPathComponent(url),
+                                    method: .GET,
+                                    timeout: timeout ?? self.configuration.requestTimeout))
     }
 
     func post(url: String, body: ByteBuffer, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
-        return self.execute(Request(url: self.config.baseURL.appendingPathComponent(url), method: .POST, body: body, timeout: timeout ?? self.config.requestTimeout))
+        return self.execute(Request(url: self.configuration.baseURL.appendingPathComponent(url),
+                                    method: .POST,
+                                    body: body,
+                                    timeout: timeout ?? self.configuration.requestTimeout))
     }
 
     private func execute(_ request: Request) -> EventLoopFuture<Response> {
+        self.lock.lock()
         switch self.state {
         case .connected(let channel):
             guard channel.isActive else {
                 // attempt to reconnect
                 self.state = .disconnected
+                self.lock.unlock()
                 return self.execute(request)
             }
+            self.lock.unlock()
             let promise = channel.eventLoop.makePromise(of: Response.self)
             let wrapper = HTTPRequestWrapper(request: request, promise: promise)
             return channel.writeAndFlush(wrapper).flatMap {
@@ -66,7 +60,8 @@ internal class HTTPClient {
             }
         case .disconnected:
             return self.connect().flatMap {
-                self.execute(request)
+                self.lock.unlock()
+                return self.execute(request)
             }
         default:
             preconditionFailure("invalid state \(self.state)")
@@ -81,11 +76,11 @@ internal class HTTPClient {
         let bootstrap = ClientBootstrap(group: eventLoop)
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().flatMap {
-                    channel.pipeline.addHandlers([HTTPHandler(keepAlive: self.config.keepAlive),
-                                                  UnaryHandler(keepAlive: self.config.keepAlive)])
+                    channel.pipeline.addHandlers([HTTPHandler(keepAlive: self.configuration.keepAlive),
+                                                  UnaryHandler(keepAlive: self.configuration.keepAlive)])
                 }
             }
-        return bootstrap.connect(host: self.config.baseURL.host, port: self.config.baseURL.port).flatMapThrowing { channel in
+        return bootstrap.connect(host: self.configuration.baseURL.host, port: self.configuration.baseURL.port).flatMapThrowing { channel in
             self.state = .connected(channel)
         }
     }
