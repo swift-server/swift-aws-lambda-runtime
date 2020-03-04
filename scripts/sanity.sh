@@ -14,6 +14,7 @@
 ##===----------------------------------------------------------------------===##
 
 set -eu
+
 here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 function replace_acceptable_years() {

@@ -17,7 +17,7 @@ import XCTest
 
 class LambdaRunnerTest: XCTestCase {
     func testSuccess() throws {
-        class Behavior: LambdaServerBehavior {
+        struct Behavior: LambdaServerBehavior {
             let requestId = NSUUID().uuidString
             let payload = "hello"
             func getWork() -> GetWorkResult {
@@ -44,7 +44,7 @@ class LambdaRunnerTest: XCTestCase {
     }
 
     func testFailure() throws {
-        class Behavior: LambdaServerBehavior {
+        struct Behavior: LambdaServerBehavior {
             static let error = "boom"
             let requestId = NSUUID().uuidString
             func getWork() -> GetWorkResult {
