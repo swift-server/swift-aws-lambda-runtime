@@ -48,9 +48,9 @@ This library is designed to simplify implementing an AWS Lambda using the Swift 
   }
   ```
 
-  See a complete example in [SwiftAwsLambdaSample](https://github.com/swift-server/swift-aws-lambda-sample).
+  See a complete example in SwiftAwsLambdaSample.
 
-  3. Deploy to AWS Lambda. To do so, you need to compile your Application for EC2 Linux, package it as a Zip file, and upload to AWS. You can find sample build and deployment scripts in [SwiftAwsLambdaSample](https://github.com/swift-server/swift-aws-lambda-sample).
+  3. Deploy to AWS Lambda. To do so, you need to compile your Application for EC2 Linux, package it as a Zip file, and upload to AWS. You can find sample build and deployment scripts in SwiftAwsLambdaSample.
 
 ## Architecture
 

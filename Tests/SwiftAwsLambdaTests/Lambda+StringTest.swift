@@ -70,7 +70,7 @@ private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHav
 }
 
 private struct GoodBehavior: LambdaServerBehavior {
-    let requestId = NSUUID().uuidString
+    let requestId = UUID().uuidString
     let payload = "hello"
     func getWork() -> GetWorkResult {
         return .success((requestId: self.requestId, payload: self.payload))

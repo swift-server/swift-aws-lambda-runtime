@@ -34,7 +34,7 @@ cleanup() {
 
 trap "cleanup" ERR
 
-iterations=100
+iterations=1000
 results=()
 
 #------------------

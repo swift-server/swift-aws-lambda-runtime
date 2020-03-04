@@ -20,6 +20,7 @@ import NIOHTTP1
 internal class HTTPClient {
     private let eventLoop: EventLoop
     private let configuration: Lambda.Configuration.RuntimeEngine
+    private let targetHost: String
 
     private var state = State.disconnected
     private let lock = Lock()
@@ -27,20 +28,24 @@ internal class HTTPClient {
     init(eventLoop: EventLoop, configuration: Lambda.Configuration.RuntimeEngine) {
         self.eventLoop = eventLoop
         self.configuration = configuration
+        self.targetHost = "\(self.configuration.ip):\(self.configuration.port)"
     }
 
     func get(url: String, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
-        return self.execute(Request(url: self.configuration.baseURL.appendingPathComponent(url),
+        return self.execute(Request(targetHost: self.targetHost,
+                                    url: url,
                                     method: .GET,
                                     timeout: timeout ?? self.configuration.requestTimeout))
     }
 
     func post(url: String, body: ByteBuffer, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
-        return self.execute(Request(url: self.configuration.baseURL.appendingPathComponent(url),
+        return self.execute(Request(targetHost: self.targetHost,
+                                    url: url,
                                     method: .POST,
                                     body: body,
                                     timeout: timeout ?? self.configuration.requestTimeout))
     }
+
 
     private func execute(_ request: Request) -> EventLoopFuture<Response> {
         self.lock.lock()
@@ -80,23 +85,30 @@ internal class HTTPClient {
                                                   UnaryHandler(keepAlive: self.configuration.keepAlive)])
                 }
             }
-        return bootstrap.connect(host: self.configuration.baseURL.host, port: self.configuration.baseURL.port).flatMapThrowing { channel in
-            self.state = .connected(channel)
+        
+        do {
+            // connect directly via socket address to avoid happy eyeballs (perf)
+            let address = try SocketAddress(ipAddress: self.configuration.ip, port: self.configuration.port)
+            return bootstrap.connect(to: address).flatMapThrowing { channel in
+                self.state = .connected(channel)
+            }
+        } catch {
+            return eventLoop.makeFailedFuture(error)
         }
     }
 
     internal struct Request: Equatable {
-        let url: Lambda.HTTPURL
+        let url: String
         let method: HTTPMethod
-        let target: String
+        let targetHost: String
         let headers: HTTPHeaders
         let body: ByteBuffer?
         let timeout: TimeAmount?
 
-        init(url: Lambda.HTTPURL, method: HTTPMethod = .GET, headers: HTTPHeaders = HTTPHeaders(), body: ByteBuffer? = nil, timeout: TimeAmount?) {
+        init(targetHost: String, url: String, method: HTTPMethod = .GET, headers: HTTPHeaders = HTTPHeaders(), body: ByteBuffer? = nil, timeout: TimeAmount?) {
+            self.targetHost = targetHost
             self.url = url
             self.method = method
-            self.target = url.path + (url.query.map { "?" + $0 } ?? "")
             self.headers = headers
             self.body = body
             self.timeout = timeout
@@ -137,9 +149,9 @@ private class HTTPHandler: ChannelDuplexHandler {
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let request = unwrapOutboundIn(data)
 
-        var head = HTTPRequestHead(version: .init(major: 1, minor: 1), method: request.method, uri: request.target, headers: request.headers)
+        var head = HTTPRequestHead(version: .init(major: 1, minor: 1), method: request.method, uri: request.url, headers: request.headers)
         if !head.headers.contains(name: "Host") {
-            head.headers.add(name: "Host", value: request.url.host)
+            head.headers.add(name: "Host", value: request.targetHost)
         }
         if let body = request.body {
             head.headers.add(name: "Content-Length", value: String(body.readableBytes))

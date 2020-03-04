@@ -98,6 +98,7 @@ class LambdaTest: XCTestCase {
         let timeout: Int64 = 100
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1),
                                                  runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
+
         let server = try MockLambdaServer(behavior: GoodBehavior(requestId: "timeout", payload: "\(timeout * 2)")).start().wait()
         let result = Lambda.run(handler: EchoHandler(), configuration: configuration)
         try server.stop().wait()
@@ -161,7 +162,7 @@ private struct GoodBehavior: LambdaServerBehavior {
     let requestId: String
     let payload: String
 
-    init(requestId: String = NSUUID().uuidString, payload: String = NSUUID().uuidString) {
+    init(requestId: String = UUID().uuidString, payload: String = UUID().uuidString) {
         self.requestId = requestId
         self.payload = payload
     }
