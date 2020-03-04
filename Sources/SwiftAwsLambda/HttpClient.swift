@@ -21,7 +21,7 @@ internal class HTTPClient {
     private let eventLoop: EventLoop
     private let configuration: Lambda.Configuration.RuntimeEngine
 
-    private var _state = State.disconnected
+    private var state = State.disconnected
     private let lock = Lock()
 
     init(eventLoop: EventLoop, configuration: Lambda.Configuration.RuntimeEngine) {
@@ -29,18 +29,6 @@ internal class HTTPClient {
         self.configuration = configuration
     }
 
-    private var state: State {
-        get {
-            return self.lock.withLock {
-                self._state
-            }
-        }
-        set {
-            self.lock.withLockVoid {
-                self._state = newValue
-            }
-        }
-    }
 
     func get(url: String, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
         return self.execute(Request(url: self.configuration.baseURL.appendingPathComponent(url),
@@ -56,13 +44,16 @@ internal class HTTPClient {
     }
 
     private func execute(_ request: Request) -> EventLoopFuture<Response> {
+        self.lock.lock()
         switch self.state {
         case .connected(let channel):
             guard channel.isActive else {
                 // attempt to reconnect
                 self.state = .disconnected
+                self.lock.unlock()
                 return self.execute(request)
             }
+            self.lock.unlock()
             let promise = channel.eventLoop.makePromise(of: Response.self)
             let wrapper = HTTPRequestWrapper(request: request, promise: promise)
             return channel.writeAndFlush(wrapper).flatMap {
@@ -70,7 +61,8 @@ internal class HTTPClient {
             }
         case .disconnected:
             return self.connect().flatMap {
-                self.execute(request)
+                self.lock.unlock()
+                return self.execute(request)
             }
         default:
             preconditionFailure("invalid state \(self.state)")
