@@ -17,7 +17,7 @@ import XCTest
 
 class LambdaRuntimeClientTest: XCTestCase {
     func testGetWorkServerInternalError() throws {
-        class Behavior: LambdaServerBehavior {
+        struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 return .failure(.internalServerError)
             }
@@ -43,7 +43,7 @@ class LambdaRuntimeClientTest: XCTestCase {
     }
 
     func testGetWorkServerNoBodyError() throws {
-        class Behavior: LambdaServerBehavior {
+        struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 return .success(("1", ""))
             }
@@ -69,7 +69,7 @@ class LambdaRuntimeClientTest: XCTestCase {
     }
 
     func testGetWorkServerNoContextError() throws {
-        class Behavior: LambdaServerBehavior {
+        struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 // no request id -> no context
                 return .success(("", "hello"))
@@ -96,7 +96,7 @@ class LambdaRuntimeClientTest: XCTestCase {
     }
 
     func testProcessResponseInternalServerError() throws {
-        class Behavior: LambdaServerBehavior {
+        struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 return .success((requestId: "1", payload: "payload"))
             }
@@ -121,7 +121,7 @@ class LambdaRuntimeClientTest: XCTestCase {
     }
 
     func testProcessErrorInternalServerError() throws {
-        class Behavior: LambdaServerBehavior {
+        struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 return .success((requestId: "1", payload: "payload"))
             }
@@ -146,7 +146,7 @@ class LambdaRuntimeClientTest: XCTestCase {
     }
 
     func testProcessInitErrorInternalServerError() throws {
-        class Behavior: LambdaServerBehavior {
+        struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 XCTFail("should not get work")
                 return .failure(.internalServerError)

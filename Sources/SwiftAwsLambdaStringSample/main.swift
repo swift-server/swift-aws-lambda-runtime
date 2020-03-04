@@ -19,5 +19,3 @@ Lambda.run { (_, payload: String, callback) in
     // as an example, respond with the reverse the input payload
     callback(.success(String(payload.reversed())))
 }
-
-print("Bye!")

@@ -19,5 +19,3 @@ Lambda.run { (_, payload: [UInt8], callback) in
     // as an example, respond with the reverse the input payload
     callback(.success(payload.reversed()))
 }
-
-print("Bye!")

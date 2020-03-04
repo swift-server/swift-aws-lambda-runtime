@@ -13,13 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Linux)
-    import Glibc
+import Glibc
 #else
-    import Darwin.C
+import Darwin.C
 #endif
 
 import Backtrace
-import Foundation
+import Foundation // for URL
 import Logging
 import NIO
 import NIOConcurrencyHelpers
@@ -28,6 +28,7 @@ public enum Lambda {
     /// Run a Lambda defined by implementing the `LambdaClosure` closure.
     ///
     /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
+    @inlinable
     public static func run(_ closure: @escaping LambdaClosure) {
         self.run(closure: closure)
     }
@@ -35,35 +36,38 @@ public enum Lambda {
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
     ///
     /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
+    @inlinable
     public static func run(_ handler: LambdaHandler) {
         self.run(handler: handler)
     }
 
     // for testing and internal use
+    @usableFromInline
     @discardableResult
-    internal static func run(maxTimes: Int = 0, stopSignal: Signal = .TERM, closure: @escaping LambdaClosure) -> LambdaLifecycleResult {
-        return self.run(handler: LambdaClosureWrapper(closure), maxTimes: maxTimes, stopSignal: stopSignal)
+    internal static func run(configuration: Configuration = .init(), closure: @escaping LambdaClosure) -> LambdaLifecycleResult {
+        return self.run(handler: LambdaClosureWrapper(closure), configuration: configuration)
     }
 
     // for testing and internal use
+    @usableFromInline
     @discardableResult
-    internal static func run(handler: LambdaHandler, maxTimes: Int = 0, stopSignal: Signal = .TERM) -> LambdaLifecycleResult {
+    internal static func run(handler: LambdaHandler, configuration: Configuration = .init()) -> LambdaLifecycleResult {
         do {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
             defer { try! eventLoopGroup.syncShutdownGracefully() }
-            let result = try self.runAsync(eventLoopGroup: eventLoopGroup, handler: handler, maxTimes: maxTimes, stopSignal: stopSignal).wait()
+            let result = try self.runAsync(eventLoopGroup: eventLoopGroup, handler: handler, configuration: configuration).wait()
             return .success(result)
         } catch {
             return .failure(error)
         }
     }
 
-    internal static func runAsync(eventLoopGroup: EventLoopGroup, handler: LambdaHandler, maxTimes: Int = 0, stopSignal: Signal = .TERM) -> EventLoopFuture<Int> {
+    internal static func runAsync(eventLoopGroup: EventLoopGroup, handler: LambdaHandler, configuration: Configuration) -> EventLoopFuture<Int> {
         Backtrace.install()
-        let logger = Logger(label: "Lambda")
-        let config = Config(lifecycle: .init(maxTimes: maxTimes))
-        let lifecycle = Lifecycle(eventLoop: eventLoopGroup.next(), logger: logger, config: config, handler: handler)
-        let signalSource = trap(signal: stopSignal) { signal in
+        var logger = Logger(label: "Lambda")
+        logger.logLevel = configuration.general.logLevel
+        let lifecycle = Lifecycle(eventLoop: eventLoopGroup.next(), logger: logger, configuration: configuration, handler: handler)
+        let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
             logger.info("intercepted signal: \(signal)")
             lifecycle.stop()
         }
@@ -73,19 +77,19 @@ public enum Lambda {
         }
     }
 
-    private class Lifecycle {
+    private final class Lifecycle {
         private let eventLoop: EventLoop
         private let logger: Logger
-        private let config: Lambda.Config
+        private let configuration: Configuration
         private let handler: LambdaHandler
 
         private var _state = LifecycleState.idle
         private let stateLock = Lock()
 
-        init(eventLoop: EventLoop, logger: Logger, config: Lambda.Config, handler: LambdaHandler) {
+        init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, handler: LambdaHandler) {
             self.eventLoop = eventLoop
             self.logger = logger
-            self.config = config
+            self.configuration = configuration
             self.handler = handler
         }
 
@@ -108,11 +112,11 @@ public enum Lambda {
         }
 
         func start() -> EventLoopFuture<Int> {
-            logger.info("lambda lifecycle starting with \(self.config)")
+            logger.info("lambda lifecycle starting with \(self.configuration)")
             self.state = .initializing
             var logger = self.logger
-            logger[metadataKey: "lifecycleId"] = .string(self.config.lifecycle.id)
-            let runner = LambdaRunner(eventLoop: self.eventLoop, config: self.config, lambdaHandler: self.handler)
+            logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
+            let runner = LambdaRunner(eventLoop: self.eventLoop, configuration: self.configuration, lambdaHandler: self.handler)
             return runner.initialize(logger: logger).flatMap { _ in
                 self.state = .active
                 return self.run(logger: logger, runner: runner, count: 0)
@@ -132,7 +136,7 @@ public enum Lambda {
         private func run(logger: Logger, runner: LambdaRunner, count: Int) -> EventLoopFuture<Int> {
             switch self.state {
             case .active:
-                if self.config.lifecycle.maxTimes > 0, count >= self.config.lifecycle.maxTimes {
+                if self.configuration.lifecycle.maxTimes > 0, count >= self.configuration.lifecycle.maxTimes {
                     return self.eventLoop.makeSucceededFuture(count)
                 }
                 var logger = logger
@@ -149,31 +153,49 @@ public enum Lambda {
         }
     }
 
-    internal struct Config: CustomStringConvertible {
+    @usableFromInline
+    internal struct Configuration: CustomStringConvertible {
+        let general: General
         let lifecycle: Lifecycle
         let runtimeEngine: RuntimeEngine
 
-        var description: String {
-            return "\(Config.self):\n  \(self.lifecycle)\n  \(self.runtimeEngine)"
+        @usableFromInline
+        init() {
+            self.init(general: .init(), lifecycle: .init(), runtimeEngine: .init())
         }
 
-        init(lifecycle: Lifecycle = .init(), runtimeEngine: RuntimeEngine = .init()) {
-            self.lifecycle = lifecycle
-            self.runtimeEngine = runtimeEngine
+        init(general: General? = nil, lifecycle: Lifecycle? = nil, runtimeEngine: RuntimeEngine? = nil) {
+            self.general = general ?? General()
+            self.lifecycle = lifecycle ?? Lifecycle()
+            self.runtimeEngine = runtimeEngine ?? RuntimeEngine()
+        }
+
+        struct General: CustomStringConvertible {
+            let logLevel: Logger.Level
+
+            init(logLevel: Logger.Level? = nil) {
+                self.logLevel = logLevel ?? env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
+            }
+
+            var description: String {
+                return "\(General.self)(logLevel: \(self.logLevel))"
+            }
         }
 
         struct Lifecycle: CustomStringConvertible {
             let id: String
             let maxTimes: Int
+            let stopSignal: Signal
 
-            init(id: String? = nil, maxTimes: Int? = nil) {
-                self.id = id ?? NSUUID().uuidString
-                self.maxTimes = maxTimes ?? 0
+            init(id: String? = nil, maxTimes: Int? = nil, stopSignal: Signal? = nil) {
+                self.id = id ?? UUID().uuidString
+                self.maxTimes = maxTimes ?? env("MAX_REQUESTS").flatMap(Int.init) ?? 0
+                self.stopSignal = stopSignal ?? env("STOP_SIGNAL").flatMap(Int32.init).flatMap(Signal.init) ?? Signal.TERM
                 precondition(self.maxTimes >= 0, "maxTimes must be equal or larger than 0")
             }
 
             var description: String {
-                return "\(Lifecycle.self)(id: \(self.id), maxTimes: \(self.maxTimes))"
+                return "\(Lifecycle.self)(id: \(self.id), maxTimes: \(self.maxTimes), stopSignal: \(self.stopSignal))"
             }
         }
 
@@ -181,16 +203,23 @@ public enum Lambda {
             let baseURL: HTTPURL
             let keepAlive: Bool
             let requestTimeout: TimeAmount?
+            let offload: Bool
 
-            init(baseURL: String? = nil, keepAlive: Bool? = nil, requestTimeout: TimeAmount? = nil) {
-                self.baseURL = HTTPURL(baseURL ?? Environment.string(Consts.hostPortEnvVariableName).flatMap { "http://\($0)" } ?? "http://\(Defaults.host):\(Defaults.port)")
-                self.keepAlive = keepAlive ?? true
-                self.requestTimeout = requestTimeout ?? Environment.int(Consts.requestTimeoutEnvVariableName).flatMap { .milliseconds(Int64($0)) }
+            init(baseURL: String? = nil, keepAlive: Bool? = nil, requestTimeout: TimeAmount? = nil, offload: Bool? = nil) {
+                self.baseURL = HTTPURL(baseURL ?? "http://\(env("AWS_LAMBDA_RUNTIME_API") ?? "127.0.0.1:7000")")
+                self.keepAlive = keepAlive ?? env("KEEP_ALIVE").flatMap(Bool.init) ?? true
+                self.requestTimeout = requestTimeout ?? env("REQUEST_TIMEOUT").flatMap(Int64.init).flatMap { .milliseconds($0) }
+                self.offload = offload ?? env("OFFLOAD").flatMap(Bool.init) ?? false
             }
 
             var description: String {
-                return "\(RuntimeEngine.self)(baseURL: \(self.baseURL), keepAlive: \(self.keepAlive), requestTimeout: \(String(describing: self.requestTimeout)))"
+                return "\(RuntimeEngine.self)(baseURL: \(self.baseURL), keepAlive: \(self.keepAlive), requestTimeout: \(String(describing: self.requestTimeout)), offload: \(self.offload)"
             }
+        }
+
+        @usableFromInline
+        var description: String {
+            return "\(Configuration.self)\n  \(self.general))\n  \(self.lifecycle)\n  \(self.runtimeEngine)"
         }
     }
 
@@ -308,6 +337,7 @@ public struct LambdaContext {
     }
 }
 
+@usableFromInline
 internal typealias LambdaLifecycleResult = Result<Int, Error>
 
 private struct LambdaClosureWrapper: LambdaHandler {

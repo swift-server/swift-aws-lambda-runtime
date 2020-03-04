@@ -38,8 +38,8 @@ This library is designed to simplify implementing an AWS Lambda using the Swift 
   Or more typically, a simple closure that receives a json payload and replies with a json response via `Codable`:
 
   ```swift
-  private class Request: Codable {}
-  private class Response: Codable {}
+  private struct Request: Codable {}
+  private struct Response: Codable {}
 
   // in this example we are receiving and responding with codables. Request and Response above are examples of how to use
   // codables to model your reqeuest and response objects

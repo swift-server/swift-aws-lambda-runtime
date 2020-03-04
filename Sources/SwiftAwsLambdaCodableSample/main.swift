@@ -14,13 +14,16 @@
 
 import SwiftAwsLambda
 
-private class Request: Codable {}
-private class Response: Codable {}
+private struct Request: Codable {
+    let body: String
+}
+
+private struct Response: Codable {
+    let body: String
+}
 
 // in this example we are receiving and responding with codables. Request and Response above are examples of how to use
 // codables to model your reqeuest and response objects
-Lambda.run { (_, _: Request, callback) in
-    callback(.success(Response()))
+Lambda.run { (_, request: Request, callback) in
+    callback(.success(Response(body: String(request.body.reversed()))))
 }
-
-print("Bye!")

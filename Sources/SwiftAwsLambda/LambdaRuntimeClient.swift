@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
+import Foundation // for JSON
 import Logging
 import NIO
 import NIOHTTP1
@@ -22,20 +22,20 @@ import NIOHTTP1
 /// * /runtime/invocation/response
 /// * /runtime/invocation/error
 /// * /runtime/init/error
-internal class LambdaRuntimeClient {
+internal struct LambdaRuntimeClient {
     private let eventLoop: EventLoop
     private let allocator = ByteBufferAllocator()
     private let httpClient: HTTPClient
 
-    init(eventLoop: EventLoop, config: Lambda.Config.RuntimeEngine) {
+    init(eventLoop: EventLoop, configuration: Lambda.Configuration.RuntimeEngine) {
         self.eventLoop = eventLoop
-        self.httpClient = HTTPClient(eventLoop: eventLoop, config: config)
+        self.httpClient = HTTPClient(eventLoop: eventLoop, configuration: configuration)
     }
 
     /// Requests work from the Runtime Engine.
     func requestWork(logger: Logger) -> EventLoopFuture<(LambdaContext, [UInt8])> {
         let url = Consts.invocationURLPrefix + Consts.requestWorkURLSuffix
-        logger.info("requesting work from lambda runtime engine using \(url)")
+        logger.debug("requesting work from lambda runtime engine using \(url)")
         return self.httpClient.get(url: url).flatMapThrowing { response in
             guard response.status == .ok else {
                 throw LambdaRuntimeClientError.badStatusCode(response.status)
@@ -80,7 +80,7 @@ internal class LambdaRuntimeClient {
                 body.writeString(json)
             }
         }
-        logger.info("reporting results to lambda runtime engine using \(url)")
+        logger.debug("reporting results to lambda runtime engine using \(url)")
         return self.httpClient.post(url: url, body: body).flatMapThrowing { response in
             guard response.status == .accepted else {
                 throw LambdaRuntimeClientError.badStatusCode(response.status)
@@ -109,7 +109,7 @@ internal class LambdaRuntimeClient {
         case .success(let json):
             body = self.allocator.buffer(capacity: json.utf8.count)
             body.writeString(json)
-            logger.info("reporting initialization error to lambda runtime engine using \(url)")
+            logger.warning("reporting initialization error to lambda runtime engine using \(url)")
             return self.httpClient.post(url: url, body: body).flatMapThrowing { response in
                 guard response.status == .accepted else {
                     throw LambdaRuntimeClientError.badStatusCode(response.status)
