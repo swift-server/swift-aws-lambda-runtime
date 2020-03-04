@@ -71,7 +71,7 @@ private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHav
 
 // TODO: taking advantage of the fact we know the serialization is json
 private struct GoodBehavior: LambdaServerBehavior {
-    let requestId = NSUUID().uuidString
+    let requestId = UUID().uuidString
 
     func getWork() -> GetWorkResult {
         guard let payload = try? JSONEncoder().encode(Request(requestId: requestId)) else {

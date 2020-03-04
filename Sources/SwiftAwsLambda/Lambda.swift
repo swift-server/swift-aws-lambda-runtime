@@ -19,10 +19,10 @@ import Darwin.C
 #endif
 
 import Backtrace
-import Foundation // for URL
 import Logging
 import NIO
 import NIOConcurrencyHelpers
+import Dispatch
 
 public enum Lambda {
     /// Run a Lambda defined by implementing the `LambdaClosure` closure.
@@ -53,7 +53,7 @@ public enum Lambda {
     @discardableResult
     internal static func run(handler: LambdaHandler, configuration: Configuration = .init()) -> LambdaLifecycleResult {
         do {
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1) // only need one thread, will improve performance
             defer { try! eventLoopGroup.syncShutdownGracefully() }
             let result = try self.runAsync(eventLoopGroup: eventLoopGroup, handler: handler, configuration: configuration).wait()
             return .success(result)
@@ -188,8 +188,8 @@ public enum Lambda {
             let stopSignal: Signal
 
             init(id: String? = nil, maxTimes: Int? = nil, stopSignal: Signal? = nil) {
-                self.id = id ?? UUID().uuidString
-                self.maxTimes = maxTimes ?? env("MAX_REQUESTS").flatMap(Int.init) ?? 0
+                self.id = id ?? "\(DispatchTime.now().uptimeNanoseconds)"
+                self.maxTimes = maxTimes ?? env("MAX_REQUESTS").flatMap(Int.init) ?? 0                
                 self.stopSignal = stopSignal ?? env("STOP_SIGNAL").flatMap(Int32.init).flatMap(Signal.init) ?? Signal.TERM
                 precondition(self.maxTimes >= 0, "maxTimes must be equal or larger than 0")
             }
@@ -200,69 +200,32 @@ public enum Lambda {
         }
 
         struct RuntimeEngine: CustomStringConvertible {
-            let baseURL: HTTPURL
+            let ip: String
+            let port: Int
             let keepAlive: Bool
             let requestTimeout: TimeAmount?
             let offload: Bool
 
             init(baseURL: String? = nil, keepAlive: Bool? = nil, requestTimeout: TimeAmount? = nil, offload: Bool? = nil) {
-                self.baseURL = HTTPURL(baseURL ?? "http://\(env("AWS_LAMBDA_RUNTIME_API") ?? "127.0.0.1:7000")")
+                let ipPort = env("AWS_LAMBDA_RUNTIME_API")?.split(separator: ":") ?? ["127.0.0.1", "7000"]
+                guard ipPort.count == 2, let port = Int(ipPort[1]) else {
+                    preconditionFailure("invalid ip+port configuration \(ipPort)")
+                }
+                self.ip = String(ipPort[0])
+                self.port = port
                 self.keepAlive = keepAlive ?? env("KEEP_ALIVE").flatMap(Bool.init) ?? true
                 self.requestTimeout = requestTimeout ?? env("REQUEST_TIMEOUT").flatMap(Int64.init).flatMap { .milliseconds($0) }
                 self.offload = offload ?? env("OFFLOAD").flatMap(Bool.init) ?? false
             }
 
             var description: String {
-                return "\(RuntimeEngine.self)(baseURL: \(self.baseURL), keepAlive: \(self.keepAlive), requestTimeout: \(String(describing: self.requestTimeout)), offload: \(self.offload)"
+                return "\(RuntimeEngine.self)(ip: \(self.ip), port: \(self.port), keepAlive: \(self.keepAlive), requestTimeout: \(String(describing: self.requestTimeout)), offload: \(self.offload)"
             }
         }
 
         @usableFromInline
         var description: String {
             return "\(Configuration.self)\n  \(self.general))\n  \(self.lifecycle)\n  \(self.runtimeEngine)"
-        }
-    }
-
-    internal struct HTTPURL: Equatable, CustomStringConvertible {
-        private let url: URL
-        let host: String
-        let port: Int
-
-        init(_ url: String) {
-            guard let url = Foundation.URL(string: url) else {
-                preconditionFailure("invalid url")
-            }
-            guard let host = url.host else {
-                preconditionFailure("invalid url host")
-            }
-            guard let port = url.port else {
-                preconditionFailure("invalid url port")
-            }
-            self.url = url
-            self.host = host
-            self.port = port
-        }
-
-        init(url: URL, host: String, port: Int) {
-            self.url = url
-            self.host = host
-            self.port = port
-        }
-
-        func appendingPathComponent(_ pathComponent: String) -> HTTPURL {
-            return .init(url: self.url.appendingPathComponent(pathComponent), host: self.host, port: self.port)
-        }
-
-        var path: String {
-            return self.url.path
-        }
-
-        var query: String? {
-            return self.url.query
-        }
-
-        var description: String {
-            return self.url.description
         }
     }
 
