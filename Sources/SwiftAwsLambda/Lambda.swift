@@ -119,7 +119,7 @@ public enum Lambda {
             let runner = LambdaRunner(eventLoop: self.eventLoop, configuration: self.configuration, lambdaHandler: self.handler)
             return runner.initialize(logger: logger).flatMap { _ in
                 self.state = .active
-                return self.run(logger: logger, runner: runner, count: 0)
+                return self.run(runner: runner)
             }
         }
 
@@ -133,23 +133,37 @@ public enum Lambda {
             self.state = .shutdown
         }
 
-        private func run(logger: Logger, runner: LambdaRunner, count: Int) -> EventLoopFuture<Int> {
-            switch self.state {
-            case .active:
-                if self.configuration.lifecycle.maxTimes > 0, count >= self.configuration.lifecycle.maxTimes {
-                    return self.eventLoop.makeSucceededFuture(count)
+        @inline(__always)
+        private func run(runner: LambdaRunner) -> EventLoopFuture<Int> {
+            let promise = self.eventLoop.makePromise(of: Int.self)
+
+            func _run(_ count: Int) {
+                switch self.state {
+                case .active:
+                    if self.configuration.lifecycle.maxTimes > 0, count >= self.configuration.lifecycle.maxTimes {
+                        return promise.succeed(count)
+                    }
+                    var logger = self.logger
+                    logger[metadataKey: "lifecycleIteration"] = "\(count)"
+                    runner.run(logger: logger).whenComplete { result in
+                        switch result {
+                        case .success:
+                            // recursive! per aws lambda runtime spec the polling requests are to be done one at a time
+                            _run(count + 1)
+                        case .failure(let error):
+                            promise.fail(error)
+                        }
+                    }
+                case .stopping, .shutdown:
+                    promise.succeed(count)
+                default:
+                    preconditionFailure("invalid run state: \(self.state)")
                 }
-                var logger = logger
-                logger[metadataKey: "lifecycleIteration"] = "\(count)"
-                return runner.run(logger: logger).flatMap { _ in
-                    // recursive! per aws lambda runtime spec the polling requests are to be done one at a time
-                    self.run(logger: logger, runner: runner, count: count + 1)
-                }
-            case .stopping, .shutdown:
-                return self.eventLoop.makeSucceededFuture(count)
-            default:
-                preconditionFailure("invalid run state: \(self.state)")
             }
+
+            _run(0)
+
+            return promise.futureResult
         }
     }
 
