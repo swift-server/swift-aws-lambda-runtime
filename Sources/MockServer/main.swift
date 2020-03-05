@@ -170,7 +170,7 @@ func env(_ name: String) -> String? {
     guard let value = getenv(name) else {
         return nil
     }
-    return String(utf8String: value)
+    return String(cString: value)
 }
 
 // main
