@@ -17,13 +17,13 @@ import NIOConcurrencyHelpers
 import NIOHTTP1
 
 /// A barebone HTTP client to interact with AWS Runtime Engine which is an HTTP server.
-internal class HTTPClient {
+internal final class HTTPClient {
     private let eventLoop: EventLoop
     private let configuration: Lambda.Configuration.RuntimeEngine
     private let targetHost: String
 
     private var state = State.disconnected
-    private let lock = Lock()
+    private let stateLock = Lock()
 
     init(eventLoop: EventLoop, configuration: Lambda.Configuration.RuntimeEngine) {
         self.eventLoop = eventLoop
@@ -47,37 +47,45 @@ internal class HTTPClient {
     }
 
     private func execute(_ request: Request) -> EventLoopFuture<Response> {
-        self.lock.lock()
+        self.stateLock.lock()
         switch self.state {
+        case .disconnected:
+            let promise = self.eventLoop.makePromise(of: Response.self)
+            self.state = .connecting(promise.futureResult)
+            self.stateLock.unlock()
+            self.connect().flatMap { channel -> EventLoopFuture<Response> in
+                self.stateLock.withLock {
+                    guard case .connecting = self.state else {
+                        preconditionFailure("invalid state \(self.state)")
+                    }
+                    self.state = .connected(channel)
+                }
+                return self.execute(request)
+            }.cascade(to: promise)
+            return promise.futureResult
+        case .connecting(let future):
+            let future = future.flatMap { _ in
+                self.execute(request)
+            }
+            self.state = .connecting(future)
+            self.stateLock.unlock()
+            return future
         case .connected(let channel):
             guard channel.isActive else {
-                // attempt to reconnect
                 self.state = .disconnected
-                self.lock.unlock()
+                self.stateLock.unlock()
                 return self.execute(request)
             }
-            self.lock.unlock()
+            self.stateLock.unlock()
             let promise = channel.eventLoop.makePromise(of: Response.self)
             let wrapper = HTTPRequestWrapper(request: request, promise: promise)
-            return channel.writeAndFlush(wrapper).flatMap {
-                promise.futureResult
-            }
-        case .disconnected:
-            return self.connect().flatMap {
-                self.lock.unlock()
-                return self.execute(request)
-            }
-        default:
-            preconditionFailure("invalid state \(self.state)")
+            channel.writeAndFlush(wrapper).cascadeFailure(to: promise)
+            return promise.futureResult
         }
     }
 
-    private func connect() -> EventLoopFuture<Void> {
-        guard case .disconnected = self.state else {
-            preconditionFailure("invalid state \(self.state)")
-        }
-        self.state = .connecting
-        let bootstrap = ClientBootstrap(group: eventLoop)
+    private func connect() -> EventLoopFuture<Channel> {
+        let bootstrap = ClientBootstrap(group: self.eventLoop)
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().flatMap {
                     channel.pipeline.addHandlers([HTTPHandler(keepAlive: self.configuration.keepAlive),
@@ -88,9 +96,7 @@ internal class HTTPClient {
         do {
             // connect directly via socket address to avoid happy eyeballs (perf)
             let address = try SocketAddress(ipAddress: self.configuration.ip, port: self.configuration.port)
-            return bootstrap.connect(to: address).flatMapThrowing { channel in
-                self.state = .connected(channel)
-            }
+            return bootstrap.connect(to: address)
         } catch {
             return self.eventLoop.makeFailedFuture(error)
         }
@@ -126,13 +132,13 @@ internal class HTTPClient {
     }
 
     private enum State {
-        case connecting
-        case connected(Channel)
         case disconnected
+        case connecting(EventLoopFuture<Response>)
+        case connected(Channel)
     }
 }
 
-private class HTTPHandler: ChannelDuplexHandler {
+private final class HTTPHandler: ChannelDuplexHandler {
     typealias OutboundIn = HTTPClient.Request
     typealias InboundOut = HTTPClient.Response
     typealias InboundIn = HTTPClientResponsePart
@@ -207,7 +213,7 @@ private class HTTPHandler: ChannelDuplexHandler {
     }
 }
 
-private class UnaryHandler: ChannelInboundHandler, ChannelOutboundHandler {
+private final class UnaryHandler: ChannelInboundHandler, ChannelOutboundHandler {
     typealias OutboundIn = HTTPRequestWrapper
     typealias InboundIn = HTTPClient.Response
     typealias OutboundOut = HTTPClient.Request
@@ -215,7 +221,7 @@ private class UnaryHandler: ChannelInboundHandler, ChannelOutboundHandler {
     private let keepAlive: Bool
 
     private let lock = Lock()
-    private var pendingResponses = CircularBuffer<(EventLoopPromise<HTTPClient.Response>, Scheduled<Void>?)>()
+    private var pendingResponses = CircularBuffer<(promise: EventLoopPromise<HTTPClient.Response>, timeout: Scheduled<Void>?)>()
     private var lastError: Error?
 
     init(keepAlive: Bool) {
@@ -231,7 +237,7 @@ private class UnaryHandler: ChannelInboundHandler, ChannelOutboundHandler {
                 }
             }
         }
-        self.lock.withLockVoid { pendingResponses.append((wrapper.promise, timeoutTask)) }
+        self.lock.withLockVoid { pendingResponses.append((promise: wrapper.promise, timeout: timeoutTask)) }
         context.writeAndFlush(wrapOutboundOut(wrapper.request), promise: promise)
     }
 
@@ -239,11 +245,13 @@ private class UnaryHandler: ChannelInboundHandler, ChannelOutboundHandler {
         let response = unwrapInboundIn(data)
         if let pending = (self.lock.withLock { self.pendingResponses.popFirst() }) {
             let serverKeepAlive = response.headers["connection"].first?.lowercased() == "keep-alive"
-            let future = self.keepAlive && serverKeepAlive ? context.eventLoop.makeSucceededFuture(()) : context.channel.close()
-            future.whenComplete { _ in
-                pending.1?.cancel()
-                pending.0.succeed(response)
+            if !self.keepAlive || !serverKeepAlive {
+                pending.promise.futureResult.whenComplete { _ in
+                    _ = context.channel.close()
+                }
             }
+            pending.timeout?.cancel()
+            pending.promise.succeed(response)
         }
     }
 

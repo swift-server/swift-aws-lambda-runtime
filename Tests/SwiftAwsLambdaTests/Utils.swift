@@ -30,7 +30,7 @@ func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws {
     }.wait()
 }
 
-class EchoHandler: LambdaHandler {
+final class EchoHandler: LambdaHandler {
     var initializeCalls = 0
 
     func initialize(callback: @escaping LambdaInitCallBack) {

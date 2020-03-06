@@ -105,7 +105,7 @@ public enum Lambda {
             }
             set {
                 self.stateLock.withLockVoid {
-                    precondition(newValue.rawValue > _state.rawValue, "invalid state \(newValue) after \(_state)")
+                    precondition(newValue.rawValue > _state.rawValue, "invalid state \(newValue) after \(self._state)")
                     self._state = newValue
                 }
             }
@@ -124,12 +124,12 @@ public enum Lambda {
         }
 
         func stop() {
-            self.logger.info("lambda lifecycle stopping")
+            self.logger.debug("lambda lifecycle stopping")
             self.state = .stopping
         }
 
         func shutdown() {
-            self.logger.info("lambda lifecycle shutdown")
+            self.logger.debug("lambda lifecycle shutdown")
             self.state = .shutdown
         }
 

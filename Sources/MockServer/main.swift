@@ -64,13 +64,12 @@ internal final class HTTPHandler: ChannelInboundHandler {
     private let mode: Mode
     private let keepAlive: Bool
 
-    private var requestHead: HTTPRequestHead!
-    private var requestBody: ByteBuffer?
+    private var pending = CircularBuffer<(head: HTTPRequestHead, body: ByteBuffer?)>()
 
     public init(logger: Logger, keepAlive: Bool, mode: Mode) {
         self.logger = logger
-        self.mode = mode
         self.keepAlive = keepAlive
+        self.mode = mode
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -78,27 +77,29 @@ internal final class HTTPHandler: ChannelInboundHandler {
 
         switch requestPart {
         case .head(let head):
-            self.requestHead = head
-            self.requestBody?.clear()
+            self.pending.append((head: head, body: nil))
         case .body(var buffer):
-            if self.requestBody == nil {
-                self.requestBody = buffer
+            var request = self.pending.removeFirst()
+            if request.body == nil {
+                request.body = buffer
             } else {
-                self.requestBody!.writeBuffer(&buffer)
+                request.body!.writeBuffer(&buffer)
             }
+            self.pending.prepend(request)
         case .end:
-            self.processRequest(context: context)
+            let request = self.pending.removeFirst()
+            self.processRequest(context: context, request: request)
         }
     }
 
-    func processRequest(context: ChannelHandlerContext) {
-        self.logger.debug("\(self) processing \(self.requestHead.uri)")
+    func processRequest(context: ChannelHandlerContext, request: (head: HTTPRequestHead, body: ByteBuffer?)) {
+        self.logger.debug("\(self) processing \(request.head.uri)")
 
         var responseStatus: HTTPResponseStatus
         var responseBody: String?
         var responseHeaders: [(String, String)]?
 
-        if self.requestHead.uri.hasSuffix("/next") {
+        if request.head.uri.hasSuffix("/next") {
             let requestId = UUID().uuidString
             responseStatus = .ok
             switch self.mode {
@@ -108,7 +109,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
                 responseBody = "{ \"body\": \"\(requestId)\" }"
             }
             responseHeaders = [(AmazonHeaders.requestID, requestId)]
-        } else if self.requestHead.uri.hasSuffix("/response") {
+        } else if request.head.uri.hasSuffix("/response") {
             responseStatus = .accepted
         } else {
             responseStatus = .notFound

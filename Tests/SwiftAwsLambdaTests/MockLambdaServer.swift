@@ -79,8 +79,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
     private let keepAlive: Bool
     private let behavior: LambdaServerBehavior
 
-    private var requestHead: HTTPRequestHead!
-    private var requestBody: ByteBuffer?
+    private var pending = CircularBuffer<(head: HTTPRequestHead, body: ByteBuffer?)>()
 
     public init(logger: Logger, keepAlive: Bool, behavior: LambdaServerBehavior) {
         self.logger = logger
@@ -93,23 +92,25 @@ internal final class HTTPHandler: ChannelInboundHandler {
 
         switch requestPart {
         case .head(let head):
-            self.requestHead = head
-            self.requestBody?.clear()
+            self.pending.append((head: head, body: nil))
         case .body(var buffer):
-            if self.requestBody == nil {
-                self.requestBody = buffer
+            var request = self.pending.removeFirst()
+            if request.body == nil {
+                request.body = buffer
             } else {
-                self.requestBody!.writeBuffer(&buffer)
+                request.body!.writeBuffer(&buffer)
             }
+            self.pending.prepend(request)
         case .end:
-            self.processRequest(context: context)
+            let request = self.pending.removeFirst()
+            self.processRequest(context: context, request: request)
         }
     }
 
-    func processRequest(context: ChannelHandlerContext) {
-        self.logger.info("\(self) processing \(self.requestHead.uri)")
+    func processRequest(context: ChannelHandlerContext, request: (head: HTTPRequestHead, body: ByteBuffer?)) {
+        self.logger.info("\(self) processing \(request.head.uri)")
 
-        let requestBody = self.requestBody.flatMap { (buffer: ByteBuffer) -> String? in
+        let requestBody = request.body.flatMap { (buffer: ByteBuffer) -> String? in
             var buffer = buffer
             return buffer.readString(length: buffer.readableBytes)
         }
@@ -119,7 +120,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
         var responseHeaders: [(String, String)]?
 
         // Handle post-init-error first to avoid matching the less specific post-error suffix.
-        if self.requestHead.uri.hasSuffix(Consts.postInitErrorURL) {
+        if request.head.uri.hasSuffix(Consts.postInitErrorURL) {
             guard let json = requestBody, let error = ErrorResponse.fromJson(json) else {
                 return self.writeResponse(context: context, status: .badRequest)
             }
@@ -129,7 +130,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
             case .failure(let error):
                 responseStatus = .init(statusCode: error.rawValue)
             }
-        } else if self.requestHead.uri.hasSuffix(Consts.requestWorkURLSuffix) {
+        } else if request.head.uri.hasSuffix(Consts.requestWorkURLSuffix) {
             switch self.behavior.getWork() {
             case .success(let (requestId, result)):
                 if requestId == "timeout" {
@@ -143,8 +144,8 @@ internal final class HTTPHandler: ChannelInboundHandler {
             case .failure(let error):
                 responseStatus = .init(statusCode: error.rawValue)
             }
-        } else if self.requestHead.uri.hasSuffix(Consts.postResponseURLSuffix) {
-            guard let requestId = requestHead.uri.split(separator: "/").dropFirst(3).first, let response = requestBody else {
+        } else if request.head.uri.hasSuffix(Consts.postResponseURLSuffix) {
+            guard let requestId = request.head.uri.split(separator: "/").dropFirst(3).first, let response = requestBody else {
                 return self.writeResponse(context: context, status: .badRequest)
             }
             switch self.behavior.processResponse(requestId: String(requestId), response: response) {
@@ -153,8 +154,8 @@ internal final class HTTPHandler: ChannelInboundHandler {
             case .failure(let error):
                 responseStatus = .init(statusCode: error.rawValue)
             }
-        } else if self.requestHead.uri.hasSuffix(Consts.postErrorURLSuffix) {
-            guard let requestId = requestHead.uri.split(separator: "/").dropFirst(3).first,
+        } else if request.head.uri.hasSuffix(Consts.postErrorURLSuffix) {
+            guard let requestId = request.head.uri.split(separator: "/").dropFirst(3).first,
                 let json = requestBody,
                 let error = ErrorResponse.fromJson(json)
             else {
@@ -169,6 +170,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
         } else {
             responseStatus = .notFound
         }
+        self.logger.info("\(self) responding to \(request.head.uri)")
         self.writeResponse(context: context, status: responseStatus, headers: responseHeaders, body: responseBody)
     }
 
