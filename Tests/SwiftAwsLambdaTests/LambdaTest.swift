@@ -79,7 +79,7 @@ class LambdaTest: XCTestCase {
             }
         }
         let signal = Signal.ALRM
-        let maxTimes = 50
+        let maxTimes = 1000
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes, stopSignal: signal))
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         let future = Lambda.runAsync(eventLoopGroup: eventLoopGroup, handler: MyHandler(), configuration: configuration)
