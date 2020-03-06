@@ -17,7 +17,7 @@ import NIO
 import XCTest
 
 class LambdaTest: XCTestCase {
-    func testSuceess() {
+    func testSuccess() {
         let server = MockLambdaServer(behavior: GoodBehavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }

@@ -25,7 +25,7 @@ import XCTest
 extension LambdaTest {
     static var allTests: [(String, (LambdaTest) -> () throws -> Void)] {
         return [
-            ("testSuceess", testSuceess),
+            ("testSuccess", testSuccess),
             ("testFailure", testFailure),
             ("testInitFailure", testInitFailure),
             ("testInitFailureAndReportErrorFailure", testInitFailureAndReportErrorFailure),
