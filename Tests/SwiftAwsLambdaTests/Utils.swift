@@ -30,16 +30,16 @@ func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws {
     }.wait()
 }
 
-class EchoHandler: LambdaHandler {
+final class EchoHandler: LambdaHandler, InitializableLambdaHandler {
     var initializeCalls = 0
 
-    func initialize(callback: @escaping LambdaInitCallBack) {
+    func initialize(promise: EventLoopPromise<Void>) {
         self.initializeCalls += 1
-        callback(.success(()))
+        promise.succeed(())
     }
 
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
-        callback(.success(payload))
+    func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>) {
+        promise.succeed(payload)
     }
 }
 
@@ -50,8 +50,8 @@ struct FailedHandler: LambdaHandler {
         self.reason = reason
     }
 
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
-        callback(.failure(Error(description: self.reason)))
+    func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>) {
+        promise.fail(Error(description: self.reason))
     }
 
     struct Error: Swift.Error, Equatable, CustomStringConvertible {
@@ -59,19 +59,19 @@ struct FailedHandler: LambdaHandler {
     }
 }
 
-struct FailedInitializerHandler: LambdaHandler {
+struct FailedInitializerHandler: LambdaHandler, InitializableLambdaHandler {
     private let reason: String
 
     public init(_ reason: String) {
         self.reason = reason
     }
 
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
-        callback(.success(payload))
+    func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>) {
+        promise.succeed(payload)
     }
 
-    func initialize(callback: @escaping LambdaInitCallBack) {
-        callback(.failure(Error(description: self.reason)))
+    func initialize(promise: EventLoopPromise<Void>) {
+        promise.fail(Error(description: self.reason))
     }
 
     public struct Error: Swift.Error, Equatable, CustomStringConvertible {

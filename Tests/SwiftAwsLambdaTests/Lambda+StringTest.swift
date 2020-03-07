@@ -45,7 +45,7 @@ class StringLambdaTest: XCTestCase {
 
     func testClosureFailure() throws {
         let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
-        let result: LambdaLifecycleResult = Lambda.run { (_, payload: String, callback) in
+        let result: Result<Int, Error> = Lambda.run { (_, payload: String, callback) in
             callback(.success(payload))
         }
         try server.stop().wait()
@@ -53,7 +53,7 @@ class StringLambdaTest: XCTestCase {
     }
 }
 
-private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil) {
+private func assertLambdaLifecycleResult(result: Result<Int, Error>, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil) {
     switch result {
     case .success(let count):
         if shouldFailWithError != nil {

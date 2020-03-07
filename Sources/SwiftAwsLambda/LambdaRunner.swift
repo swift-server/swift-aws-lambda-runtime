@@ -36,17 +36,19 @@ internal struct LambdaRunner {
     ///
     /// - Returns: An `EventLoopFuture<Void>` fulfilled with the outcome of the initialization.
     func initialize(logger: Logger) -> EventLoopFuture<Void> {
-        logger.info("initializing lambda")
-        // We need to use `flatMap` instead of `whenFailure` to ensure we complete reporting the result before stopping.
-        return self.lambdaHandler.initialize(eventLoop: self.eventLoop,
-                                             lifecycleId: self.lifecycleId,
-                                             offload: self.offload).peekError { error in
-            self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
-                // We're going to bail out because the init failed, so there's not a lot we can do other than log
-                // that we couldn't report this error back to the runtime.
-                logger.error("failed reporting initialization error to lambda runtime engine: \(reportingError)")
+        if let handler = self.lambdaHandler as? InitializableLambdaHandler {
+            logger.debug("initializing lambda")
+            return handler.initialize(eventLoop: self.eventLoop,
+                                      lifecycleId: self.lifecycleId,
+                                      offload: self.offload).peekError { error in
+                self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
+                    // We're going to bail out because the init failed, so there's not a lot we can do other than log
+                    // that we couldn't report this error back to the runtime.
+                    logger.error("failed reporting initialization error to lambda runtime engine: \(reportingError)")
+                }
             }
         }
+        return self.eventLoop.makeSucceededFuture(()) // FIXME:
     }
 
     func run(logger: Logger) -> EventLoopFuture<Void> {
@@ -61,7 +63,7 @@ internal struct LambdaRunner {
                                              lifecycleId: self.lifecycleId,
                                              offload: self.offload,
                                              context: context,
-                                             payload: payload).map { (context, $0) }
+                                             payload: payload).mapResult { (context, $0) }
         }.flatMap { context, result in
             // 3. report results to runtime engine
             self.runtimeClient.reportResults(logger: logger, context: context, result: result).peekError { error in
@@ -74,34 +76,43 @@ internal struct LambdaRunner {
     }
 }
 
-private extension LambdaHandler {
+private extension InitializableLambdaHandler {
     func initialize(eventLoop: EventLoop, lifecycleId: String, offload: Bool) -> EventLoopFuture<Void> {
         // offloading so user code never blocks the eventloop
         let promise = eventLoop.makePromise(of: Void.self)
-        if offload {
-            DispatchQueue(label: "lambda-\(lifecycleId)").async {
-                self.initialize { promise.completeWith($0) }
-            }
-        } else {
-            self.initialize { promise.completeWith($0) }
-        }
+        /* if offload {
+             DispatchQueue(label: "lambda-\(lifecycleId)").async {
+                 self.initialize { promise.completeWith($0) }
+             }
+         } else {
+             self.initialize { promise.completeWith($0) }
+         }
+         return promise.futureResult */
+        // FIXME: offloading
+        self.initialize(promise: promise)
         return promise.futureResult
     }
+}
 
-    func handle(eventLoop: EventLoop, lifecycleId: String, offload: Bool, context: LambdaContext, payload: [UInt8]) -> EventLoopFuture<LambdaResult> {
+private extension LambdaHandler {
+    func handle(eventLoop: EventLoop, lifecycleId: String, offload: Bool, context: LambdaContext, payload: ByteBuffer) -> EventLoopFuture<ByteBuffer> {
         // offloading so user code never blocks the eventloop
-        let promise = eventLoop.makePromise(of: LambdaResult.self)
-        if offload {
-            DispatchQueue(label: "lambda-\(lifecycleId)").async {
-                self.handle(context: context, payload: payload) { result in
-                    promise.succeed(result)
-                }
-            }
-        } else {
-            self.handle(context: context, payload: payload) { result in
-                promise.succeed(result)
-            }
-        }
+        let promise = eventLoop.makePromise(of: ByteBuffer.self)
+        /* if offload {
+             DispatchQueue(label: "lambda-\(lifecycleId)").async {
+                 self.handle(context: context, payload: payload) { result in
+                     promise.succeed(result)
+                 }
+             }
+         } else {
+             self.handle(context: context, payload: payload) { result in
+                 promise.succeed(result)
+             }
+         }
+         return promise.futureResult */
+
+        // FIXME: offloading
+        self.handle(context: context, payload: payload, promise: promise)
         return promise.futureResult
     }
 }
@@ -124,6 +135,14 @@ private extension EventLoopFuture {
                 promise.completeWith(self)
             }
             return promise.futureResult
+        }
+    }
+
+    func mapResult<NewValue>(_ callback: @escaping (Result<Value, Error>) -> NewValue) -> EventLoopFuture<NewValue> {
+        return self.map { value in
+            callback(.success(value))
+        }.flatMapErrorThrowing { error in
+            callback(.failure(error))
         }
     }
 }

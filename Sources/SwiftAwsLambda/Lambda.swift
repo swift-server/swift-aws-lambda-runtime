@@ -44,14 +44,14 @@ public enum Lambda {
     // for testing and internal use
     @usableFromInline
     @discardableResult
-    internal static func run(configuration: Configuration = .init(), closure: @escaping LambdaClosure) -> LambdaLifecycleResult {
+    internal static func run(configuration: Configuration = .init(), closure: @escaping LambdaClosure) -> Result<Int, Error> {
         return self.run(handler: LambdaClosureWrapper(closure), configuration: configuration)
     }
 
     // for testing and internal use
     @usableFromInline
     @discardableResult
-    internal static func run(handler: LambdaHandler, configuration: Configuration = .init()) -> LambdaLifecycleResult {
+    internal static func run(handler: LambdaHandler, configuration: Configuration = .init()) -> Result<Int, Error> {
         do {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1) // only need one thread, will improve performance
             defer { try! eventLoopGroup.syncShutdownGracefully() }
@@ -252,32 +252,20 @@ public enum Lambda {
     }
 }
 
-/// A result type for a Lambda that returns a `[UInt8]`.
-public typealias LambdaResult = Result<[UInt8], Error>
-
-public typealias LambdaCallback = (LambdaResult) -> Void
+/// A callback for a Lambda that returns a `Result<[UInt8], Error>`.
+public typealias LambdaCallback = (Result<[UInt8], Error>) -> Void
 
 /// A processing closure for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously.
 public typealias LambdaClosure = (LambdaContext, [UInt8], LambdaCallback) -> Void
 
-/// A result type for a Lambda initialization.
-public typealias LambdaInitResult = Result<Void, Error>
-
-/// A callback to provide the result of Lambda initialization.
-public typealias LambdaInitCallBack = (LambdaInitResult) -> Void
-
 /// A processing protocol for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously.
 public protocol LambdaHandler {
-    /// Initializes the `LambdaHandler`.
-    func initialize(callback: @escaping LambdaInitCallBack)
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback)
+    func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>)
 }
 
-extension LambdaHandler {
-    @inlinable
-    public func initialize(callback: @escaping LambdaInitCallBack) {
-        callback(.success(()))
-    }
+public protocol InitializableLambdaHandler {
+    /// Initializes the `LambdaHandler`.
+    func initialize(promise: EventLoopPromise<Void>)
 }
 
 public struct LambdaContext {
@@ -289,6 +277,8 @@ public struct LambdaContext {
     public let clientContext: String?
     public let deadline: String?
     // utliity
+    public let eventLoop: EventLoop
+    public let allocator: ByteBufferAllocator
     public let logger: Logger
 
     public init(requestId: String,
@@ -297,6 +287,7 @@ public struct LambdaContext {
                 cognitoIdentity: String? = nil,
                 clientContext: String? = nil,
                 deadline: String? = nil,
+                eventLoop: EventLoop,
                 logger: Logger) {
         self.requestId = requestId
         self.traceId = traceId
@@ -304,6 +295,9 @@ public struct LambdaContext {
         self.cognitoIdentity = cognitoIdentity
         self.clientContext = clientContext
         self.deadline = deadline
+        // utility
+        self.eventLoop = eventLoop
+        self.allocator = ByteBufferAllocator()
         // mutate logger with context
         var logger = logger
         logger[metadataKey: "awsRequestId"] = .string(requestId)
@@ -314,9 +308,6 @@ public struct LambdaContext {
     }
 }
 
-@usableFromInline
-internal typealias LambdaLifecycleResult = Result<Int, Error>
-
 private struct LambdaClosureWrapper: LambdaHandler {
     private let closure: LambdaClosure
     init(_ closure: @escaping LambdaClosure) {
@@ -325,5 +316,18 @@ private struct LambdaClosureWrapper: LambdaHandler {
 
     func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
         self.closure(context, payload, callback)
+    }
+
+    func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>) {
+        self.closure(context, payload.getBytes(at: payload.readerIndex, length: payload.readableBytes) ?? []) { result in
+            switch result {
+            case .success(let bytes):
+                var buffer = context.allocator.buffer(capacity: bytes.count)
+                buffer.writeBytes(bytes)
+                promise.succeed(buffer)
+            case .failure(let error):
+                promise.fail(error)
+            }
+        }
     }
 }

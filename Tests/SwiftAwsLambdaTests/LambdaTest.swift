@@ -64,7 +64,7 @@ class LambdaTest: XCTestCase {
 
     func testClosureFailure() throws {
         let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
-        let result: LambdaLifecycleResult = Lambda.run { (_, payload: [UInt8], callback: LambdaCallback) in
+        let result: Result<Int, Error> = Lambda.run { (_, payload: [UInt8], callback: LambdaCallback) in
             callback(.success(payload))
         }
         try server.stop().wait()
@@ -74,8 +74,8 @@ class LambdaTest: XCTestCase {
     func testStartStop() throws {
         let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
         struct MyHandler: LambdaHandler {
-            func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
-                callback(.success(payload))
+            func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>) {
+                promise.succeed(payload)
             }
         }
         let signal = Signal.ALRM
@@ -141,7 +141,7 @@ class LambdaTest: XCTestCase {
     }
 }
 
-private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil) {
+private func assertLambdaLifecycleResult(result: Result<Int, Error>, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil) {
     switch result {
     case .success(let count):
         if shouldFailWithError != nil {

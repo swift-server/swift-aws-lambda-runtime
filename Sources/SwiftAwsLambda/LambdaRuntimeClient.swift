@@ -33,17 +33,17 @@ internal struct LambdaRuntimeClient {
     }
 
     /// Requests work from the Runtime Engine.
-    func requestWork(logger: Logger) -> EventLoopFuture<(LambdaContext, [UInt8])> {
+    func requestWork(logger: Logger) -> EventLoopFuture<(LambdaContext, ByteBuffer)> {
         let url = Consts.invocationURLPrefix + Consts.requestWorkURLSuffix
         logger.debug("requesting work from lambda runtime engine using \(url)")
         return self.httpClient.get(url: url).flatMapThrowing { response in
             guard response.status == .ok else {
                 throw LambdaRuntimeClientError.badStatusCode(response.status)
             }
-            guard let payload = response.readWholeBody() else {
+            guard let payload = response.body else {
                 throw LambdaRuntimeClientError.noBody
             }
-            guard let context = LambdaContext(logger: logger, response: response) else {
+            guard let context = LambdaContext(eventLoop: self.eventLoop, logger: logger, response: response) else {
                 throw LambdaRuntimeClientError.noContext
             }
             return (context, payload)
@@ -60,14 +60,13 @@ internal struct LambdaRuntimeClient {
     }
 
     /// Reports a result to the Runtime Engine.
-    func reportResults(logger: Logger, context: LambdaContext, result: LambdaResult) -> EventLoopFuture<Void> {
+    func reportResults(logger: Logger, context: LambdaContext, result: Result<ByteBuffer, Error>) -> EventLoopFuture<Void> {
         var url = Consts.invocationURLPrefix + "/" + context.requestId
         var body: ByteBuffer
         switch result {
         case .success(let data):
             url += Consts.postResponseURLSuffix
-            body = self.allocator.buffer(capacity: data.count)
-            body.writeBytes(data)
+            body = data
         case .failure(let error):
             url += Consts.postErrorURLSuffix
             // TODO: make FunctionError a const
@@ -183,7 +182,7 @@ private extension HTTPClient.Response {
 }
 
 private extension LambdaContext {
-    init?(logger: Logger, response: HTTPClient.Response) {
+    init?(eventLoop: EventLoop, logger: Logger, response: HTTPClient.Response) {
         guard let requestId = response.headerValue(AmazonHeaders.requestID) else {
             return nil
         }
@@ -201,6 +200,7 @@ private extension LambdaContext {
                              cognitoIdentity: cognitoIdentity,
                              clientContext: clientContext,
                              deadline: deadline,
+                             eventLoop: eventLoop,
                              logger: logger)
     }
 }

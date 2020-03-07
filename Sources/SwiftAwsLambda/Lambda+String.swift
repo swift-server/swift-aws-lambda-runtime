@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIO
+
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `String` payloads.
 extension Lambda {
     /// Run a Lambda defined by implementing the `LambdaStringClosure` protocol.
@@ -29,21 +31,18 @@ extension Lambda {
     }
 
     // for testing
-    internal static func run(configuration: Configuration = .init(), _ closure: @escaping LambdaStringClosure) -> LambdaLifecycleResult {
+    internal static func run(configuration: Configuration = .init(), _ closure: @escaping LambdaStringClosure) -> Result<Int, Error> {
         return self.run(handler: LambdaClosureWrapper(closure), configuration: configuration)
     }
 
     // for testing
-    internal static func run(handler: LambdaStringHandler, configuration: Configuration = .init()) -> LambdaLifecycleResult {
+    internal static func run(handler: LambdaStringHandler, configuration: Configuration = .init()) -> Result<Int, Error> {
         return self.run(handler: handler as LambdaHandler, configuration: configuration)
     }
 }
 
-/// A result type for a Lambda that returns a `String`.
-public typealias LambdaStringResult = Result<String, Error>
-
-/// A callback for a Lambda that returns a `LambdaStringResult` result type.
-public typealias LambdaStringCallback = (LambdaStringResult) -> Void
+/// A callback for a Lambda that returns a `Result<String, Error>` result type.
+public typealias LambdaStringCallback = (Result<String, Error>) -> Void
 
 /// A processing closure for a Lambda that takes a `String` and returns a `LambdaStringResult` via `LambdaStringCallback` asynchronously.
 public typealias LambdaStringClosure = (LambdaContext, String, LambdaStringCallback) -> Void
@@ -55,13 +54,18 @@ public protocol LambdaStringHandler: LambdaHandler {
 
 /// Default implementation of `String` -> `[UInt8]` encoding and `[UInt8]` -> `String' decoding
 public extension LambdaStringHandler {
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
-        self.handle(context: context, payload: String(decoding: payload, as: UTF8.self)) { result in
+    func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>) {
+        guard let payload = payload.getString(at: payload.readerIndex, length: payload.readableBytes) else {
+            return promise.fail(Errors.invalidBuffer)
+        }
+        self.handle(context: context, payload: payload) { result in
             switch result {
             case .success(let string):
-                return callback(.success([UInt8](string.utf8)))
+                var buffer = context.allocator.buffer(capacity: string.utf8.count)
+                buffer.writeString(string)
+                return promise.succeed(buffer)
             case .failure(let error):
-                return callback(.failure(error))
+                return promise.fail(error)
             }
         }
     }
@@ -76,4 +80,8 @@ private struct LambdaClosureWrapper: LambdaStringHandler {
     func handle(context: LambdaContext, payload: String, callback: @escaping LambdaStringCallback) {
         self.closure(context, payload, callback)
     }
+}
+
+private enum Errors: Error {
+    case invalidBuffer
 }

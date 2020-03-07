@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation // for JSON
+import NIO
+import NIOFoundationCompat
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` payloads.
 /// This is the most common way to use this library in AWS Lambda, since its JSON based.
@@ -32,21 +34,18 @@ extension Lambda {
     }
 
     // for testing
-    internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
+    internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping LambdaCodableClosure<In, Out>) -> Result<Int, Error> {
         return self.run(handler: LambdaClosureWrapper(closure), configuration: configuration)
     }
 
     // for testing
-    internal static func run<Handler>(handler: Handler, configuration: Configuration = .init()) -> LambdaLifecycleResult where Handler: LambdaCodableHandler {
+    internal static func run<Handler>(handler: Handler, configuration: Configuration = .init()) -> Result<Int, Error> where Handler: LambdaCodableHandler {
         return self.run(handler: handler as LambdaHandler, configuration: configuration)
     }
 }
 
-/// A result type for a Lambda that returns a generic `Out`, having `Out` extend `Encodable`.
-public typealias LambdaCodableResult<Out> = Result<Out, Error>
-
-/// A callback for a Lambda that returns a `LambdaCodableResult<Out>` result type, having `Out` extend `Encodable`.
-public typealias LambdaCodableCallback<Out> = (LambdaCodableResult<Out>) -> Void
+/// A callback for a Lambda that returns a `Result<Out, Error>` result type, having `Out` extend `Encodable`.
+public typealias LambdaCodableCallback<Out> = (Result<Out, Error>) -> Void
 
 /// A processing closure for a Lambda that takes an `In` and returns an `Out` via `LambdaCodableCallback<Out>` asynchronously,
 /// having `In` and `Out` extending `Decodable` and `Encodable` respectively.
@@ -73,27 +72,27 @@ public extension LambdaCodableHandler {
 /// LambdaCodableCodec is an abstract/empty implementation for codec which does `Encodable` -> `[UInt8]` encoding and `[UInt8]` -> `Decodable' decoding.
 // TODO: would be nicer to use a protocol instead of this "abstract class", but generics get in the way
 public class LambdaCodableCodec<In: Decodable, Out: Encodable> {
-    func encode(_: Out) -> Result<[UInt8], Error> { fatalError("not implmented") }
-    func decode(_: [UInt8]) -> Result<In, Error> { fatalError("not implmented") }
+    func encode(_: Out) -> Result<ByteBuffer, Error> { fatalError("not implmented") }
+    func decode(_: ByteBuffer) -> Result<In, Error> { fatalError("not implmented") }
 }
 
 /// Default implementation of `Encodable` -> `[UInt8]` encoding and `[UInt8]` -> `Decodable' decoding
 public extension LambdaCodableHandler {
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping (LambdaResult) -> Void) {
+    func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>) {
         switch self.codec.decode(payload) {
         case .failure(let error):
-            return callback(.failure(Errors.requestDecoding(error)))
+            return promise.fail(Errors.requestDecoding(error))
         case .success(let payloadAsCodable):
             self.handle(context: context, payload: payloadAsCodable) { result in
                 switch result {
                 case .failure(let error):
-                    return callback(.failure(error))
+                    return promise.fail(error)
                 case .success(let encodable):
                     switch self.codec.encode(encodable) {
                     case .failure(let error):
-                        return callback(.failure(Errors.responseEncoding(error)))
-                    case .success(let codableAsBytes):
-                        return callback(.success(codableAsBytes))
+                        return promise.fail(Errors.responseEncoding(error))
+                    case .success(let buffer):
+                        return promise.succeed(buffer)
                     }
                 }
             }
@@ -107,18 +106,25 @@ public extension LambdaCodableHandler {
 private final class LambdaCodableJsonCodec<In: Decodable, Out: Encodable>: LambdaCodableCodec<In, Out> {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private let allocator = ByteBufferAllocator()
 
-    public override func encode(_ value: Out) -> Result<[UInt8], Error> {
+    public override func encode(_ value: Out) -> Result<ByteBuffer, Error> {
         do {
-            return .success(try [UInt8](self.encoder.encode(value)))
+            let data = try self.encoder.encode(value)
+            var buffer = self.allocator.buffer(capacity: data.count)
+            buffer.writeBytes(data)
+            return .success(buffer)
         } catch {
             return .failure(error)
         }
     }
 
-    public override func decode(_ data: [UInt8]) -> Result<In, Error> {
+    public override func decode(_ buffer: ByteBuffer) -> Result<In, Error> {
         do {
-            return .success(try self.decoder.decode(In.self, from: Data(data)))
+            guard let data = buffer.getData(at: buffer.readerIndex, length: buffer.readableBytes) else {
+                throw Errors.invalidBuffer
+            }
+            return .success(try self.decoder.decode(In.self, from: data))
         } catch {
             return .failure(error)
         }
@@ -141,4 +147,5 @@ private struct LambdaClosureWrapper<In: Decodable, Out: Encodable>: LambdaCodabl
 private enum Errors: Error {
     case responseEncoding(Error)
     case requestDecoding(Error)
+    case invalidBuffer
 }
