@@ -210,7 +210,7 @@ private final class UnaryHandler: ChannelDuplexHandler {
 
     private let keepAlive: Bool
 
-    private var pending: (promise: EventLoopPromise<HTTPClient.Response>, timeout: Scheduled<Void>?)? = nil
+    private var pending: (promise: EventLoopPromise<HTTPClient.Response>, timeout: Scheduled<Void>?)?
     private var lastError: Error?
 
     init(keepAlive: Bool) {
@@ -262,7 +262,7 @@ private final class UnaryHandler: ChannelDuplexHandler {
         }
         context.fireChannelInactive()
     }
-    
+
     private func completeWith(_ result: Result<HTTPClient.Response, Error>) {
         guard let pending = self.pending else {
             preconditionFailure("invalid state, no pending request")
