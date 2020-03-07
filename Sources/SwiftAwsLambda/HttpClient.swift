@@ -17,13 +17,15 @@ import NIOConcurrencyHelpers
 import NIOHTTP1
 
 /// A barebone HTTP client to interact with AWS Runtime Engine which is an HTTP server.
+/// Note that Lambda Runtime API dictate that only one requests runs at a time.
+/// This means we can avoid locks and other concurrency concern we would otherwise need to build into the client
 internal final class HTTPClient {
     private let eventLoop: EventLoop
     private let configuration: Lambda.Configuration.RuntimeEngine
     private let targetHost: String
 
     private var state = State.disconnected
-    private let stateLock = Lock()
+    private let executing = NIOAtomic.makeAtomic(value: false)
 
     init(eventLoop: EventLoop, configuration: Lambda.Configuration.RuntimeEngine) {
         self.eventLoop = eventLoop
@@ -46,38 +48,26 @@ internal final class HTTPClient {
                                     timeout: timeout ?? self.configuration.requestTimeout))
     }
 
-    private func execute(_ request: Request) -> EventLoopFuture<Response> {
-        self.stateLock.lock()
+    // TODO: cap reconnect attempt
+    private func execute(_ request: Request, validate: Bool = true) -> EventLoopFuture<Response> {
+        precondition(!validate || self.executing.compareAndExchange(expected: false, desired: true), "expecting single request at a time")
+
         switch self.state {
         case .disconnected:
-            let promise = self.eventLoop.makePromise(of: Response.self)
-            self.state = .connecting(promise.futureResult)
-            self.stateLock.unlock()
-            self.connect().flatMap { channel -> EventLoopFuture<Response> in
-                self.stateLock.withLock {
-                    guard case .connecting = self.state else {
-                        preconditionFailure("invalid state \(self.state)")
-                    }
-                    self.state = .connected(channel)
-                }
-                return self.execute(request)
-            }.cascade(to: promise)
-            return promise.futureResult
-        case .connecting(let future):
-            let future = future.flatMap { _ in
-                self.execute(request)
+            return self.connect().flatMap { channel -> EventLoopFuture<Response> in
+                self.state = .connected(channel)
+                return self.execute(request, validate: false)
             }
-            self.state = .connecting(future)
-            self.stateLock.unlock()
-            return future
         case .connected(let channel):
             guard channel.isActive else {
                 self.state = .disconnected
-                self.stateLock.unlock()
-                return self.execute(request)
+                return self.execute(request, validate: false)
             }
-            self.stateLock.unlock()
+
             let promise = channel.eventLoop.makePromise(of: Response.self)
+            promise.futureResult.whenComplete { _ in
+                precondition(self.executing.compareAndExchange(expected: true, desired: false), "invalid execution state")
+            }
             let wrapper = HTTPRequestWrapper(request: request, promise: promise)
             channel.writeAndFlush(wrapper).cascadeFailure(to: promise)
             return promise.futureResult
@@ -133,7 +123,6 @@ internal final class HTTPClient {
 
     private enum State {
         case disconnected
-        case connecting(EventLoopFuture<Response>)
         case connected(Channel)
     }
 }
@@ -213,15 +202,15 @@ private final class HTTPHandler: ChannelDuplexHandler {
     }
 }
 
-private final class UnaryHandler: ChannelInboundHandler, ChannelOutboundHandler {
+// no need in locks since we validate only one request can run at a time
+private final class UnaryHandler: ChannelDuplexHandler {
     typealias OutboundIn = HTTPRequestWrapper
     typealias InboundIn = HTTPClient.Response
     typealias OutboundOut = HTTPClient.Request
 
     private let keepAlive: Bool
 
-    private let lock = Lock()
-    private var pendingResponses = CircularBuffer<(promise: EventLoopPromise<HTTPClient.Response>, timeout: Scheduled<Void>?)>()
+    private var pending: (promise: EventLoopPromise<HTTPClient.Response>, timeout: Scheduled<Void>?)?
     private var lastError: Error?
 
     init(keepAlive: Bool) {
@@ -232,19 +221,20 @@ private final class UnaryHandler: ChannelInboundHandler, ChannelOutboundHandler 
         let wrapper = unwrapOutboundIn(data)
         let timeoutTask = wrapper.request.timeout.map {
             context.eventLoop.scheduleTask(in: $0) {
-                if (self.lock.withLock { !self.pendingResponses.isEmpty }) {
-                    self.errorCaught(context: context, error: HTTPClient.Errors.timeout)
+                if self.pending != nil {
+                    // TODO: need to verify this is thread safe i.e tha the timeout event wont interleave with the normal hander events
+                    context.pipeline.fireErrorCaught(HTTPClient.Errors.timeout)
                 }
             }
         }
-        self.lock.withLockVoid { pendingResponses.append((promise: wrapper.promise, timeout: timeoutTask)) }
+        self.pending = (promise: wrapper.promise, timeout: timeoutTask)
         context.writeAndFlush(wrapOutboundOut(wrapper.request), promise: promise)
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let response = unwrapInboundIn(data)
-        if let pending = (self.lock.withLock { self.pendingResponses.popFirst() }) {
-            let serverKeepAlive = response.headers["connection"].first?.lowercased() == "keep-alive"
+        if let pending = self.pending {
+            let serverKeepAlive = response.headers.first(name: "connection")?.lowercased() == "keep-alive"
             if !self.keepAlive || !serverKeepAlive {
                 pending.promise.futureResult.whenComplete { _ in
                     _ = context.channel.close()
@@ -257,20 +247,20 @@ private final class UnaryHandler: ChannelInboundHandler, ChannelOutboundHandler 
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
         // pending responses will fail with lastError in channelInactive since we are calling context.close
-        self.lock.withLockVoid { self.lastError = error }
+        self.lastError = error
         context.channel.close(promise: nil)
     }
 
     func channelInactive(context: ChannelHandlerContext) {
         // fail any pending responses with last error or assume peer disconnected
-        self.failPendingResponses(self.lock.withLock { self.lastError } ?? HTTPClient.Errors.connectionResetByPeer)
+        self.failPendingResponses(self.lastError ?? HTTPClient.Errors.connectionResetByPeer)
         context.fireChannelInactive()
     }
 
     private func failPendingResponses(_ error: Error) {
-        while let pending = (self.lock.withLock { pendingResponses.popFirst() }) {
-            pending.1?.cancel()
-            pending.0.fail(error)
+        if let pending = self.pending {
+            pending.timeout?.cancel()
+            pending.promise.fail(error)
         }
     }
 }

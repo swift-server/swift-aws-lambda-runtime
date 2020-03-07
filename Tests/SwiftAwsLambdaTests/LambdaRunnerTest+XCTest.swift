@@ -27,7 +27,6 @@ extension LambdaRunnerTest {
         return [
             ("testSuccess", testSuccess),
             ("testFailure", testFailure),
-            ("testConcurrency", testConcurrency),
         ]
     }
 }
