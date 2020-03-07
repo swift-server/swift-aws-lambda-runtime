@@ -210,7 +210,7 @@ private final class UnaryHandler: ChannelDuplexHandler {
 
     private let keepAlive: Bool
 
-    private var pending: (promise: EventLoopPromise<HTTPClient.Response>, timeout: Scheduled<Void>?)?
+    private var pending: (promise: EventLoopPromise<HTTPClient.Response>, timeout: Scheduled<Void>?)? = nil
     private var lastError: Error?
 
     init(keepAlive: Bool) {
@@ -218,10 +218,13 @@ private final class UnaryHandler: ChannelDuplexHandler {
     }
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        guard self.pending == nil else {
+            preconditionFailure("invalid state, outstanding request")
+        }
         let wrapper = unwrapOutboundIn(data)
         let timeoutTask = wrapper.request.timeout.map {
-            context.eventLoop.scheduleTask(in: $0) {
-                if self.pending != nil {
+            context.eventLoop.scheduleTask(in: $0) { [weak self] in
+                if self?.pending != nil {
                     // TODO: need to verify this is thread safe i.e tha the timeout event wont interleave with the normal hander events
                     context.pipeline.fireErrorCaught(HTTPClient.Errors.timeout)
                 }
@@ -233,16 +236,16 @@ private final class UnaryHandler: ChannelDuplexHandler {
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let response = unwrapInboundIn(data)
-        if let pending = self.pending {
-            let serverKeepAlive = response.headers.first(name: "connection")?.lowercased() == "keep-alive"
-            if !self.keepAlive || !serverKeepAlive {
-                pending.promise.futureResult.whenComplete { _ in
-                    _ = context.channel.close()
-                }
-            }
-            pending.timeout?.cancel()
-            pending.promise.succeed(response)
+        guard let pending = self.pending else {
+            preconditionFailure("invalid state, no pending request")
         }
+        let serverKeepAlive = response.headers.first(name: "connection")?.lowercased() == "keep-alive"
+        if !self.keepAlive || !serverKeepAlive {
+            pending.promise.futureResult.whenComplete { _ in
+                _ = context.channel.close()
+            }
+        }
+        self.completeWith(.success(response))
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
@@ -253,15 +256,21 @@ private final class UnaryHandler: ChannelDuplexHandler {
 
     func channelInactive(context: ChannelHandlerContext) {
         // fail any pending responses with last error or assume peer disconnected
-        self.failPendingResponses(self.lastError ?? HTTPClient.Errors.connectionResetByPeer)
+        if self.pending != nil {
+            let error = self.lastError ?? HTTPClient.Errors.connectionResetByPeer
+            self.completeWith(.failure(error))
+        }
         context.fireChannelInactive()
     }
-
-    private func failPendingResponses(_ error: Error) {
-        if let pending = self.pending {
-            pending.timeout?.cancel()
-            pending.promise.fail(error)
+    
+    private func completeWith(_ result: Result<HTTPClient.Response, Error>) {
+        guard let pending = self.pending else {
+            preconditionFailure("invalid state, no pending request")
         }
+        self.pending = nil
+        self.lastError = nil
+        pending.timeout?.cancel()
+        pending.promise.completeWith(result)
     }
 }
 
