@@ -46,7 +46,6 @@ internal class HTTPClient {
                                     timeout: timeout ?? self.configuration.requestTimeout))
     }
 
-
     private func execute(_ request: Request) -> EventLoopFuture<Response> {
         self.lock.lock()
         switch self.state {
@@ -85,7 +84,7 @@ internal class HTTPClient {
                                                   UnaryHandler(keepAlive: self.configuration.keepAlive)])
                 }
             }
-        
+
         do {
             // connect directly via socket address to avoid happy eyeballs (perf)
             let address = try SocketAddress(ipAddress: self.configuration.ip, port: self.configuration.port)
@@ -93,7 +92,7 @@ internal class HTTPClient {
                 self.state = .connected(channel)
             }
         } catch {
-            return eventLoop.makeFailedFuture(error)
+            return self.eventLoop.makeFailedFuture(error)
         }
     }
 
