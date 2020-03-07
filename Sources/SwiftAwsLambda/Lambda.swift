@@ -19,10 +19,10 @@ import Darwin.C
 #endif
 
 import Backtrace
+import Dispatch
 import Logging
 import NIO
 import NIOConcurrencyHelpers
-import Dispatch
 
 public enum Lambda {
     /// Run a Lambda defined by implementing the `LambdaClosure` closure.
@@ -203,7 +203,7 @@ public enum Lambda {
 
             init(id: String? = nil, maxTimes: Int? = nil, stopSignal: Signal? = nil) {
                 self.id = id ?? "\(DispatchTime.now().uptimeNanoseconds)"
-                self.maxTimes = maxTimes ?? env("MAX_REQUESTS").flatMap(Int.init) ?? 0                
+                self.maxTimes = maxTimes ?? env("MAX_REQUESTS").flatMap(Int.init) ?? 0
                 self.stopSignal = stopSignal ?? env("STOP_SIGNAL").flatMap(Int32.init).flatMap(Signal.init) ?? Signal.TERM
                 precondition(self.maxTimes >= 0, "maxTimes must be equal or larger than 0")
             }
