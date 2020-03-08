@@ -20,61 +20,165 @@ class LambdaTest: XCTestCase {
     func testSuceess() throws {
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
+        let server = try MockLambdaServer(behavior: Behavior()).start().wait()
         let handler = EchoHandler()
         let result = Lambda.run(handler: handler, configuration: configuration)
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
-        XCTAssertEqual(handler.initializeCalls, 1)
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(handler.bootstrapped, 1)
     }
 
     func testFailure() throws {
-        let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
-        let result = Lambda.run(handler: EchoHandler())
-        try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
-    }
-
-    func testInitFailure() throws {
-        let server = try MockLambdaServer(behavior: GoodBehaviourWhenInitFails()).start().wait()
-        let handler = FailedInitializerHandler("kaboom")
-        let result = Lambda.run(handler: handler)
-        try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: FailedInitializerHandler.Error(description: "kaboom"))
-    }
-
-    func testInitFailureAndReportErrorFailure() throws {
-        let server = try MockLambdaServer(behavior: BadBehaviourWhenInitFails()).start().wait()
-        let handler = FailedInitializerHandler("kaboom")
-        let result = Lambda.run(handler: handler)
-        try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: FailedInitializerHandler.Error(description: "kaboom"))
-    }
-
-    func testClosureSuccess() throws {
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
-        let result = Lambda.run(configuration: configuration) { (_, payload: [UInt8], callback: LambdaCallback) in
-            callback(.success(payload))
-        }
+        let server = try MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom")))).start().wait()
+        let result = Lambda.run(handler: FailedHandler("boom"), configuration: configuration)
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    func testClosureFailure() throws {
-        let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
-        let result: Result<Int, Error> = Lambda.run { (_, payload: [UInt8], callback: LambdaCallback) in
-            callback(.success(payload))
+    func testServerFailure() throws {
+        struct Behavior: LambdaServerBehavior {
+            func getWork() -> GetWorkResult {
+                return .failure(.internalServerError)
+            }
+
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+                return .failure(.internalServerError)
+            }
+
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                return .failure(.internalServerError)
+            }
+
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                XCTFail("should not report init error")
+                return .failure(.internalServerError)
+            }
         }
+        let server = try MockLambdaServer(behavior: Behavior()).start().wait()
+        let result = Lambda.run(handler: EchoHandler())
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
+        assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeClient.Errors.badStatusCode(.internalServerError))
+    }
+
+    func testBootstrapFailure() throws {
+        struct Behavior: LambdaServerBehavior {
+            func getWork() -> GetWorkResult {
+                XCTFail("should not get work")
+                return .failure(.internalServerError)
+            }
+
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+                XCTFail("should not report a response")
+                return .failure(.internalServerError)
+            }
+
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                XCTFail("should not report an error")
+                return .failure(.internalServerError)
+            }
+
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                return .success(())
+            }
+        }
+        let server = try MockLambdaServer(behavior: Behavior()).start().wait()
+        let result = Lambda.run(handler: FailedBootstrapHandler("kaboom"))
+        try server.stop().wait()
+        assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
+    }
+
+    func testBootstrapFailureAndReportErrorFailure() throws {
+        struct Behavior: LambdaServerBehavior {
+            func getWork() -> GetWorkResult {
+                XCTFail("should not get work")
+                return .failure(.internalServerError)
+            }
+
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+                XCTFail("should not report a response")
+                return .failure(.internalServerError)
+            }
+
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                XCTFail("should not report an error")
+                return .failure(.internalServerError)
+            }
+
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                return .failure(.internalServerError)
+            }
+        }
+        let server = try MockLambdaServer(behavior: Behavior()).start().wait()
+        let result = Lambda.run(handler: FailedBootstrapHandler("kaboom"))
+        try server.stop().wait()
+        assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
+    }
+
+    func testProviderFailure() {
+        struct Behavior: LambdaServerBehavior {
+            func getWork() -> GetWorkResult {
+                XCTFail("should not get work")
+                return .failure(.internalServerError)
+            }
+
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+                XCTFail("should not report a response")
+                return .failure(.internalServerError)
+            }
+
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                XCTFail("should not report an error")
+                return .failure(.internalServerError)
+            }
+
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                return .success(())
+            }
+        }
+        let server = MockLambdaServer(behavior: Behavior())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        let result = Lambda.run(provider: { _ in throw TestError("boom") })
+
+        assertLambdaLifecycleResult(result, shouldFailWithError: TestError("boom"))
+    }
+
+    func testProviderFailureAndReportErrorFailure() {
+        struct Behavior: LambdaServerBehavior {
+            func getWork() -> GetWorkResult {
+                XCTFail("should not get work")
+                return .failure(.internalServerError)
+            }
+
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+                XCTFail("should not report a response")
+                return .failure(.internalServerError)
+            }
+
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                XCTFail("should not report an error")
+                return .failure(.internalServerError)
+            }
+
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                return .failure(.internalServerError)
+            }
+        }
+        let server = MockLambdaServer(behavior: Behavior())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        let result = Lambda.run(provider: { _ in throw TestError("boom") })
+        assertLambdaLifecycleResult(result, shouldFailWithError: TestError("boom"))
     }
 
     func testStartStop() throws {
-        let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
-        struct MyHandler: LambdaHandler {
-            func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>) {
+        let server = try MockLambdaServer(behavior: Behavior()).start().wait()
+        struct Handler: LambdaHandler {
+            func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>) {
                 promise.succeed(payload)
             }
         }
@@ -82,7 +186,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = 1000
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes, stopSignal: signal))
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
-        let future = Lambda.runAsync(eventLoopGroup: eventLoopGroup, handler: MyHandler(), configuration: configuration)
+        let future = Lambda.runAsync(eventLoopGroup: eventLoopGroup, provider: { _ in Handler() }, configuration: configuration)
         DispatchQueue(label: "test").async {
             usleep(100_000)
             kill(getpid(), signal.rawValue)
@@ -99,152 +203,89 @@ class LambdaTest: XCTestCase {
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1),
                                                  runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
 
-        let server = try MockLambdaServer(behavior: GoodBehavior(requestId: "timeout", payload: "\(timeout * 2)")).start().wait()
+        let server = try MockLambdaServer(behavior: Behavior(requestId: "timeout", payload: "\(timeout * 2)")).start().wait()
         let result = Lambda.run(handler: EchoHandler(), configuration: configuration)
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.upstreamError("timeout"))
+        assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeClient.Errors.upstreamError("timeout"))
     }
 
     func testDisconnect() throws {
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
-        let server = try MockLambdaServer(behavior: GoodBehavior(requestId: "disconnect")).start().wait()
+        let server = try MockLambdaServer(behavior: Behavior(requestId: "disconnect")).start().wait()
         let result = Lambda.run(handler: EchoHandler(), configuration: configuration)
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.upstreamError("connectionResetByPeer"))
+        assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeClient.Errors.upstreamError("connectionResetByPeer"))
     }
 
     func testBigPayload() throws {
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
         let payload = String(repeating: "*", count: 104_448)
-        let server = try MockLambdaServer(behavior: GoodBehavior(payload: payload)).start().wait()
+        let server = try MockLambdaServer(behavior: Behavior(payload: payload, result: .success(payload))).start().wait()
         let result = Lambda.run(handler: EchoHandler(), configuration: configuration)
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shoudHaveRun: 1)
+        assertLambdaLifecycleResult(result, shoudHaveRun: 1)
     }
 
     func testKeepAliveServer() throws {
         let maxTimes = 10
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let server = try MockLambdaServer(behavior: GoodBehavior(), keepAlive: true).start().wait()
+        let server = try MockLambdaServer(behavior: Behavior(), keepAlive: true).start().wait()
         let result = Lambda.run(handler: EchoHandler(), configuration: configuration)
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
     func testNoKeepAliveServer() throws {
         let maxTimes = 10
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let server = try MockLambdaServer(behavior: GoodBehavior(), keepAlive: false).start().wait()
+        let server = try MockLambdaServer(behavior: Behavior(), keepAlive: false).start().wait()
         let result = Lambda.run(handler: EchoHandler(), configuration: configuration)
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 }
 
-private func assertLambdaLifecycleResult(result: Result<Int, Error>, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil) {
-    switch result {
-    case .success(let count):
-        if shouldFailWithError != nil {
-            XCTFail("should fail with \(shouldFailWithError!)")
-            break
-        }
-        XCTAssertEqual(shoudHaveRun, count, "should have run \(shoudHaveRun) times")
-    case .failure(let error):
-        if shouldFailWithError == nil {
-            XCTFail("should succeed, but failed with \(error)")
-            break
-        }
-        XCTAssertEqual(shouldFailWithError?.localizedDescription, error.localizedDescription, "expected error to mactch")
-    }
-}
-
-private struct GoodBehavior: LambdaServerBehavior {
+private struct Behavior: LambdaServerBehavior {
     let requestId: String
     let payload: String
+    let result: Result<String?, TestError>
 
-    init(requestId: String = UUID().uuidString, payload: String = UUID().uuidString) {
+    init(requestId: String = UUID().uuidString, payload: String = "hello", result: Result<String?, TestError> = .success("hello")) {
         self.requestId = requestId
         self.payload = payload
+        self.result = result
     }
 
     func getWork() -> GetWorkResult {
         return .success((requestId: self.requestId, payload: self.payload))
     }
 
-    func processResponse(requestId: String, response: String) -> ProcessResponseResult {
+    func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
         XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
-        XCTAssertEqual(self.payload, response, "expecting response to match")
-        return .success
+        switch self.result {
+        case .success(let expected):
+            XCTAssertEqual(expected, response, "expecting response to match")
+            return .success(())
+        case .failure:
+            XCTFail("unexpected to fail, but succeeded with: \(response ?? "undefined")")
+            return .failure(.internalServerError)
+        }
     }
 
-    func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
-        XCTFail("should not report error")
-        return .failure(.internalServerError)
+    func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+        XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
+        switch self.result {
+        case .success:
+            XCTFail("unexpected to succeed, but failed with: \(error)")
+            return .failure(.internalServerError)
+        case .failure(let expected):
+            XCTAssertEqual(expected.description, error.errorMessage, "expecting error to match")
+            return .success(())
+        }
     }
 
-    func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+    func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
         XCTFail("should not report init error")
-        return .failure(.internalServerError)
-    }
-}
-
-private struct BadBehavior: LambdaServerBehavior {
-    func getWork() -> GetWorkResult {
-        return .failure(.internalServerError)
-    }
-
-    func processResponse(requestId: String, response: String) -> ProcessResponseResult {
-        return .failure(.internalServerError)
-    }
-
-    func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
-        return .failure(.internalServerError)
-    }
-
-    func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
-        XCTFail("should not report init error")
-        return .failure(.internalServerError)
-    }
-}
-
-private struct GoodBehaviourWhenInitFails: LambdaServerBehavior {
-    func getWork() -> GetWorkResult {
-        XCTFail("should not get work")
-        return .failure(.internalServerError)
-    }
-
-    func processResponse(requestId: String, response: String) -> ProcessResponseResult {
-        XCTFail("should not report a response")
-        return .failure(.internalServerError)
-    }
-
-    func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
-        XCTFail("should not report an error")
-        return .failure(.internalServerError)
-    }
-
-    func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
-        return .success(())
-    }
-}
-
-private struct BadBehaviourWhenInitFails: LambdaServerBehavior {
-    func getWork() -> GetWorkResult {
-        XCTFail("should not get work")
-        return .failure(.internalServerError)
-    }
-
-    func processResponse(requestId: String, response: String) -> ProcessResponseResult {
-        XCTFail("should not report a response")
-        return .failure(.internalServerError)
-    }
-
-    func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
-        XCTFail("should not report an error")
-        return .failure(.internalServerError)
-    }
-
-    func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
         return .failure(.internalServerError)
     }
 }

@@ -25,14 +25,6 @@ import NIO
 import NIOConcurrencyHelpers
 
 public enum Lambda {
-    /// Run a Lambda defined by implementing the `LambdaClosure` closure.
-    ///
-    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
-    @inlinable
-    public static func run(_ closure: @escaping LambdaClosure) {
-        self.run(closure: closure)
-    }
-
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
     ///
     /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
@@ -41,32 +33,40 @@ public enum Lambda {
         self.run(handler: handler)
     }
 
-    // for testing and internal use
-    @usableFromInline
-    @discardableResult
-    internal static func run(configuration: Configuration = .init(), closure: @escaping LambdaClosure) -> Result<Int, Error> {
-        return self.run(handler: LambdaClosureWrapper(closure), configuration: configuration)
+    /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
+    ///
+    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
+    @inlinable
+    public static func run(_ provider: @escaping (EventLoop) throws -> LambdaHandler) {
+        self.run(provider: provider)
     }
 
     // for testing and internal use
     @usableFromInline
     @discardableResult
     internal static func run(handler: LambdaHandler, configuration: Configuration = .init()) -> Result<Int, Error> {
+        self.run(provider: { _ in handler }, configuration: configuration)
+    }
+
+    // for testing and internal use
+    @usableFromInline
+    @discardableResult
+    internal static func run(provider: @escaping (EventLoop) throws -> LambdaHandler, configuration: Configuration = .init()) -> Result<Int, Error> {
         do {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1) // only need one thread, will improve performance
             defer { try! eventLoopGroup.syncShutdownGracefully() }
-            let result = try self.runAsync(eventLoopGroup: eventLoopGroup, handler: handler, configuration: configuration).wait()
+            let result = try self.runAsync(eventLoopGroup: eventLoopGroup, provider: provider, configuration: configuration).wait()
             return .success(result)
         } catch {
             return .failure(error)
         }
     }
 
-    internal static func runAsync(eventLoopGroup: EventLoopGroup, handler: LambdaHandler, configuration: Configuration) -> EventLoopFuture<Int> {
+    internal static func runAsync(eventLoopGroup: EventLoopGroup, provider: @escaping (EventLoop) throws -> LambdaHandler, configuration: Configuration) -> EventLoopFuture<Int> {
         Backtrace.install()
         var logger = Logger(label: "Lambda")
         logger.logLevel = configuration.general.logLevel
-        let lifecycle = Lifecycle(eventLoop: eventLoopGroup.next(), logger: logger, configuration: configuration, handler: handler)
+        let lifecycle = Lifecycle(eventLoop: eventLoopGroup.next(), logger: logger, configuration: configuration, provider: provider)
         let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
             logger.info("intercepted signal: \(signal)")
             lifecycle.stop()
@@ -81,16 +81,16 @@ public enum Lambda {
         private let eventLoop: EventLoop
         private let logger: Logger
         private let configuration: Configuration
-        private let handler: LambdaHandler
+        private let provider: (EventLoop) throws -> LambdaHandler
 
         private var _state = LifecycleState.idle
         private let stateLock = Lock()
 
-        init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, handler: LambdaHandler) {
+        init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, provider: @escaping (EventLoop) throws -> LambdaHandler) {
             self.eventLoop = eventLoop
             self.logger = logger
             self.configuration = configuration
-            self.handler = handler
+            self.provider = provider
         }
 
         deinit {
@@ -116,10 +116,10 @@ public enum Lambda {
             self.state = .initializing
             var logger = self.logger
             logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
-            let runner = LambdaRunner(eventLoop: self.eventLoop, configuration: self.configuration, lambdaHandler: self.handler)
-            return runner.initialize(logger: logger).flatMap { _ in
+            let runner = Runner(eventLoop: self.eventLoop, configuration: self.configuration, provider: self.provider)
+            return runner.initialize(logger: logger).flatMap { handler in
                 self.state = .active
-                return self.run(runner: runner)
+                return self.run(runner: runner, handler: handler)
             }
         }
 
@@ -134,7 +134,7 @@ public enum Lambda {
         }
 
         @inline(__always)
-        private func run(runner: LambdaRunner) -> EventLoopFuture<Int> {
+        private func run(runner: Runner, handler: LambdaHandler) -> EventLoopFuture<Int> {
             let promise = self.eventLoop.makePromise(of: Int.self)
 
             func _run(_ count: Int) {
@@ -145,7 +145,7 @@ public enum Lambda {
                     }
                     var logger = self.logger
                     logger[metadataKey: "lifecycleIteration"] = "\(count)"
-                    runner.run(logger: logger).whenComplete { result in
+                    runner.run(logger: logger, handler: handler).whenComplete { result in
                         switch result {
                         case .success:
                             // recursive! per aws lambda runtime spec the polling requests are to be done one at a time
@@ -252,82 +252,54 @@ public enum Lambda {
     }
 }
 
-/// A callback for a Lambda that returns a `Result<[UInt8], Error>`.
-public typealias LambdaCallback = (Result<[UInt8], Error>) -> Void
-
-/// A processing closure for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously.
-public typealias LambdaClosure = (LambdaContext, [UInt8], LambdaCallback) -> Void
-
-/// A processing protocol for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously.
+/// A processing protocol for a Lambda that takes a `ByteBuffer` and returns an optional `ByteBuffer`  asynchronously via an `EventLoopPromise`.
 public protocol LambdaHandler {
-    func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>)
+    func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>)
 }
 
-public protocol InitializableLambdaHandler {
-    /// Initializes the `LambdaHandler`.
-    func initialize(promise: EventLoopPromise<Void>)
+public protocol BootstrappedLambdaHandler: LambdaHandler {
+    /// Bootstraps the `LambdaHandler`.
+    func bootstrap(eventLoop: EventLoop, promise: EventLoopPromise<Void>)
 }
 
-public struct LambdaContext {
-    // from aws
-    public let requestId: String
-    public let traceId: String?
-    public let invokedFunctionArn: String?
-    public let cognitoIdentity: String?
-    public let clientContext: String?
-    public let deadline: String?
-    // utliity
-    public let eventLoop: EventLoop
-    public let allocator: ByteBufferAllocator
-    public let logger: Logger
+extension Lambda {
+    public struct Context {
+        // from aws
+        public let requestId: String
+        public let traceId: String?
+        public let invokedFunctionArn: String?
+        public let cognitoIdentity: String?
+        public let clientContext: String?
+        public let deadline: String?
+        // utliity
+        public let eventLoop: EventLoop
+        public let allocator: ByteBufferAllocator
+        public let logger: Logger
 
-    public init(requestId: String,
-                traceId: String? = nil,
-                invokedFunctionArn: String? = nil,
-                cognitoIdentity: String? = nil,
-                clientContext: String? = nil,
-                deadline: String? = nil,
-                eventLoop: EventLoop,
-                logger: Logger) {
-        self.requestId = requestId
-        self.traceId = traceId
-        self.invokedFunctionArn = invokedFunctionArn
-        self.cognitoIdentity = cognitoIdentity
-        self.clientContext = clientContext
-        self.deadline = deadline
-        // utility
-        self.eventLoop = eventLoop
-        self.allocator = ByteBufferAllocator()
-        // mutate logger with context
-        var logger = logger
-        logger[metadataKey: "awsRequestId"] = .string(requestId)
-        if let traceId = traceId {
-            logger[metadataKey: "awsTraceId"] = .string(traceId)
-        }
-        self.logger = logger
-    }
-}
-
-private struct LambdaClosureWrapper: LambdaHandler {
-    private let closure: LambdaClosure
-    init(_ closure: @escaping LambdaClosure) {
-        self.closure = closure
-    }
-
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
-        self.closure(context, payload, callback)
-    }
-
-    func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>) {
-        self.closure(context, payload.getBytes(at: payload.readerIndex, length: payload.readableBytes) ?? []) { result in
-            switch result {
-            case .success(let bytes):
-                var buffer = context.allocator.buffer(capacity: bytes.count)
-                buffer.writeBytes(bytes)
-                promise.succeed(buffer)
-            case .failure(let error):
-                promise.fail(error)
+        public init(requestId: String,
+                    traceId: String? = nil,
+                    invokedFunctionArn: String? = nil,
+                    cognitoIdentity: String? = nil,
+                    clientContext: String? = nil,
+                    deadline: String? = nil,
+                    eventLoop: EventLoop,
+                    logger: Logger) {
+            self.requestId = requestId
+            self.traceId = traceId
+            self.invokedFunctionArn = invokedFunctionArn
+            self.cognitoIdentity = cognitoIdentity
+            self.clientContext = clientContext
+            self.deadline = deadline
+            // utility
+            self.eventLoop = eventLoop
+            self.allocator = ByteBufferAllocator()
+            // mutate logger with context
+            var logger = logger
+            logger[metadataKey: "awsRequestId"] = .string(requestId)
+            if let traceId = traceId {
+                logger[metadataKey: "awsTraceId"] = .string(traceId)
             }
+            self.logger = logger
         }
     }
 }

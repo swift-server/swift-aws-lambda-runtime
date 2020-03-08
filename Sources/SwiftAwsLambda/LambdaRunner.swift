@@ -16,31 +16,41 @@ import Dispatch // for offloading
 import Logging
 import NIO
 
-/// LambdaRunner manages the Lambda runtime workflow, or business logic.
-internal struct LambdaRunner {
-    private let runtimeClient: LambdaRuntimeClient
-    private let lambdaHandler: LambdaHandler
-    private let eventLoop: EventLoop
-    private let lifecycleId: String
-    private let offload: Bool
+internal extension Lambda {
+    /// LambdaRunner manages the Lambda runtime workflow, or business logic.
+    struct Runner {
+        private let runtimeClient: RuntimeClient
+        private let provider: (EventLoop) throws -> LambdaHandler
+        private let eventLoop: EventLoop
+        private let lifecycleId: String
+        private let offload: Bool
 
-    init(eventLoop: EventLoop, configuration: Lambda.Configuration, lambdaHandler: LambdaHandler) {
-        self.eventLoop = eventLoop
-        self.runtimeClient = LambdaRuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine)
-        self.lambdaHandler = lambdaHandler
-        self.lifecycleId = configuration.lifecycle.id
-        self.offload = configuration.runtimeEngine.offload
-    }
+        init(eventLoop: EventLoop, configuration: Configuration, provider: @escaping (EventLoop) throws -> LambdaHandler) {
+            self.eventLoop = eventLoop
+            self.runtimeClient = RuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine)
+            self.provider = provider
+            self.lifecycleId = configuration.lifecycle.id
+            self.offload = configuration.runtimeEngine.offload
+        }
 
-    /// Run the user provided initializer. This *must* only be called once.
-    ///
-    /// - Returns: An `EventLoopFuture<Void>` fulfilled with the outcome of the initialization.
-    func initialize(logger: Logger) -> EventLoopFuture<Void> {
-        if let handler = self.lambdaHandler as? InitializableLambdaHandler {
-            logger.debug("initializing lambda")
-            return handler.initialize(eventLoop: self.eventLoop,
-                                      lifecycleId: self.lifecycleId,
-                                      offload: self.offload).peekError { error in
+        /// Run the user provided initializer. This *must* only be called once.
+        ///
+        /// - Returns: An `EventLoopFuture<Void>` fulfilled with the outcome of the initialization.
+        func initialize(logger: Logger) -> EventLoopFuture<LambdaHandler> {
+            let future: EventLoopFuture<LambdaHandler>
+            do {
+                let handler = try self.provider(self.eventLoop)
+                if let handler = handler as? BootstrappedLambdaHandler {
+                    logger.debug("bootstrapping lambda")
+                    future = handler.bootstrap(eventLoop: self.eventLoop, lifecycleId: self.lifecycleId, offload: self.offload).map { handler }
+                } else {
+                    future = self.eventLoop.makeSucceededFuture(handler)
+                }
+
+            } catch {
+                future = self.eventLoop.makeFailedFuture(error)
+            }
+            return future.peekError { error in
                 self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
                     // We're going to bail out because the init failed, so there's not a lot we can do other than log
                     // that we couldn't report this error back to the runtime.
@@ -48,36 +58,35 @@ internal struct LambdaRunner {
                 }
             }
         }
-        return self.eventLoop.makeSucceededFuture(()) // FIXME:
-    }
 
-    func run(logger: Logger) -> EventLoopFuture<Void> {
-        logger.debug("lambda invocation sequence starting")
-        // 1. request work from lambda runtime engine
-        return self.runtimeClient.requestWork(logger: logger).peekError { error in
-            logger.error("could not fetch work from lambda runtime engine: \(error)")
-        }.flatMap { context, payload in
-            // 2. send work to handler
-            logger.debug("sending work to lambda handler \(self.lambdaHandler)")
-            return self.lambdaHandler.handle(eventLoop: self.eventLoop,
-                                             lifecycleId: self.lifecycleId,
-                                             offload: self.offload,
-                                             context: context,
-                                             payload: payload).mapResult { (context, $0) }
-        }.flatMap { context, result in
-            // 3. report results to runtime engine
-            self.runtimeClient.reportResults(logger: logger, context: context, result: result).peekError { error in
-                logger.error("failed reporting results to lambda runtime engine: \(error)")
+        func run(logger: Logger, handler: LambdaHandler) -> EventLoopFuture<Void> {
+            logger.debug("lambda invocation sequence starting")
+            // 1. request work from lambda runtime engine
+            return self.runtimeClient.requestWork(logger: logger).peekError { error in
+                logger.error("could not fetch work from lambda runtime engine: \(error)")
+            }.flatMap { context, payload in
+                // 2. send work to handler
+                logger.debug("sending work to lambda handler \(handler)")
+                return handler.handle(eventLoop: self.eventLoop,
+                                      lifecycleId: self.lifecycleId,
+                                      offload: self.offload,
+                                      context: context,
+                                      payload: payload).mapResult { (context, $0) }
+            }.flatMap { context, result in
+                // 3. report results to runtime engine
+                self.runtimeClient.reportResults(logger: logger, context: context, result: result).peekError { error in
+                    logger.error("failed reporting results to lambda runtime engine: \(error)")
+                }
+            }.always { result in
+                // we are done!
+                logger.log(level: result.successful ? .info : .warning, "lambda invocation sequence completed \(result.successful ? "successfully" : "with failure")")
             }
-        }.always { result in
-            // we are done!
-            logger.log(level: result.successful ? .info : .warning, "lambda invocation sequence completed \(result.successful ? "successfully" : "with failure")")
         }
     }
 }
 
-private extension InitializableLambdaHandler {
-    func initialize(eventLoop: EventLoop, lifecycleId: String, offload: Bool) -> EventLoopFuture<Void> {
+private extension BootstrappedLambdaHandler {
+    func bootstrap(eventLoop: EventLoop, lifecycleId: String, offload: Bool) -> EventLoopFuture<Void> {
         // offloading so user code never blocks the eventloop
         let promise = eventLoop.makePromise(of: Void.self)
         /* if offload {
@@ -89,15 +98,15 @@ private extension InitializableLambdaHandler {
          }
          return promise.futureResult */
         // FIXME: offloading
-        self.initialize(promise: promise)
+        self.bootstrap(eventLoop: eventLoop, promise: promise)
         return promise.futureResult
     }
 }
 
 private extension LambdaHandler {
-    func handle(eventLoop: EventLoop, lifecycleId: String, offload: Bool, context: LambdaContext, payload: ByteBuffer) -> EventLoopFuture<ByteBuffer> {
+    func handle(eventLoop: EventLoop, lifecycleId: String, offload: Bool, context: Lambda.Context, payload: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
         // offloading so user code never blocks the eventloop
-        let promise = eventLoop.makePromise(of: ByteBuffer.self)
+        let promise = eventLoop.makePromise(of: ByteBuffer?.self)
         /* if offload {
              DispatchQueue(label: "lambda-\(lifecycleId)").async {
                  self.handle(context: context, payload: payload) { result in

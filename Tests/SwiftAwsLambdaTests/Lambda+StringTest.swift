@@ -12,107 +12,142 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIO
 @testable import SwiftAwsLambda
 import XCTest
 
 class StringLambdaTest: XCTestCase {
     func testSuceess() throws {
+        struct Handler: StringLambdaHandler {
+            func handle(context: Lambda.Context, payload: String, callback: @escaping StringLambda.CompletionHandler) {
+                callback(.success(payload))
+            }
+        }
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
-        let result = Lambda.run(handler: StringEchoHandler(), configuration: configuration)
+        let server = try MockLambdaServer(behavior: Behavior()).start().wait()
+        let result = Lambda.run(handler: Handler(), configuration: configuration)
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
     func testFailure() throws {
-        let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
-        let result = Lambda.run(handler: StringEchoHandler())
+        struct Handler: StringLambdaHandler {
+            func handle(context: Lambda.Context, payload: String, callback: @escaping StringLambda.CompletionHandler) {
+                callback(.failure(TestError("boom")))
+            }
+        }
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let server = try MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom")))).start().wait()
+        let result = Lambda.run(handler: Handler(), configuration: configuration)
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+    }
+
+    func testPromiseSuccess() throws {
+        struct Handler: StringPromiseLambdaHandler {
+            func handle(context: Lambda.Context, payload: String, promise: EventLoopPromise<String?>) {
+                promise.succeed(payload)
+            }
+        }
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let server = try MockLambdaServer(behavior: Behavior()).start().wait()
+        let result = Lambda.run(handler: Handler(), configuration: configuration)
+        try server.stop().wait()
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+    }
+
+    func testPromiseFailure() throws {
+        struct Handler: StringPromiseLambdaHandler {
+            func handle(context: Lambda.Context, payload: String, promise: EventLoopPromise<String?>) {
+                promise.fail(TestError("boom"))
+            }
+        }
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let server = try MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom")))).start().wait()
+        let result = Lambda.run(handler: Handler(), configuration: configuration)
+        try server.stop().wait()
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
     func testClosureSuccess() throws {
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
+        let server = try MockLambdaServer(behavior: Behavior()).start().wait()
         let result = Lambda.run(configuration: configuration) { (_, payload: String, callback) in
             callback(.success(payload))
         }
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
     func testClosureFailure() throws {
-        let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
-        let result: Result<Int, Error> = Lambda.run { (_, payload: String, callback) in
-            callback(.success(payload))
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let server = try MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom")))).start().wait()
+        let result: Result<Int, Error> = Lambda.run(configuration: configuration) { (_, _: String, callback) in
+            callback(.failure(TestError("boom")))
         }
         try server.stop().wait()
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+    }
+
+    func testVoidClosure() throws {
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let server = try MockLambdaServer(behavior: Behavior(result: .success(nil))).start().wait()
+        let result = Lambda.run(configuration: configuration) { (_, _: String, callback) in
+            callback(nil)
+        }
+        try server.stop().wait()
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 }
 
-private func assertLambdaLifecycleResult(result: Result<Int, Error>, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil) {
-    switch result {
-    case .success(let count):
-        if shouldFailWithError != nil {
-            XCTFail("should fail with \(shouldFailWithError!)")
-        }
-        XCTAssertEqual(shoudHaveRun, count, "should have run \(shoudHaveRun) times")
-    case .failure(let error):
-        if shouldFailWithError == nil {
-            XCTFail("should succeed, but failed with \(error)")
-            break
-        }
-        XCTAssertEqual(shouldFailWithError?.localizedDescription, error.localizedDescription, "expected error to mactch")
-    }
-}
+private struct Behavior: LambdaServerBehavior {
+    let requestId: String
+    let payload: String
+    let result: Result<String?, TestError>
 
-private struct GoodBehavior: LambdaServerBehavior {
-    let requestId = UUID().uuidString
-    let payload = "hello"
+    init(requestId: String = UUID().uuidString, payload: String = "hello", result: Result<String?, TestError> = .success("hello")) {
+        self.requestId = requestId
+        self.payload = payload
+        self.result = result
+    }
+
     func getWork() -> GetWorkResult {
         return .success((requestId: self.requestId, payload: self.payload))
     }
 
-    func processResponse(requestId: String, response: String) -> ProcessResponseResult {
+    func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
         XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
-        XCTAssertEqual(self.payload, response, "expecting response to match")
-        return .success
+        switch self.result {
+        case .success(let expected):
+            XCTAssertEqual(expected, response, "expecting response to match")
+            return .success(())
+        case .failure:
+            XCTFail("unexpected to fail, but succeeded with: \(response ?? "undefined")")
+            return .failure(.internalServerError)
+        }
     }
 
-    func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
-        XCTFail("should not report error")
-        return .failure(.internalServerError)
+    func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+        XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
+        switch self.result {
+        case .success:
+            XCTFail("unexpected to succeed, but failed with: \(error)")
+            return .failure(.internalServerError)
+        case .failure(let expected):
+            XCTAssertEqual(expected.description, error.errorMessage, "expecting error to match")
+            return .success(())
+        }
     }
 
-    func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+    func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
         XCTFail("should not report init error")
         return .failure(.internalServerError)
-    }
-}
-
-private struct BadBehavior: LambdaServerBehavior {
-    func getWork() -> GetWorkResult {
-        return .failure(.internalServerError)
-    }
-
-    func processResponse(requestId: String, response: String) -> ProcessResponseResult {
-        return .failure(.internalServerError)
-    }
-
-    func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
-        return .failure(.internalServerError)
-    }
-
-    func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
-        return .failure(.internalServerError)
-    }
-}
-
-private struct StringEchoHandler: LambdaStringHandler {
-    func handle(context: LambdaContext, payload: String, callback: @escaping LambdaStringCallback) {
-        callback(.success(payload))
     }
 }

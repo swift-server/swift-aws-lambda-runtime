@@ -16,68 +16,108 @@ import NIO
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `String` payloads.
 extension Lambda {
-    /// Run a Lambda defined by implementing the `LambdaStringClosure` protocol.
+    /// Run a Lambda defined by implementing the `StringLambda.Closure` protocol.
     ///
     /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ closure: @escaping LambdaStringClosure) {
-        self.run(LambdaClosureWrapper(closure))
+    public static func run(_ closure: @escaping StringLambda.Closure) {
+        self.run(ClosureWrapper(closure))
     }
 
-    /// Run a Lambda defined by implementing the `LambdaStringHandler` protocol.
+    /// Run a Lambda defined by implementing the `StringLambdaHandler` protocol.
     ///
     /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ handler: LambdaStringHandler) {
-        self.run(handler as LambdaHandler)
+    public static func run(_ handler: StringLambdaHandler) {
+        self.run { _ in handler }
+    }
+
+    /// Run a Lambda defined by implementing the `StringLambdaHandler` protocol.
+    ///
+    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
+    public static func run(_ provider: @escaping (EventLoop) throws -> StringLambdaHandler) {
+        self.run(provider: { try provider($0) as LambdaHandler })
     }
 
     // for testing
-    internal static func run(configuration: Configuration = .init(), _ closure: @escaping LambdaStringClosure) -> Result<Int, Error> {
-        return self.run(handler: LambdaClosureWrapper(closure), configuration: configuration)
+    internal static func run(configuration: Configuration = .init(), closure: @escaping StringLambda.Closure) -> Result<Int, Error> {
+        return self.run(handler: ClosureWrapper(closure), configuration: configuration)
     }
 
     // for testing
-    internal static func run(handler: LambdaStringHandler, configuration: Configuration = .init()) -> Result<Int, Error> {
+    internal static func run(handler: StringLambdaHandler, configuration: Configuration = .init()) -> Result<Int, Error> {
         return self.run(handler: handler as LambdaHandler, configuration: configuration)
     }
+
+    // for testing
+    internal static func run(provider: @escaping (EventLoop) throws -> StringLambdaHandler, configuration: Configuration = .init()) -> Result<Int, Error> {
+        return self.run(provider: { try provider($0) as LambdaHandler }, configuration: configuration)
+    }
 }
 
-/// A callback for a Lambda that returns a `Result<String, Error>` result type.
-public typealias LambdaStringCallback = (Result<String, Error>) -> Void
+public enum StringLambda {
+    /// A completion handler for a Lambda that returns a `Result<String, Error>` result type.
+    public typealias CompletionHandler = (Result<String, Error>?) -> Void
 
-/// A processing closure for a Lambda that takes a `String` and returns a `LambdaStringResult` via `LambdaStringCallback` asynchronously.
-public typealias LambdaStringClosure = (LambdaContext, String, LambdaStringCallback) -> Void
-
-/// A processing protocol for a Lambda that takes a `String` and returns a `LambdaStringResult` via `LambdaStringCallback` asynchronously.
-public protocol LambdaStringHandler: LambdaHandler {
-    func handle(context: LambdaContext, payload: String, callback: @escaping LambdaStringCallback)
+    /// A processing closure for a Lambda that takes a `String` and returns a `Result<String, Error>` via `CompletionHandler` asynchronously.
+    public typealias Closure = (Lambda.Context, String, CompletionHandler) -> Void
 }
 
-/// Default implementation of `String` -> `[UInt8]` encoding and `[UInt8]` -> `String' decoding
-public extension LambdaStringHandler {
-    func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>) {
+/// A processing protocol for a Lambda that takes a `String` and returns an optional `String`  asynchronously via an `CompletionHandler`.
+public protocol StringLambdaHandler: LambdaHandler {
+    func handle(context: Lambda.Context, payload: String, callback: @escaping StringLambda.CompletionHandler)
+}
+
+/// A processing protocol for a Lambda that takes a `String` and returns an optional `String`  asynchronously via an `EventLoopPromise`.
+public protocol StringPromiseLambdaHandler: LambdaHandler {
+    func handle(context: Lambda.Context, payload: String, promise: EventLoopPromise<String?>)
+}
+
+/// Default implementation of `String` -> `ByteBuffer` encoding and `ByteBuffer` -> `String` decoding
+public extension StringLambdaHandler {
+    func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>) {
         guard let payload = payload.getString(at: payload.readerIndex, length: payload.readableBytes) else {
             return promise.fail(Errors.invalidBuffer)
         }
         self.handle(context: context, payload: payload) { result in
             switch result {
+            case .none:
+                promise.succeed(nil)
+            case .failure(let error):
+                promise.fail(error)
             case .success(let string):
                 var buffer = context.allocator.buffer(capacity: string.utf8.count)
                 buffer.writeString(string)
-                return promise.succeed(buffer)
-            case .failure(let error):
-                return promise.fail(error)
+                promise.succeed(buffer)
             }
         }
     }
 }
 
-private struct LambdaClosureWrapper: LambdaStringHandler {
-    private let closure: LambdaStringClosure
-    init(_ closure: @escaping LambdaStringClosure) {
+/// Default implementation of `String` -> `ByteBuffer` encoding and `ByteBuffer` -> `String` decoding
+public extension StringPromiseLambdaHandler {
+    func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>) {
+        guard let payload = payload.getString(at: payload.readerIndex, length: payload.readableBytes) else {
+            return promise.fail(Errors.invalidBuffer)
+        }
+        let stringPromise = context.eventLoop.makePromise(of: String?.self)
+        stringPromise.futureResult.map { string in
+            string.flatMap { string in
+                var buffer = context.allocator.buffer(capacity: string.utf8.count)
+                buffer.writeString(string)
+                return buffer
+            }
+        }.cascade(to: promise)
+        self.handle(context: context, payload: payload, promise: stringPromise)
+    }
+}
+
+private struct ClosureWrapper: StringLambdaHandler {
+    private let closure: StringLambda.Closure
+
+    init(_ closure: @escaping StringLambda.Closure) {
         self.closure = closure
     }
 
-    func handle(context: LambdaContext, payload: String, callback: @escaping LambdaStringCallback) {
+    func handle(context: Lambda.Context, payload: String, callback: @escaping StringLambda.CompletionHandler) {
         self.closure(context, payload, callback)
     }
 }

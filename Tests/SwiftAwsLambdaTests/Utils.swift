@@ -18,27 +18,31 @@ import NIO
 import XCTest
 
 func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws {
+    try runLambda(behavior: behavior, provider: { _ in handler })
+}
+
+func runLambda(behavior: LambdaServerBehavior, provider: @escaping (EventLoop) throws -> LambdaHandler) throws {
     let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
     let configuration = Lambda.Configuration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
-    let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration, lambdaHandler: handler)
+    let runner = Lambda.Runner(eventLoop: eventLoopGroup.next(), configuration: configuration, provider: provider)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer { XCTAssertNoThrow(try server.stop().wait()) }
-    try runner.initialize(logger: logger).flatMap {
-        runner.run(logger: logger)
+    try runner.initialize(logger: logger).flatMap { handler in
+        runner.run(logger: logger, handler: handler)
     }.wait()
 }
 
-final class EchoHandler: LambdaHandler, InitializableLambdaHandler {
-    var initializeCalls = 0
+final class EchoHandler: LambdaHandler, BootstrappedLambdaHandler {
+    var bootstrapped = 0
 
-    func initialize(promise: EventLoopPromise<Void>) {
-        self.initializeCalls += 1
+    func bootstrap(eventLoop: EventLoop, promise: EventLoopPromise<Void>) {
+        self.bootstrapped += 1
         promise.succeed(())
     }
 
-    func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>) {
+    func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>) {
         promise.succeed(payload)
     }
 }
@@ -50,31 +54,46 @@ struct FailedHandler: LambdaHandler {
         self.reason = reason
     }
 
-    func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>) {
-        promise.fail(Error(description: self.reason))
-    }
-
-    struct Error: Swift.Error, Equatable, CustomStringConvertible {
-        let description: String
+    func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>) {
+        promise.fail(TestError(self.reason))
     }
 }
 
-struct FailedInitializerHandler: LambdaHandler, InitializableLambdaHandler {
+struct FailedBootstrapHandler: LambdaHandler, BootstrappedLambdaHandler {
     private let reason: String
 
     public init(_ reason: String) {
         self.reason = reason
     }
 
-    func handle(context: LambdaContext, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer>) {
-        promise.succeed(payload)
+    func bootstrap(eventLoop: EventLoop, promise: EventLoopPromise<Void>) {
+        promise.fail(TestError(self.reason))
     }
 
-    func initialize(promise: EventLoopPromise<Void>) {
-        promise.fail(Error(description: self.reason))
+    func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>) {
+        promise.fail(TestError("should not be called"))
     }
+}
 
-    public struct Error: Swift.Error, Equatable, CustomStringConvertible {
-        let description: String
+struct TestError: Swift.Error, Equatable, CustomStringConvertible {
+    let description: String
+
+    init(_ description: String) {
+        self.description = description
+    }
+}
+
+func assertLambdaLifecycleResult(_ result: Result<Int, Error>, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil, file: StaticString = #file, line: UInt = #line) {
+    switch result {
+    case .success where shouldFailWithError != nil:
+        XCTFail("should fail with \(shouldFailWithError!)", file: file, line: line)
+    case .success(let count) where shouldFailWithError == nil:
+        XCTAssertEqual(shoudHaveRun, count, "should have run \(shoudHaveRun) times", file: file, line: line)
+    case .failure(let error) where shouldFailWithError == nil:
+        XCTFail("should succeed, but failed with \(error)", file: file, line: line)
+    case .failure(let error) where shouldFailWithError != nil:
+        XCTAssertEqual(String(describing: shouldFailWithError!), String(describing: error), "expected error to mactch", file: file, line: line)
+    default:
+        XCTFail("invalid state")
     }
 }
