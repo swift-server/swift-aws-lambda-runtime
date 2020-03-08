@@ -38,7 +38,7 @@ final class EchoHandler: LambdaHandler {
         callback(.success(()))
     }
 
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
+    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
         callback(.success(payload))
     }
 }
@@ -50,7 +50,7 @@ struct FailedHandler: LambdaHandler {
         self.reason = reason
     }
 
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
+    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
         callback(.failure(Error(description: self.reason)))
     }
 
@@ -66,7 +66,7 @@ struct FailedInitializerHandler: LambdaHandler {
         self.reason = reason
     }
 
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
+    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
         callback(.success(payload))
     }
 

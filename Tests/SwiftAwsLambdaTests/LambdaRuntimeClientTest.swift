@@ -68,7 +68,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         }
     }
 
-    func testGetWorkServerNoContextError() throws {
+    func testGetWorkServerMissingHeaderRequestIDError() throws {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 // no request id -> no context
@@ -91,7 +91,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
-            XCTAssertEqual(error as? LambdaRuntimeClientError, LambdaRuntimeClientError.noContext)
+            XCTAssertEqual(error as? LambdaRuntimeClientError, LambdaRuntimeClientError.invocationMissingHeader(AmazonHeaders.requestID))
         }
     }
 

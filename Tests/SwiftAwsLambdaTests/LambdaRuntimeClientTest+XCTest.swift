@@ -27,7 +27,7 @@ extension LambdaRuntimeClientTest {
         return [
             ("testGetWorkServerInternalError", testGetWorkServerInternalError),
             ("testGetWorkServerNoBodyError", testGetWorkServerNoBodyError),
-            ("testGetWorkServerNoContextError", testGetWorkServerNoContextError),
+            ("testGetWorkServerMissingHeaderRequestIDError", testGetWorkServerMissingHeaderRequestIDError),
             ("testProcessResponseInternalServerError", testProcessResponseInternalServerError),
             ("testProcessErrorInternalServerError", testProcessErrorInternalServerError),
             ("testProcessInitErrorInternalServerError", testProcessInitErrorInternalServerError),

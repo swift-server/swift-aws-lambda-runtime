@@ -33,20 +33,18 @@ internal struct LambdaRuntimeClient {
     }
 
     /// Requests work from the Runtime Engine.
-    func requestWork(logger: Logger) -> EventLoopFuture<(LambdaContext, [UInt8])> {
+    func requestWork(logger: Logger) -> EventLoopFuture<(Invocation, ByteBuffer)> {
         let url = Consts.invocationURLPrefix + Consts.requestWorkURLSuffix
         logger.debug("requesting work from lambda runtime engine using \(url)")
         return self.httpClient.get(url: url).flatMapThrowing { response in
             guard response.status == .ok else {
                 throw LambdaRuntimeClientError.badStatusCode(response.status)
             }
-            guard let payload = response.readWholeBody() else {
+            let invocation = try Invocation(headers: response.headers)
+            guard let payload = response.body else {
                 throw LambdaRuntimeClientError.noBody
             }
-            guard let context = LambdaContext(logger: logger, response: response) else {
-                throw LambdaRuntimeClientError.noContext
-            }
-            return (context, payload)
+            return (invocation, payload)
         }.flatMapErrorThrowing { error in
             switch error {
             case HTTPClient.Errors.timeout:
@@ -60,14 +58,13 @@ internal struct LambdaRuntimeClient {
     }
 
     /// Reports a result to the Runtime Engine.
-    func reportResults(logger: Logger, context: LambdaContext, result: LambdaResult) -> EventLoopFuture<Void> {
-        var url = Consts.invocationURLPrefix + "/" + context.requestId
+    func reportResults(logger: Logger, invocation: Invocation, result: Result<ByteBuffer, Error>) -> EventLoopFuture<Void> {
+        var url = Consts.invocationURLPrefix + "/" + invocation.requestId
         var body: ByteBuffer
         switch result {
-        case .success(let data):
+        case .success(let buffer):
             url += Consts.postResponseURLSuffix
-            body = self.allocator.buffer(capacity: data.count)
-            body.writeBytes(data)
+            body = buffer
         case .failure(let error):
             url += Consts.postErrorURLSuffix
             // TODO: make FunctionError a const
@@ -132,8 +129,8 @@ internal struct LambdaRuntimeClient {
 internal enum LambdaRuntimeClientError: Error, Equatable {
     case badStatusCode(HTTPResponseStatus)
     case upstreamError(String)
+    case invocationMissingHeader(String)
     case noBody
-    case noContext
     case json(JsonCodecError)
 }
 
@@ -182,25 +179,36 @@ private extension HTTPClient.Response {
     }
 }
 
-private extension LambdaContext {
-    init?(logger: Logger, response: HTTPClient.Response) {
-        guard let requestId = response.headerValue(AmazonHeaders.requestID) else {
-            return nil
+internal struct Invocation {
+    let requestId: String
+    let deadlineDate: String
+    let invokedFunctionArn: String
+    let traceId: String
+    let clientContext: String?
+    let cognitoIdentity: String?
+
+    init(headers: HTTPHeaders) throws {
+        guard let requestId = headers.first(name: AmazonHeaders.requestID), !requestId.isEmpty else {
+            throw LambdaRuntimeClientError.invocationMissingHeader(AmazonHeaders.requestID)
         }
-        if requestId.isEmpty {
-            return nil
+
+        guard let unixTimeMilliseconds = headers.first(name: AmazonHeaders.deadline) else {
+            throw LambdaRuntimeClientError.invocationMissingHeader(AmazonHeaders.deadline)
         }
-        let traceId = response.headerValue(AmazonHeaders.traceID)
-        let invokedFunctionArn = response.headerValue(AmazonHeaders.invokedFunctionARN)
-        let cognitoIdentity = response.headerValue(AmazonHeaders.cognitoIdentity)
-        let clientContext = response.headerValue(AmazonHeaders.clientContext)
-        let deadline = response.headerValue(AmazonHeaders.deadline)
-        self = LambdaContext(requestId: requestId,
-                             traceId: traceId,
-                             invokedFunctionArn: invokedFunctionArn,
-                             cognitoIdentity: cognitoIdentity,
-                             clientContext: clientContext,
-                             deadline: deadline,
-                             logger: logger)
+
+        guard let invokedFunctionArn = headers.first(name: AmazonHeaders.invokedFunctionARN) else {
+            throw LambdaRuntimeClientError.invocationMissingHeader(AmazonHeaders.invokedFunctionARN)
+        }
+
+        guard let traceId = headers.first(name: AmazonHeaders.traceID) else {
+            throw LambdaRuntimeClientError.invocationMissingHeader(AmazonHeaders.traceID)
+        }
+
+        self.requestId = requestId
+        self.deadlineDate = unixTimeMilliseconds
+        self.invokedFunctionArn = invokedFunctionArn
+        self.traceId = traceId
+        self.clientContext = headers["Lambda-Runtime-Client-Context"].first
+        self.cognitoIdentity = headers["Lambda-Runtime-Cognito-Identity"].first
     }
 }

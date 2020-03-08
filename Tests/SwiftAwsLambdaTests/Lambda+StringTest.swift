@@ -120,7 +120,7 @@ private struct BadBehavior: LambdaServerBehavior {
 }
 
 private struct StringEchoHandler: LambdaStringHandler {
-    func handle(context: LambdaContext, payload: String, callback: @escaping LambdaStringCallback) {
+    func handle(context: Lambda.Context, payload: String, callback: @escaping LambdaStringCallback) {
         callback(.success(payload))
     }
 }
