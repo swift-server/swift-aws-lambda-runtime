@@ -77,6 +77,38 @@ public enum Lambda {
         }
     }
 
+    public class Context {
+        // from aws
+        public let requestId: String
+        public let traceId: String
+        public let invokedFunctionArn: String
+        public let deadline: String
+        public let cognitoIdentity: String?
+        public let clientContext: String?
+        // utility
+        public let logger: Logger
+
+        internal init(requestId: String,
+                      traceId: String,
+                      invokedFunctionArn: String,
+                      deadline: String,
+                      cognitoIdentity: String? = nil,
+                      clientContext: String? = nil,
+                      logger: Logger) {
+            self.requestId = requestId
+            self.traceId = traceId
+            self.invokedFunctionArn = invokedFunctionArn
+            self.cognitoIdentity = cognitoIdentity
+            self.clientContext = clientContext
+            self.deadline = deadline
+            // mutate logger with context
+            var logger = logger
+            logger[metadataKey: "awsRequestId"] = .string(requestId)
+            logger[metadataKey: "awsTraceId"] = .string(traceId)
+            self.logger = logger
+        }
+    }
+
     private final class Lifecycle {
         private let eventLoop: EventLoop
         private let logger: Logger
@@ -258,7 +290,7 @@ public typealias LambdaResult = Result<[UInt8], Error>
 public typealias LambdaCallback = (LambdaResult) -> Void
 
 /// A processing closure for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously.
-public typealias LambdaClosure = (LambdaContext, [UInt8], LambdaCallback) -> Void
+public typealias LambdaClosure = (Lambda.Context, [UInt8], LambdaCallback) -> Void
 
 /// A result type for a Lambda initialization.
 public typealias LambdaInitResult = Result<Void, Error>
@@ -270,47 +302,13 @@ public typealias LambdaInitCallBack = (LambdaInitResult) -> Void
 public protocol LambdaHandler {
     /// Initializes the `LambdaHandler`.
     func initialize(callback: @escaping LambdaInitCallBack)
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback)
+    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback)
 }
 
 extension LambdaHandler {
     @inlinable
     public func initialize(callback: @escaping LambdaInitCallBack) {
         callback(.success(()))
-    }
-}
-
-public struct LambdaContext {
-    // from aws
-    public let requestId: String
-    public let traceId: String?
-    public let invokedFunctionArn: String?
-    public let cognitoIdentity: String?
-    public let clientContext: String?
-    public let deadline: String?
-    // utliity
-    public let logger: Logger
-
-    public init(requestId: String,
-                traceId: String? = nil,
-                invokedFunctionArn: String? = nil,
-                cognitoIdentity: String? = nil,
-                clientContext: String? = nil,
-                deadline: String? = nil,
-                logger: Logger) {
-        self.requestId = requestId
-        self.traceId = traceId
-        self.invokedFunctionArn = invokedFunctionArn
-        self.cognitoIdentity = cognitoIdentity
-        self.clientContext = clientContext
-        self.deadline = deadline
-        // mutate logger with context
-        var logger = logger
-        logger[metadataKey: "awsRequestId"] = .string(requestId)
-        if let traceId = traceId {
-            logger[metadataKey: "awsTraceId"] = .string(traceId)
-        }
-        self.logger = logger
     }
 }
 
@@ -323,7 +321,7 @@ private struct LambdaClosureWrapper: LambdaHandler {
         self.closure = closure
     }
 
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
+    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
         self.closure(context, payload, callback)
     }
 }

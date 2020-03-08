@@ -54,17 +54,36 @@ internal struct LambdaRunner {
         // 1. request work from lambda runtime engine
         return self.runtimeClient.requestWork(logger: logger).peekError { error in
             logger.error("could not fetch work from lambda runtime engine: \(error)")
-        }.flatMap { context, payload in
+        }.flatMap { invocation, payload in
             // 2. send work to handler
+            let context = Lambda.Context(logger: logger, eventLoop: self.eventLoop, invocation: invocation)
             logger.debug("sending work to lambda handler \(self.lambdaHandler)")
+
+            // TODO: This is just for now, so that we can work with ByteBuffers only
+            //       in the LambdaRuntimeClient
+            let bytes = [UInt8](payload.readableBytesView)
             return self.lambdaHandler.handle(eventLoop: self.eventLoop,
                                              lifecycleId: self.lifecycleId,
                                              offload: self.offload,
                                              context: context,
-                                             payload: payload).map { (context, $0) }
-        }.flatMap { context, result in
+                                             payload: bytes)
+                .map {
+                    // TODO: This mapping shall be removed as soon as the LambdaHandler protocol
+                    //       works with ByteBuffer? instead of [UInt8]
+                    let mappedResult: Result<ByteBuffer, Error>
+                    switch $0 {
+                    case .success(let bytes):
+                        var buffer = ByteBufferAllocator().buffer(capacity: bytes.count)
+                        buffer.writeBytes(bytes)
+                        mappedResult = .success(buffer)
+                    case .failure(let error):
+                        mappedResult = .failure(error)
+                    }
+                    return (invocation, mappedResult)
+                }
+        }.flatMap { invocation, result in
             // 3. report results to runtime engine
-            self.runtimeClient.reportResults(logger: logger, context: context, result: result).peekError { error in
+            self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError { error in
                 logger.error("failed reporting results to lambda runtime engine: \(error)")
             }
         }.always { result in
@@ -88,7 +107,7 @@ private extension LambdaHandler {
         return promise.futureResult
     }
 
-    func handle(eventLoop: EventLoop, lifecycleId: String, offload: Bool, context: LambdaContext, payload: [UInt8]) -> EventLoopFuture<LambdaResult> {
+    func handle(eventLoop: EventLoop, lifecycleId: String, offload: Bool, context: Lambda.Context, payload: [UInt8]) -> EventLoopFuture<LambdaResult> {
         // offloading so user code never blocks the eventloop
         let promise = eventLoop.makePromise(of: LambdaResult.self)
         if offload {
@@ -103,6 +122,18 @@ private extension LambdaHandler {
             }
         }
         return promise.futureResult
+    }
+}
+
+private extension Lambda.Context {
+    convenience init(logger: Logger, eventLoop: EventLoop, invocation: Invocation) {
+        self.init(requestId: invocation.requestId,
+                  traceId: invocation.traceId,
+                  invokedFunctionArn: invocation.invokedFunctionArn,
+                  deadline: invocation.deadlineDate,
+                  cognitoIdentity: invocation.cognitoIdentity,
+                  clientContext: invocation.clientContext,
+                  logger: logger)
     }
 }
 

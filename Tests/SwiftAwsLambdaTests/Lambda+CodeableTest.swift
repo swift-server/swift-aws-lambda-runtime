@@ -150,7 +150,7 @@ private struct Response: Codable {
 }
 
 private struct CodableEchoHandler: LambdaCodableHandler {
-    func handle(context: LambdaContext, payload: Request, callback: @escaping LambdaCodableCallback<Response>) {
+    func handle(context: Lambda.Context, payload: Request, callback: @escaping LambdaCodableCallback<Response>) {
         callback(.success(Response(requestId: payload.requestId)))
     }
 }

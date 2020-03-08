@@ -86,7 +86,7 @@ class LambdaTest: XCTestCase {
     func testStartStop() throws {
         let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
         struct MyHandler: LambdaHandler {
-            func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
+            func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
                 callback(.success(payload))
             }
         }

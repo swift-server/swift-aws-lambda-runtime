@@ -50,7 +50,7 @@ public typealias LambdaCodableCallback<Out> = (LambdaCodableResult<Out>) -> Void
 
 /// A processing closure for a Lambda that takes an `In` and returns an `Out` via `LambdaCodableCallback<Out>` asynchronously,
 /// having `In` and `Out` extending `Decodable` and `Encodable` respectively.
-public typealias LambdaCodableClosure<In, Out> = (LambdaContext, In, LambdaCodableCallback<Out>) -> Void
+public typealias LambdaCodableClosure<In, Out> = (Lambda.Context, In, LambdaCodableCallback<Out>) -> Void
 
 /// A processing protocol for a Lambda that takes an `In` and returns an `Out` via `LambdaCodableCallback<Out>` asynchronously,
 /// having `In` and `Out` extending `Decodable` and `Encodable` respectively.
@@ -58,7 +58,7 @@ public protocol LambdaCodableHandler: LambdaHandler {
     associatedtype In: Decodable
     associatedtype Out: Encodable
 
-    func handle(context: LambdaContext, payload: In, callback: @escaping LambdaCodableCallback<Out>)
+    func handle(context: Lambda.Context, payload: In, callback: @escaping LambdaCodableCallback<Out>)
     var codec: LambdaCodableCodec<In, Out> { get }
 }
 
@@ -79,7 +79,7 @@ public class LambdaCodableCodec<In: Decodable, Out: Encodable> {
 
 /// Default implementation of `Encodable` -> `[UInt8]` encoding and `[UInt8]` -> `Decodable' decoding
 public extension LambdaCodableHandler {
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping (LambdaResult) -> Void) {
+    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping (LambdaResult) -> Void) {
         switch self.codec.decode(payload) {
         case .failure(let error):
             return callback(.failure(Errors.requestDecoding(error)))
@@ -133,7 +133,7 @@ private struct LambdaClosureWrapper<In: Decodable, Out: Encodable>: LambdaCodabl
         self.closure = closure
     }
 
-    public func handle(context: LambdaContext, payload: In, callback: @escaping LambdaCodableCallback<Out>) {
+    public func handle(context: Lambda.Context, payload: In, callback: @escaping LambdaCodableCallback<Out>) {
         self.closure(context, payload, callback)
     }
 }

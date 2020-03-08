@@ -46,16 +46,16 @@ public typealias LambdaStringResult = Result<String, Error>
 public typealias LambdaStringCallback = (LambdaStringResult) -> Void
 
 /// A processing closure for a Lambda that takes a `String` and returns a `LambdaStringResult` via `LambdaStringCallback` asynchronously.
-public typealias LambdaStringClosure = (LambdaContext, String, LambdaStringCallback) -> Void
+public typealias LambdaStringClosure = (Lambda.Context, String, LambdaStringCallback) -> Void
 
 /// A processing protocol for a Lambda that takes a `String` and returns a `LambdaStringResult` via `LambdaStringCallback` asynchronously.
 public protocol LambdaStringHandler: LambdaHandler {
-    func handle(context: LambdaContext, payload: String, callback: @escaping LambdaStringCallback)
+    func handle(context: Lambda.Context, payload: String, callback: @escaping LambdaStringCallback)
 }
 
 /// Default implementation of `String` -> `[UInt8]` encoding and `[UInt8]` -> `String' decoding
 public extension LambdaStringHandler {
-    func handle(context: LambdaContext, payload: [UInt8], callback: @escaping LambdaCallback) {
+    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
         self.handle(context: context, payload: String(decoding: payload, as: UTF8.self)) { result in
             switch result {
             case .success(let string):
@@ -73,7 +73,7 @@ private struct LambdaClosureWrapper: LambdaStringHandler {
         self.closure = closure
     }
 
-    func handle(context: LambdaContext, payload: String, callback: @escaping LambdaStringCallback) {
+    func handle(context: Lambda.Context, payload: String, callback: @escaping LambdaStringCallback) {
         self.closure(context, payload, callback)
     }
 }
