@@ -17,57 +17,69 @@ import NIO
 import XCTest
 
 class LambdaTest: XCTestCase {
-    func testSuceess() throws {
+    func testSuccess() {
+        let server = MockLambdaServer(behavior: GoodBehavior())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
         let handler = EchoHandler()
         let result = Lambda.run(handler: handler, configuration: configuration)
-        try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
         XCTAssertEqual(handler.initializeCalls, 1)
     }
 
-    func testFailure() throws {
-        let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
+    func testFailure() {
+        let server = MockLambdaServer(behavior: BadBehavior())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
         let result = Lambda.run(handler: EchoHandler())
-        try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
     }
 
-    func testInitFailure() throws {
-        let server = try MockLambdaServer(behavior: GoodBehaviourWhenInitFails()).start().wait()
+    func testInitFailure() {
+        let server = MockLambdaServer(behavior: GoodBehaviourWhenInitFails())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
         let handler = FailedInitializerHandler("kaboom")
         let result = Lambda.run(handler: handler)
-        try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shouldFailWithError: FailedInitializerHandler.Error(description: "kaboom"))
     }
 
-    func testInitFailureAndReportErrorFailure() throws {
-        let server = try MockLambdaServer(behavior: BadBehaviourWhenInitFails()).start().wait()
+    func testInitFailureAndReportErrorFailure() {
+        let server = MockLambdaServer(behavior: BadBehaviourWhenInitFails())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
         let handler = FailedInitializerHandler("kaboom")
         let result = Lambda.run(handler: handler)
-        try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shouldFailWithError: FailedInitializerHandler.Error(description: "kaboom"))
     }
 
-    func testClosureSuccess() throws {
+    func testClosureSuccess() {
+        let server = MockLambdaServer(behavior: GoodBehavior())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let server = try MockLambdaServer(behavior: GoodBehavior()).start().wait()
         let result = Lambda.run(configuration: configuration) { (_, payload: [UInt8], callback: LambdaCallback) in
             callback(.success(payload))
         }
-        try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
     }
 
-    func testClosureFailure() throws {
-        let server = try MockLambdaServer(behavior: BadBehavior()).start().wait()
+    func testClosureFailure() {
+        let server = MockLambdaServer(behavior: BadBehavior())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
         let result: LambdaLifecycleResult = Lambda.run { (_, payload: [UInt8], callback: LambdaCallback) in
             callback(.success(payload))
         }
-        try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
     }
 
@@ -94,49 +106,58 @@ class LambdaTest: XCTestCase {
         try eventLoopGroup.syncShutdownGracefully()
     }
 
-    func testTimeout() throws {
+    func testTimeout() {
         let timeout: Int64 = 100
+        let server = MockLambdaServer(behavior: GoodBehavior(requestId: "timeout", payload: "\(timeout * 2)"))
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1),
                                                  runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
-
-        let server = try MockLambdaServer(behavior: GoodBehavior(requestId: "timeout", payload: "\(timeout * 2)")).start().wait()
         let result = Lambda.run(handler: EchoHandler(), configuration: configuration)
-        try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.upstreamError("timeout"))
     }
 
-    func testDisconnect() throws {
+    func testDisconnect() {
+        let server = MockLambdaServer(behavior: GoodBehavior(requestId: "disconnect"))
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
-        let server = try MockLambdaServer(behavior: GoodBehavior(requestId: "disconnect")).start().wait()
         let result = Lambda.run(handler: EchoHandler(), configuration: configuration)
-        try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.upstreamError("connectionResetByPeer"))
     }
 
-    func testBigPayload() throws {
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
+    func testBigPayload() {
         let payload = String(repeating: "*", count: 104_448)
-        let server = try MockLambdaServer(behavior: GoodBehavior(payload: payload)).start().wait()
+        let server = MockLambdaServer(behavior: GoodBehavior(payload: payload))
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
         let result = Lambda.run(handler: EchoHandler(), configuration: configuration)
-        try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shoudHaveRun: 1)
     }
 
-    func testKeepAliveServer() throws {
+    func testKeepAliveServer() {
+        let server = MockLambdaServer(behavior: GoodBehavior(), keepAlive: true)
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
         let maxTimes = 10
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let server = try MockLambdaServer(behavior: GoodBehavior(), keepAlive: true).start().wait()
         let result = Lambda.run(handler: EchoHandler(), configuration: configuration)
-        try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
     }
 
-    func testNoKeepAliveServer() throws {
+    func testNoKeepAliveServer() {
+        let server = MockLambdaServer(behavior: GoodBehavior(), keepAlive: false)
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
         let maxTimes = 10
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let server = try MockLambdaServer(behavior: GoodBehavior(), keepAlive: false).start().wait()
         let result = Lambda.run(handler: EchoHandler(), configuration: configuration)
-        try server.stop().wait()
         assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
     }
 }

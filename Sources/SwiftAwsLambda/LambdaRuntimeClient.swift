@@ -145,7 +145,7 @@ internal struct JsonCodecError: Error, Equatable {
     }
 
     static func == (lhs: JsonCodecError, rhs: JsonCodecError) -> Bool {
-        return lhs.cause.localizedDescription == rhs.cause.localizedDescription
+        return String(describing: lhs.cause) == String(describing: rhs.cause)
     }
 }
 

@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
+import NIO
 @testable import SwiftAwsLambda
 import XCTest
 

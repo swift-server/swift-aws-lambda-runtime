@@ -36,7 +36,7 @@ internal struct LambdaRunner {
     ///
     /// - Returns: An `EventLoopFuture<Void>` fulfilled with the outcome of the initialization.
     func initialize(logger: Logger) -> EventLoopFuture<Void> {
-        logger.info("initializing lambda")
+        logger.debug("initializing lambda")
         // We need to use `flatMap` instead of `whenFailure` to ensure we complete reporting the result before stopping.
         return self.lambdaHandler.initialize(eventLoop: self.eventLoop,
                                              lifecycleId: self.lifecycleId,
@@ -69,7 +69,7 @@ internal struct LambdaRunner {
             }
         }.always { result in
             // we are done!
-            logger.log(level: result.successful ? .info : .warning, "lambda invocation sequence completed \(result.successful ? "successfully" : "with failure")")
+            logger.log(level: result.successful ? .debug : .warning, "lambda invocation sequence completed \(result.successful ? "successfully" : "with failure")")
         }
     }
 }
