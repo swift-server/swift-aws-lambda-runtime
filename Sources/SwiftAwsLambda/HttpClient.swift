@@ -223,9 +223,8 @@ private final class UnaryHandler: ChannelDuplexHandler {
         }
         let wrapper = unwrapOutboundIn(data)
         let timeoutTask = wrapper.request.timeout.map {
-            context.eventLoop.scheduleTask(in: $0) { [weak self] in
-                if self?.pending != nil {
-                    // TODO: need to verify this is thread safe i.e tha the timeout event wont interleave with the normal hander events
+            context.eventLoop.scheduleTask(in: $0) {
+                if self.pending != nil {
                     context.pipeline.fireErrorCaught(HTTPClient.Errors.timeout)
                 }
             }
