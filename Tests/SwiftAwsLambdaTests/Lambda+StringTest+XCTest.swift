@@ -25,11 +25,14 @@ import XCTest
 extension StringLambdaTest {
     static var allTests: [(String, (StringLambdaTest) -> () throws -> Void)] {
         return [
-            ("testSuccess", testSuccess),
-            ("testFailure", testFailure),
+            ("testCallbackSuccess", testCallbackSuccess),
+            ("testCallbackFailure", testCallbackFailure),
+            ("testPromiseSuccess", testPromiseSuccess),
+            ("testPromiseFailure", testPromiseFailure),
             ("testClosureSuccess", testClosureSuccess),
             ("testClosureFailure", testClosureFailure),
             ("testBootstrapFailure", testBootstrapFailure),
+            ("testVoidSuccess", testVoidSuccess),
         ]
     }
 }

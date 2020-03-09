@@ -23,70 +23,55 @@ import Logging
 import NIO
 
 public enum Lambda {
-    /// Run a Lambda defined by implementing the `LambdaClosure` closure.
-    ///
-    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
-    @inlinable
-    public static func run(_ closure: @escaping LambdaClosure) {
-        self.run(closure: closure)
-    }
-
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
     ///
-    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
+    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     @inlinable
-    public static func run(_ handler: LambdaHandler) {
+    public static func run(_ handler: ByteBufferLambdaHandler) {
         self.run(handler: handler)
     }
 
-    /// Run a Lambda defined by implementing the `LambdaHandler` protocol via a `LambdaHandlerFactory`.
+    /// Run a Lambda defined by implementing the `LambdaHandler` protocol provided via a `LambdaHandlerFactory`.
     ///
-    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
+    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     @inlinable
     public static func run(_ factory: @escaping LambdaHandlerFactory) {
         self.run(factory: factory)
     }
 
-    /// Run a Lambda defined by implementing the `LambdaHandler` protocol via a factory.
+    /// Run a Lambda defined by implementing the `LambdaHandler` protocol provided via a factory, typically a constructor.
     ///
-    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
+    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     @inlinable
-    public static func run(_ factory: @escaping (EventLoop) throws -> LambdaHandler) {
+    public static func run(_ factory: @escaping (EventLoop) throws -> ByteBufferLambdaHandler) {
         self.run(factory: factory)
     }
 
     // for testing and internal use
-    @usableFromInline
+    @inlinable
     @discardableResult
-    internal static func run(configuration: Configuration = .init(), closure: @escaping LambdaClosure) -> LambdaLifecycleResult {
-        return self.run(configuration: configuration, handler: LambdaClosureWrapper(closure))
+    internal static func run(configuration: Configuration = .init(), handler: ByteBufferLambdaHandler) -> Result<Int, Error> {
+        return self.run(configuration: configuration, factory: { _, promise in promise.succeed(handler) })
     }
 
     // for testing and internal use
-    @usableFromInline
+    @inlinable
     @discardableResult
-    internal static func run(configuration: Configuration = .init(), handler: LambdaHandler) -> LambdaLifecycleResult {
-        return self.run(configuration: configuration, factory: { _, callback in callback(.success(handler)) })
-    }
-
-    // for testing and internal use
-    @usableFromInline
-    @discardableResult
-    internal static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> LambdaHandler) -> LambdaLifecycleResult {
-        return self.run(configuration: configuration, factory: { (eventloop: EventLoop, callback: (Result<LambdaHandler, Error>) -> Void) -> Void in
+    internal static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> ByteBufferLambdaHandler) -> Result<Int, Error> {
+        return self.run(configuration: configuration, factory: { (eventloop: EventLoop, promise: EventLoopPromise<ByteBufferLambdaHandler>) -> Void in
             do {
                 let handler = try factory(eventloop)
-                callback(.success(handler))
+                promise.succeed(handler)
             } catch {
-                callback(.failure(error))
+                promise.fail(error)
             }
         })
     }
 
     // for testing and internal use
-    @usableFromInline
+    @inlinable
     @discardableResult
-    internal static func run(configuration: Configuration = .init(), factory: @escaping LambdaHandlerFactory) -> LambdaLifecycleResult {
+    internal static func run(configuration: Configuration = .init(), factory: @escaping LambdaHandlerFactory) -> Result<Int, Error> {
         do {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1) // only need one thread, will improve performance
             defer { try! eventLoopGroup.syncShutdownGracefully() }
@@ -97,6 +82,7 @@ public enum Lambda {
         }
     }
 
+    @usableFromInline
     internal static func runAsync(eventLoopGroup: EventLoopGroup, configuration: Configuration, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<Int> {
         Backtrace.install()
         var logger = Logger(label: "Lambda")
@@ -113,34 +99,12 @@ public enum Lambda {
     }
 }
 
-public typealias LambdaResult = Result<[UInt8], Error>
+public typealias LambdaHandlerFactory = (EventLoop, EventLoopPromise<ByteBufferLambdaHandler>) -> Void
 
-public typealias LambdaCallback = (LambdaResult) -> Void
-
-/// A processing closure for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously via`LambdaCallback` .
-public typealias LambdaClosure = (Lambda.Context, [UInt8], LambdaCallback) -> Void
-
-/// A callback to provide the result of Lambda initialization.
-public typealias LambdaInitCallBack = (Result<LambdaHandler, Error>) -> Void
-
-public typealias LambdaHandlerFactory = (EventLoop, LambdaInitCallBack) -> Void
-
-/// A processing protocol for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously via `LambdaCallback`.
-public protocol LambdaHandler {
+/// A processing protocol for a Lambda that takes a `ByteBuffer` and returns a `ByteBuffer?` asynchronously via `EventLoopPromise`.
+///
+/// - note: This is a low level API design to power the higher level `LambdaHandler` based APIs. Most users are not expected to implement this API.
+public protocol ByteBufferLambdaHandler {
     /// Handles the Lambda request.
-    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback)
-}
-
-@usableFromInline
-internal typealias LambdaLifecycleResult = Result<Int, Error>
-
-private struct LambdaClosureWrapper: LambdaHandler {
-    private let closure: LambdaClosure
-    init(_ closure: @escaping LambdaClosure) {
-        self.closure = closure
-    }
-
-    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
-        self.closure(context, payload, callback)
-    }
+    func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>)
 }

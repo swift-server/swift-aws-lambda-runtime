@@ -30,7 +30,7 @@ class LambdaRuntimeClientTest: XCTestCase {
 
     func testBootstrapFailure() {
         let behavior = Behavior()
-        XCTAssertThrowsError(try runLambda(behavior: behavior, factory: { _, callback in callback(.failure(TestError("boom"))) })) { error in
+        XCTAssertThrowsError(try runLambda(behavior: behavior, factory: { _, promise in promise.fail(TestError("boom")) })) { error in
             XCTAssertEqual(error as? TestError, TestError("boom"))
         }
         XCTAssertEqual(behavior.state, 1)
@@ -58,7 +58,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
-            XCTAssertEqual(error as? LambdaRuntimeClientError, LambdaRuntimeClientError.badStatusCode(.internalServerError))
+            XCTAssertEqual(error as? LambdaRuntimeClient.Errors, .badStatusCode(.internalServerError))
         }
     }
 
@@ -84,7 +84,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
-            XCTAssertEqual(error as? LambdaRuntimeClientError, LambdaRuntimeClientError.noBody)
+            XCTAssertEqual(error as? LambdaRuntimeClient.Errors, .noBody)
         }
     }
 
@@ -111,7 +111,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
-            XCTAssertEqual(error as? LambdaRuntimeClientError, LambdaRuntimeClientError.invocationMissingHeader(AmazonHeaders.requestID))
+            XCTAssertEqual(error as? LambdaRuntimeClient.Errors, .invocationMissingHeader(AmazonHeaders.requestID))
         }
     }
 
@@ -136,7 +136,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
-            XCTAssertEqual(error as? LambdaRuntimeClientError, LambdaRuntimeClientError.badStatusCode(.internalServerError))
+            XCTAssertEqual(error as? LambdaRuntimeClient.Errors, .badStatusCode(.internalServerError))
         }
     }
 
@@ -161,7 +161,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: FailedHandler("boom"))) { error in
-            XCTAssertEqual(error as? LambdaRuntimeClientError, LambdaRuntimeClientError.badStatusCode(.internalServerError))
+            XCTAssertEqual(error as? LambdaRuntimeClient.Errors, .badStatusCode(.internalServerError))
         }
     }
 
@@ -186,7 +186,7 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), factory: { _, callback in callback(.failure(TestError("boom"))) })) { error in
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), factory: { _, promise in promise.fail(TestError("boom")) })) { error in
             XCTAssertEqual(error as? TestError, TestError("boom"))
         }
     }

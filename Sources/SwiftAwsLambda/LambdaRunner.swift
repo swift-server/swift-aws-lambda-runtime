@@ -33,7 +33,7 @@ internal struct LambdaRunner {
     /// Run the user provided initializer. This *must* only be called once.
     ///
     /// - Returns: An `EventLoopFuture<LambdaHandler>` fulfilled with the outcome of the initialization.
-    func initialize(logger: Logger, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<LambdaHandler> {
+    func initialize(logger: Logger, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<ByteBufferLambdaHandler> {
         logger.debug("initializing lambda")
         // 1. create the handler from the factory
         let future = bootstrap(eventLoop: self.eventLoop, lifecycleId: self.lifecycleId, offload: self.offload, factory: factory)
@@ -47,7 +47,7 @@ internal struct LambdaRunner {
         }
     }
 
-    func run(logger: Logger, handler: LambdaHandler) -> EventLoopFuture<Void> {
+    func run(logger: Logger, handler: ByteBufferLambdaHandler) -> EventLoopFuture<Void> {
         logger.debug("lambda invocation sequence starting")
         // 1. request work from lambda runtime engine
         return self.runtimeClient.requestWork(logger: logger).peekError { error in
@@ -56,29 +56,11 @@ internal struct LambdaRunner {
             // 2. send work to handler
             let context = Lambda.Context(logger: logger, eventLoop: self.eventLoop, invocation: invocation)
             logger.debug("sending work to lambda handler \(handler)")
-
-            // TODO: This is just for now, so that we can work with ByteBuffers only
-            //       in the LambdaRuntimeClient
-            let bytes = [UInt8](payload.readableBytesView)
             return handler.handle(eventLoop: self.eventLoop,
                                   lifecycleId: self.lifecycleId,
                                   offload: self.offload,
                                   context: context,
-                                  payload: bytes)
-                .map {
-                    // TODO: This mapping shall be removed as soon as the LambdaHandler protocol
-                    //       works with ByteBuffer? instead of [UInt8]
-                    let mappedResult: Result<ByteBuffer, Error>
-                    switch $0 {
-                    case .success(let bytes):
-                        var buffer = ByteBufferAllocator().buffer(capacity: bytes.count)
-                        buffer.writeBytes(bytes)
-                        mappedResult = .success(buffer)
-                    case .failure(let error):
-                        mappedResult = .failure(error)
-                    }
-                    return (invocation, mappedResult)
-                }
+                                  payload: payload).mapResult { (invocation, $0) }
         }.flatMap { invocation, result in
             // 3. report results to runtime engine
             self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError { error in
@@ -91,35 +73,42 @@ internal struct LambdaRunner {
     }
 }
 
-private func bootstrap(eventLoop: EventLoop, lifecycleId: String, offload: Bool, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<LambdaHandler> {
-    let promise = eventLoop.makePromise(of: LambdaHandler.self)
-    if offload {
-        // offloading so user code never blocks the eventloop
-        DispatchQueue(label: "lambda-\(lifecycleId)").async {
-            factory(eventLoop, promise.completeWith)
-        }
-    } else {
-        factory(eventLoop, promise.completeWith)
-    }
+// FIXME: offload
+private func bootstrap(eventLoop: EventLoop, lifecycleId: String, offload: Bool, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<ByteBufferLambdaHandler> {
+    let promise = eventLoop.makePromise(of: ByteBufferLambdaHandler.self)
+    /* if offload {
+         // offloading so user code never blocks the eventloop
+         DispatchQueue(label: "lambda-\(lifecycleId)").async {
+             factory(eventLoop, promise.completeWith)
+         }
+     } else {
+         factory(eventLoop, promise.completeWith)
+     } */
+    factory(eventLoop, promise)
     return promise.futureResult
 }
 
-private extension LambdaHandler {
-    func handle(eventLoop: EventLoop, lifecycleId: String, offload: Bool, context: Lambda.Context, payload: [UInt8]) -> EventLoopFuture<LambdaResult> {
-        let promise = eventLoop.makePromise(of: LambdaResult.self)
-        if offload {
-            // offloading so user code never blocks the eventloop
-            DispatchQueue(label: "lambda-\(lifecycleId)").async {
-                self.handle(context: context, payload: payload) { result in
-                    promise.succeed(result)
-                }
-            }
-        } else {
-            self.handle(context: context, payload: payload) { result in
-                promise.succeed(result)
-            }
-        }
+private extension ByteBufferLambdaHandler {
+    // FIXME: offload
+    func handle(eventLoop: EventLoop, lifecycleId: String, offload: Bool, context: Lambda.Context, payload: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
+        let promise = eventLoop.makePromise(of: ByteBuffer?.self)
+        self.handle(context: context, payload: payload, promise: promise)
         return promise.futureResult
+
+        /* let promise = eventLoop.makePromise(of: LambdaResult.self)
+         if offload {
+             // offloading so user code never blocks the eventloop
+             DispatchQueue(label: "lambda-\(lifecycleId)").async {
+                 self.handle(context: context, payload: payload) { result in
+                     promise.succeed(result)
+                 }
+             }
+         } else {
+             self.handle(context: context, payload: payload) { result in
+                 promise.succeed(result)
+             }
+         }
+         return promise.futureResult */
     }
 }
 
@@ -131,7 +120,8 @@ private extension Lambda.Context {
                   deadline: DispatchWallTime(millisSinceEpoch: invocation.deadlineInMillisSinceEpoch),
                   cognitoIdentity: invocation.cognitoIdentity,
                   clientContext: invocation.clientContext,
-                  logger: logger)
+                  logger: logger,
+                  eventLoop: eventLoop)
     }
 }
 
@@ -155,6 +145,14 @@ private extension EventLoopFuture {
             return promise.futureResult
         }
     }
+
+    func mapResult<NewValue>(_ callback: @escaping (Result<Value, Error>) -> NewValue) -> EventLoopFuture<NewValue> {
+        return self.map { value in
+            callback(.success(value))
+        }.flatMapErrorThrowing { error in
+            callback(.failure(error))
+        }
+    }
 }
 
 private extension Result {
@@ -162,7 +160,7 @@ private extension Result {
         switch self {
         case .success:
             return true
-        default:
+        case .failure:
             return false
         }
     }

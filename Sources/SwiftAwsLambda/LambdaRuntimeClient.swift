@@ -38,19 +38,19 @@ internal struct LambdaRuntimeClient {
         logger.debug("requesting work from lambda runtime engine using \(url)")
         return self.httpClient.get(url: url).flatMapThrowing { response in
             guard response.status == .ok else {
-                throw LambdaRuntimeClientError.badStatusCode(response.status)
+                throw Errors.badStatusCode(response.status)
             }
             let invocation = try Invocation(headers: response.headers)
             guard let payload = response.body else {
-                throw LambdaRuntimeClientError.noBody
+                throw Errors.noBody
             }
             return (invocation, payload)
         }.flatMapErrorThrowing { error in
             switch error {
             case HTTPClient.Errors.timeout:
-                throw LambdaRuntimeClientError.upstreamError("timeout")
+                throw Errors.upstreamError("timeout")
             case HTTPClient.Errors.connectionResetByPeer:
-                throw LambdaRuntimeClientError.upstreamError("connectionResetByPeer")
+                throw Errors.upstreamError("connectionResetByPeer")
             default:
                 throw error
             }
@@ -58,20 +58,20 @@ internal struct LambdaRuntimeClient {
     }
 
     /// Reports a result to the Runtime Engine.
-    func reportResults(logger: Logger, invocation: Invocation, result: Result<ByteBuffer, Error>) -> EventLoopFuture<Void> {
+    func reportResults(logger: Logger, invocation: Invocation, result: Result<ByteBuffer?, Error>) -> EventLoopFuture<Void> {
         var url = Consts.invocationURLPrefix + "/" + invocation.requestId
         var body: ByteBuffer
         switch result {
         case .success(let buffer):
             url += Consts.postResponseURLSuffix
-            body = buffer
+            body = buffer ?? self.allocator.buffer(capacity: 0) // FIXME:
         case .failure(let error):
             url += Consts.postErrorURLSuffix
             // TODO: make FunctionError a const
             let error = ErrorResponse(errorType: "FunctionError", errorMessage: "\(error)")
             switch error.toJson() {
             case .failure(let jsonError):
-                return self.eventLoop.makeFailedFuture(LambdaRuntimeClientError.json(jsonError))
+                return self.eventLoop.makeFailedFuture(Errors.json(jsonError))
             case .success(let json):
                 body = self.allocator.buffer(capacity: json.utf8.count)
                 body.writeString(json)
@@ -80,15 +80,15 @@ internal struct LambdaRuntimeClient {
         logger.debug("reporting results to lambda runtime engine using \(url)")
         return self.httpClient.post(url: url, body: body).flatMapThrowing { response in
             guard response.status == .accepted else {
-                throw LambdaRuntimeClientError.badStatusCode(response.status)
+                throw Errors.badStatusCode(response.status)
             }
             return ()
         }.flatMapErrorThrowing { error in
             switch error {
             case HTTPClient.Errors.timeout:
-                throw LambdaRuntimeClientError.upstreamError("timeout")
+                throw Errors.upstreamError("timeout")
             case HTTPClient.Errors.connectionResetByPeer:
-                throw LambdaRuntimeClientError.upstreamError("connectionResetByPeer")
+                throw Errors.upstreamError("connectionResetByPeer")
             default:
                 throw error
             }
@@ -102,36 +102,36 @@ internal struct LambdaRuntimeClient {
         var body: ByteBuffer
         switch errorResponse.toJson() {
         case .failure(let jsonError):
-            return self.eventLoop.makeFailedFuture(LambdaRuntimeClientError.json(jsonError))
+            return self.eventLoop.makeFailedFuture(Errors.json(jsonError))
         case .success(let json):
             body = self.allocator.buffer(capacity: json.utf8.count)
             body.writeString(json)
             logger.warning("reporting initialization error to lambda runtime engine using \(url)")
             return self.httpClient.post(url: url, body: body).flatMapThrowing { response in
                 guard response.status == .accepted else {
-                    throw LambdaRuntimeClientError.badStatusCode(response.status)
+                    throw Errors.badStatusCode(response.status)
                 }
                 return ()
             }.flatMapErrorThrowing { error in
                 switch error {
                 case HTTPClient.Errors.timeout:
-                    throw LambdaRuntimeClientError.upstreamError("timeout")
+                    throw Errors.upstreamError("timeout")
                 case HTTPClient.Errors.connectionResetByPeer:
-                    throw LambdaRuntimeClientError.upstreamError("connectionResetByPeer")
+                    throw Errors.upstreamError("connectionResetByPeer")
                 default:
                     throw error
                 }
             }
         }
     }
-}
 
-internal enum LambdaRuntimeClientError: Error, Equatable {
-    case badStatusCode(HTTPResponseStatus)
-    case upstreamError(String)
-    case invocationMissingHeader(String)
-    case noBody
-    case json(JsonCodecError)
+    internal enum Errors: Error, Equatable {
+        case badStatusCode(HTTPResponseStatus)
+        case upstreamError(String)
+        case invocationMissingHeader(String)
+        case noBody
+        case json(JsonCodecError)
+    }
 }
 
 // FIXME: get rid of this. created to satisfy Equatable
@@ -189,20 +189,20 @@ internal struct Invocation {
 
     init(headers: HTTPHeaders) throws {
         guard let requestId = headers.first(name: AmazonHeaders.requestID), !requestId.isEmpty else {
-            throw LambdaRuntimeClientError.invocationMissingHeader(AmazonHeaders.requestID)
+            throw LambdaRuntimeClient.Errors.invocationMissingHeader(AmazonHeaders.requestID)
         }
 
         guard let deadline = headers.first(name: AmazonHeaders.deadline),
             let unixTimeInMilliseconds = Int64(deadline) else {
-            throw LambdaRuntimeClientError.invocationMissingHeader(AmazonHeaders.deadline)
+            throw LambdaRuntimeClient.Errors.invocationMissingHeader(AmazonHeaders.deadline)
         }
 
         guard let invokedFunctionArn = headers.first(name: AmazonHeaders.invokedFunctionARN) else {
-            throw LambdaRuntimeClientError.invocationMissingHeader(AmazonHeaders.invokedFunctionARN)
+            throw LambdaRuntimeClient.Errors.invocationMissingHeader(AmazonHeaders.invokedFunctionARN)
         }
 
         guard let traceId = headers.first(name: AmazonHeaders.traceID) else {
-            throw LambdaRuntimeClientError.invocationMissingHeader(AmazonHeaders.traceID)
+            throw LambdaRuntimeClient.Errors.invocationMissingHeader(AmazonHeaders.traceID)
         }
 
         self.requestId = requestId

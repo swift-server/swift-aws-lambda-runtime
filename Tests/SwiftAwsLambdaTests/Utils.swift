@@ -17,8 +17,8 @@ import NIO
 @testable import SwiftAwsLambda
 import XCTest
 
-func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws {
-    try runLambda(behavior: behavior, factory: { _, callback in callback(.success(handler)) })
+func runLambda(behavior: LambdaServerBehavior, handler: ByteBufferLambdaHandler) throws {
+    try runLambda(behavior: behavior, factory: { _, promise in promise.succeed(handler) })
 }
 
 func runLambda(behavior: LambdaServerBehavior, factory: @escaping LambdaHandlerFactory) throws {
@@ -34,21 +34,21 @@ func runLambda(behavior: LambdaServerBehavior, factory: @escaping LambdaHandlerF
     }.wait()
 }
 
-struct EchoHandler: LambdaHandler {
-    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
-        callback(.success(payload))
+struct EchoHandler: ByteBufferLambdaHandler {
+    func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>) {
+        promise.succeed(payload)
     }
 }
 
-struct FailedHandler: LambdaHandler {
+struct FailedHandler: ByteBufferLambdaHandler {
     private let reason: String
 
     public init(_ reason: String) {
         self.reason = reason
     }
 
-    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
-        callback(.failure(TestError(self.reason)))
+    func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>) {
+        promise.fail(TestError(self.reason))
     }
 }
 

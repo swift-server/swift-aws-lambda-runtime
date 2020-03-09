@@ -17,13 +17,16 @@ import NIO
 import XCTest
 
 class CodableLambdaTest: XCTestCase {
-    func testSuccess() {
+    func testCallbackSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: LambdaCodableHandler {
-            func handle(context: Lambda.Context, payload: Request, callback: @escaping LambdaCodableCallback<Response>) {
+        struct Handler: LambdaHandler {
+            typealias In = Request
+            typealias Out = Response
+
+            func handle(context: Lambda.Context, payload: Request, callback: (Result<Response, Error>) -> Void) {
                 callback(.success(Response(requestId: payload.requestId)))
             }
         }
@@ -34,14 +37,57 @@ class CodableLambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    func testFailure() {
+    func testCallbackFailure() {
         let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: LambdaCodableHandler {
-            func handle(context: Lambda.Context, payload: Request, callback: @escaping LambdaCodableCallback<Response>) {
+        struct Handler: LambdaHandler {
+            typealias In = Request
+            typealias Out = Response
+
+            func handle(context: Lambda.Context, payload: Request, callback: (Result<Response, Error>) -> Void) {
                 callback(.failure(TestError("boom")))
+            }
+        }
+
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let result = Lambda.run(configuration: configuration, handler: Handler())
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+    }
+
+    func testPromiseSuccess() {
+        let server = MockLambdaServer(behavior: Behavior())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        struct Handler: LambdaHandler {
+            typealias In = Request
+            typealias Out = Response
+
+            func handle(context: Lambda.Context, payload: Request, promise: EventLoopPromise<Response>) {
+                promise.succeed(Response(requestId: payload.requestId))
+            }
+        }
+
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let result = Lambda.run(configuration: configuration, handler: Handler())
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+    }
+
+    func testPromiseFailure() {
+        let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        struct Handler: LambdaHandler {
+            typealias In = Request
+            typealias Out = Response
+
+            func handle(context: Lambda.Context, payload: Request, promise: EventLoopPromise<Response>) {
+                promise.fail(TestError("boom"))
             }
         }
 
@@ -82,18 +128,41 @@ class CodableLambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: LambdaCodableHandler {
+        struct Handler: LambdaHandler {
+            typealias In = Request
+            typealias Out = Response
+
             init(eventLoop: EventLoop) throws {
                 throw TestError("kaboom")
             }
 
-            func handle(context: Lambda.Context, payload: Request, callback: @escaping LambdaCodableCallback<Response>) {
+            func handle(context: Lambda.Context, payload: Request, callback: (Result<Response, Error>) -> Void) {
                 callback(.failure(TestError("should not be called")))
             }
         }
 
         let result = Lambda.run(factory: Handler.init)
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
+    }
+
+    func testVoidSuccess() {
+        let server = MockLambdaServer(behavior: Behavior(result: .success(nil)))
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        struct Handler: LambdaHandler {
+            typealias In = Request
+            typealias Out = Void
+
+            func handle(context: Lambda.Context, payload: Request, callback: (Result<Void, Error>) -> Void) {
+                callback(.success(()))
+            }
+        }
+
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let result = Lambda.run(configuration: configuration, handler: Handler())
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 }
 

@@ -40,7 +40,7 @@ internal final class HTTPClient {
                                     timeout: timeout ?? self.configuration.requestTimeout))
     }
 
-    func post(url: String, body: ByteBuffer, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
+    func post(url: String, body: ByteBuffer?, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
         return self.execute(Request(targetHost: self.targetHost,
                                     url: url,
                                     method: .POST,
