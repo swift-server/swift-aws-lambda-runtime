@@ -35,24 +35,9 @@ internal struct LambdaRunner {
     /// - Returns: An `EventLoopFuture<LambdaHandler>` fulfilled with the outcome of the initialization.
     func initialize(logger: Logger, provider: @escaping LambdaHandlerProvider) -> EventLoopFuture<LambdaHandler> {
         logger.debug("initializing lambda")
-
-        let future: EventLoopFuture<LambdaHandler>
-        do {
-            // 1. craete the handler from the provider
-            let handler = try provider(self.eventLoop)
-            // 2. bootstrap if needed
-            if let handler = handler as? BootstrappedLambdaHandler {
-                future = handler.bootstrap(eventLoop: self.eventLoop,
-                                           lifecycleId: self.lifecycleId,
-                                           offload: self.offload).map { handler }
-            } else {
-                future = self.eventLoop.makeSucceededFuture(handler)
-            }
-        } catch {
-            future = self.eventLoop.makeFailedFuture(error)
-        }
-
-        // 3. report initialization error if one occured
+        // 1. craete the handler from the provider
+        let future = bootstrap(eventLoop: self.eventLoop, lifecycleId: self.lifecycleId, offload: self.offload, provider: provider)
+        // 2. report initialization error if one occured
         return future.peekError { error in
             self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
                 // We're going to bail out because the init failed, so there's not a lot we can do other than log
@@ -106,19 +91,21 @@ internal struct LambdaRunner {
     }
 }
 
-private extension BootstrappedLambdaHandler {
-    func bootstrap(eventLoop: EventLoop, lifecycleId: String, offload: Bool) -> EventLoopFuture<Void> {
-        let promise = eventLoop.makePromise(of: Void.self)
-        if offload {
-            // offloading so user code never blocks the eventloop
-            DispatchQueue(label: "lambda-\(lifecycleId)").async {
-                self.bootstrap { promise.completeWith($0) }
+private func bootstrap(eventLoop: EventLoop, lifecycleId: String, offload: Bool, provider: @escaping LambdaHandlerProvider) -> EventLoopFuture<LambdaHandler> {
+    let promise = eventLoop.makePromise(of: LambdaHandler.self)
+    if offload {
+        // offloading so user code never blocks the eventloop
+        DispatchQueue(label: "lambda-\(lifecycleId)").async {
+            _ = provider(eventLoop) { result in
+                promise.completeWith(result)
             }
-        } else {
-            self.bootstrap { promise.completeWith($0) }
         }
-        return promise.futureResult
+    } else {
+        _ = provider(eventLoop) { result in
+            promise.completeWith(result)
+        }
     }
+    return promise.futureResult
 }
 
 private extension LambdaHandler {

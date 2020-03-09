@@ -28,14 +28,12 @@ extension LambdaRuntimeClientTest {
             ("testSuccess", testSuccess),
             ("testFailure", testFailure),
             ("testProviderFailure", testProviderFailure),
-            ("testBootstrapFailure", testBootstrapFailure),
             ("testGetWorkServerInternalError", testGetWorkServerInternalError),
             ("testGetWorkServerNoBodyError", testGetWorkServerNoBodyError),
             ("testGetWorkServerMissingHeaderRequestIDError", testGetWorkServerMissingHeaderRequestIDError),
             ("testProcessResponseInternalServerError", testProcessResponseInternalServerError),
             ("testProcessErrorInternalServerError", testProcessErrorInternalServerError),
             ("testProcessInitErrorOnProviderFailure", testProcessInitErrorOnProviderFailure),
-            ("testProcessInitErrorOnBootstrapFailure", testProcessInitErrorOnBootstrapFailure),
         ]
     }
 }

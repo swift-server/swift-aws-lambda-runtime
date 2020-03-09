@@ -18,7 +18,7 @@ import NIO
 import XCTest
 
 func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws {
-    try runLambda(behavior: behavior, provider: { _ in handler })
+    try runLambda(behavior: behavior, provider: { _, callback in callback(.success(handler)) })
 }
 
 func runLambda(behavior: LambdaServerBehavior, provider: @escaping LambdaHandlerProvider) throws {
@@ -34,14 +34,7 @@ func runLambda(behavior: LambdaServerBehavior, provider: @escaping LambdaHandler
     }.wait()
 }
 
-final class EchoHandler: BootstrappedLambdaHandler {
-    var bootstrapped = 0
-
-    public func bootstrap(callback: @escaping LambdaInitCallBack) {
-        self.bootstrapped += 1
-        callback(.success(()))
-    }
-
+struct EchoHandler: LambdaHandler {
     func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
         callback(.success(payload))
     }
@@ -56,22 +49,6 @@ struct FailedHandler: LambdaHandler {
 
     func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
         callback(.failure(TestError(self.reason)))
-    }
-}
-
-struct FailedBootstrapHandler: BootstrappedLambdaHandler {
-    private let reason: String
-
-    public init(_ reason: String) {
-        self.reason = reason
-    }
-
-    func bootstrap(callback: @escaping LambdaInitCallBack) {
-        callback(.failure(TestError(self.reason)))
-    }
-
-    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
-        callback(.failure(TestError("should not be called")))
     }
 }
 

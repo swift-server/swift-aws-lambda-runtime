@@ -76,6 +76,44 @@ class StringLambdaTest: XCTestCase {
         }
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
+
+    func testProviderFailure() {
+        let server = MockLambdaServer(behavior: FailedBootstrapBehavior())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        struct Handler: LambdaStringHandler {
+            init(eventLoop: EventLoop, callback: (Result<LambdaHandler, Error>) -> Void) {
+                callback(.failure(TestError("kaboom")))
+            }
+
+            func handle(context: Lambda.Context, payload: String, callback: @escaping LambdaStringCallback) {
+                callback(.failure(TestError("should not be called")))
+            }
+        }
+
+        let result = Lambda.run(provider: Handler.init)
+        assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
+    }
+
+    func testProviderFailure2() {
+        let server = MockLambdaServer(behavior: FailedBootstrapBehavior())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        struct Handler: LambdaStringHandler {
+            init(eventLoop: EventLoop) throws {
+                throw TestError("kaboom")
+            }
+
+            func handle(context: Lambda.Context, payload: String, callback: @escaping LambdaStringCallback) {
+                callback(.failure(TestError("should not be called")))
+            }
+        }
+
+        let result = Lambda.run(provider: Handler.init)
+        assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
+    }
 }
 
 private struct Behavior: LambdaServerBehavior {

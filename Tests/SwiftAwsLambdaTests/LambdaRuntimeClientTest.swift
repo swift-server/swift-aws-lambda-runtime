@@ -30,15 +30,7 @@ class LambdaRuntimeClientTest: XCTestCase {
 
     func testProviderFailure() {
         let behavior = Behavior()
-        XCTAssertThrowsError(try runLambda(behavior: behavior, provider: { _ in throw TestError("boom") })) { error in
-            XCTAssertEqual(error as? TestError, TestError("boom"))
-        }
-        XCTAssertEqual(behavior.state, 1)
-    }
-
-    func testBootstrapFailure() {
-        let behavior = Behavior()
-        XCTAssertThrowsError(try runLambda(behavior: behavior, handler: FailedBootstrapHandler("boom"))) { error in
+        XCTAssertThrowsError(try runLambda(behavior: behavior, provider: { _, callback in callback(.failure(TestError("boom"))) })) { error in
             XCTAssertEqual(error as? TestError, TestError("boom"))
         }
         XCTAssertEqual(behavior.state, 1)
@@ -194,33 +186,7 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), provider: { _ in throw TestError("boom") })) { error in
-            XCTAssertEqual(error as? TestError, TestError("boom"))
-        }
-    }
-
-    func testProcessInitErrorOnBootstrapFailure() {
-        struct Behavior: LambdaServerBehavior {
-            func getWork() -> GetWorkResult {
-                XCTFail("should not get work")
-                return .failure(.internalServerError)
-            }
-
-            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
-                XCTFail("should not report results")
-                return .failure(.internalServerError)
-            }
-
-            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
-                XCTFail("should not report error")
-                return .failure(.internalServerError)
-            }
-
-            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
-                return .failure(.internalServerError)
-            }
-        }
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: FailedBootstrapHandler("boom"))) { error in
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), provider: { _, callback in callback(.failure(TestError("boom"))) })) { error in
             XCTAssertEqual(error as? TestError, TestError("boom"))
         }
     }

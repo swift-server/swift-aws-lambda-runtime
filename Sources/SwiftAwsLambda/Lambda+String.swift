@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
-
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `String` payloads.
 extension Lambda {
     /// Run a Lambda defined by implementing the `LambdaStringClosure` protocol.

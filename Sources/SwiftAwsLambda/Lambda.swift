@@ -49,6 +49,14 @@ public enum Lambda {
         self.run(provider: provider)
     }
 
+    /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
+    ///
+    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
+    @inlinable
+    public static func run(_ provider: @escaping (EventLoop) throws -> LambdaHandler) {
+        self.run(provider: provider)
+    }
+
     // for testing and internal use
     @usableFromInline
     @discardableResult
@@ -60,7 +68,21 @@ public enum Lambda {
     @usableFromInline
     @discardableResult
     internal static func run(configuration: Configuration = .init(), handler: LambdaHandler) -> LambdaLifecycleResult {
-        return self.run(configuration: configuration, provider: { _ in handler })
+        return self.run(configuration: configuration, provider: { _, callback in callback(.success(handler)) })
+    }
+
+    // for testing and internal use
+    @usableFromInline
+    @discardableResult
+    internal static func run(configuration: Configuration = .init(), provider: @escaping (EventLoop) throws -> LambdaHandler) -> LambdaLifecycleResult {
+        self.run(provider: { (eventloop: EventLoop, callback: (Result<LambdaHandler, Error>) -> Void) -> Void in
+            do {
+                let handler = try provider(eventloop)
+                callback(.success(handler))
+            } catch {
+                callback(.failure(error))
+            }
+        })
     }
 
     // for testing and internal use
@@ -344,22 +366,17 @@ public typealias LambdaCallback = (LambdaResult) -> Void
 public typealias LambdaClosure = (Lambda.Context, [UInt8], LambdaCallback) -> Void
 
 /// A result type for a Lambda initialization.
-public typealias LambdaInitResult = Result<Void, Error>
+public typealias LambdaInitResult = Result<LambdaHandler, Error>
 
 /// A callback to provide the result of Lambda initialization.
 public typealias LambdaInitCallBack = (LambdaInitResult) -> Void
 
-public typealias LambdaHandlerProvider = (EventLoop) throws -> LambdaHandler
+public typealias LambdaHandlerProvider = (EventLoop, LambdaInitCallBack) -> Any
 
 /// A processing protocol for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously.
 public protocol LambdaHandler {
     /// Handles the Lambda request.
     func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback)
-}
-
-public protocol BootstrappedLambdaHandler: LambdaHandler {
-    /// Bootstraps the `LambdaHandler`.
-    func bootstrap(callback: @escaping LambdaInitCallBack)
 }
 
 @usableFromInline
