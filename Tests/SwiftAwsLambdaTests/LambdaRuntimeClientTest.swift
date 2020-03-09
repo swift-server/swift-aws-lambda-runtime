@@ -165,7 +165,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         }
     }
 
-    func testProcessInitErrorOnBootsratpFailure() {
+    func testProcessInitErrorOnBootstrapFailure() {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 XCTFail("should not get work")

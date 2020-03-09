@@ -33,7 +33,7 @@ extension LambdaRuntimeClientTest {
             ("testGetWorkServerMissingHeaderRequestIDError", testGetWorkServerMissingHeaderRequestIDError),
             ("testProcessResponseInternalServerError", testProcessResponseInternalServerError),
             ("testProcessErrorInternalServerError", testProcessErrorInternalServerError),
-            ("testProcessInitErrorOnBootsratpFailure", testProcessInitErrorOnBootsratpFailure),
+            ("testProcessInitErrorOnBootstrapFailure", testProcessInitErrorOnBootstrapFailure),
         ]
     }
 }
