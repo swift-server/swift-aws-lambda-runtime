@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation // for JSON
+import NIO
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` payloads.
 /// This is the most common way to use this library in AWS Lambda, since its JSON based.
