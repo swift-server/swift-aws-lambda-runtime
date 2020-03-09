@@ -27,9 +27,10 @@ class StringLambdaTest: XCTestCase {
                 callback(.success(payload))
             }
         }
+
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(handler: Handler(), configuration: configuration)
+        let result = Lambda.run(configuration: configuration, handler: Handler())
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
@@ -43,9 +44,10 @@ class StringLambdaTest: XCTestCase {
                 callback(.failure(TestError("boom")))
             }
         }
+
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(handler: Handler(), configuration: configuration)
+        let result = Lambda.run(configuration: configuration, handler: Handler())
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
