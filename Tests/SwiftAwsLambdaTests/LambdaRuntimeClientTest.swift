@@ -16,23 +16,43 @@
 import XCTest
 
 class LambdaRuntimeClientTest: XCTestCase {
-    func testGetWorkServerInternalError() throws {
+    func testSuccess() {
+        let behavior = Behavior()
+        XCTAssertNoThrow(try runLambda(behavior: behavior, handler: EchoHandler()))
+        XCTAssertEqual(behavior.state, 6)
+    }
+
+    func testFailure() {
+        let behavior = Behavior()
+        XCTAssertNoThrow(try runLambda(behavior: behavior, handler: FailedHandler("boom")))
+        XCTAssertEqual(behavior.state, 10)
+    }
+
+    func testBootstrapFailure() {
+        let behavior = Behavior()
+        XCTAssertThrowsError(try runLambda(behavior: behavior, handler: FailedInitializerHandler("boom"))) { error in
+            XCTAssertEqual(error as? TestError, TestError("boom"))
+        }
+        XCTAssertEqual(behavior.state, 1)
+    }
+
+    func testGetWorkServerInternalError() {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 return .failure(.internalServerError)
             }
 
-            func processResponse(requestId: String, response: String) -> ProcessResponseResult {
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
                 XCTFail("should not report results")
                 return .failure(.internalServerError)
             }
 
-            func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
                 XCTFail("should not report error")
                 return .failure(.internalServerError)
             }
 
-            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
                 XCTFail("should not report init error")
                 return .failure(.internalServerError)
             }
@@ -42,23 +62,23 @@ class LambdaRuntimeClientTest: XCTestCase {
         }
     }
 
-    func testGetWorkServerNoBodyError() throws {
+    func testGetWorkServerNoBodyError() {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 return .success(("1", ""))
             }
 
-            func processResponse(requestId: String, response: String) -> ProcessResponseResult {
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
                 XCTFail("should not report results")
                 return .failure(.internalServerError)
             }
 
-            func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
                 XCTFail("should not report error")
                 return .failure(.internalServerError)
             }
 
-            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
                 XCTFail("should not report init error")
                 return .failure(.internalServerError)
             }
@@ -68,24 +88,24 @@ class LambdaRuntimeClientTest: XCTestCase {
         }
     }
 
-    func testGetWorkServerMissingHeaderRequestIDError() throws {
+    func testGetWorkServerMissingHeaderRequestIDError() {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 // no request id -> no context
                 return .success(("", "hello"))
             }
 
-            func processResponse(requestId: String, response: String) -> ProcessResponseResult {
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
                 XCTFail("should not report results")
                 return .failure(.internalServerError)
             }
 
-            func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
                 XCTFail("should not report error")
                 return .failure(.internalServerError)
             }
 
-            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
                 XCTFail("should not report init error")
                 return .failure(.internalServerError)
             }
@@ -95,22 +115,22 @@ class LambdaRuntimeClientTest: XCTestCase {
         }
     }
 
-    func testProcessResponseInternalServerError() throws {
+    func testProcessResponseInternalServerError() {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 return .success((requestId: "1", payload: "payload"))
             }
 
-            func processResponse(requestId: String, response: String) -> ProcessResponseResult {
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
                 return .failure(.internalServerError)
             }
 
-            func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
                 XCTFail("should not report error")
                 return .failure(.internalServerError)
             }
 
-            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
                 XCTFail("should not report init error")
                 return .failure(.internalServerError)
             }
@@ -120,22 +140,22 @@ class LambdaRuntimeClientTest: XCTestCase {
         }
     }
 
-    func testProcessErrorInternalServerError() throws {
+    func testProcessErrorInternalServerError() {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 return .success((requestId: "1", payload: "payload"))
             }
 
-            func processResponse(requestId: String, response: String) -> ProcessResponseResult {
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
                 XCTFail("should not report results")
                 return .failure(.internalServerError)
             }
 
-            func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
                 return .failure(.internalServerError)
             }
 
-            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
                 XCTFail("should not report init error")
                 return .failure(.internalServerError)
             }
@@ -145,29 +165,53 @@ class LambdaRuntimeClientTest: XCTestCase {
         }
     }
 
-    func testProcessInitErrorInternalServerError() throws {
+    func testProcessInitErrorOnBootstrapFailure() {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 XCTFail("should not get work")
                 return .failure(.internalServerError)
             }
 
-            func processResponse(requestId: String, response: String) -> ProcessResponseResult {
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
                 XCTFail("should not report results")
                 return .failure(.internalServerError)
             }
 
-            func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
                 XCTFail("should not report error")
                 return .failure(.internalServerError)
             }
 
-            func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
                 return .failure(.internalServerError)
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: FailedInitializerHandler("boom"))) { error in
-            XCTAssertEqual(error as? FailedInitializerHandler.Error, FailedInitializerHandler.Error(description: "boom"))
+            XCTAssertEqual(error as? TestError, TestError("boom"))
+        }
+    }
+
+    class Behavior: LambdaServerBehavior {
+        var state = 0
+
+        func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+            self.state += 1
+            return .success(())
+        }
+
+        func getWork() -> GetWorkResult {
+            self.state += 2
+            return .success(("1", "hello"))
+        }
+
+        func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+            self.state += 4
+            return .success(())
+        }
+
+        func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+            self.state += 8
+            return .success(())
         }
     }
 }

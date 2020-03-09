@@ -12,32 +12,45 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIO
 @testable import SwiftAwsLambda
 import XCTest
 
 class CodableLambdaTest: XCTestCase {
     func testSuccess() {
-        let server = MockLambdaServer(behavior: GoodBehavior())
+        let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
+        struct Handler: LambdaCodableHandler {
+            func handle(context: Lambda.Context, payload: Request, callback: @escaping LambdaCodableCallback<Response>) {
+                callback(.success(Response(requestId: payload.requestId)))
+            }
+        }
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(handler: CodableEchoHandler(), configuration: configuration)
-        assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
+        let result = Lambda.run(handler: Handler(), configuration: configuration)
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
     func testFailure() {
-        let server = MockLambdaServer(behavior: BadBehavior())
+        let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(handler: CodableEchoHandler())
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
+        struct Handler: LambdaCodableHandler {
+            func handle(context: Lambda.Context, payload: Request, callback: @escaping LambdaCodableCallback<Response>) {
+                callback(.failure(TestError("boom")))
+            }
+        }
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let result = Lambda.run(handler: Handler(), configuration: configuration)
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
     func testClosureSuccess() {
-        let server = MockLambdaServer(behavior: GoodBehavior())
+        let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
@@ -46,40 +59,34 @@ class CodableLambdaTest: XCTestCase {
         let result = Lambda.run(configuration: configuration) { (_, payload: Request, callback) in
             callback(.success(Response(requestId: payload.requestId)))
         }
-        assertLambdaLifecycleResult(result: result, shoudHaveRun: maxTimes)
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
     func testClosureFailure() {
-        let server = MockLambdaServer(behavior: BadBehavior())
+        let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result: LambdaLifecycleResult = Lambda.run { (_, payload: Request, callback) in
-            callback(.success(Response(requestId: payload.requestId)))
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let result: Result<Int, Error> = Lambda.run(configuration: configuration) { (_, _: Request, callback: (Result<Response, Error>) -> Void) in
+            callback(.failure(TestError("boom")))
         }
-        assertLambdaLifecycleResult(result: result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
-    }
-}
-
-private func assertLambdaLifecycleResult(result: LambdaLifecycleResult, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil) {
-    switch result {
-    case .success(let count):
-        if shouldFailWithError != nil {
-            XCTFail("should fail with \(shouldFailWithError!)")
-        }
-        XCTAssertEqual(shoudHaveRun, count, "should have run \(shoudHaveRun) times")
-    case .failure(let error):
-        if shouldFailWithError == nil {
-            XCTFail("should succeed, but failed with \(error)")
-            break
-        }
-        XCTAssertEqual(shouldFailWithError?.localizedDescription, error.localizedDescription, "expected error to mactch")
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 }
 
 // TODO: taking advantage of the fact we know the serialization is json
-private struct GoodBehavior: LambdaServerBehavior {
-    let requestId = UUID().uuidString
+private struct Behavior: LambdaServerBehavior {
+    let requestId: String
+    let payload: String
+    let result: Result<String?, TestError>
+
+    init(requestId: String = UUID().uuidString, payload: String = "hello", result: Result<String?, TestError> = .success("hello")) {
+        self.requestId = requestId
+        self.payload = payload
+        self.result = result
+    }
 
     func getWork() -> GetWorkResult {
         guard let payload = try? JSONEncoder().encode(Request(requestId: requestId)) else {
@@ -93,44 +100,44 @@ private struct GoodBehavior: LambdaServerBehavior {
         return .success((requestId: self.requestId, payload: payloadAsString))
     }
 
-    func processResponse(requestId: String, response: String) -> ProcessResponseResult {
-        guard let data = response.data(using: .utf8) else {
-            XCTFail("decoding error")
+    func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+        switch self.result {
+        case .success(let expected) where expected != nil:
+            guard let data = response?.data(using: .utf8) else {
+                XCTFail("decoding error")
+                return .failure(.internalServerError)
+            }
+            guard let response = try? JSONDecoder().decode(Response.self, from: data) else {
+                XCTFail("decoding error")
+                return .failure(.internalServerError)
+            }
+            XCTAssertEqual(self.requestId, response.requestId, "expecting requestId to match")
+            return .success(())
+        case .success(let expected) where expected == nil:
+            XCTAssertNil(response)
+            return .success(())
+        case .failure:
+            XCTFail("unexpected to fail, but succeeded with: \(response ?? "undefined")")
             return .failure(.internalServerError)
+        default:
+            preconditionFailure("invalid state")
         }
-        guard let response = try? JSONDecoder().decode(Response.self, from: data) else {
-            XCTFail("decoding error")
-            return .failure(.internalServerError)
-        }
-        XCTAssertEqual(self.requestId, response.requestId, "expecting requestId to match")
-        return .success
     }
 
-    func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
-        XCTFail("should not report error")
-        return .failure(.internalServerError)
+    func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+        XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
+        switch self.result {
+        case .success:
+            XCTFail("unexpected to succeed, but failed with: \(error)")
+            return .failure(.internalServerError)
+        case .failure(let expected):
+            XCTAssertEqual(expected.description, error.errorMessage, "expecting error to match")
+            return .success(())
+        }
     }
 
-    func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
+    func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
         XCTFail("should not report init error")
-        return .failure(.internalServerError)
-    }
-}
-
-private struct BadBehavior: LambdaServerBehavior {
-    func getWork() -> GetWorkResult {
-        return .failure(.internalServerError)
-    }
-
-    func processResponse(requestId: String, response: String) -> ProcessResponseResult {
-        return .failure(.internalServerError)
-    }
-
-    func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult {
-        return .failure(.internalServerError)
-    }
-
-    func processInitError(error: ErrorResponse) -> ProcessInitErrorResult {
         return .failure(.internalServerError)
     }
 }
@@ -146,11 +153,5 @@ private struct Response: Codable {
     let requestId: String
     init(requestId: String) {
         self.requestId = requestId
-    }
-}
-
-private struct CodableEchoHandler: LambdaCodableHandler {
-    func handle(context: Lambda.Context, payload: Request, callback: @escaping LambdaCodableCallback<Response>) {
-        callback(.success(Response(requestId: payload.requestId)))
     }
 }
