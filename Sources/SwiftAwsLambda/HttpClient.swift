@@ -111,6 +111,7 @@ internal final class HTTPClient {
     }
 
     internal struct Response: Equatable {
+        public var version: HTTPVersion
         public var status: HTTPResponseStatus
         public var headers: HTTPHeaders
         public var body: ByteBuffer?
@@ -150,7 +151,20 @@ private final class HTTPHandler: ChannelDuplexHandler {
         if let body = request.body {
             head.headers.add(name: "Content-Length", value: String(body.readableBytes))
         }
-        head.headers.add(name: "Connection", value: self.keepAlive ? "keep-alive" : "close")
+        // We don't add a "Connection" header here if we want to keep the connection open,
+        // HTTP/1.1 defines specifies the following in RFC 2616, Section 8.1.2.1:
+        //
+        // An HTTP/1.1 server MAY assume that a HTTP/1.1 client intends to
+        // maintain a persistent connection unless a Connection header including
+        // the connection-token "close" was sent in the request. If the server
+        // chooses to close the connection immediately after sending the
+        // response, it SHOULD send a Connection header including the
+        // connection-token close.
+        //
+        // See also UnaryHandler.channelRead below.
+        if !self.keepAlive {
+            head.headers.add(name: "Connection", value: "close")
+        }
 
         context.write(self.wrapOutboundOut(HTTPClientRequestPart.head(head))).flatMap { _ -> EventLoopFuture<Void> in
             if let body = request.body {
@@ -184,10 +198,10 @@ private final class HTTPHandler: ChannelDuplexHandler {
         case .end:
             switch self.readState {
             case .head(let head):
-                context.fireChannelRead(wrapInboundOut(HTTPClient.Response(status: head.status, headers: head.headers, body: nil)))
+                context.fireChannelRead(wrapInboundOut(HTTPClient.Response(version: head.version, status: head.status, headers: head.headers, body: nil)))
                 self.readState = .idle
             case .body(let head, let body):
-                context.fireChannelRead(wrapInboundOut(HTTPClient.Response(status: head.status, headers: head.headers, body: body)))
+                context.fireChannelRead(wrapInboundOut(HTTPClient.Response(version: head.version, status: head.status, headers: head.headers, body: body)))
                 self.readState = .idle
             default:
                 preconditionFailure("invalid read state \(self.readState)")
@@ -238,8 +252,14 @@ private final class UnaryHandler: ChannelDuplexHandler {
         guard let pending = self.pending else {
             preconditionFailure("invalid state, no pending request")
         }
-        let serverKeepAlive = response.headers.first(name: "connection")?.lowercased() == "keep-alive"
-        if !self.keepAlive || !serverKeepAlive {
+
+        // As defined in RFC 2616 Section 8.1.2:
+        // [...] unless otherwise indicated, the client SHOULD assume
+        // that the server will maintain a persistent connection, even
+        // after error responses from the server.
+        let serverCloseConnection = response.headers.first(name: "connection")?.lowercased() == "close"
+
+        if !self.keepAlive || serverCloseConnection || response.version != .init(major: 1, minor: 1) {
             pending.promise.futureResult.whenComplete { _ in
                 _ = context.channel.close()
             }

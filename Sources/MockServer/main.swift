@@ -125,7 +125,10 @@ internal final class HTTPHandler: ChannelInboundHandler {
     func writeResponse(context: ChannelHandlerContext, status: HTTPResponseStatus, headers: [(String, String)]? = nil, body: String? = nil) {
         var headers = HTTPHeaders(headers ?? [])
         headers.add(name: "Content-Length", value: "\(body?.utf8.count ?? 0)")
-        headers.add(name: "Connection", value: self.keepAlive ? "keep-alive" : "close")
+        if !self.keepAlive {
+            // We only need to add a "Connection" header if we really want to close the connection
+            headers.add(name: "Connection", value: "close")
+        }
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: status, headers: headers)
 
         context.write(wrapOutboundOut(.head(head))).whenFailure { error in
