@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
 import NIO
 @testable import SwiftAwsLambda
 import XCTest
@@ -211,6 +212,16 @@ class LambdaTest: XCTestCase {
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(handler: EchoHandler(), configuration: configuration)
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+    }
+
+    @available(OSX 10.12, *)
+    func testGetTimeRemaining() {
+        let deadline = round(Date(timeIntervalSinceNow: 60).timeIntervalSince1970 * 1000)
+        let context = Lambda.Context(requestId: "abc", traceId: "abc", invokedFunctionArn: "abc", deadline: Int64(deadline), logger: Logger(label: ""))
+
+        let remaining = context.getRemainingTime().nanoseconds
+        // maximal allowed time offset 2 milliseconds
+        XCTAssertLessThanOrEqual(abs(remaining - 60 * 1_000_000_000), 2_000_000)
     }
 }
 
