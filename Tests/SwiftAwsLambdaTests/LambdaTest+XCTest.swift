@@ -28,6 +28,8 @@ extension LambdaTest {
             ("testSuccess", testSuccess),
             ("testFailure", testFailure),
             ("testServerFailure", testServerFailure),
+            ("testProviderFailure", testProviderFailure),
+            ("testProviderFailureAndReportErrorFailure", testProviderFailureAndReportErrorFailure),
             ("testBootstrapFailure", testBootstrapFailure),
             ("testBootstrapFailureAndReportErrorFailure", testBootstrapFailureAndReportErrorFailure),
             ("testStartStop", testStartStop),

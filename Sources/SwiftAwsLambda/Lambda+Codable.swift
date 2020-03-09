@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation // for JSON
+import NIO
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` payloads.
 /// This is the most common way to use this library in AWS Lambda, since its JSON based.
@@ -26,7 +27,7 @@ extension Lambda {
 
     // for testing
     internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
-        return self.run(handler: LambdaClosureWrapper(closure), configuration: configuration)
+        return self.run(configuration: configuration, handler: LambdaClosureWrapper(closure))
     }
 }
 
