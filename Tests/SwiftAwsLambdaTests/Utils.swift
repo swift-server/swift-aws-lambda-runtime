@@ -25,7 +25,7 @@ func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws {
     let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration, lambdaHandler: handler)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer { XCTAssertNoThrow(try server.stop().wait()) }
-    try runner.initialize(logger: logger).flatMap {
+    try runner.initialize(logger: logger).flatMap { _ in
         runner.run(logger: logger)
     }.wait()
 }
@@ -33,7 +33,7 @@ func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws {
 final class EchoHandler: LambdaHandler {
     var initializeCalls = 0
 
-    func initialize(callback: @escaping LambdaInitCallBack) {
+    public func initialize(callback: @escaping LambdaInitCallBack) {
         self.initializeCalls += 1
         callback(.success(()))
     }
@@ -51,11 +51,7 @@ struct FailedHandler: LambdaHandler {
     }
 
     func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
-        callback(.failure(Error(description: self.reason)))
-    }
-
-    struct Error: Swift.Error, Equatable, CustomStringConvertible {
-        let description: String
+        callback(.failure(TestError(self.reason)))
     }
 }
 
@@ -67,14 +63,33 @@ struct FailedInitializerHandler: LambdaHandler {
     }
 
     func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
-        callback(.success(payload))
+        callback(.failure(TestError("should not be called")))
     }
 
     func initialize(callback: @escaping LambdaInitCallBack) {
-        callback(.failure(Error(description: self.reason)))
+        callback(.failure(TestError(self.reason)))
     }
+}
 
-    public struct Error: Swift.Error, Equatable, CustomStringConvertible {
-        let description: String
+func assertLambdaLifecycleResult(_ result: Result<Int, Error>, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil, file: StaticString = #file, line: UInt = #line) {
+    switch result {
+    case .success where shouldFailWithError != nil:
+        XCTFail("should fail with \(shouldFailWithError!)", file: file, line: line)
+    case .success(let count) where shouldFailWithError == nil:
+        XCTAssertEqual(shoudHaveRun, count, "should have run \(shoudHaveRun) times", file: file, line: line)
+    case .failure(let error) where shouldFailWithError == nil:
+        XCTFail("should succeed, but failed with \(error)", file: file, line: line)
+    case .failure(let error) where shouldFailWithError != nil:
+        XCTAssertEqual(String(describing: shouldFailWithError!), String(describing: error), "expected error to mactch", file: file, line: line)
+    default:
+        XCTFail("invalid state")
+    }
+}
+
+struct TestError: Error, Equatable, CustomStringConvertible {
+    let description: String
+
+    init(_ description: String) {
+        self.description = description
     }
 }

@@ -150,10 +150,10 @@ internal final class HTTPHandler: ChannelInboundHandler {
                 responseStatus = .init(statusCode: error.rawValue)
             }
         } else if request.head.uri.hasSuffix(Consts.postResponseURLSuffix) {
-            guard let requestId = request.head.uri.split(separator: "/").dropFirst(3).first, let response = requestBody else {
+            guard let requestId = request.head.uri.split(separator: "/").dropFirst(3).first else {
                 return self.writeResponse(context: context, status: .badRequest)
             }
-            switch self.behavior.processResponse(requestId: String(requestId), response: response) {
+            switch self.behavior.processResponse(requestId: String(requestId), response: requestBody) {
             case .success:
                 responseStatus = .accepted
             case .failure(let error):
@@ -175,7 +175,6 @@ internal final class HTTPHandler: ChannelInboundHandler {
         } else {
             responseStatus = .notFound
         }
-        self.logger.info("\(self) responding to \(request.head.uri)")
         self.writeResponse(context: context, status: responseStatus, headers: responseHeaders, body: responseBody)
     }
 
@@ -212,9 +211,9 @@ internal final class HTTPHandler: ChannelInboundHandler {
 
 internal protocol LambdaServerBehavior {
     func getWork() -> GetWorkResult
-    func processResponse(requestId: String, response: String) -> ProcessResponseResult
-    func processError(requestId: String, error: ErrorResponse) -> ProcessErrorResult
-    func processInitError(error: ErrorResponse) -> ProcessInitErrorResult
+    func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError>
+    func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError>
+    func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError>
 }
 
 internal typealias GetWorkResult = Result<(String, String), GetWorkError>
@@ -225,27 +224,18 @@ internal enum GetWorkError: Int, Error {
     case internalServerError = 500
 }
 
-internal enum ProcessResponseResult {
-    case success
-    case failure(ProcessResponseError)
-}
-
-internal enum ProcessResponseError: Int {
+internal enum ProcessResponseError: Int, Error {
     case badRequest = 400
     case payloadTooLarge = 413
     case tooManyRequests = 429
     case internalServerError = 500
 }
 
-internal typealias ProcessErrorResult = Result<Void, ProcessError>
-
-internal enum ProcessError: Int, Error {
+internal enum ProcessErrorError: Int, Error {
     case invalidErrorShape = 299
     case badRequest = 400
     case internalServerError = 500
 }
-
-internal typealias ProcessInitErrorResult = Result<Void, ProcessError>
 
 internal enum ServerError: Error {
     case notReady
