@@ -75,7 +75,7 @@ public enum Lambda {
     @usableFromInline
     @discardableResult
     internal static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> LambdaHandler) -> LambdaLifecycleResult {
-        return self.run(factory: { (eventloop: EventLoop, callback: (Result<LambdaHandler, Error>) -> Void) -> Void in
+        return self.run(configuration: configuration, factory: { (eventloop: EventLoop, callback: (Result<LambdaHandler, Error>) -> Void) -> Void in
             do {
                 let handler = try factory(eventloop)
                 callback(.success(handler))

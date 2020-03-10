@@ -40,16 +40,17 @@ class LambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    func testInitializedOnce() {
+    func testBootstrapOnce() {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: LambdaHandler {
-            var initialized = 0
+            var initialized = false
 
-            init() {
-                self.initialized += 1
+            init(eventLoop: EventLoop) {
+                XCTAssertFalse(self.initialized)
+                self.initialized = true
             }
 
             func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
@@ -59,10 +60,8 @@ class LambdaTest: XCTestCase {
 
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let handler = Handler()
-        let result = Lambda.run(configuration: configuration, handler: handler)
+        let result = Lambda.run(configuration: configuration, factory: Handler.init)
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
-        XCTAssertEqual(1, handler.initialized)
     }
 
     func testBootstrapFailure() {

@@ -27,7 +27,7 @@ extension LambdaTest {
         return [
             ("testSuccess", testSuccess),
             ("testFailure", testFailure),
-            ("testInitializedOnce", testInitializedOnce),
+            ("testBootstrapOnce", testBootstrapOnce),
             ("testBootstrapFailure", testBootstrapFailure),
             ("testBootstrapFailure2", testBootstrapFailure2),
             ("testBootstrapFailureAndReportErrorFailure", testBootstrapFailureAndReportErrorFailure),
