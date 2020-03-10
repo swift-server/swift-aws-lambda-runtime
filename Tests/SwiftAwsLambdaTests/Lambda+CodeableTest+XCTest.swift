@@ -29,6 +29,7 @@ extension CodableLambdaTest {
             ("testFailure", testFailure),
             ("testClosureSuccess", testClosureSuccess),
             ("testClosureFailure", testClosureFailure),
+            ("testBootstrapFailure", testBootstrapFailure),
         ]
     }
 }

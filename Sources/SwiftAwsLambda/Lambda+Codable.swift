@@ -26,7 +26,7 @@ extension Lambda {
 
     // for testing
     internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
-        return self.run(handler: LambdaClosureWrapper(closure), configuration: configuration)
+        return self.run(configuration: configuration, handler: LambdaClosureWrapper(closure))
     }
 }
 
@@ -64,7 +64,7 @@ public class LambdaCodableCodec<In: Decodable, Out: Encodable> {
 
 /// Default implementation of `Encodable` -> `[UInt8]` encoding and `[UInt8]` -> `Decodable' decoding
 public extension LambdaCodableHandler {
-    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping (LambdaResult) -> Void) {
+    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
         switch self.codec.decode(payload) {
         case .failure(let error):
             return callback(.failure(Errors.requestDecoding(error)))

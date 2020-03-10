@@ -18,26 +18,23 @@ import NIO
 import XCTest
 
 func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws {
+    try runLambda(behavior: behavior, factory: { _, callback in callback(.success(handler)) })
+}
+
+func runLambda(behavior: LambdaServerBehavior, factory: @escaping LambdaHandlerFactory) throws {
     let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
     let configuration = Lambda.Configuration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
-    let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration, lambdaHandler: handler)
+    let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer { XCTAssertNoThrow(try server.stop().wait()) }
-    try runner.initialize(logger: logger).flatMap { _ in
-        runner.run(logger: logger)
+    try runner.initialize(logger: logger, factory: factory).flatMap { handler in
+        runner.run(logger: logger, handler: handler)
     }.wait()
 }
 
-final class EchoHandler: LambdaHandler {
-    var initializeCalls = 0
-
-    public func initialize(callback: @escaping LambdaInitCallBack) {
-        self.initializeCalls += 1
-        callback(.success(()))
-    }
-
+struct EchoHandler: LambdaHandler {
     func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
         callback(.success(payload))
     }
@@ -51,22 +48,6 @@ struct FailedHandler: LambdaHandler {
     }
 
     func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
-        callback(.failure(TestError(self.reason)))
-    }
-}
-
-struct FailedInitializerHandler: LambdaHandler {
-    private let reason: String
-
-    public init(_ reason: String) {
-        self.reason = reason
-    }
-
-    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
-        callback(.failure(TestError("should not be called")))
-    }
-
-    func initialize(callback: @escaping LambdaInitCallBack) {
         callback(.failure(TestError(self.reason)))
     }
 }

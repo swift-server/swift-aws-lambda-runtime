@@ -27,8 +27,9 @@ extension LambdaTest {
         return [
             ("testSuccess", testSuccess),
             ("testFailure", testFailure),
-            ("testServerFailure", testServerFailure),
+            ("testBootstrapOnce", testBootstrapOnce),
             ("testBootstrapFailure", testBootstrapFailure),
+            ("testBootstrapFailure2", testBootstrapFailure2),
             ("testBootstrapFailureAndReportErrorFailure", testBootstrapFailureAndReportErrorFailure),
             ("testStartStop", testStartStop),
             ("testTimeout", testTimeout),
@@ -36,6 +37,7 @@ extension LambdaTest {
             ("testBigPayload", testBigPayload),
             ("testKeepAliveServer", testKeepAliveServer),
             ("testNoKeepAliveServer", testNoKeepAliveServer),
+            ("testServerFailure", testServerFailure),
             ("testDeadline", testDeadline),
             ("testGetRemainingTime", testGetRemainingTime),
         ]

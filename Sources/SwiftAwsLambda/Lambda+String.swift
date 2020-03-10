@@ -23,7 +23,7 @@ extension Lambda {
 
     // for testing
     internal static func run(configuration: Configuration = .init(), _ closure: @escaping LambdaStringClosure) -> LambdaLifecycleResult {
-        return self.run(handler: LambdaClosureWrapper(closure), configuration: configuration)
+        return self.run(configuration: configuration, handler: LambdaClosureWrapper(closure))
     }
 }
 

@@ -27,9 +27,10 @@ class CodableLambdaTest: XCTestCase {
                 callback(.success(Response(requestId: payload.requestId)))
             }
         }
+
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(handler: Handler(), configuration: configuration)
+        let result = Lambda.run(configuration: configuration, handler: Handler())
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
@@ -43,9 +44,10 @@ class CodableLambdaTest: XCTestCase {
                 callback(.failure(TestError("boom")))
             }
         }
+
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(handler: Handler(), configuration: configuration)
+        let result = Lambda.run(configuration: configuration, handler: Handler())
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
@@ -73,6 +75,25 @@ class CodableLambdaTest: XCTestCase {
             callback(.failure(TestError("boom")))
         }
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+    }
+
+    func testBootstrapFailure() {
+        let server = MockLambdaServer(behavior: FailedBootstrapBehavior())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        struct Handler: LambdaCodableHandler {
+            init(eventLoop: EventLoop) throws {
+                throw TestError("kaboom")
+            }
+
+            func handle(context: Lambda.Context, payload: Request, callback: @escaping LambdaCodableCallback<Response>) {
+                callback(.failure(TestError("should not be called")))
+            }
+        }
+
+        let result = Lambda.run(factory: Handler.init)
+        assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 }
 

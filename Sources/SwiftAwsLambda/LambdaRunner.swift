@@ -19,28 +19,26 @@ import NIO
 /// LambdaRunner manages the Lambda runtime workflow, or business logic.
 internal struct LambdaRunner {
     private let runtimeClient: LambdaRuntimeClient
-    private let lambdaHandler: LambdaHandler
     private let eventLoop: EventLoop
     private let lifecycleId: String
     private let offload: Bool
 
-    init(eventLoop: EventLoop, configuration: Lambda.Configuration, lambdaHandler: LambdaHandler) {
+    init(eventLoop: EventLoop, configuration: Lambda.Configuration) {
         self.eventLoop = eventLoop
         self.runtimeClient = LambdaRuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine)
-        self.lambdaHandler = lambdaHandler
         self.lifecycleId = configuration.lifecycle.id
         self.offload = configuration.runtimeEngine.offload
     }
 
     /// Run the user provided initializer. This *must* only be called once.
     ///
-    /// - Returns: An `EventLoopFuture<Void>` fulfilled with the outcome of the initialization.
-    func initialize(logger: Logger) -> EventLoopFuture<Void> {
+    /// - Returns: An `EventLoopFuture<LambdaHandler>` fulfilled with the outcome of the initialization.
+    func initialize(logger: Logger, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<LambdaHandler> {
         logger.debug("initializing lambda")
-        // We need to use `flatMap` instead of `whenFailure` to ensure we complete reporting the result before stopping.
-        return self.lambdaHandler.initialize(eventLoop: self.eventLoop,
-                                             lifecycleId: self.lifecycleId,
-                                             offload: self.offload).peekError { error in
+        // 1. create the handler from the factory
+        let future = bootstrap(eventLoop: self.eventLoop, lifecycleId: self.lifecycleId, offload: self.offload, factory: factory)
+        // 2. report initialization error if one occured
+        return future.peekError { error in
             self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
                 // We're going to bail out because the init failed, so there's not a lot we can do other than log
                 // that we couldn't report this error back to the runtime.
@@ -49,7 +47,7 @@ internal struct LambdaRunner {
         }
     }
 
-    func run(logger: Logger) -> EventLoopFuture<Void> {
+    func run(logger: Logger, handler: LambdaHandler) -> EventLoopFuture<Void> {
         logger.debug("lambda invocation sequence starting")
         // 1. request work from lambda runtime engine
         return self.runtimeClient.requestWork(logger: logger).peekError { error in
@@ -57,16 +55,16 @@ internal struct LambdaRunner {
         }.flatMap { invocation, payload in
             // 2. send work to handler
             let context = Lambda.Context(logger: logger, eventLoop: self.eventLoop, invocation: invocation)
-            logger.debug("sending work to lambda handler \(self.lambdaHandler)")
+            logger.debug("sending work to lambda handler \(handler)")
 
             // TODO: This is just for now, so that we can work with ByteBuffers only
             //       in the LambdaRuntimeClient
             let bytes = [UInt8](payload.readableBytesView)
-            return self.lambdaHandler.handle(eventLoop: self.eventLoop,
-                                             lifecycleId: self.lifecycleId,
-                                             offload: self.offload,
-                                             context: context,
-                                             payload: bytes)
+            return handler.handle(eventLoop: self.eventLoop,
+                                  lifecycleId: self.lifecycleId,
+                                  offload: self.offload,
+                                  context: context,
+                                  payload: bytes)
                 .map {
                     // TODO: This mapping shall be removed as soon as the LambdaHandler protocol
                     //       works with ByteBuffer? instead of [UInt8]
@@ -93,24 +91,24 @@ internal struct LambdaRunner {
     }
 }
 
-private extension LambdaHandler {
-    func initialize(eventLoop: EventLoop, lifecycleId: String, offload: Bool) -> EventLoopFuture<Void> {
+private func bootstrap(eventLoop: EventLoop, lifecycleId: String, offload: Bool, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<LambdaHandler> {
+    let promise = eventLoop.makePromise(of: LambdaHandler.self)
+    if offload {
         // offloading so user code never blocks the eventloop
-        let promise = eventLoop.makePromise(of: Void.self)
-        if offload {
-            DispatchQueue(label: "lambda-\(lifecycleId)").async {
-                self.initialize { promise.completeWith($0) }
-            }
-        } else {
-            self.initialize { promise.completeWith($0) }
+        DispatchQueue(label: "lambda-\(lifecycleId)").async {
+            factory(eventLoop, promise.completeWith)
         }
-        return promise.futureResult
+    } else {
+        factory(eventLoop, promise.completeWith)
     }
+    return promise.futureResult
+}
 
+private extension LambdaHandler {
     func handle(eventLoop: EventLoop, lifecycleId: String, offload: Bool, context: Lambda.Context, payload: [UInt8]) -> EventLoopFuture<LambdaResult> {
-        // offloading so user code never blocks the eventloop
         let promise = eventLoop.makePromise(of: LambdaResult.self)
         if offload {
+            // offloading so user code never blocks the eventloop
             DispatchQueue(label: "lambda-\(lifecycleId)").async {
                 self.handle(context: context, payload: payload) { result in
                     promise.succeed(result)
