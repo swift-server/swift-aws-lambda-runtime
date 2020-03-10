@@ -35,7 +35,7 @@ internal struct LambdaRunner {
     /// - Returns: An `EventLoopFuture<LambdaHandler>` fulfilled with the outcome of the initialization.
     func initialize(logger: Logger, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<LambdaHandler> {
         logger.debug("initializing lambda")
-        // 1. craete the handler from the factory
+        // 1. create the handler from the factory
         let future = bootstrap(eventLoop: self.eventLoop, lifecycleId: self.lifecycleId, offload: self.offload, factory: factory)
         // 2. report initialization error if one occured
         return future.peekError { error in
