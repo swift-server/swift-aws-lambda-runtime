@@ -181,7 +181,7 @@ private extension HTTPClient.Response {
 
 internal struct Invocation {
     let requestId: String
-    let deadlineDate: String
+    let deadlineInMillisSinceEpoch: Int64
     let invokedFunctionArn: String
     let traceId: String
     let clientContext: String?
@@ -192,7 +192,8 @@ internal struct Invocation {
             throw LambdaRuntimeClientError.invocationMissingHeader(AmazonHeaders.requestID)
         }
 
-        guard let unixTimeMilliseconds = headers.first(name: AmazonHeaders.deadline) else {
+        guard let deadline = headers.first(name: AmazonHeaders.deadline),
+            let unixTimeInMilliseconds = Int64(deadline) else {
             throw LambdaRuntimeClientError.invocationMissingHeader(AmazonHeaders.deadline)
         }
 
@@ -205,7 +206,7 @@ internal struct Invocation {
         }
 
         self.requestId = requestId
-        self.deadlineDate = unixTimeMilliseconds
+        self.deadlineInMillisSinceEpoch = unixTimeInMilliseconds
         self.invokedFunctionArn = invokedFunctionArn
         self.traceId = traceId
         self.clientContext = headers["Lambda-Runtime-Client-Context"].first

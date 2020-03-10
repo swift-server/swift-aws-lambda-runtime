@@ -78,20 +78,31 @@ public enum Lambda {
     }
 
     public class Context {
-        // from aws
+        /// The request ID, which identifies the request that triggered the function invocation.
         public let requestId: String
+
+        /// The AWS X-Ray tracing header.
         public let traceId: String
+
+        /// The ARN of the Lambda function, version, or alias that's specified in the invocation.
         public let invokedFunctionArn: String
-        public let deadline: String
+
+        /// The timestamp that the function times out
+        public let deadline: DispatchWallTime
+
+        /// For invocations from the AWS Mobile SDK, data about the Amazon Cognito identity provider.
         public let cognitoIdentity: String?
+
+        /// For invocations from the AWS Mobile SDK, data about the client application and device.
         public let clientContext: String?
-        // utility
+
+        /// a logger to log
         public let logger: Logger
 
         internal init(requestId: String,
                       traceId: String,
                       invokedFunctionArn: String,
-                      deadline: String,
+                      deadline: DispatchWallTime,
                       cognitoIdentity: String? = nil,
                       clientContext: String? = nil,
                       logger: Logger) {
@@ -106,6 +117,14 @@ public enum Lambda {
             logger[metadataKey: "awsRequestId"] = .string(requestId)
             logger[metadataKey: "awsTraceId"] = .string(traceId)
             self.logger = logger
+        }
+
+        public func getRemainingTime() -> TimeAmount {
+            let deadline = self.deadline.millisSinceEpoch
+            let now = DispatchWallTime.now().millisSinceEpoch
+
+            let remaining = deadline - now
+            return .milliseconds(remaining)
         }
     }
 

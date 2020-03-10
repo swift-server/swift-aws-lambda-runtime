@@ -64,3 +64,16 @@ internal enum Signal: Int32 {
     case ALRM = 14
     case TERM = 15
 }
+
+internal extension DispatchWallTime {
+    init(millisSinceEpoch: Int64) {
+        let nanoSinceEpoch = UInt64(millisSinceEpoch) * 1_000_000
+        let seconds = UInt64(nanoSinceEpoch / 1_000_000_000)
+        let nanoseconds = nanoSinceEpoch - (seconds * 1_000_000_000)
+        self.init(timespec: timespec(tv_sec: Int(seconds), tv_nsec: Int(nanoseconds)))
+    }
+
+    var millisSinceEpoch: Int64 {
+        return Int64(bitPattern: self.rawValue) / -1_000_000
+    }
+}

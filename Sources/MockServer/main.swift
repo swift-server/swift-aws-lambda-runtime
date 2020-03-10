@@ -108,11 +108,12 @@ internal final class HTTPHandler: ChannelInboundHandler {
             case .json:
                 responseBody = "{ \"body\": \"\(requestId)\" }"
             }
+            let deadline = Int64(Date(timeIntervalSinceNow: 60).timeIntervalSince1970 * 1000)
             responseHeaders = [
                 (AmazonHeaders.requestID, requestId),
                 (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),
                 (AmazonHeaders.traceID, "Root=1-5bef4de7-ad49b0e87f6ef6c87fc2e700;Parent=9a9197af755a6419;Sampled=1"),
-                (AmazonHeaders.deadline, String(Date(timeIntervalSinceNow: 60).timeIntervalSince1970 * 1000)),
+                (AmazonHeaders.deadline, String(deadline)),
             ]
         } else if request.head.uri.hasSuffix("/response") {
             responseStatus = .accepted
