@@ -87,8 +87,8 @@ public enum Lambda {
         /// The ARN of the Lambda function, version, or alias that's specified in the invocation.
         public let invokedFunctionArn: String
 
-        /// The date that the function times out in Unix time milliseconds
-        public let deadline: Int64
+        /// The timestamp that the function times out
+        public let deadline: DispatchWallTime
 
         /// For invocations from the AWS Mobile SDK, data about the Amazon Cognito identity provider.
         public let cognitoIdentity: String?
@@ -102,7 +102,7 @@ public enum Lambda {
         internal init(requestId: String,
                       traceId: String,
                       invokedFunctionArn: String,
-                      deadline: Int64,
+                      deadline: DispatchWallTime,
                       cognitoIdentity: String? = nil,
                       clientContext: String? = nil,
                       logger: Logger) {
@@ -117,17 +117,6 @@ public enum Lambda {
             logger[metadataKey: "awsRequestId"] = .string(requestId)
             logger[metadataKey: "awsTraceId"] = .string(traceId)
             self.logger = logger
-        }
-
-        @available(OSX 10.12, *)
-        public func getRemainingTime() -> TimeAmount {
-            func getTimeInMilliSeconds() -> Int64 {
-                var ts: timespec = timespec(tv_sec: 0, tv_nsec: 0)
-                clock_gettime(CLOCK_REALTIME, &ts)
-                return Int64(ts.tv_sec * 1000) + Int64(ts.tv_nsec / 1_000_000)
-            }
-
-            return .milliseconds(self.deadline - getTimeInMilliSeconds())
         }
     }
 

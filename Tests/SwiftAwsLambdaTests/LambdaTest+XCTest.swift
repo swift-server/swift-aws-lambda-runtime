@@ -36,6 +36,7 @@ extension LambdaTest {
             ("testBigPayload", testBigPayload),
             ("testKeepAliveServer", testKeepAliveServer),
             ("testNoKeepAliveServer", testNoKeepAliveServer),
+            ("testDeadline", testDeadline),
         ]
     }
 }

@@ -214,14 +214,43 @@ class LambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    @available(OSX 10.12, *)
-    func testGetTimeRemaining() {
-        let deadline = round(Date(timeIntervalSinceNow: 60).timeIntervalSince1970 * 1000)
-        let context = Lambda.Context(requestId: "abc", traceId: "abc", invokedFunctionArn: "abc", deadline: Int64(deadline), logger: Logger(label: ""))
+    func testDeadline() {
+        let delta = Int.random(in: 1 ... 600)
 
-        let remaining = context.getRemainingTime().nanoseconds
-        // maximal allowed time offset 2 milliseconds
-        XCTAssertLessThanOrEqual(abs(remaining - 60 * 1_000_000_000), 2_000_000)
+        let milli1 = Date(timeIntervalSinceNow: Double(delta)).millisSinceEpoch
+        let milli2 = (DispatchWallTime.now() + .seconds(delta)).millisSinceEpoch
+        XCTAssertEqual(Double(milli1), Double(milli2), accuracy: 2.0)
+
+        let now1 = DispatchWallTime.now()
+        let now2 = DispatchWallTime(millisSinceEpoch: Date().millisSinceEpoch)
+        XCTAssertEqual(Double(now2.rawValue), Double(now1.rawValue), accuracy: 2_000_000.0)
+
+        let future1 = DispatchWallTime.now() + .seconds(delta)
+        let future2 = DispatchWallTime(millisSinceEpoch: Date(timeIntervalSinceNow: Double(delta)).millisSinceEpoch)
+        XCTAssertEqual(Double(future1.rawValue), Double(future2.rawValue), accuracy: 2_000_000.0)
+
+        let past1 = DispatchWallTime.now() - .seconds(delta)
+        let past2 = DispatchWallTime(millisSinceEpoch: Date(timeIntervalSinceNow: Double(-delta)).millisSinceEpoch)
+        XCTAssertEqual(Double(past1.rawValue), Double(past2.rawValue), accuracy: 2_000_000.0)
+
+        let logger = Logger(label: "test")
+        let context = Lambda.Context(requestId: UUID().uuidString,
+                                     traceId: UUID().uuidString,
+                                     invokedFunctionArn: UUID().uuidString,
+                                     deadline: .now() + .seconds(1),
+                                     cognitoIdentity: nil,
+                                     clientContext: nil,
+                                     logger: logger)
+        XCTAssertGreaterThan(context.deadline, .now())
+
+        let expiredContext = Lambda.Context(requestId: UUID().uuidString,
+                                            traceId: UUID().uuidString,
+                                            invokedFunctionArn: UUID().uuidString,
+                                            deadline: .now() - .seconds(1),
+                                            cognitoIdentity: nil,
+                                            clientContext: nil,
+                                            logger: logger)
+        XCTAssertLessThan(expiredContext.deadline, .now())
     }
 }
 

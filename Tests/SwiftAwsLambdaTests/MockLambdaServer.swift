@@ -140,7 +140,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
                 }
                 responseStatus = .ok
                 responseBody = result
-                let deadline = Int64(Date(timeIntervalSinceNow: 60).timeIntervalSince1970 * 1000)
+                let deadline = Date(timeIntervalSinceNow: 60).millisSinceEpoch
                 responseHeaders = [
                     (AmazonHeaders.requestID, requestId),
                     (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),

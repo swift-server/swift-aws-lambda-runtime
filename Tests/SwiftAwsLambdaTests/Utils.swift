@@ -93,3 +93,9 @@ struct TestError: Error, Equatable, CustomStringConvertible {
         self.description = description
     }
 }
+
+internal extension Date {
+    var millisSinceEpoch: Int64 {
+        return Int64(self.timeIntervalSince1970 * 1000)
+    }
+}
