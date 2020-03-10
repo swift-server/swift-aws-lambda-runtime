@@ -24,29 +24,14 @@ extension Lambda {
         self.run(LambdaClosureWrapper(closure))
     }
 
-    /// Run a Lambda defined by implementing the `LambdaCodableHandler` protocol, having `In` and `Out` are `Decodable` and `Encodable` respectively.
-    ///
-    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<Handler>(_ handler: Handler) where Handler: LambdaCodableHandler {
-        self.run(handler as LambdaHandler)
-    }
-
     // for testing
     internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
         return self.run(handler: LambdaClosureWrapper(closure), configuration: configuration)
     }
-
-    // for testing
-    internal static func run<Handler>(handler: Handler, configuration: Configuration = .init()) -> LambdaLifecycleResult where Handler: LambdaCodableHandler {
-        return self.run(handler: handler as LambdaHandler, configuration: configuration)
-    }
 }
 
-/// A result type for a Lambda that returns a generic `Out`, having `Out` extend `Encodable`.
-public typealias LambdaCodableResult<Out> = Result<Out, Error>
-
-/// A callback for a Lambda that returns a `LambdaCodableResult<Out>` result type, having `Out` extend `Encodable`.
-public typealias LambdaCodableCallback<Out> = (LambdaCodableResult<Out>) -> Void
+/// A callback for a Lambda that returns a `Result<Out, Error>` result type, having `Out` extend `Encodable`.
+public typealias LambdaCodableCallback<Out> = (Result<Out, Error>) -> Void
 
 /// A processing closure for a Lambda that takes an `In` and returns an `Out` via `LambdaCodableCallback<Out>` asynchronously,
 /// having `In` and `Out` extending `Decodable` and `Encodable` respectively.

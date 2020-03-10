@@ -21,29 +21,14 @@ extension Lambda {
         self.run(LambdaClosureWrapper(closure))
     }
 
-    /// Run a Lambda defined by implementing the `LambdaStringHandler` protocol.
-    ///
-    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ handler: LambdaStringHandler) {
-        self.run(handler as LambdaHandler)
-    }
-
     // for testing
     internal static func run(configuration: Configuration = .init(), _ closure: @escaping LambdaStringClosure) -> LambdaLifecycleResult {
         return self.run(handler: LambdaClosureWrapper(closure), configuration: configuration)
     }
-
-    // for testing
-    internal static func run(handler: LambdaStringHandler, configuration: Configuration = .init()) -> LambdaLifecycleResult {
-        return self.run(handler: handler as LambdaHandler, configuration: configuration)
-    }
 }
 
-/// A result type for a Lambda that returns a `String`.
-public typealias LambdaStringResult = Result<String, Error>
-
-/// A callback for a Lambda that returns a `LambdaStringResult` result type.
-public typealias LambdaStringCallback = (LambdaStringResult) -> Void
+/// A callback for a Lambda that returns a `Result<String, Error>` result type.
+public typealias LambdaStringCallback = (Result<String, Error>) -> Void
 
 /// A processing closure for a Lambda that takes a `String` and returns a `LambdaStringResult` via `LambdaStringCallback` asynchronously.
 public typealias LambdaStringClosure = (Lambda.Context, String, LambdaStringCallback) -> Void
