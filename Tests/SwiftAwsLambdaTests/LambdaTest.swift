@@ -65,47 +65,16 @@ class LambdaTest: XCTestCase {
         XCTAssertEqual(1, handler.initialized)
     }
 
-    func testProviderFailure() {
-        let server = MockLambdaServer(behavior: Behavior())
+    func testBootstrapFailure() {
+        let server = MockLambdaServer(behavior: FailedBootstrapBehavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Behavior: LambdaServerBehavior {
-            func getWork() -> GetWorkResult {
-                XCTFail("should not get work")
-                return .failure(.internalServerError)
-            }
-
-            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
-                XCTFail("should not report a response")
-                return .failure(.internalServerError)
-            }
-
-            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
-                XCTFail("should not report an error")
-                return .failure(.internalServerError)
-            }
-
-            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
-                return .failure(.internalServerError)
-            }
-        }
-
-        struct Handler: LambdaHandler {
-            init(eventLoop: EventLoop, callback: (Result<LambdaHandler, Error>) -> Void) {
-                callback(.failure(TestError("kaboom")))
-            }
-
-            func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
-                callback(.failure(TestError("should not be called")))
-            }
-        }
-
-        let result = Lambda.run(provider: Handler.init)
+        let result = Lambda.run(factory: { _, callback in callback(.failure(TestError("kaboom"))) })
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
-    func testProviderFailure2() {
+    func testBootstrapFailure2() {
         let server = MockLambdaServer(behavior: FailedBootstrapBehavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
@@ -120,11 +89,11 @@ class LambdaTest: XCTestCase {
             }
         }
 
-        let result = Lambda.run(provider: Handler.init)
+        let result = Lambda.run(factory: Handler.init)
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
-    func testProviderFailureAndReportErrorFailure() {
+    func testBootstrapFailureAndReportErrorFailure() {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 XCTFail("should not get work")
@@ -150,7 +119,7 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(provider: { _, callback in callback(.failure(TestError("kaboom"))) })
+        let result = Lambda.run(factory: { _, callback in callback(.failure(TestError("kaboom"))) })
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
@@ -171,7 +140,7 @@ class LambdaTest: XCTestCase {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
 
-        let future = Lambda.runAsync(eventLoopGroup: eventLoopGroup, configuration: configuration, provider: { _, callback in callback(.success(Handler())) })
+        let future = Lambda.runAsync(eventLoopGroup: eventLoopGroup, configuration: configuration, factory: { _, callback in callback(.success(Handler())) })
         DispatchQueue(label: "test").async {
             usleep(100_000)
             kill(getpid(), signal.rawValue)
@@ -189,7 +158,8 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1), runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1),
+                                                 runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
         let result = Lambda.run(configuration: configuration, handler: EchoHandler())
         assertLambdaLifecycleResult(result, shouldFailWithError: LambdaRuntimeClientError.upstreamError("timeout"))
     }

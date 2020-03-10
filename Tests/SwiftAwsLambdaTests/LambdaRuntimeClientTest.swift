@@ -28,9 +28,9 @@ class LambdaRuntimeClientTest: XCTestCase {
         XCTAssertEqual(behavior.state, 10)
     }
 
-    func testProviderFailure() {
+    func testBootstrapFailure() {
         let behavior = Behavior()
-        XCTAssertThrowsError(try runLambda(behavior: behavior, provider: { _, callback in callback(.failure(TestError("boom"))) })) { error in
+        XCTAssertThrowsError(try runLambda(behavior: behavior, factory: { _, callback in callback(.failure(TestError("boom"))) })) { error in
             XCTAssertEqual(error as? TestError, TestError("boom"))
         }
         XCTAssertEqual(behavior.state, 1)
@@ -165,7 +165,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         }
     }
 
-    func testProcessInitErrorOnProviderFailure() {
+    func testProcessInitErrorOnBootstrapFailure() {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 XCTFail("should not get work")
@@ -186,7 +186,7 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), provider: { _, callback in callback(.failure(TestError("boom"))) })) { error in
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), factory: { _, callback in callback(.failure(TestError("boom"))) })) { error in
             XCTAssertEqual(error as? TestError, TestError("boom"))
         }
     }

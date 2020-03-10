@@ -33,10 +33,10 @@ internal struct LambdaRunner {
     /// Run the user provided initializer. This *must* only be called once.
     ///
     /// - Returns: An `EventLoopFuture<LambdaHandler>` fulfilled with the outcome of the initialization.
-    func initialize(logger: Logger, provider: @escaping LambdaHandlerProvider) -> EventLoopFuture<LambdaHandler> {
+    func initialize(logger: Logger, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<LambdaHandler> {
         logger.debug("initializing lambda")
-        // 1. craete the handler from the provider
-        let future = bootstrap(eventLoop: self.eventLoop, lifecycleId: self.lifecycleId, offload: self.offload, provider: provider)
+        // 1. craete the handler from the factory
+        let future = bootstrap(eventLoop: self.eventLoop, lifecycleId: self.lifecycleId, offload: self.offload, factory: factory)
         // 2. report initialization error if one occured
         return future.peekError { error in
             self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
@@ -91,19 +91,15 @@ internal struct LambdaRunner {
     }
 }
 
-private func bootstrap(eventLoop: EventLoop, lifecycleId: String, offload: Bool, provider: @escaping LambdaHandlerProvider) -> EventLoopFuture<LambdaHandler> {
+private func bootstrap(eventLoop: EventLoop, lifecycleId: String, offload: Bool, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<LambdaHandler> {
     let promise = eventLoop.makePromise(of: LambdaHandler.self)
     if offload {
         // offloading so user code never blocks the eventloop
         DispatchQueue(label: "lambda-\(lifecycleId)").async {
-            _ = provider(eventLoop) { result in
-                promise.completeWith(result)
-            }
+            factory(eventLoop, promise.completeWith)
         }
     } else {
-        _ = provider(eventLoop) { result in
-            promise.completeWith(result)
-        }
+        factory(eventLoop, promise.completeWith)
     }
     return promise.futureResult
 }

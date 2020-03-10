@@ -18,10 +18,10 @@ import NIO
 import XCTest
 
 func runLambda(behavior: LambdaServerBehavior, handler: LambdaHandler) throws {
-    try runLambda(behavior: behavior, provider: { _, callback in callback(.success(handler)) })
+    try runLambda(behavior: behavior, factory: { _, callback in callback(.success(handler)) })
 }
 
-func runLambda(behavior: LambdaServerBehavior, provider: @escaping LambdaHandlerProvider) throws {
+func runLambda(behavior: LambdaServerBehavior, factory: @escaping LambdaHandlerFactory) throws {
     let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
@@ -29,7 +29,7 @@ func runLambda(behavior: LambdaServerBehavior, provider: @escaping LambdaHandler
     let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer { XCTAssertNoThrow(try server.stop().wait()) }
-    try runner.initialize(logger: logger, provider: provider).flatMap { handler in
+    try runner.initialize(logger: logger, factory: factory).flatMap { handler in
         runner.run(logger: logger, handler: handler)
     }.wait()
 }

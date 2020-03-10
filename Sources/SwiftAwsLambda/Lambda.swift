@@ -41,20 +41,20 @@ public enum Lambda {
         self.run(handler: handler)
     }
 
-    /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
+    /// Run a Lambda defined by implementing the `LambdaHandler` protocol via a `LambdaHandlerFactory`.
     ///
     /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
     @inlinable
-    public static func run(_ provider: @escaping LambdaHandlerProvider) {
-        self.run(provider: provider)
+    public static func run(_ factory: @escaping LambdaHandlerFactory) {
+        self.run(factory: factory)
     }
 
-    /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
+    /// Run a Lambda defined by implementing the `LambdaHandler` protocol via a factory.
     ///
     /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
     @inlinable
-    public static func run(_ provider: @escaping (EventLoop) throws -> LambdaHandler) {
-        self.run(provider: provider)
+    public static func run(_ factory: @escaping (EventLoop) throws -> LambdaHandler) {
+        self.run(factory: factory)
     }
 
     // for testing and internal use
@@ -68,16 +68,16 @@ public enum Lambda {
     @usableFromInline
     @discardableResult
     internal static func run(configuration: Configuration = .init(), handler: LambdaHandler) -> LambdaLifecycleResult {
-        return self.run(configuration: configuration, provider: { _, callback in callback(.success(handler)) })
+        return self.run(configuration: configuration, factory: { _, callback in callback(.success(handler)) })
     }
 
     // for testing and internal use
     @usableFromInline
     @discardableResult
-    internal static func run(configuration: Configuration = .init(), provider: @escaping (EventLoop) throws -> LambdaHandler) -> LambdaLifecycleResult {
-        self.run(provider: { (eventloop: EventLoop, callback: (Result<LambdaHandler, Error>) -> Void) -> Void in
+    internal static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> LambdaHandler) -> LambdaLifecycleResult {
+        self.run(factory: { (eventloop: EventLoop, callback: (Result<LambdaHandler, Error>) -> Void) -> Void in
             do {
-                let handler = try provider(eventloop)
+                let handler = try factory(eventloop)
                 callback(.success(handler))
             } catch {
                 callback(.failure(error))
@@ -88,22 +88,22 @@ public enum Lambda {
     // for testing and internal use
     @usableFromInline
     @discardableResult
-    internal static func run(configuration: Configuration = .init(), provider: @escaping LambdaHandlerProvider) -> LambdaLifecycleResult {
+    internal static func run(configuration: Configuration = .init(), factory: @escaping LambdaHandlerFactory) -> LambdaLifecycleResult {
         do {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1) // only need one thread, will improve performance
             defer { try! eventLoopGroup.syncShutdownGracefully() }
-            let result = try self.runAsync(eventLoopGroup: eventLoopGroup, configuration: configuration, provider: provider).wait()
+            let result = try self.runAsync(eventLoopGroup: eventLoopGroup, configuration: configuration, factory: factory).wait()
             return .success(result)
         } catch {
             return .failure(error)
         }
     }
 
-    internal static func runAsync(eventLoopGroup: EventLoopGroup, configuration: Configuration, provider: @escaping LambdaHandlerProvider) -> EventLoopFuture<Int> {
+    internal static func runAsync(eventLoopGroup: EventLoopGroup, configuration: Configuration, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<Int> {
         Backtrace.install()
         var logger = Logger(label: "Lambda")
         logger.logLevel = configuration.general.logLevel
-        let lifecycle = Lifecycle(eventLoop: eventLoopGroup.next(), logger: logger, configuration: configuration, provider: provider)
+        let lifecycle = Lifecycle(eventLoop: eventLoopGroup.next(), logger: logger, configuration: configuration, factory: factory)
         let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
             logger.info("intercepted signal: \(signal)")
             lifecycle.stop()
@@ -169,16 +169,16 @@ public enum Lambda {
         private let eventLoop: EventLoop
         private let logger: Logger
         private let configuration: Configuration
-        private let provider: LambdaHandlerProvider
+        private let factory: LambdaHandlerFactory
 
         private var _state = State.idle
         private let stateLock = Lock()
 
-        init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, provider: @escaping LambdaHandlerProvider) {
+        init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, factory: @escaping LambdaHandlerFactory) {
             self.eventLoop = eventLoop
             self.logger = logger
             self.configuration = configuration
-            self.provider = provider
+            self.factory = factory
         }
 
         deinit {
@@ -207,7 +207,7 @@ public enum Lambda {
             var logger = self.logger
             logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
             let runner = LambdaRunner(eventLoop: self.eventLoop, configuration: self.configuration)
-            return runner.initialize(logger: logger, provider: self.provider).flatMap { handler in
+            return runner.initialize(logger: logger, factory: self.factory).flatMap { handler in
                 self.state = .active(runner, handler)
                 return self.run()
             }
@@ -357,23 +357,19 @@ public enum Lambda {
     }
 }
 
-/// A result type for a Lambda that returns a `[UInt8]`.
 public typealias LambdaResult = Result<[UInt8], Error>
 
 public typealias LambdaCallback = (LambdaResult) -> Void
 
-/// A processing closure for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously.
+/// A processing closure for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously via`LambdaCallback` .
 public typealias LambdaClosure = (Lambda.Context, [UInt8], LambdaCallback) -> Void
 
-/// A result type for a Lambda initialization.
-public typealias LambdaInitResult = Result<LambdaHandler, Error>
-
 /// A callback to provide the result of Lambda initialization.
-public typealias LambdaInitCallBack = (LambdaInitResult) -> Void
+public typealias LambdaInitCallBack = (Result<LambdaHandler, Error>) -> Void
 
-public typealias LambdaHandlerProvider = (EventLoop, LambdaInitCallBack) -> Any
+public typealias LambdaHandlerFactory = (EventLoop, LambdaInitCallBack) -> Void
 
-/// A processing protocol for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously.
+/// A processing protocol for a Lambda that takes a `[UInt8]` and returns a `LambdaResult` result type asynchronously via `LambdaCallback`.
 public protocol LambdaHandler {
     /// Handles the Lambda request.
     func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback)

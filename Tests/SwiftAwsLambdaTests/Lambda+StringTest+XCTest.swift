@@ -29,8 +29,7 @@ extension StringLambdaTest {
             ("testFailure", testFailure),
             ("testClosureSuccess", testClosureSuccess),
             ("testClosureFailure", testClosureFailure),
-            ("testProviderFailure", testProviderFailure),
-            ("testProviderFailure2", testProviderFailure2),
+            ("testBootstrapFailure", testBootstrapFailure),
         ]
     }
 }
