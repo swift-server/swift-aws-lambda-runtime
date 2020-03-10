@@ -11,6 +11,8 @@ services:
 
   test:
     image: swift-aws-lambda:16.04-5.1
+    environment:
+      - SANITIZER_ARG=--sanitize=thread
 
   shell:
     image: swift-aws-lambda:16.04-5.1
