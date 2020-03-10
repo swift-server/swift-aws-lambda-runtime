@@ -37,6 +37,7 @@ extension LambdaTest {
             ("testKeepAliveServer", testKeepAliveServer),
             ("testNoKeepAliveServer", testNoKeepAliveServer),
             ("testDeadline", testDeadline),
+            ("testGetRemainingTime", testGetRemainingTime),
         ]
     }
 }
