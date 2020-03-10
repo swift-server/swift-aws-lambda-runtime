@@ -130,7 +130,7 @@ private extension Lambda.Context {
         self.init(requestId: invocation.requestId,
                   traceId: invocation.traceId,
                   invokedFunctionArn: invocation.invokedFunctionArn,
-                  deadline: DispatchWallTime(millisSinceEpoch: invocation.deadline),
+                  deadline: DispatchWallTime(millisSinceEpoch: invocation.deadlineInMillisSinceEpoch),
                   cognitoIdentity: invocation.cognitoIdentity,
                   clientContext: invocation.clientContext,
                   logger: logger)

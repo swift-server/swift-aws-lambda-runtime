@@ -181,7 +181,7 @@ private extension HTTPClient.Response {
 
 internal struct Invocation {
     let requestId: String
-    let deadline: Int64
+    let deadlineInMillisSinceEpoch: Int64
     let invokedFunctionArn: String
     let traceId: String
     let clientContext: String?
@@ -206,7 +206,7 @@ internal struct Invocation {
         }
 
         self.requestId = requestId
-        self.deadline = unixTimeInMilliseconds
+        self.deadlineInMillisSinceEpoch = unixTimeInMilliseconds
         self.invokedFunctionArn = invokedFunctionArn
         self.traceId = traceId
         self.clientContext = headers["Lambda-Runtime-Client-Context"].first

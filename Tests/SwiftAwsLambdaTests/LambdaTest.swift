@@ -252,6 +252,19 @@ class LambdaTest: XCTestCase {
                                             logger: logger)
         XCTAssertLessThan(expiredContext.deadline, .now())
     }
+
+    func testGetRemainingTime() {
+        let logger = Logger(label: "test")
+        let context = Lambda.Context(requestId: UUID().uuidString,
+                                     traceId: UUID().uuidString,
+                                     invokedFunctionArn: UUID().uuidString,
+                                     deadline: .now() + .seconds(1),
+                                     cognitoIdentity: nil,
+                                     clientContext: nil,
+                                     logger: logger)
+        XCTAssertLessThanOrEqual(context.getRemainingTime(), .seconds(1))
+        XCTAssertGreaterThan(context.getRemainingTime(), .milliseconds(800))
+    }
 }
 
 private struct Behavior: LambdaServerBehavior {

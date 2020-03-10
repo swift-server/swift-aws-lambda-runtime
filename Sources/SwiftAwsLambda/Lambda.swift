@@ -118,6 +118,14 @@ public enum Lambda {
             logger[metadataKey: "awsTraceId"] = .string(traceId)
             self.logger = logger
         }
+
+        public func getRemainingTime() -> TimeAmount {
+            let deadline = self.deadline.millisSinceEpoch
+            let now = DispatchWallTime.now().millisSinceEpoch
+
+            let remaining = deadline - now
+            return .milliseconds(remaining)
+        }
     }
 
     private final class Lifecycle {
