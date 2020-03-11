@@ -36,7 +36,7 @@ def header(fileName)
 //
 // This source file is part of the SwiftAwsLambda open source project
 //
-// Copyright (c) 2017-2019 Apple Inc. and the SwiftAwsLambda project authors
+// Copyright (c) 2017-2020 Apple Inc. and the SwiftAwsLambda project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
