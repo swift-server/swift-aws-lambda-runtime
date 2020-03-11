@@ -37,6 +37,26 @@ class StringLambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
+    func testVoidCallbackSuccess() {
+        let server = MockLambdaServer(behavior: Behavior(result: .success(nil)))
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        struct Handler: LambdaHandler {
+            typealias In = String
+            typealias Out = Void
+
+            func handle(context: Lambda.Context, payload: String, callback: (Result<Void, Error>) -> Void) {
+                callback(.success(()))
+            }
+        }
+
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let result = Lambda.run(configuration: configuration, handler: Handler())
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+    }
+
     func testCallbackFailure() {
         let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
         XCTAssertNoThrow(try server.start().wait())
@@ -68,6 +88,26 @@ class StringLambdaTest: XCTestCase {
 
             func handle(context: Lambda.Context, payload: String, promise: EventLoopPromise<String>) {
                 promise.succeed(payload)
+            }
+        }
+
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let result = Lambda.run(configuration: configuration, handler: Handler())
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+    }
+
+    func testVoidPromiseSuccess() {
+        let server = MockLambdaServer(behavior: Behavior(result: .success(nil)))
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        struct Handler: LambdaHandler {
+            typealias In = String
+            typealias Out = Void
+
+            func handle(context: Lambda.Context, payload: String, promise: EventLoopPromise<Void>) {
+                promise.succeed(())
             }
         }
 
@@ -110,6 +150,19 @@ class StringLambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
+    func testVoidClosureSuccess() {
+        let server = MockLambdaServer(behavior: Behavior(result: .success(nil)))
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let result = Lambda.run(configuration: configuration) { (_, _: String, callback) in
+            callback(.success(()))
+        }
+        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+    }
+
     func testClosureFailure() {
         let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
         XCTAssertNoThrow(try server.start().wait())
@@ -117,7 +170,7 @@ class StringLambdaTest: XCTestCase {
 
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result: Result<Int, Error> = Lambda.run(configuration: configuration) { (_, _: String, callback) in
+        let result: Result<Int, Error> = Lambda.run(configuration: configuration) { (_, _: String, callback: (Result<String, Error>) -> Void) in
             callback(.failure(TestError("boom")))
         }
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
@@ -143,26 +196,6 @@ class StringLambdaTest: XCTestCase {
 
         let result = Lambda.run(factory: Handler.init)
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
-    }
-
-    func testVoidSuccess() {
-        let server = MockLambdaServer(behavior: Behavior(result: .success(nil)))
-        XCTAssertNoThrow(try server.start().wait())
-        defer { XCTAssertNoThrow(try server.stop().wait()) }
-
-        struct Handler: LambdaHandler {
-            typealias In = String
-            typealias Out = Void
-
-            func handle(context: Lambda.Context, payload: String, callback: (Result<Void, Error>) -> Void) {
-                callback(.success(()))
-            }
-        }
-
-        let maxTimes = Int.random(in: 1 ... 10)
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handler: Handler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 }
 

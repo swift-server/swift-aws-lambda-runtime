@@ -26,13 +26,15 @@ extension CodableLambdaTest {
     static var allTests: [(String, (CodableLambdaTest) -> () throws -> Void)] {
         return [
             ("testCallbackSuccess", testCallbackSuccess),
+            ("testVoidCallbackSuccess", testVoidCallbackSuccess),
             ("testCallbackFailure", testCallbackFailure),
             ("testPromiseSuccess", testPromiseSuccess),
+            ("testVoidPromiseSuccess", testVoidPromiseSuccess),
             ("testPromiseFailure", testPromiseFailure),
             ("testClosureSuccess", testClosureSuccess),
+            ("testVoidClosureSuccess", testVoidClosureSuccess),
             ("testClosureFailure", testClosureFailure),
             ("testBootstrapFailure", testBootstrapFailure),
-            ("testVoidSuccess", testVoidSuccess),
         ]
     }
 }

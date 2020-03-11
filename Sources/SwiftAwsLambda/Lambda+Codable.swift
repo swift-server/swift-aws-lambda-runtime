@@ -23,18 +23,37 @@ extension Lambda {
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     @inlinable
     public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableLambdaClosure<In, Out>) {
-        self.run(CodableLambdaClosureWrapper(closure))
+        self.run(closure: closure)
+    }
+
+    /// Run a Lambda defined by implementing the `CodableVoidLambdaClosure` function.
+    ///
+    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
+    @inlinable
+    public static func run<In: Decodable>(_ closure: @escaping CodableVoidLambdaClosure<In>) {
+        self.run(closure: closure)
     }
 
     // for testing
     @inlinable
-    internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), _ closure: @escaping CodableLambdaClosure<In, Out>) -> Result<Int, Error> {
+    @discardableResult
+    internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping CodableLambdaClosure<In, Out>) -> Result<Int, Error> {
         return self.run(configuration: configuration, handler: CodableLambdaClosureWrapper(closure))
+    }
+
+    // for testing
+    @inlinable
+    @discardableResult
+    internal static func run<In: Decodable>(configuration: Configuration = .init(), closure: @escaping CodableVoidLambdaClosure<In>) -> Result<Int, Error> {
+        return self.run(configuration: configuration, handler: CodableVoidLambdaClosureWrapper(closure))
     }
 }
 
-/// A processing closure for a Lambda that takes a `String` and returns a `Result<Out, Error>` via a `CompletionHandler`  asynchronously.
+/// A processing closure for a Lambda that takes a `In` and returns a `Result<Out, Error>` via a `CompletionHandler`  asynchronously.
 public typealias CodableLambdaClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
+
+/// A processing closure for a Lambda that takes a `In` and returns a `Result<Void, Error>` via a `CompletionHandler`  asynchronously.
+public typealias CodableVoidLambdaClosure<In: Decodable> = (Lambda.Context, In, @escaping (Result<Void, Error>) -> Void) -> Void
 
 @usableFromInline
 internal struct CodableLambdaClosureWrapper<In: Decodable, Out: Encodable>: LambdaHandler {
@@ -47,6 +66,26 @@ internal struct CodableLambdaClosureWrapper<In: Decodable, Out: Encodable>: Lamb
 
     @usableFromInline
     init(_ closure: @escaping CodableLambdaClosure<In, Out>) {
+        self.closure = closure
+    }
+
+    @usableFromInline
+    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, payload, callback)
+    }
+}
+
+@usableFromInline
+internal struct CodableVoidLambdaClosureWrapper<In: Decodable>: LambdaHandler {
+    @usableFromInline
+    typealias In = In
+    @usableFromInline
+    typealias Out = Void
+
+    private let closure: CodableVoidLambdaClosure<In>
+
+    @usableFromInline
+    init(_ closure: @escaping CodableVoidLambdaClosure<In>) {
         self.closure = closure
     }
 
@@ -71,7 +110,7 @@ public extension LambdaHandler where In: Decodable, Out: Encodable {
     func decode(buffer: ByteBuffer) throws -> In {
         let decoder = JSONDecoder()
         guard let data = buffer.getData(at: buffer.readerIndex, length: buffer.readableBytes) else {
-            throw Errors.invalidBuffer
+            throw Lambda.CodecError.invalidBuffer
         }
         return try decoder.decode(In.self, from: data)
     }
@@ -85,12 +124,8 @@ public extension LambdaHandler where In: Decodable, Out == Void {
     func decode(buffer: ByteBuffer) throws -> In {
         let decoder = JSONDecoder()
         guard let data = buffer.getData(at: buffer.readerIndex, length: buffer.readableBytes) else {
-            throw Errors.invalidBuffer
+            throw Lambda.CodecError.invalidBuffer
         }
         return try decoder.decode(In.self, from: data)
     }
-}
-
-private enum Errors: Error {
-    case invalidBuffer
 }

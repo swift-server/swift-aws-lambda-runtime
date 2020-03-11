@@ -60,21 +60,20 @@ internal struct LambdaRuntimeClient {
     /// Reports a result to the Runtime Engine.
     func reportResults(logger: Logger, invocation: Invocation, result: Result<ByteBuffer?, Error>) -> EventLoopFuture<Void> {
         var url = Consts.invocationURLPrefix + "/" + invocation.requestId
-        var body: ByteBuffer
+        var body: ByteBuffer?
         switch result {
         case .success(let buffer):
             url += Consts.postResponseURLSuffix
-            body = buffer ?? self.allocator.buffer(capacity: 0) // FIXME:
+            body = buffer
         case .failure(let error):
             url += Consts.postErrorURLSuffix
-            // TODO: make FunctionError a const
-            let error = ErrorResponse(errorType: "FunctionError", errorMessage: "\(error)")
+            let error = ErrorResponse(errorType: Consts.functionError, errorMessage: "\(error)")
             switch error.toJson() {
             case .failure(let jsonError):
                 return self.eventLoop.makeFailedFuture(Errors.json(jsonError))
             case .success(let json):
                 body = self.allocator.buffer(capacity: json.utf8.count)
-                body.writeString(json)
+                body!.writeString(json)
             }
         }
         logger.debug("reporting results to lambda runtime engine using \(url)")
@@ -98,7 +97,7 @@ internal struct LambdaRuntimeClient {
     /// Reports an initialization error to the Runtime Engine.
     func reportInitializationError(logger: Logger, error: Error) -> EventLoopFuture<Void> {
         let url = Consts.postInitErrorURL
-        let errorResponse = ErrorResponse(errorType: "InitializationError", errorMessage: "\(error)")
+        let errorResponse = ErrorResponse(errorType: Consts.initializationError, errorMessage: "\(error)")
         var body: ByteBuffer
         switch errorResponse.toJson() {
         case .failure(let jsonError):

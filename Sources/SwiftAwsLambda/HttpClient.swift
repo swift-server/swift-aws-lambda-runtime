@@ -145,12 +145,9 @@ private final class HTTPHandler: ChannelDuplexHandler {
         let request = unwrapOutboundIn(data)
 
         var head = HTTPRequestHead(version: .init(major: 1, minor: 1), method: request.method, uri: request.url, headers: request.headers)
-        if !head.headers.contains(name: "Host") {
-            head.headers.add(name: "Host", value: request.targetHost)
-        }
-        if let body = request.body {
-            head.headers.add(name: "Content-Length", value: String(body.readableBytes))
-        }
+        head.headers.add(name: "Host", value: request.targetHost)
+        head.headers.add(name: "Content-Length", value: String(request.body?.readableBytes ?? 0))
+        // }
         // We don't add a "Connection" header here if we want to keep the connection open,
         // HTTP/1.1 defines specifies the following in RFC 2616, Section 8.1.2.1:
         //

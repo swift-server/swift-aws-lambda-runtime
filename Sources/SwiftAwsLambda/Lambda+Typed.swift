@@ -44,13 +44,13 @@ public extension LambdaHandler {
     func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>) {
         switch self.decodeIn(buffer: payload) {
         case .failure(let error):
-            return promise.fail(Errors.requestDecoding(error))
+            return promise.fail(Lambda.CodecError.requestDecoding(error))
         case .success(let `in`):
             let outPromise = context.eventLoop.makePromise(of: Out.self)
             outPromise.futureResult.flatMapThrowing { out in
                 switch self.encodeOut(allocator: context.allocator, value: out) {
                 case .failure(let error):
-                    throw Errors.responseEncoding(error)
+                    throw Lambda.CodecError.responseEncoding(error)
                 case .success(let buffer):
                     return buffer
                 }
@@ -76,7 +76,10 @@ public extension LambdaHandler {
     }
 }
 
-private enum Errors: Error {
-    case responseEncoding(Error)
-    case requestDecoding(Error)
+internal extension Lambda {
+    enum CodecError: Error {
+        case responseEncoding(Error)
+        case requestDecoding(Error)
+        case invalidBuffer
+    }
 }

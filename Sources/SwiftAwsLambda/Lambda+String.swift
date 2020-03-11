@@ -20,18 +20,37 @@ extension Lambda {
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     @inlinable
     public static func run(_ closure: @escaping StringLambdaClosure) {
-        self.run(StringLambdaClosureWrapper(closure))
+        self.run(closure: closure)
+    }
+
+    /// Run a Lambda defined by implementing the `StringVoidLambdaClosure` function.
+    ///
+    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
+    @inlinable
+    public static func run(_ closure: @escaping StringVoidLambdaClosure) {
+        self.run(closure: closure)
     }
 
     // for testing
     @inlinable
-    internal static func run(configuration: Configuration = .init(), _ closure: @escaping StringLambdaClosure) -> Result<Int, Error> {
+    @discardableResult
+    internal static func run(configuration: Configuration = .init(), closure: @escaping StringLambdaClosure) -> Result<Int, Error> {
         return self.run(configuration: configuration, handler: StringLambdaClosureWrapper(closure))
+    }
+
+    // for testing
+    @inlinable
+    @discardableResult
+    internal static func run(configuration: Configuration = .init(), closure: @escaping StringVoidLambdaClosure) -> Result<Int, Error> {
+        return self.run(configuration: configuration, handler: StringVoidLambdaClosureWrapper(closure))
     }
 }
 
 /// A processing closure for a Lambda that takes a `String` and returns a `Result<String, Error>` via a `CompletionHandler`  asynchronously.
 public typealias StringLambdaClosure = (Lambda.Context, String, @escaping (Result<String, Error>) -> Void) -> Void
+
+/// A processing closure for a Lambda that takes a `String` and returns a `Result<Void, Error>` via a `CompletionHandler`  asynchronously.
+public typealias StringVoidLambdaClosure = (Lambda.Context, String, @escaping (Result<Void, Error>) -> Void) -> Void
 
 @usableFromInline
 internal struct StringLambdaClosureWrapper: LambdaHandler {
@@ -53,6 +72,26 @@ internal struct StringLambdaClosureWrapper: LambdaHandler {
     }
 }
 
+@usableFromInline
+internal struct StringVoidLambdaClosureWrapper: LambdaHandler {
+    @usableFromInline
+    typealias In = String
+    @usableFromInline
+    typealias Out = Void
+
+    private let closure: StringVoidLambdaClosure
+
+    @usableFromInline
+    init(_ closure: @escaping StringVoidLambdaClosure) {
+        self.closure = closure
+    }
+
+    @usableFromInline
+    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, payload, callback)
+    }
+}
+
 /// Implementation of  a`ByteBuffer` to `String` and `String` to `ByteBuffer` codec
 public extension LambdaHandler where In == String, Out == String {
     func encode(allocator: ByteBufferAllocator, value: String) throws -> ByteBuffer? {
@@ -63,7 +102,7 @@ public extension LambdaHandler where In == String, Out == String {
 
     func decode(buffer: ByteBuffer) throws -> String {
         guard let string = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
-            throw Errors.invalidBuffer
+            throw Lambda.CodecError.invalidBuffer
         }
         return string
     }
@@ -76,12 +115,8 @@ public extension LambdaHandler where In == String, Out == Void {
 
     func decode(buffer: ByteBuffer) throws -> String {
         guard let string = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
-            throw Errors.invalidBuffer
+            throw Lambda.CodecError.invalidBuffer
         }
         return string
     }
-}
-
-private enum Errors: Error {
-    case invalidBuffer
 }

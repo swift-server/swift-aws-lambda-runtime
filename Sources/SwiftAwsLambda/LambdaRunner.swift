@@ -64,7 +64,7 @@ internal struct LambdaRunner {
         }.flatMap { invocation, result in
             // 3. report results to runtime engine
             self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError { error in
-                logger.error("failed reporting results to lambda runtime engine: \(error)")
+                logger.error("could not report results to lambda runtime engine: \(error)")
             }
         }.always { result in
             // we are done!
