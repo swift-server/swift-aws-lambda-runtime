@@ -154,7 +154,7 @@ class LambdaTest: XCTestCase {
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1),
                                                  runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
         let result = Lambda.run(configuration: configuration, handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shouldFailWithError: LambdaRuntimeClient.Errors.upstreamError("timeout"))
+        assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("timeout"))
     }
 
     func testDisconnect() {
@@ -164,7 +164,7 @@ class LambdaTest: XCTestCase {
 
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
         let result = Lambda.run(configuration: configuration, handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shouldFailWithError: LambdaRuntimeClient.Errors.upstreamError("connectionResetByPeer"))
+        assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("connectionResetByPeer"))
     }
 
     func testBigPayload() {
@@ -225,7 +225,7 @@ class LambdaTest: XCTestCase {
         }
 
         let result = Lambda.run(handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shouldFailWithError: LambdaRuntimeClient.Errors.badStatusCode(.internalServerError))
+        assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeError.badStatusCode(.internalServerError))
     }
 
     func testDeadline() {

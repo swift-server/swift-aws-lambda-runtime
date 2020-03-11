@@ -58,7 +58,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
-            XCTAssertEqual(error as? LambdaRuntimeClient.Errors, .badStatusCode(.internalServerError))
+            XCTAssertEqual(error as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
         }
     }
 
@@ -84,7 +84,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
-            XCTAssertEqual(error as? LambdaRuntimeClient.Errors, .noBody)
+            XCTAssertEqual(error as? Lambda.RuntimeError, .noBody)
         }
     }
 
@@ -111,7 +111,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
-            XCTAssertEqual(error as? LambdaRuntimeClient.Errors, .invocationMissingHeader(AmazonHeaders.requestID))
+            XCTAssertEqual(error as? Lambda.RuntimeError, .invocationMissingHeader(AmazonHeaders.requestID))
         }
     }
 
@@ -136,7 +136,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
-            XCTAssertEqual(error as? LambdaRuntimeClient.Errors, .badStatusCode(.internalServerError))
+            XCTAssertEqual(error as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
         }
     }
 
@@ -161,7 +161,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: FailedHandler("boom"))) { error in
-            XCTAssertEqual(error as? LambdaRuntimeClient.Errors, .badStatusCode(.internalServerError))
+            XCTAssertEqual(error as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
         }
     }
 
