@@ -67,7 +67,7 @@ class CodableLambdaTest: XCTestCase {
             typealias Out = Response
 
             func handle(context: Lambda.Context, payload: Request, callback: (Result<Response, Error>) -> Void) {
-                callback(.failure(TestError("boom")))
+                return callback(.failure(TestError("boom")))
             }
         }
 
@@ -77,17 +77,17 @@ class CodableLambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    func testPromiseSuccess() {
+    func testEventLoopSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: LambdaHandler {
+        struct Handler: EventLoopLambdaHandler {
             typealias In = Request
             typealias Out = Response
 
-            func handle(context: Lambda.Context, payload: Request, promise: EventLoopPromise<Response>) {
-                promise.succeed(Response(requestId: payload.requestId))
+            func handle(context: Lambda.Context, payload: Request) -> EventLoopFuture<Response> {
+                return context.eventLoop.makeSucceededFuture(Response(requestId: payload.requestId))
             }
         }
 
@@ -97,17 +97,17 @@ class CodableLambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    func testVoidPromiseSuccess() {
+    func testVoidEventLoopSuccess() {
         let server = MockLambdaServer(behavior: Behavior(result: .success(nil)))
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: LambdaHandler {
+        struct Handler: EventLoopLambdaHandler {
             typealias In = Request
             typealias Out = Void
 
-            func handle(context: Lambda.Context, payload: Request, promise: EventLoopPromise<Void>) {
-                promise.succeed(())
+            func handle(context: Lambda.Context, payload: Request) -> EventLoopFuture<Void> {
+                return context.eventLoop.makeSucceededFuture(())
             }
         }
 
@@ -117,17 +117,17 @@ class CodableLambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    func testPromiseFailure() {
+    func testEventLoopFailure() {
         let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: LambdaHandler {
+        struct Handler: EventLoopLambdaHandler {
             typealias In = Request
             typealias Out = Response
 
-            func handle(context: Lambda.Context, payload: Request, promise: EventLoopPromise<Response>) {
-                promise.fail(TestError("boom"))
+            func handle(context: Lambda.Context, payload: Request) -> EventLoopFuture<Response> {
+                return context.eventLoop.makeFailedFuture(TestError("boom"))
             }
         }
 

@@ -51,19 +51,19 @@ public enum Lambda {
     @inlinable
     @discardableResult
     internal static func run(configuration: Configuration = .init(), handler: ByteBufferLambdaHandler) -> Result<Int, Error> {
-        return self.run(configuration: configuration, factory: { _, promise in promise.succeed(handler) })
+        return self.run(configuration: configuration, factory: { $0.makeSucceededFuture(handler) })
     }
 
     // for testing and internal use
     @inlinable
     @discardableResult
     internal static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> ByteBufferLambdaHandler) -> Result<Int, Error> {
-        return self.run(configuration: configuration, factory: { (eventloop: EventLoop, promise: EventLoopPromise<ByteBufferLambdaHandler>) -> Void in
+        return self.run(configuration: configuration, factory: { eventloop -> EventLoopFuture<ByteBufferLambdaHandler> in
             do {
                 let handler = try factory(eventloop)
-                promise.succeed(handler)
+                return eventloop.makeSucceededFuture(handler)
             } catch {
-                promise.fail(error)
+                return eventloop.makeFailedFuture(error)
             }
         })
     }
@@ -99,12 +99,15 @@ public enum Lambda {
     }
 }
 
-public typealias LambdaHandlerFactory = (EventLoop, EventLoopPromise<ByteBufferLambdaHandler>) -> Void
+public typealias LambdaHandlerFactory = (EventLoop) -> EventLoopFuture<ByteBufferLambdaHandler>
 
 /// A processing protocol for a Lambda that takes a `ByteBuffer` and returns a `ByteBuffer?` asynchronously via `EventLoopPromise`.
 ///
 /// - note: This is a low level API design to power the higher level `LambdaHandler` based APIs. Most users are not expected to implement this API.
 public protocol ByteBufferLambdaHandler {
     /// Handles the Lambda request.
-    func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>)
+    func handle(context: Lambda.Context, payload: ByteBuffer) -> EventLoopFuture<ByteBuffer?>
+
+    // Should execution be offloaded to a seperate thread
+    var offload: Bool { get }
 }

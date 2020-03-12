@@ -18,7 +18,7 @@ import NIO
 import XCTest
 
 func runLambda(behavior: LambdaServerBehavior, handler: ByteBufferLambdaHandler) throws {
-    try runLambda(behavior: behavior, factory: { _, promise in promise.succeed(handler) })
+    try runLambda(behavior: behavior, factory: { $0.makeSucceededFuture(handler) })
 }
 
 func runLambda(behavior: LambdaServerBehavior, factory: @escaping LambdaHandlerFactory) throws {
@@ -34,21 +34,21 @@ func runLambda(behavior: LambdaServerBehavior, factory: @escaping LambdaHandlerF
     }.wait()
 }
 
-struct EchoHandler: ByteBufferLambdaHandler {
-    func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>) {
-        promise.succeed(payload)
+struct EchoHandler: LambdaHandler {
+    func handle(context: Lambda.Context, payload: String, callback: (Result<String, Error>) -> Void) {
+        callback(.success(payload))
     }
 }
 
-struct FailedHandler: ByteBufferLambdaHandler {
+struct FailedHandler: LambdaHandler {
     private let reason: String
 
     public init(_ reason: String) {
         self.reason = reason
     }
 
-    func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>) {
-        promise.fail(TestError(self.reason))
+    func handle(context: Lambda.Context, payload: String, callback: (Result<Void, Error>) -> Void) {
+        callback(.failure(TestError(self.reason)))
     }
 }
 

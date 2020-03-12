@@ -77,17 +77,17 @@ class StringLambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    func testPromiseSuccess() {
+    func testEventLoopSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: LambdaHandler {
+        struct Handler: EventLoopLambdaHandler {
             typealias In = String
             typealias Out = String
 
-            func handle(context: Lambda.Context, payload: String, promise: EventLoopPromise<String>) {
-                promise.succeed(payload)
+            func handle(context: Lambda.Context, payload: String) -> EventLoopFuture<String> {
+                return context.eventLoop.makeSucceededFuture(payload)
             }
         }
 
@@ -97,17 +97,17 @@ class StringLambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    func testVoidPromiseSuccess() {
+    func testVoidEventLoopSuccess() {
         let server = MockLambdaServer(behavior: Behavior(result: .success(nil)))
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: LambdaHandler {
+        struct Handler: EventLoopLambdaHandler {
             typealias In = String
             typealias Out = Void
 
-            func handle(context: Lambda.Context, payload: String, promise: EventLoopPromise<Void>) {
-                promise.succeed(())
+            func handle(context: Lambda.Context, payload: String) -> EventLoopFuture<Void> {
+                return context.eventLoop.makeSucceededFuture(())
             }
         }
 
@@ -117,17 +117,17 @@ class StringLambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    func testPromiseFailure() {
+    func testEventLoopFailure() {
         let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: LambdaHandler {
+        struct Handler: EventLoopLambdaHandler {
             typealias In = String
             typealias Out = String
 
-            func handle(context: Lambda.Context, payload: String, promise: EventLoopPromise<String>) {
-                promise.fail(TestError("boom"))
+            func handle(context: Lambda.Context, payload: String) -> EventLoopFuture<String> {
+                return context.eventLoop.makeFailedFuture(TestError("boom"))
             }
         }
 

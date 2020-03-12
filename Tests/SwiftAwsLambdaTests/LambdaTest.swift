@@ -45,7 +45,7 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: ByteBufferLambdaHandler {
+        struct Handler: LambdaHandler {
             var initialized = false
 
             init(eventLoop: EventLoop) {
@@ -53,8 +53,8 @@ class LambdaTest: XCTestCase {
                 self.initialized = true
             }
 
-            func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>) {
-                promise.succeed(payload)
+            func handle(context: Lambda.Context, payload: String, callback: (Result<String, Error>) -> Void) {
+                callback(.success(payload))
             }
         }
 
@@ -69,7 +69,7 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(factory: { _, promise in promise.fail(TestError("kaboom")) })
+        let result = Lambda.run(factory: { $0.makeFailedFuture(TestError("kaboom")) })
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
@@ -78,13 +78,13 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: ByteBufferLambdaHandler {
+        struct Handler: LambdaHandler {
             init(eventLoop: EventLoop) throws {
                 throw TestError("kaboom")
             }
 
-            func handle(context: Lambda.Context, payload: ByteBuffer, promise: EventLoopPromise<ByteBuffer?>) {
-                promise.fail(TestError("should not be called"))
+            func handle(context: Lambda.Context, payload: String, callback: (Result<Void, Error>) -> Void) {
+                callback(.failure(TestError("should not be called")))
             }
         }
 
@@ -118,7 +118,7 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(factory: { _, promise in promise.fail(TestError("kaboom")) })
+        let result = Lambda.run(factory: { $0.makeFailedFuture(TestError("kaboom")) })
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
@@ -133,7 +133,7 @@ class LambdaTest: XCTestCase {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
 
-        let future = Lambda.runAsync(eventLoopGroup: eventLoopGroup, configuration: configuration, factory: { _, promise in promise.succeed(EchoHandler()) })
+        let future = Lambda.runAsync(eventLoopGroup: eventLoopGroup, configuration: configuration, factory: { $0.makeSucceededFuture(EchoHandler()) })
         DispatchQueue(label: "test").async {
             usleep(100_000)
             kill(getpid(), signal.rawValue)

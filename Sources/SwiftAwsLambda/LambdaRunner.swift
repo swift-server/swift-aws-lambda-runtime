@@ -21,14 +21,12 @@ extension Lambda {
     internal struct Runner {
         private let runtimeClient: RuntimeClient
         private let eventLoop: EventLoop
-        private let lifecycleId: String
-        private let offload: Bool
+        private let offloadQueue: DispatchQueue
 
         init(eventLoop: EventLoop, configuration: Configuration) {
             self.eventLoop = eventLoop
             self.runtimeClient = RuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine)
-            self.lifecycleId = configuration.lifecycle.id
-            self.offload = configuration.runtimeEngine.offload
+            self.offloadQueue = DispatchQueue(label: "lambda-\(configuration.lifecycle.id)")
         }
 
         /// Run the user provided initializer. This *must* only be called once.
@@ -37,9 +35,8 @@ extension Lambda {
         func initialize(logger: Logger, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<ByteBufferLambdaHandler> {
             logger.debug("initializing lambda")
             // 1. create the handler from the factory
-            let future = bootstrap(eventLoop: self.eventLoop, lifecycleId: self.lifecycleId, offload: self.offload, factory: factory)
             // 2. report initialization error if one occured
-            return future.peekError { error in
+            return factory(self.eventLoop).hop(to: self.eventLoop).peekError { error in
                 self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
                     // We're going to bail out because the init failed, so there's not a lot we can do other than log
                     // that we couldn't report this error back to the runtime.
@@ -58,10 +55,15 @@ extension Lambda {
                 let context = Context(logger: logger, eventLoop: self.eventLoop, invocation: invocation)
                 logger.debug("sending work to lambda handler \(handler)")
                 return handler.handle(eventLoop: self.eventLoop,
-                                      lifecycleId: self.lifecycleId,
-                                      offload: self.offload,
+                                      offloadQueue: self.offloadQueue,
                                       context: context,
-                                      payload: payload).mapResult { (invocation, $0) }
+                                      payload: payload)
+                    .mapResult { result in
+                        if case .failure(let error) = result {
+                            logger.warning("lambda handler returned an error: \(error)")
+                        }
+                        return (invocation, result)
+                    }
             }.flatMap { invocation, result in
                 // 3. report results to runtime engine
                 self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError { error in
@@ -75,42 +77,18 @@ extension Lambda {
     }
 }
 
-// FIXME: offload
-private func bootstrap(eventLoop: EventLoop, lifecycleId: String, offload: Bool, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<ByteBufferLambdaHandler> {
-    let promise = eventLoop.makePromise(of: ByteBufferLambdaHandler.self)
-    /* if offload {
-         // offloading so user code never blocks the eventloop
-         DispatchQueue(label: "lambda-\(lifecycleId)").async {
-             factory(eventLoop, promise.completeWith)
-         }
-     } else {
-         factory(eventLoop, promise.completeWith)
-     } */
-    factory(eventLoop, promise)
-    return promise.futureResult
-}
-
 private extension ByteBufferLambdaHandler {
-    // FIXME: offload
-    func handle(eventLoop: EventLoop, lifecycleId: String, offload: Bool, context: Lambda.Context, payload: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
+    func handle(eventLoop: EventLoop, offloadQueue: DispatchQueue, context: Lambda.Context, payload: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
+        if !self.offload {
+            return self.handle(context: context, payload: payload).hop(to: eventLoop)
+        }
+        // offloading to a DispatchQueue
+        // this is slower but safer, in case the implementation blocks EventLoop
         let promise = eventLoop.makePromise(of: ByteBuffer?.self)
-        self.handle(context: context, payload: payload, promise: promise)
+        offloadQueue.async {
+            self.handle(context: context, payload: payload).cascade(to: promise)
+        }
         return promise.futureResult
-
-        /* let promise = eventLoop.makePromise(of: LambdaResult.self)
-         if offload {
-             // offloading so user code never blocks the eventloop
-             DispatchQueue(label: "lambda-\(lifecycleId)").async {
-                 self.handle(context: context, payload: payload) { result in
-                     promise.succeed(result)
-                 }
-             }
-         } else {
-             self.handle(context: context, payload: payload) { result in
-                 promise.succeed(result)
-             }
-         }
-         return promise.futureResult */
     }
 }
 
