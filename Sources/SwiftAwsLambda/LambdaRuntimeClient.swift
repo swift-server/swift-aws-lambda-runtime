@@ -128,29 +128,12 @@ extension Lambda {
 }
 
 internal extension Lambda {
-    enum RuntimeError: Error, Equatable {
+    enum RuntimeError: Error {
         case badStatusCode(HTTPResponseStatus)
         case upstreamError(String)
         case invocationMissingHeader(String)
         case noBody
         case json(Error)
-
-        static func == (lhs: Lambda.RuntimeError, rhs: Lambda.RuntimeError) -> Bool {
-            switch (lhs, rhs) {
-            case (.badStatusCode(let lhs), .badStatusCode(let rhs)):
-                return lhs == rhs
-            case (.upstreamError(let lhs), .upstreamError(let rhs)):
-                return lhs == rhs
-            case (.invocationMissingHeader(let lhs), .invocationMissingHeader(let rhs)):
-                return lhs == rhs
-            case (.noBody, .noBody):
-                return true
-            case (.json(let lhs), .json(let rhs)):
-                return String(describing: lhs) == String(describing: rhs)
-            default:
-                return false
-            }
-        }
     }
 }
 

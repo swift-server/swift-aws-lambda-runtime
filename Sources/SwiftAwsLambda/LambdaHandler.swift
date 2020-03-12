@@ -80,7 +80,6 @@ internal extension Lambda {
     enum CodecError: Error {
         case responseEncoding(Error)
         case requestDecoding(Error)
-        case invalidBuffer
     }
 
     struct InvalidLambdaError: Error, CustomStringConvertible {

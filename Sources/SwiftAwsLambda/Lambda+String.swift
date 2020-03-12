@@ -101,8 +101,9 @@ public extension LambdaHandler where In == String, Out == String {
     }
 
     func decode(buffer: ByteBuffer) throws -> String {
-        guard let string = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
-            throw Lambda.CodecError.invalidBuffer
+        var buffer = buffer
+        guard let string = buffer.readString(length: buffer.readableBytes) else {
+            fatalError("bug in NIO: buffer.readString(length: buffer.readableBytes) failed")
         }
         return string
     }
@@ -114,8 +115,9 @@ public extension LambdaHandler where In == String, Out == Void {
     }
 
     func decode(buffer: ByteBuffer) throws -> String {
-        guard let string = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
-            throw Lambda.CodecError.invalidBuffer
+        var buffer = buffer
+        guard let string = buffer.readString(length: buffer.readableBytes) else {
+            fatalError("bug in NIO: buffer.readString(length: buffer.readableBytes) failed")
         }
         return string
     }

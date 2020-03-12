@@ -100,19 +100,16 @@ internal struct CodableVoidLambdaClosureWrapper<In: Decodable>: LambdaHandler {
 /// Advanced users that want to inject their own codec can do it by overriding these functions.
 public extension LambdaHandler where In: Decodable, Out: Encodable {
     func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer? {
-        let encoder = JSONEncoder()
-        let data = try encoder.encode(value)
-        var buffer = allocator.buffer(capacity: data.count)
-        buffer.writeBytes(data)
+        // FIXME: reusable JSONEncoder and buffer
+        // nio will resize the buffer if necessary
+        var buffer = allocator.buffer(capacity: 1024)
+        try JSONEncoder().encode(value, into: &buffer)
         return buffer
     }
 
     func decode(buffer: ByteBuffer) throws -> In {
-        let decoder = JSONDecoder()
-        guard let data = buffer.getData(at: buffer.readerIndex, length: buffer.readableBytes) else {
-            throw Lambda.CodecError.invalidBuffer
-        }
-        return try decoder.decode(In.self, from: data)
+        // FIXME: reusable JSONDecoder
+        return try JSONDecoder().decode(In.self, from: buffer)
     }
 }
 
@@ -122,10 +119,7 @@ public extension LambdaHandler where In: Decodable, Out == Void {
     }
 
     func decode(buffer: ByteBuffer) throws -> In {
-        let decoder = JSONDecoder()
-        guard let data = buffer.getData(at: buffer.readerIndex, length: buffer.readableBytes) else {
-            throw Lambda.CodecError.invalidBuffer
-        }
-        return try decoder.decode(In.self, from: data)
+        // FIXME: reusable JSONDecoder
+        return try JSONDecoder().decode(In.self, from: buffer)
     }
 }

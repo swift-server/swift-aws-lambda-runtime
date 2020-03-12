@@ -80,3 +80,10 @@ internal extension Date {
         return Int64(self.timeIntervalSince1970 * 1000)
     }
 }
+
+extension Lambda.RuntimeError: Equatable {
+    public static func == (lhs: Lambda.RuntimeError, rhs: Lambda.RuntimeError) -> Bool {
+        // technically incorrect, but good enough for our tests
+        return String(describing: lhs) == String(describing: rhs)
+    }
+}
