@@ -171,22 +171,6 @@ private extension ErrorResponse {
     }
 }
 
-private extension HTTPClient.Response {
-    func headerValue(_ name: String) -> String? {
-        return headers[name].first
-    }
-
-    func readWholeBody() -> [UInt8]? {
-        guard var buffer = self.body else {
-            return nil
-        }
-        guard let bytes = buffer.readBytes(length: buffer.readableBytes) else {
-            return nil
-        }
-        return bytes
-    }
-}
-
 extension Lambda {
     internal struct Invocation {
         let requestId: String

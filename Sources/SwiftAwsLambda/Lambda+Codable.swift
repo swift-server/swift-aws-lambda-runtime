@@ -70,8 +70,8 @@ internal struct CodableLambdaClosureWrapper<In: Decodable, Out: Encodable>: Lamb
     }
 
     @usableFromInline
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, payload: In, promise: EventLoopPromise<Out>) {
+        self.closure(context, payload, promise.completeWith)
     }
 }
 
@@ -90,8 +90,8 @@ internal struct CodableVoidLambdaClosureWrapper<In: Decodable>: LambdaHandler {
     }
 
     @usableFromInline
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, payload: In, promise: EventLoopPromise<Out>) {
+        self.closure(context, payload, promise.completeWith)
     }
 }
 

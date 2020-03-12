@@ -67,8 +67,8 @@ internal struct StringLambdaClosureWrapper: LambdaHandler {
     }
 
     @usableFromInline
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, payload: In, promise: EventLoopPromise<Out>) {
+        self.closure(context, payload, promise.completeWith)
     }
 }
 
@@ -87,8 +87,8 @@ internal struct StringVoidLambdaClosureWrapper: LambdaHandler {
     }
 
     @usableFromInline
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, payload: In, promise: EventLoopPromise<Out>) {
+        self.closure(context, payload, promise.completeWith)
     }
 }
 

@@ -35,7 +35,7 @@ public extension LambdaHandler {
     }
 
     func handle(context: Lambda.Context, payload: In, callback: (Result<Out, Error>) -> Void) {
-        fatalError("Lambda Handler not implemented correctly, either handler(promise) or handle(callback) must be implemented.")
+        callback(Result.failure(Lambda.InvalidLambdaError()))
     }
 }
 
@@ -81,5 +81,9 @@ internal extension Lambda {
         case responseEncoding(Error)
         case requestDecoding(Error)
         case invalidBuffer
+    }
+
+    struct InvalidLambdaError: Error, CustomStringConvertible {
+        let description = "Lambda Handler not implemented correctly, either handle(promise) or handle(callback) must be implemented."
     }
 }
