@@ -1,13 +1,13 @@
 #!/bin/bash
 ##===----------------------------------------------------------------------===##
 ##
-## This source file is part of the SwiftAwsLambda open source project
+## This source file is part of the SwiftAWSLambdaRuntime open source project
 ##
-## Copyright (c) 2020 Apple Inc. and the SwiftAwsLambda project authors
+## Copyright (c) 2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
-## See CONTRIBUTORS.txt for the list of SwiftAwsLambda project authors
+## See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
 ##
 ## SPDX-License-Identifier: Apache-2.0
 ##
@@ -37,10 +37,10 @@ cd -
 #
 # strace
 # export MAX_REQUESTS=10000
-# strace -o .build/strace-c-string-$MAX_REQUESTS -c .build/release/SwiftAwsLambdaStringSample
-# strace -o .build/strace-ffftt-string-$MAX_REQUESTS -fftt .build/release/SwiftAwsLambdaStringSample
+# strace -o .build/strace-c-string-$MAX_REQUESTS -c .build/release/StringSample
+# strace -o .build/strace-ffftt-string-$MAX_REQUESTS -fftt .build/release/StringSample
 #
 # perf
 # export MAX_REQUESTS=10000
-# perf record -o .build/perf-$MAX_REQUESTS.data -g .build/release/SwiftAwsLambdaStringSample dwarf
+# perf record -o .build/perf-$MAX_REQUESTS.data -g .build/release/StringSample dwarf
 # perf script -i .build/perf-$MAX_REQUESTS.data | /opt/FlameGraph/stackcollapse-perf.pl | swift-demangle | /opt/FlameGraph/flamegraph.pl > .build/flamegraph-$MAX_REQUESTS.svg

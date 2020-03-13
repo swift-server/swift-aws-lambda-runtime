@@ -1,20 +1,20 @@
 //===----------------------------------------------------------------------===//
 //
-// This source file is part of the SwiftAwsLambda open source project
+// This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftAwsLambda project authors
+// Copyright (c) 2017-2018 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
-// See CONTRIBUTORS.txt for the list of SwiftAwsLambda project authors
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
 //
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
 
+@testable import AWSLambdaRuntime
 import Logging
 import NIO
-@testable import SwiftAwsLambda
 import XCTest
 
 func runLambda(behavior: LambdaServerBehavior, handler: ByteBufferLambdaHandler) throws {

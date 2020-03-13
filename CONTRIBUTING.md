@@ -10,8 +10,8 @@ that your contributions are licensed under the Apache 2.0 license (see
 
 Please ensure to specify the following:
 
-* SwiftAwsLambda commit hash
-* Contextual information (e.g. what you were trying to achieve with SwiftAwsLambda)
+* SwiftAWSLambdaRuntime commit hash
+* Contextual information (e.g. what you were trying to achieve with SwiftAWSLambdaRuntime)
 * Simplest possible steps to reproduce
   * More complex the steps are, lower the priority will be.
   * A pull request with failing test case is preferred, but it's just fine to paste the test case into the issue description.
@@ -24,10 +24,10 @@ Please ensure to specify the following:
 ### Example
 
 ```
-SwiftAwsLambda commit hash: 22ec043dc9d24bb011b47ece4f9ee97ee5be2757
+SwiftAWSLambdaRuntime commit hash: 22ec043dc9d24bb011b47ece4f9ee97ee5be2757
 
 Context:
-While load testing my HTTP web server written with SwiftAwsLambda, I noticed
+While load testing my Lambda written with SwiftAWSLambdaRuntime, I noticed
 that one file descriptor is leaked per request.
 
 Steps to reproduce:
@@ -50,7 +50,7 @@ My system has IPv6 disabled.
 
 ## Writing a Patch
 
-A good SwiftAwsLambda patch is:
+A good SwiftAWSLambdaRuntime patch is:
 
 1. Concise, and contains as few changes as needed to achieve the end result.
 2. Tested, ensuring that any tests provided failed before the patch and pass after it.
@@ -62,11 +62,6 @@ A good SwiftAwsLambda patch is:
 We require that your commit messages match our template. The easiest way to do that is to get git to help you by explicitly using the template. To do that, `cd` to the root of our repository and run:
 
     git config commit.template dev/git.commit.template
-
-### Make sure Tests work on Linux
-
-SwiftAwsLambda uses XCTest to run tests on both macOS and Linux. While the macOS version of XCTest is able to use the Objective-C runtime to discover tests at execution time, the Linux version is not. 
-For this reason, whenever you add new tests **you have to run a script** that generates the hooks needed to run those tests on Linux, or our CI will complain that the tests are not all present on Linux. To do this, merely execute `ruby ./scripts/generate_linux_tests.rb` at the root of the package and check the changes it made.
 
 ## How to contribute your work
 

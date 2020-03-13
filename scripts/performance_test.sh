@@ -1,13 +1,13 @@
 #!/bin/bash
 ##===----------------------------------------------------------------------===##
 ##
-## This source file is part of the SwiftAwsLambda open source project
+## This source file is part of the SwiftAWSLambdaRuntime open source project
 ##
-## Copyright (c) 2017-2018 Apple Inc. and the SwiftAwsLambda project authors
+## Copyright (c) 2017-2018 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
-## See CONTRIBUTORS.txt for the list of SwiftAwsLambda project authors
+## See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
 ##
 ## SPDX-License-Identifier: Apache-2.0
 ##
@@ -58,7 +58,7 @@ cold=()
 export MAX_REQUESTS=1
 for (( i=0; i<$cold_iterations; i++ )); do
   start=$(gdate +%s%N)
-  ./.build/release/SwiftAwsLambdaStringSample
+  ./.build/release/StringSample
   end=$(gdate +%s%N)
   cold+=( $(($end-$start)) )
 done
@@ -70,7 +70,7 @@ results+=( "$MODE, cold: $avg_cold (ns)" )
 echo "running $MODE mode warm test"
 export MAX_REQUESTS=$warm_iterations
 start=$(gdate +%s%N)
-./.build/release/SwiftAwsLambdaStringSample
+./.build/release/StringSample
 end=$(gdate +%s%N)
 sum_warm=$(($end-$start-$avg_cold)) # substract by avg cold since the first call is cold
 avg_warm=$(($sum_warm/($warm_iterations-1))) # substract since the first call is cold
@@ -96,7 +96,7 @@ cold=()
 export MAX_REQUESTS=1
 for (( i=0; i<$cold_iterations; i++ )); do
   start=$(gdate +%s%N)
-  ./.build/release/SwiftAwsLambdaCodableSample
+  ./.build/release/CodableSample
   end=$(gdate +%s%N)
   cold+=( $(($end-$start)) )
 done
@@ -108,7 +108,7 @@ results+=( "$MODE, cold: $avg_cold (ns)" )
 echo "running $MODE mode warm test"
 export MAX_REQUESTS=$warm_iterations
 start=$(gdate +%s%N)
-./.build/release/SwiftAwsLambdaCodableSample
+./.build/release/CodableSample
 end=$(gdate +%s%N)
 sum_warm=$(($end-$start-$avg_cold)) # substract by avg cold since the first call is cold
 avg_warm=$(($sum_warm/($warm_iterations-1))) # substract since the first call is cold
