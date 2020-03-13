@@ -17,7 +17,6 @@ import NIO
 import NIOConcurrencyHelpers
 
 extension Lambda {
-    @usableFromInline
     internal final class Lifecycle {
         private let eventLoop: EventLoop
         private let logger: Logger
@@ -42,7 +41,7 @@ extension Lambda {
 
         private var state: State {
             get {
-                return self.stateLock.withLock {
+                self.stateLock.withLock {
                     self._state
                 }
             }

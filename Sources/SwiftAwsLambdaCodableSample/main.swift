@@ -31,7 +31,7 @@ struct Handler: EventLoopLambdaHandler {
 
     func handle(context: Lambda.Context, payload: Request) -> EventLoopFuture<Response> {
         // as an example, respond with the reverse the input payload
-        return context.eventLoop.makeSucceededFuture(Response(body: String(payload.body.reversed())))
+        context.eventLoop.makeSucceededFuture(Response(body: String(payload.body.reversed())))
     }
 }
 

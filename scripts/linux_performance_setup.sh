@@ -13,7 +13,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-# docker run --privileged -it -v `pwd`:/code -w /code swift:5.1 bash
+# docker run --privileged -it -v `pwd`:/code -w /code swiftlang/swift:nightly-5.2-bionic bash
 
 apt-get update -y
 apt-get install -y vim htop strace linux-tools-common linux-tools-generic

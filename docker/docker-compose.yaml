@@ -1,6 +1,6 @@
 # this file is not designed to be run directly
 # instead, use the docker-compose.<os>.<swift> files
-# eg docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.1804.50.yaml run test
+# eg docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.1804.52.yaml run test
 version: "3"
 
 services:
@@ -28,7 +28,7 @@ services:
 
   test:
     <<: *common
-    command: /bin/bash -cl "swift test -Xswiftc -warnings-as-errors $${SANITIZER_ARG-}"
+    command: /bin/bash -cl "swift test --enable-test-discovery -Xswiftc -warnings-as-errors $${SANITIZER_ARG-}"
 
   # util
 

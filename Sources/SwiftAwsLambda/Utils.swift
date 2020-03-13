@@ -56,7 +56,6 @@ internal func trap(signal sig: Signal, handler: @escaping (Signal) -> Void) -> D
     return signalSource
 }
 
-@usableFromInline
 internal enum Signal: Int32 {
     case HUP = 1
     case INT = 2
@@ -76,6 +75,6 @@ internal extension DispatchWallTime {
     }
 
     var millisSinceEpoch: Int64 {
-        return Int64(bitPattern: self.rawValue) / -1_000_000
+        Int64(bitPattern: self.rawValue) / -1_000_000
     }
 }
