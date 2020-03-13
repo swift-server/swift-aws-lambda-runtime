@@ -40,7 +40,7 @@ internal final class HTTPClient {
                                     timeout: timeout ?? self.configuration.requestTimeout))
     }
 
-    func post(url: String, body: ByteBuffer, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
+    func post(url: String, body: ByteBuffer?, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
         return self.execute(Request(targetHost: self.targetHost,
                                     url: url,
                                     method: .POST,
@@ -145,12 +145,14 @@ private final class HTTPHandler: ChannelDuplexHandler {
         let request = unwrapOutboundIn(data)
 
         var head = HTTPRequestHead(version: .init(major: 1, minor: 1), method: request.method, uri: request.url, headers: request.headers)
-        if !head.headers.contains(name: "Host") {
-            head.headers.add(name: "Host", value: request.targetHost)
+        head.headers.add(name: "host", value: request.targetHost)
+        switch request.method {
+        case .POST, .PUT:
+            head.headers.add(name: "content-length", value: String(request.body?.readableBytes ?? 0))
+        default:
+            break
         }
-        if let body = request.body {
-            head.headers.add(name: "Content-Length", value: String(body.readableBytes))
-        }
+
         // We don't add a "Connection" header here if we want to keep the connection open,
         // HTTP/1.1 defines specifies the following in RFC 2616, Section 8.1.2.1:
         //
@@ -163,7 +165,7 @@ private final class HTTPHandler: ChannelDuplexHandler {
         //
         // See also UnaryHandler.channelRead below.
         if !self.keepAlive {
-            head.headers.add(name: "Connection", value: "close")
+            head.headers.add(name: "connection", value: "close")
         }
 
         context.write(self.wrapOutboundOut(HTTPClientRequestPart.head(head))).flatMap { _ -> EventLoopFuture<Void> in

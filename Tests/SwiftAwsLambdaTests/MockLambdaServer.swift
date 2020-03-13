@@ -203,7 +203,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
             if case .failure(let error) = result {
                 self.logger.error("\(self) write error \(error)")
             }
-            if !self.self.keepAlive {
+            if !self.keepAlive {
                 context.close().whenFailure { error in
                     self.logger.error("\(self) close error \(error)")
                 }

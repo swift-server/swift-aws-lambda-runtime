@@ -38,6 +38,8 @@ extension Lambda {
 
         /// a logger to log
         public let logger: Logger
+        public let eventLoop: EventLoop
+        public let allocator: ByteBufferAllocator
 
         internal init(requestId: String,
                       traceId: String,
@@ -45,13 +47,17 @@ extension Lambda {
                       deadline: DispatchWallTime,
                       cognitoIdentity: String? = nil,
                       clientContext: String? = nil,
-                      logger: Logger) {
+                      logger: Logger,
+                      eventLoop: EventLoop) {
             self.requestId = requestId
             self.traceId = traceId
             self.invokedFunctionArn = invokedFunctionArn
             self.cognitoIdentity = cognitoIdentity
             self.clientContext = clientContext
             self.deadline = deadline
+            // utility
+            self.eventLoop = eventLoop
+            self.allocator = ByteBufferAllocator()
             // mutate logger with context
             var logger = logger
             logger[metadataKey: "awsRequestId"] = .string(requestId)

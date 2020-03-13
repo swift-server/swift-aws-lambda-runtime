@@ -25,9 +25,14 @@ import XCTest
 extension CodableLambdaTest {
     static var allTests: [(String, (CodableLambdaTest) -> () throws -> Void)] {
         return [
-            ("testSuccess", testSuccess),
-            ("testFailure", testFailure),
+            ("testCallbackSuccess", testCallbackSuccess),
+            ("testVoidCallbackSuccess", testVoidCallbackSuccess),
+            ("testCallbackFailure", testCallbackFailure),
+            ("testEventLoopSuccess", testEventLoopSuccess),
+            ("testVoidEventLoopSuccess", testVoidEventLoopSuccess),
+            ("testEventLoopFailure", testEventLoopFailure),
             ("testClosureSuccess", testClosureSuccess),
+            ("testVoidClosureSuccess", testVoidClosureSuccess),
             ("testClosureFailure", testClosureFailure),
             ("testBootstrapFailure", testBootstrapFailure),
         ]

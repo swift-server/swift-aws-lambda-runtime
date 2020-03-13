@@ -12,118 +12,115 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation // for JSON
+import class Foundation.JSONDecoder
+import class Foundation.JSONEncoder
+import NIO
+import NIOFoundationCompat
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` payloads.
-/// This is the most common way to use this library in AWS Lambda, since its JSON based.
 extension Lambda {
-    /// Run a Lambda defined by implementing the `LambdaCodableClosure` closure, having `In` and `Out` extending `Decodable` and `Encodable` respectively.
+    /// Run a Lambda defined by implementing the `CodableLambdaClosure` function.
     ///
-    /// - note: This is a blocking operation that will run forever, as it's lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping LambdaCodableClosure<In, Out>) {
-        self.run(LambdaClosureWrapper(closure))
+    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
+    @inlinable
+    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableLambdaClosure<In, Out>) {
+        self.run(closure: closure)
+    }
+
+    /// Run a Lambda defined by implementing the `CodableVoidLambdaClosure` function.
+    ///
+    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
+    @inlinable
+    public static func run<In: Decodable>(_ closure: @escaping CodableVoidLambdaClosure<In>) {
+        self.run(closure: closure)
     }
 
     // for testing
-    internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping LambdaCodableClosure<In, Out>) -> LambdaLifecycleResult {
-        return self.run(configuration: configuration, handler: LambdaClosureWrapper(closure))
+    @inlinable
+    @discardableResult
+    internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping CodableLambdaClosure<In, Out>) -> Result<Int, Error> {
+        return self.run(configuration: configuration, handler: CodableLambdaClosureWrapper(closure))
+    }
+
+    // for testing
+    @inlinable
+    @discardableResult
+    internal static func run<In: Decodable>(configuration: Configuration = .init(), closure: @escaping CodableVoidLambdaClosure<In>) -> Result<Int, Error> {
+        return self.run(configuration: configuration, handler: CodableVoidLambdaClosureWrapper(closure))
     }
 }
 
-/// A callback for a Lambda that returns a `Result<Out, Error>` result type, having `Out` extend `Encodable`.
-public typealias LambdaCodableCallback<Out> = (Result<Out, Error>) -> Void
+/// A processing closure for a Lambda that takes a `In` and returns a `Result<Out, Error>` via a `CompletionHandler` asynchronously.
+public typealias CodableLambdaClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
 
-/// A processing closure for a Lambda that takes an `In` and returns an `Out` via `LambdaCodableCallback<Out>` asynchronously,
-/// having `In` and `Out` extending `Decodable` and `Encodable` respectively.
-public typealias LambdaCodableClosure<In, Out> = (Lambda.Context, In, LambdaCodableCallback<Out>) -> Void
+/// A processing closure for a Lambda that takes a `In` and returns a `Result<Void, Error>` via a `CompletionHandler` asynchronously.
+public typealias CodableVoidLambdaClosure<In: Decodable> = (Lambda.Context, In, @escaping (Result<Void, Error>) -> Void) -> Void
 
-/// A processing protocol for a Lambda that takes an `In` and returns an `Out` via `LambdaCodableCallback<Out>` asynchronously,
-/// having `In` and `Out` extending `Decodable` and `Encodable` respectively.
-public protocol LambdaCodableHandler: LambdaHandler {
-    associatedtype In: Decodable
-    associatedtype Out: Encodable
+@usableFromInline
+internal struct CodableLambdaClosureWrapper<In: Decodable, Out: Encodable>: LambdaHandler {
+    @usableFromInline
+    typealias In = In
+    @usableFromInline
+    typealias Out = Out
 
-    func handle(context: Lambda.Context, payload: In, callback: @escaping LambdaCodableCallback<Out>)
-    var codec: LambdaCodableCodec<In, Out> { get }
-}
+    private let closure: CodableLambdaClosure<In, Out>
 
-/// Default implementation for `LambdaCodableHandler` codec which uses JSON via `LambdaCodableJsonCodec`.
-/// Advanced users that want to inject their own codec can do it by overriding this.
-public extension LambdaCodableHandler {
-    var codec: LambdaCodableCodec<In, Out> {
-        return LambdaCodableJsonCodec<In, Out>()
-    }
-}
-
-/// LambdaCodableCodec is an abstract/empty implementation for codec which does `Encodable` -> `[UInt8]` encoding and `[UInt8]` -> `Decodable' decoding.
-// TODO: would be nicer to use a protocol instead of this "abstract class", but generics get in the way
-public class LambdaCodableCodec<In: Decodable, Out: Encodable> {
-    func encode(_: Out) -> Result<[UInt8], Error> { fatalError("not implmented") }
-    func decode(_: [UInt8]) -> Result<In, Error> { fatalError("not implmented") }
-}
-
-/// Default implementation of `Encodable` -> `[UInt8]` encoding and `[UInt8]` -> `Decodable' decoding
-public extension LambdaCodableHandler {
-    func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
-        switch self.codec.decode(payload) {
-        case .failure(let error):
-            return callback(.failure(Errors.requestDecoding(error)))
-        case .success(let payloadAsCodable):
-            self.handle(context: context, payload: payloadAsCodable) { result in
-                switch result {
-                case .failure(let error):
-                    return callback(.failure(error))
-                case .success(let encodable):
-                    switch self.codec.encode(encodable) {
-                    case .failure(let error):
-                        return callback(.failure(Errors.responseEncoding(error)))
-                    case .success(let codableAsBytes):
-                        return callback(.success(codableAsBytes))
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// LambdaCodableJsonCodec is an implementation of `LambdaCodableCodec` which does `Encodable` -> `[UInt8]` encoding and `[UInt8]` -> `Decodable' decoding
-/// using JSONEncoder and JSONDecoder respectively.
-// This is a class as encoder amd decoder are a class, which means its cheaper to hold a reference to both in a class then a struct.
-private final class LambdaCodableJsonCodec<In: Decodable, Out: Encodable>: LambdaCodableCodec<In, Out> {
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
-
-    public override func encode(_ value: Out) -> Result<[UInt8], Error> {
-        do {
-            return .success(try [UInt8](self.encoder.encode(value)))
-        } catch {
-            return .failure(error)
-        }
-    }
-
-    public override func decode(_ data: [UInt8]) -> Result<In, Error> {
-        do {
-            return .success(try self.decoder.decode(In.self, from: Data(data)))
-        } catch {
-            return .failure(error)
-        }
-    }
-}
-
-private struct LambdaClosureWrapper<In: Decodable, Out: Encodable>: LambdaCodableHandler {
-    typealias Codec = LambdaCodableJsonCodec<In, Out>
-
-    private let closure: LambdaCodableClosure<In, Out>
-    init(_ closure: @escaping LambdaCodableClosure<In, Out>) {
+    @usableFromInline
+    init(_ closure: @escaping CodableLambdaClosure<In, Out>) {
         self.closure = closure
     }
 
-    public func handle(context: Lambda.Context, payload: In, callback: @escaping LambdaCodableCallback<Out>) {
+    @usableFromInline
+    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
         self.closure(context, payload, callback)
     }
 }
 
-private enum Errors: Error {
-    case responseEncoding(Error)
-    case requestDecoding(Error)
+@usableFromInline
+internal struct CodableVoidLambdaClosureWrapper<In: Decodable>: LambdaHandler {
+    @usableFromInline
+    typealias In = In
+    @usableFromInline
+    typealias Out = Void
+
+    private let closure: CodableVoidLambdaClosure<In>
+
+    @usableFromInline
+    init(_ closure: @escaping CodableVoidLambdaClosure<In>) {
+        self.closure = closure
+    }
+
+    @usableFromInline
+    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, payload, callback)
+    }
+}
+
+/// Implementation of  a`ByteBuffer` to `In` and `Out` to `ByteBuffer` codec
+/// Using Foundation's JSONEncoder and JSONDecoder
+/// Advanced users that want to inject their own codec can do it by overriding these functions.
+public extension EventLoopLambdaHandler where In: Decodable, Out: Encodable {
+    func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer? {
+        // nio will resize the buffer if necessary
+        // FIXME: reusable JSONEncoder and buffer
+        var buffer = allocator.buffer(capacity: 1024)
+        try JSONEncoder().encode(value, into: &buffer)
+        return buffer
+    }
+
+    func decode(buffer: ByteBuffer) throws -> In {
+        // FIXME: reusable JSONDecoder
+        return try JSONDecoder().decode(In.self, from: buffer)
+    }
+}
+
+public extension EventLoopLambdaHandler where In: Decodable, Out == Void {
+    func encode(allocator: ByteBufferAllocator, value: Void) throws -> ByteBuffer? {
+        return nil
+    }
+
+    func decode(buffer: ByteBuffer) throws -> In {
+        // FIXME: reusable JSONDecoder
+        return try JSONDecoder().decode(In.self, from: buffer)
+    }
 }

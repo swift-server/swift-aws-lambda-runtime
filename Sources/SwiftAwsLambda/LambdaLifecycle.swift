@@ -17,6 +17,7 @@ import NIO
 import NIOConcurrencyHelpers
 
 extension Lambda {
+    @usableFromInline
     internal final class Lifecycle {
         private let eventLoop: EventLoop
         private let logger: Logger
@@ -58,7 +59,7 @@ extension Lambda {
             self.state = .initializing
             var logger = self.logger
             logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
-            let runner = LambdaRunner(eventLoop: self.eventLoop, configuration: self.configuration)
+            let runner = Runner(eventLoop: self.eventLoop, configuration: self.configuration)
             return runner.initialize(logger: logger, factory: self.factory).flatMap { handler in
                 self.state = .active(runner, handler)
                 return self.run()
@@ -111,7 +112,7 @@ extension Lambda {
         private enum State {
             case idle
             case initializing
-            case active(LambdaRunner, LambdaHandler)
+            case active(Runner, ByteBufferLambdaHandler)
             case stopping
             case shutdown
 

@@ -13,10 +13,9 @@ let package = Package(
         .package(url: "https://github.com/swift-server/swift-backtrace.git", from: "1.1.0"),
     ],
     targets: [
-        .target(name: "SwiftAwsLambda", dependencies: ["Logging", "Backtrace", "NIOHTTP1"]),
+        .target(name: "SwiftAwsLambda", dependencies: ["Logging", "Backtrace", "NIOHTTP1", "NIOFoundationCompat"]),
         .testTarget(name: "SwiftAwsLambdaTests", dependencies: ["SwiftAwsLambda"]),
         // samples
-        .target(name: "SwiftAwsLambdaSample", dependencies: ["SwiftAwsLambda"]),
         .target(name: "SwiftAwsLambdaStringSample", dependencies: ["SwiftAwsLambda"]),
         .target(name: "SwiftAwsLambdaCodableSample", dependencies: ["SwiftAwsLambda"]),
         // perf tests

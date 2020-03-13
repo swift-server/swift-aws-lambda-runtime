@@ -46,6 +46,9 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: LambdaHandler {
+            typealias In = String
+            typealias Out = String
+
             var initialized = false
 
             init(eventLoop: EventLoop) {
@@ -53,7 +56,7 @@ class LambdaTest: XCTestCase {
                 self.initialized = true
             }
 
-            func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
+            func handle(context: Lambda.Context, payload: String, callback: (Result<String, Error>) -> Void) {
                 callback(.success(payload))
             }
         }
@@ -69,7 +72,7 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(factory: { _, callback in callback(.failure(TestError("kaboom"))) })
+        let result = Lambda.run(factory: { $0.makeFailedFuture(TestError("kaboom")) })
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
@@ -79,11 +82,14 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: LambdaHandler {
+            typealias In = String
+            typealias Out = Void
+
             init(eventLoop: EventLoop) throws {
                 throw TestError("kaboom")
             }
 
-            func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
+            func handle(context: Lambda.Context, payload: String, callback: (Result<Void, Error>) -> Void) {
                 callback(.failure(TestError("should not be called")))
             }
         }
@@ -118,7 +124,7 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(factory: { _, callback in callback(.failure(TestError("kaboom"))) })
+        let result = Lambda.run(factory: { $0.makeFailedFuture(TestError("kaboom")) })
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
@@ -127,19 +133,13 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: LambdaHandler {
-            func handle(context: Lambda.Context, payload: [UInt8], callback: @escaping LambdaCallback) {
-                callback(.success(payload))
-            }
-        }
-
         let signal = Signal.ALRM
         let maxTimes = 1000
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes, stopSignal: signal))
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
 
-        let future = Lambda.runAsync(eventLoopGroup: eventLoopGroup, configuration: configuration, factory: { _, callback in callback(.success(Handler())) })
+        let future = Lambda.runAsync(eventLoopGroup: eventLoopGroup, configuration: configuration, factory: { $0.makeSucceededFuture(EchoHandler()) })
         DispatchQueue(label: "test").async {
             usleep(100_000)
             kill(getpid(), signal.rawValue)
@@ -160,7 +160,7 @@ class LambdaTest: XCTestCase {
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1),
                                                  runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
         let result = Lambda.run(configuration: configuration, handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shouldFailWithError: LambdaRuntimeClientError.upstreamError("timeout"))
+        assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("timeout"))
     }
 
     func testDisconnect() {
@@ -170,7 +170,7 @@ class LambdaTest: XCTestCase {
 
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
         let result = Lambda.run(configuration: configuration, handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shouldFailWithError: LambdaRuntimeClientError.upstreamError("connectionResetByPeer"))
+        assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("connectionResetByPeer"))
     }
 
     func testBigPayload() {
@@ -231,7 +231,7 @@ class LambdaTest: XCTestCase {
         }
 
         let result = Lambda.run(handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shouldFailWithError: LambdaRuntimeClientError.badStatusCode(.internalServerError))
+        assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeError.badStatusCode(.internalServerError))
     }
 
     func testDeadline() {
@@ -253,35 +253,36 @@ class LambdaTest: XCTestCase {
         let past2 = DispatchWallTime(millisSinceEpoch: Date(timeIntervalSinceNow: Double(-delta)).millisSinceEpoch)
         XCTAssertEqual(Double(past1.rawValue), Double(past2.rawValue), accuracy: 2_000_000.0)
 
-        let logger = Logger(label: "test")
         let context = Lambda.Context(requestId: UUID().uuidString,
                                      traceId: UUID().uuidString,
                                      invokedFunctionArn: UUID().uuidString,
                                      deadline: .now() + .seconds(1),
                                      cognitoIdentity: nil,
                                      clientContext: nil,
-                                     logger: logger)
+                                     logger: Logger(label: "test"),
+                                     eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next())
         XCTAssertGreaterThan(context.deadline, .now())
 
-        let expiredContext = Lambda.Context(requestId: UUID().uuidString,
-                                            traceId: UUID().uuidString,
-                                            invokedFunctionArn: UUID().uuidString,
+        let expiredContext = Lambda.Context(requestId: context.requestId,
+                                            traceId: context.traceId,
+                                            invokedFunctionArn: context.invokedFunctionArn,
                                             deadline: .now() - .seconds(1),
-                                            cognitoIdentity: nil,
-                                            clientContext: nil,
-                                            logger: logger)
+                                            cognitoIdentity: context.cognitoIdentity,
+                                            clientContext: context.clientContext,
+                                            logger: context.logger,
+                                            eventLoop: context.eventLoop)
         XCTAssertLessThan(expiredContext.deadline, .now())
     }
 
     func testGetRemainingTime() {
-        let logger = Logger(label: "test")
         let context = Lambda.Context(requestId: UUID().uuidString,
                                      traceId: UUID().uuidString,
                                      invokedFunctionArn: UUID().uuidString,
                                      deadline: .now() + .seconds(1),
                                      cognitoIdentity: nil,
                                      clientContext: nil,
-                                     logger: logger)
+                                     logger: Logger(label: "test"),
+                                     eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next())
         XCTAssertLessThanOrEqual(context.getRemainingTime(), .seconds(1))
         XCTAssertGreaterThan(context.getRemainingTime(), .milliseconds(800))
     }

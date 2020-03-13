@@ -68,9 +68,8 @@ extension Lambda {
             let port: Int
             let keepAlive: Bool
             let requestTimeout: TimeAmount?
-            let offload: Bool
 
-            init(baseURL: String? = nil, keepAlive: Bool? = nil, requestTimeout: TimeAmount? = nil, offload: Bool? = nil) {
+            init(baseURL: String? = nil, keepAlive: Bool? = nil, requestTimeout: TimeAmount? = nil) {
                 let ipPort = env("AWS_LAMBDA_RUNTIME_API")?.split(separator: ":") ?? ["127.0.0.1", "7000"]
                 guard ipPort.count == 2, let port = Int(ipPort[1]) else {
                     preconditionFailure("invalid ip+port configuration \(ipPort)")
@@ -79,11 +78,10 @@ extension Lambda {
                 self.port = port
                 self.keepAlive = keepAlive ?? env("KEEP_ALIVE").flatMap(Bool.init) ?? true
                 self.requestTimeout = requestTimeout ?? env("REQUEST_TIMEOUT").flatMap(Int64.init).flatMap { .milliseconds($0) }
-                self.offload = offload ?? env("OFFLOAD").flatMap(Bool.init) ?? false
             }
 
             var description: String {
-                return "\(RuntimeEngine.self)(ip: \(self.ip), port: \(self.port), keepAlive: \(self.keepAlive), requestTimeout: \(String(describing: self.requestTimeout)), offload: \(self.offload)"
+                return "\(RuntimeEngine.self)(ip: \(self.ip), port: \(self.port), keepAlive: \(self.keepAlive), requestTimeout: \(String(describing: self.requestTimeout))"
             }
         }
 
