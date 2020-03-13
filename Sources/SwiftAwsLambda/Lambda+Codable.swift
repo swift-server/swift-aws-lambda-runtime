@@ -98,7 +98,7 @@ internal struct CodableVoidLambdaClosureWrapper<In: Decodable>: LambdaHandler {
 /// Implementation of  a`ByteBuffer` to `In` and `Out` to `ByteBuffer` codec
 /// Using Foundation's JSONEncoder and JSONDecoder
 /// Advanced users that want to inject their own codec can do it by overriding these functions.
-public extension LambdaHandler where In: Decodable, Out: Encodable {
+public extension EventLoopLambdaHandler where In: Decodable, Out: Encodable {
     func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer? {
         // FIXME: reusable JSONEncoder and buffer
         // nio will resize the buffer if necessary
@@ -113,7 +113,7 @@ public extension LambdaHandler where In: Decodable, Out: Encodable {
     }
 }
 
-public extension LambdaHandler where In: Decodable, Out == Void {
+public extension EventLoopLambdaHandler where In: Decodable, Out == Void {
     func encode(allocator: ByteBufferAllocator, value: Void) throws -> ByteBuffer? {
         return nil
     }

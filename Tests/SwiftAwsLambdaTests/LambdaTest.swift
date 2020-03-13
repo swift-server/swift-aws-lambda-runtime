@@ -46,6 +46,9 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: LambdaHandler {
+            typealias In = String
+            typealias Out = String
+
             var initialized = false
 
             init(eventLoop: EventLoop) {
@@ -79,6 +82,9 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: LambdaHandler {
+            typealias In = String
+            typealias Out = Void
+
             init(eventLoop: EventLoop) throws {
                 throw TestError("kaboom")
             }

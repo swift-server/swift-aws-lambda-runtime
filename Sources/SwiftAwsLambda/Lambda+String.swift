@@ -93,7 +93,7 @@ internal struct StringVoidLambdaClosureWrapper: LambdaHandler {
 }
 
 /// Implementation of  a`ByteBuffer` to `String` and `String` to `ByteBuffer` codec
-public extension LambdaHandler where In == String, Out == String {
+public extension EventLoopLambdaHandler where In == String, Out == String {
     func encode(allocator: ByteBufferAllocator, value: String) throws -> ByteBuffer? {
         var buffer = allocator.buffer(capacity: value.utf8.count)
         buffer.writeString(value)
@@ -109,7 +109,7 @@ public extension LambdaHandler where In == String, Out == String {
     }
 }
 
-public extension LambdaHandler where In == String, Out == Void {
+public extension EventLoopLambdaHandler where In == String, Out == Void {
     func encode(allocator: ByteBufferAllocator, value: Void) throws -> ByteBuffer? {
         return nil
     }

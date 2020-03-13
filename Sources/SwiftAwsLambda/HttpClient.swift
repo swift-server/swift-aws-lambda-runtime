@@ -153,7 +153,6 @@ private final class HTTPHandler: ChannelDuplexHandler {
             break
         }
 
-        // }
         // We don't add a "Connection" header here if we want to keep the connection open,
         // HTTP/1.1 defines specifies the following in RFC 2616, Section 8.1.2.1:
         //

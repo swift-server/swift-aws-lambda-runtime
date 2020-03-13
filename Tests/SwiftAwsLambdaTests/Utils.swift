@@ -35,12 +35,18 @@ func runLambda(behavior: LambdaServerBehavior, factory: @escaping LambdaHandlerF
 }
 
 struct EchoHandler: LambdaHandler {
+    typealias In = String
+    typealias Out = String
+
     func handle(context: Lambda.Context, payload: String, callback: (Result<String, Error>) -> Void) {
         callback(.success(payload))
     }
 }
 
 struct FailedHandler: LambdaHandler {
+    typealias In = String
+    typealias Out = Void
+
     private let reason: String
 
     public init(_ reason: String) {
