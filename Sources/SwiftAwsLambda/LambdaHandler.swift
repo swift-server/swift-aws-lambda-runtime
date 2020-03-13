@@ -21,7 +21,7 @@ import NIO
 /// `LambdaHandler` implements `EventLoopLambdaHandler`, performing callback to `EventLoopFuture` mapping, over a `DispatchQueue` for safety.
 ///
 /// - note: To implement a Lambda, implement either `LambdaHandler` or the `EventLoopLambdaHandler` protocol.
-///         The `LambdaHandler` will offload the Lambda execution to a `DispatchQueue` making the procssing safer but slower.
+///         The `LambdaHandler` will offload the Lambda execution to a `DispatchQueue` making processing safer but slower.
 ///         The `EventLoopLambdaHandler` will execute the Lambda on the same `EventLoop` as the core runtime engine, making the processing faster but requires
 ///         more care from the implementation to never block the `EventLoop`.
 public protocol LambdaHandler: EventLoopLambdaHandler {
@@ -29,7 +29,7 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
 }
 
 public extension LambdaHandler {
-    /// `LambdaHandler` is offloading to the processing to a `DispatchQueue`
+    /// `LambdaHandler` is offloading the processing to a `DispatchQueue`
     /// This is slower but safer, in case the implementation blocks the `EventLoop`
     /// Performance sensitive Lambdas should be based on `EventLoopLambdaHandler` which does not offload.
     func handle(context: Lambda.Context, payload: In) -> EventLoopFuture<Out> {
@@ -48,7 +48,7 @@ public extension LambdaHandler {
 /// `EventLoopLambdaHandler` extends `ByteBufferLambdaHandler`, performing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
 ///
 /// - note: To implement a Lambda, implement either `LambdaHandler` or the `EventLoopLambdaHandler` protocol.
-///         The `LambdaHandler` will offload the Lambda execution to a `DispatchQueue` making the procssing safer but slower
+///         The `LambdaHandler` will offload the Lambda execution to a `DispatchQueue` making processing safer but slower
 ///         The `EventLoopLambdaHandler` will execute the Lambda on the same `EventLoop` as the core runtime engine, making the processing faster but requires
 ///         more care from the implementation to never block the `EventLoop`.
 public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {

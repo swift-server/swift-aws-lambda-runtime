@@ -46,10 +46,10 @@ extension Lambda {
     }
 }
 
-/// A processing closure for a Lambda that takes a `String` and returns a `Result<String, Error>` via a `CompletionHandler`  asynchronously.
+/// A processing closure for a Lambda that takes a `String` and returns a `Result<String, Error>` via a `CompletionHandler` asynchronously.
 public typealias StringLambdaClosure = (Lambda.Context, String, @escaping (Result<String, Error>) -> Void) -> Void
 
-/// A processing closure for a Lambda that takes a `String` and returns a `Result<Void, Error>` via a `CompletionHandler`  asynchronously.
+/// A processing closure for a Lambda that takes a `String` and returns a `Result<Void, Error>` via a `CompletionHandler` asynchronously.
 public typealias StringVoidLambdaClosure = (Lambda.Context, String, @escaping (Result<Void, Error>) -> Void) -> Void
 
 @usableFromInline

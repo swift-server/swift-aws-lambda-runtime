@@ -74,7 +74,7 @@ The library defined 3 base protcols for the implementation of a Lambda:
     
     `LambdaHandler` extends `ByteBufferLambdaHandler`, performing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
     
-    `LambdaHandler` offloads the Lambda execution to a `DispatchQueue` making the procssing safer but slower.
+    `LambdaHandler` offloads the Lambda execution to a `DispatchQueue` making processing safer but slower.
 
 In addition to protocol based Lambda, the library provides support for Closure based ones, as demosrated in the getting started section. 
 Closure based Lambda are based on the `LambdaHandler` protocol which mean the are safer but slower. 
