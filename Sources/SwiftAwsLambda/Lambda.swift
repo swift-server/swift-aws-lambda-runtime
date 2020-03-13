@@ -100,14 +100,3 @@ public enum Lambda {
 }
 
 public typealias LambdaHandlerFactory = (EventLoop) -> EventLoopFuture<ByteBufferLambdaHandler>
-
-/// A processing protocol for a Lambda that takes a `ByteBuffer` and returns a `ByteBuffer?` asynchronously via `EventLoopPromise`.
-///
-/// - note: This is a low level API design to power the higher level `LambdaHandler` based APIs. Most users are not expected to implement this API.
-public protocol ByteBufferLambdaHandler {
-    /// Handles the Lambda request.
-    func handle(context: Lambda.Context, payload: ByteBuffer) -> EventLoopFuture<ByteBuffer?>
-
-    // Should execution be offloaded to a seperate thread
-    var offload: Bool { get }
-}

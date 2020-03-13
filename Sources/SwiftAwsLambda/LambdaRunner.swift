@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Dispatch // for offloading
+import Dispatch
 import Logging
 import NIO
 
@@ -21,12 +21,10 @@ extension Lambda {
     internal struct Runner {
         private let runtimeClient: RuntimeClient
         private let eventLoop: EventLoop
-        private let offloadQueue: DispatchQueue
 
         init(eventLoop: EventLoop, configuration: Configuration) {
             self.eventLoop = eventLoop
             self.runtimeClient = RuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine)
-            self.offloadQueue = DispatchQueue(label: "lambda-\(configuration.lifecycle.id)")
         }
 
         /// Run the user provided initializer. This *must* only be called once.
@@ -54,10 +52,7 @@ extension Lambda {
                 // 2. send work to handler
                 let context = Context(logger: logger, eventLoop: self.eventLoop, invocation: invocation)
                 logger.debug("sending work to lambda handler \(handler)")
-                return handler.handle(eventLoop: self.eventLoop,
-                                      offloadQueue: self.offloadQueue,
-                                      context: context,
-                                      payload: payload)
+                return handler.handle(context: context, payload: payload)
                     .mapResult { result in
                         if case .failure(let error) = result {
                             logger.warning("lambda handler returned an error: \(error)")
@@ -74,21 +69,6 @@ extension Lambda {
                 logger.log(level: result.successful ? .debug : .warning, "lambda invocation sequence completed \(result.successful ? "successfully" : "with failure")")
             }
         }
-    }
-}
-
-private extension ByteBufferLambdaHandler {
-    func handle(eventLoop: EventLoop, offloadQueue: DispatchQueue, context: Lambda.Context, payload: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
-        if !self.offload {
-            return self.handle(context: context, payload: payload).hop(to: eventLoop)
-        }
-        // offloading to a DispatchQueue
-        // this is slower but safer, in case the implementation blocks EventLoop
-        let promise = eventLoop.makePromise(of: ByteBuffer?.self)
-        offloadQueue.async {
-            self.handle(context: context, payload: payload).cascade(to: promise)
-        }
-        return promise.futureResult
     }
 }
 

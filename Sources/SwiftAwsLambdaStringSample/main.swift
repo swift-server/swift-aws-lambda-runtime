@@ -32,6 +32,6 @@ Lambda.run(Handler())
 
 /*
  Lambda.run { (_, payload: String, callback) in
- callback(.success(String(payload.reversed())))
+   callback(.success(String(payload.reversed())))
  }
  */

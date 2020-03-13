@@ -95,6 +95,7 @@ internal struct StringVoidLambdaClosureWrapper: LambdaHandler {
 /// Implementation of  a`ByteBuffer` to `String` and `String` to `ByteBuffer` codec
 public extension EventLoopLambdaHandler where In == String, Out == String {
     func encode(allocator: ByteBufferAllocator, value: String) throws -> ByteBuffer? {
+        // FIXME: reusable buffer
         var buffer = allocator.buffer(capacity: value.utf8.count)
         buffer.writeString(value)
         return buffer
@@ -103,7 +104,7 @@ public extension EventLoopLambdaHandler where In == String, Out == String {
     func decode(buffer: ByteBuffer) throws -> String {
         var buffer = buffer
         guard let string = buffer.readString(length: buffer.readableBytes) else {
-            fatalError("bug in NIO: buffer.readString(length: buffer.readableBytes) failed")
+            fatalError("buffer.readString(length: buffer.readableBytes) failed")
         }
         return string
     }
@@ -117,7 +118,7 @@ public extension EventLoopLambdaHandler where In == String, Out == Void {
     func decode(buffer: ByteBuffer) throws -> String {
         var buffer = buffer
         guard let string = buffer.readString(length: buffer.readableBytes) else {
-            fatalError("bug in NIO: buffer.readString(length: buffer.readableBytes) failed")
+            fatalError("buffer.readString(length: buffer.readableBytes) failed")
         }
         return string
     }

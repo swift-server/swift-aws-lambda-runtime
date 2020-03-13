@@ -12,12 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Dispatch
 import NIO
 
 // MARK: - LambdaHandler
 
-/// Strongly typed, callback based Lamnda.
-/// `LambdaHandler` implements `ByteBufferLambdaHandler`,  performing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
+/// Strongly typed, callback based processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` asynchronously.
+/// `LambdaHandler` implements `EventLoopLambdaHandler`, performing callback to `EventLoopFuture` mapping, over a `DispatchQueue` for safety.
 ///
 /// - note: To implement a Lambda, implement either `LambdaHandler` or the `EventLoopLambdaHandler` protocol.
 ///         The `LambdaHandler` will offload the Lambda execution to a `DispatchQueue` making the procssing safer but slower.
@@ -28,25 +29,28 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
 }
 
 public extension LambdaHandler {
+    /// `LambdaHandler` is offloading to the processing to a `DispatchQueue`
+    /// This is slower but safer, in case the implementation blocks the `EventLoop`
+    /// Performance sensitive Lambdas should be based on `EventLoopLambdaHandler` which does not offload.
     func handle(context: Lambda.Context, payload: In) -> EventLoopFuture<Out> {
         let promise = context.eventLoop.makePromise(of: Out.self)
-        self.handle(context: context, payload: payload, callback: promise.completeWith)
+        // FIXME: reusable DispatchQueue
+        DispatchQueue(label: "LambdaHandler.offload").async {
+            self.handle(context: context, payload: payload, callback: promise.completeWith)
+        }
         return promise.futureResult
     }
-
-    /// The `EventLoopLambdaHandler` will execute the Lambda on the same `EventLoop` as the core runtime engine, making the processing faster but requires
-    var offload: Bool { return true }
 }
 
 // MARK: - EventLoopLambdaHandler
 
-/// Strongly typed, `EventLoopFuture` based  Lambda.
-/// `EventLoopLambdaHandler` implements `ByteBufferLambdaHandler`,  performing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
+/// Strongly typed, `EventLoopFuture` based processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` asynchronously.
+/// `EventLoopLambdaHandler` extends `ByteBufferLambdaHandler`, performing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
 ///
 /// - note: To implement a Lambda, implement either `LambdaHandler` or the `EventLoopLambdaHandler` protocol.
 ///         The `LambdaHandler` will offload the Lambda execution to a `DispatchQueue` making the procssing safer but slower
 ///         The `EventLoopLambdaHandler` will execute the Lambda on the same `EventLoop` as the core runtime engine, making the processing faster but requires
-///         more care from the implementation to never  block the `EventLoop`.
+///         more care from the implementation to never block the `EventLoop`.
 public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
     associatedtype In
     associatedtype Out
@@ -57,22 +61,17 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
     func decode(buffer: ByteBuffer) throws -> In
 }
 
-public extension EventLoopLambdaHandler {
-    /// The `LambdaHandler` will offload the Lambda execution to a `DispatchQueue` making the procssing safer but slower.
-    var offload: Bool { return false }
-}
-
 /// Driver for `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding
 public extension EventLoopLambdaHandler {
     func handle(context: Lambda.Context, payload: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
         switch self.decodeIn(buffer: payload) {
         case .failure(let error):
-            return context.eventLoop.makeFailedFuture(Lambda.CodecError.requestDecoding(error))
+            return context.eventLoop.makeFailedFuture(CodecError.requestDecoding(error))
         case .success(let `in`):
             return self.handle(context: context, payload: `in`).flatMapThrowing { out in
                 switch self.encodeOut(allocator: context.allocator, value: out) {
                 case .failure(let error):
-                    throw Lambda.CodecError.responseEncoding(error)
+                    throw CodecError.responseEncoding(error)
                 case .success(let buffer):
                     return buffer
                 }
@@ -97,9 +96,18 @@ public extension EventLoopLambdaHandler {
     }
 }
 
-internal extension Lambda {
-    enum CodecError: Error {
-        case requestDecoding(Error)
-        case responseEncoding(Error)
-    }
+// MARK: - ByteBufferLambdaHandler
+
+/// An `EventLoopFuture` based processing protocol for a Lambda that takes a `ByteBuffer` and returns a `ByteBuffer?` asynchronously.
+///
+/// - note: This is a low level protocol designed to power the higher level `EventLoopLambdaHandler` and `LambdaHandler` based APIs.
+///         Most users are not expected to use this protocol.
+public protocol ByteBufferLambdaHandler {
+    /// Handles the Lambda request.
+    func handle(context: Lambda.Context, payload: ByteBuffer) -> EventLoopFuture<ByteBuffer?>
+}
+
+private enum CodecError: Error {
+    case requestDecoding(Error)
+    case responseEncoding(Error)
 }

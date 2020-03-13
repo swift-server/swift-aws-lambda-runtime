@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation // for JSON
+import class Foundation.JSONDecoder
+import class Foundation.JSONEncoder
 import NIO
 import NIOFoundationCompat
 
@@ -100,8 +101,8 @@ internal struct CodableVoidLambdaClosureWrapper<In: Decodable>: LambdaHandler {
 /// Advanced users that want to inject their own codec can do it by overriding these functions.
 public extension EventLoopLambdaHandler where In: Decodable, Out: Encodable {
     func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer? {
-        // FIXME: reusable JSONEncoder and buffer
         // nio will resize the buffer if necessary
+        // FIXME: reusable JSONEncoder and buffer
         var buffer = allocator.buffer(capacity: 1024)
         try JSONEncoder().encode(value, into: &buffer)
         return buffer

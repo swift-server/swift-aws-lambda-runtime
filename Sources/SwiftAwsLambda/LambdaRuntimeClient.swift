@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation // for JSON
+import class Foundation.JSONEncoder
 import Logging
 import NIO
 import NIOHTTP1
