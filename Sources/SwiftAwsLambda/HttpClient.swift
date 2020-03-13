@@ -34,18 +34,18 @@ internal final class HTTPClient {
     }
 
     func get(url: String, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
-        return self.execute(Request(targetHost: self.targetHost,
-                                    url: url,
-                                    method: .GET,
-                                    timeout: timeout ?? self.configuration.requestTimeout))
+        self.execute(Request(targetHost: self.targetHost,
+                             url: url,
+                             method: .GET,
+                             timeout: timeout ?? self.configuration.requestTimeout))
     }
 
     func post(url: String, body: ByteBuffer?, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
-        return self.execute(Request(targetHost: self.targetHost,
-                                    url: url,
-                                    method: .POST,
-                                    body: body,
-                                    timeout: timeout ?? self.configuration.requestTimeout))
+        self.execute(Request(targetHost: self.targetHost,
+                             url: url,
+                             method: .POST,
+                             body: body,
+                             timeout: timeout ?? self.configuration.requestTimeout))
     }
 
     // TODO: cap reconnect attempt

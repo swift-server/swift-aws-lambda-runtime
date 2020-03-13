@@ -26,7 +26,6 @@ public enum Lambda {
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    @inlinable
     public static func run(_ handler: ByteBufferLambdaHandler) {
         self.run(handler: handler)
     }
@@ -34,7 +33,6 @@ public enum Lambda {
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol provided via a `LambdaHandlerFactory`.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    @inlinable
     public static func run(_ factory: @escaping LambdaHandlerFactory) {
         self.run(factory: factory)
     }
@@ -42,23 +40,20 @@ public enum Lambda {
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol provided via a factory, typically a constructor.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    @inlinable
     public static func run(_ factory: @escaping (EventLoop) throws -> ByteBufferLambdaHandler) {
         self.run(factory: factory)
     }
 
     // for testing and internal use
-    @inlinable
     @discardableResult
     internal static func run(configuration: Configuration = .init(), handler: ByteBufferLambdaHandler) -> Result<Int, Error> {
-        return self.run(configuration: configuration, factory: { $0.makeSucceededFuture(handler) })
+        self.run(configuration: configuration, factory: { $0.makeSucceededFuture(handler) })
     }
 
     // for testing and internal use
-    @inlinable
     @discardableResult
     internal static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> ByteBufferLambdaHandler) -> Result<Int, Error> {
-        return self.run(configuration: configuration, factory: { eventloop -> EventLoopFuture<ByteBufferLambdaHandler> in
+        self.run(configuration: configuration, factory: { eventloop -> EventLoopFuture<ByteBufferLambdaHandler> in
             do {
                 let handler = try factory(eventloop)
                 return eventloop.makeSucceededFuture(handler)
@@ -69,7 +64,6 @@ public enum Lambda {
     }
 
     // for testing and internal use
-    @inlinable
     @discardableResult
     internal static func run(configuration: Configuration = .init(), factory: @escaping LambdaHandlerFactory) -> Result<Int, Error> {
         do {
@@ -82,7 +76,6 @@ public enum Lambda {
         }
     }
 
-    @usableFromInline
     internal static func runAsync(eventLoopGroup: EventLoopGroup, configuration: Configuration, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<Int> {
         Backtrace.install()
         var logger = Logger(label: "Lambda")

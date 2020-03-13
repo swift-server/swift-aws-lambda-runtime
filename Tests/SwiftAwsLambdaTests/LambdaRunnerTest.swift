@@ -21,7 +21,7 @@ class LambdaRunnerTest: XCTestCase {
             let requestId = UUID().uuidString
             let payload = "hello"
             func getWork() -> GetWorkResult {
-                return .success((self.requestId, self.payload))
+                .success((self.requestId, self.payload))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
@@ -48,7 +48,7 @@ class LambdaRunnerTest: XCTestCase {
             static let error = "boom"
             let requestId = UUID().uuidString
             func getWork() -> GetWorkResult {
-                return .success((requestId: self.requestId, payload: "hello"))
+                .success((requestId: self.requestId, payload: "hello"))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {

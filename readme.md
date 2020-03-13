@@ -7,7 +7,7 @@ This library is designed to simplify implementing an AWS Lambda using the Swift 
 1. Create a SwiftPM project and pull SwiftAwsLambda as dependency into your project
 
 ```swift
-// swift-tools-version:5.0
+// swift-tools-version:5.2
 import PackageDescription
 
 let package = Package(

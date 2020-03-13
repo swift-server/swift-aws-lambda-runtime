@@ -39,7 +39,7 @@ class LambdaRuntimeClientTest: XCTestCase {
     func testGetWorkServerInternalError() {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
-                return .failure(.internalServerError)
+                .failure(.internalServerError)
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
@@ -65,7 +65,7 @@ class LambdaRuntimeClientTest: XCTestCase {
     func testGetWorkServerNoBodyError() {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
-                return .success(("1", ""))
+                .success(("1", ""))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
@@ -92,7 +92,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
                 // no request id -> no context
-                return .success(("", "hello"))
+                .success(("", "hello"))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
@@ -118,11 +118,11 @@ class LambdaRuntimeClientTest: XCTestCase {
     func testProcessResponseInternalServerError() {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
-                return .success((requestId: "1", payload: "payload"))
+                .success((requestId: "1", payload: "payload"))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
-                return .failure(.internalServerError)
+                .failure(.internalServerError)
             }
 
             func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
@@ -143,7 +143,7 @@ class LambdaRuntimeClientTest: XCTestCase {
     func testProcessErrorInternalServerError() {
         struct Behavior: LambdaServerBehavior {
             func getWork() -> GetWorkResult {
-                return .success((requestId: "1", payload: "payload"))
+                .success((requestId: "1", payload: "payload"))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
@@ -152,7 +152,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
 
             func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
-                return .failure(.internalServerError)
+                .failure(.internalServerError)
             }
 
             func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
@@ -183,7 +183,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
 
             func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
-                return .failure(.internalServerError)
+                .failure(.internalServerError)
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), factory: { $0.makeFailedFuture(TestError("boom")) })) { error in

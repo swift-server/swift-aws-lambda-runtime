@@ -67,7 +67,7 @@ class CodableLambdaTest: XCTestCase {
             typealias Out = Response
 
             func handle(context: Lambda.Context, payload: Request, callback: (Result<Response, Error>) -> Void) {
-                return callback(.failure(TestError("boom")))
+                callback(.failure(TestError("boom")))
             }
         }
 
@@ -87,7 +87,7 @@ class CodableLambdaTest: XCTestCase {
             typealias Out = Response
 
             func handle(context: Lambda.Context, payload: Request) -> EventLoopFuture<Response> {
-                return context.eventLoop.makeSucceededFuture(Response(requestId: payload.requestId))
+                context.eventLoop.makeSucceededFuture(Response(requestId: payload.requestId))
             }
         }
 
@@ -107,7 +107,7 @@ class CodableLambdaTest: XCTestCase {
             typealias Out = Void
 
             func handle(context: Lambda.Context, payload: Request) -> EventLoopFuture<Void> {
-                return context.eventLoop.makeSucceededFuture(())
+                context.eventLoop.makeSucceededFuture(())
             }
         }
 
@@ -127,7 +127,7 @@ class CodableLambdaTest: XCTestCase {
             typealias Out = Response
 
             func handle(context: Lambda.Context, payload: Request) -> EventLoopFuture<Response> {
-                return context.eventLoop.makeFailedFuture(TestError("boom"))
+                context.eventLoop.makeFailedFuture(TestError("boom"))
             }
         }
 

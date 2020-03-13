@@ -17,13 +17,11 @@ import Logging
 import NIO
 
 extension Lambda {
-    @usableFromInline
     internal struct Configuration: CustomStringConvertible {
         let general: General
         let lifecycle: Lifecycle
         let runtimeEngine: RuntimeEngine
 
-        @usableFromInline
         init() {
             self.init(general: .init(), lifecycle: .init(), runtimeEngine: .init())
         }
@@ -42,7 +40,7 @@ extension Lambda {
             }
 
             var description: String {
-                return "\(General.self)(logLevel: \(self.logLevel))"
+                "\(General.self)(logLevel: \(self.logLevel))"
             }
         }
 
@@ -59,7 +57,7 @@ extension Lambda {
             }
 
             var description: String {
-                return "\(Lifecycle.self)(id: \(self.id), maxTimes: \(self.maxTimes), stopSignal: \(self.stopSignal))"
+                "\(Lifecycle.self)(id: \(self.id), maxTimes: \(self.maxTimes), stopSignal: \(self.stopSignal))"
             }
         }
 
@@ -81,13 +79,12 @@ extension Lambda {
             }
 
             var description: String {
-                return "\(RuntimeEngine.self)(ip: \(self.ip), port: \(self.port), keepAlive: \(self.keepAlive), requestTimeout: \(String(describing: self.requestTimeout))"
+                "\(RuntimeEngine.self)(ip: \(self.ip), port: \(self.port), keepAlive: \(self.keepAlive), requestTimeout: \(String(describing: self.requestTimeout))"
             }
         }
 
-        @usableFromInline
         var description: String {
-            return "\(Configuration.self)\n  \(self.general))\n  \(self.lifecycle)\n  \(self.runtimeEngine)"
+            "\(Configuration.self)\n  \(self.general))\n  \(self.lifecycle)\n  \(self.runtimeEngine)"
         }
     }
 }
