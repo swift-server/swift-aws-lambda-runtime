@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2017-2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import AWSLambdaRuntime
 import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
 import NIO
