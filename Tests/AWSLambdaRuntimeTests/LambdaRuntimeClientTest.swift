@@ -191,6 +191,24 @@ class LambdaRuntimeClientTest: XCTestCase {
         }
     }
 
+    func testErrorResponseToJSON() {
+        // we want to check if quotes and back slashes are correctly escaped
+        let windowsError = ErrorResponse(
+            errorType: "error",
+            errorMessage: #"underlyingError: "An error with a windows path C:\Windows\""#
+        )
+        let windowsBytes = windowsError.toJSONBytes()
+        XCTAssertEqual(#"{"errorType":"error","errorMessage":"underlyingError: \"An error with a windows path C:\\Windows\\\""}"#, String(decoding: windowsBytes, as: Unicode.UTF8.self))
+
+        // we want to check if unicode sequences work
+        let emojiError = ErrorResponse(
+            errorType: "error",
+            errorMessage: #"🥑👨‍👩‍👧‍👧👩‍👩‍👧‍👧👨‍👨‍👧"#
+        )
+        let emojiBytes = emojiError.toJSONBytes()
+        XCTAssertEqual(#"{"errorType":"error","errorMessage":"🥑👨‍👩‍👧‍👧👩‍👩‍👧‍👧👨‍👨‍👧"}"#, String(decoding: emojiBytes, as: Unicode.UTF8.self))
+    }
+
     class Behavior: LambdaServerBehavior {
         var state = 0
 

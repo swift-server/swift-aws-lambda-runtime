@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import class Foundation.JSONEncoder
 import Logging
 import NIO
 import NIOHTTP1
@@ -68,14 +67,10 @@ extension Lambda {
                 body = buffer
             case .failure(let error):
                 url += Consts.postErrorURLSuffix
-                let error = ErrorResponse(errorType: Consts.functionError, errorMessage: "\(error)")
-                switch error.toJson() {
-                case .failure(let jsonError):
-                    return self.eventLoop.makeFailedFuture(RuntimeError.json(jsonError))
-                case .success(let json):
-                    body = self.allocator.buffer(capacity: json.utf8.count)
-                    body!.writeString(json)
-                }
+                let errorResponse = ErrorResponse(errorType: Consts.functionError, errorMessage: "\(error)")
+                let bytes = errorResponse.toJSONBytes()
+                body = self.allocator.buffer(capacity: bytes.count)
+                body!.writeBytes(bytes)
             }
             logger.debug("reporting results to lambda runtime engine using \(url)")
             return self.httpClient.post(url: url, body: body).flatMapThrowing { response in
@@ -99,28 +94,23 @@ extension Lambda {
         func reportInitializationError(logger: Logger, error: Error) -> EventLoopFuture<Void> {
             let url = Consts.postInitErrorURL
             let errorResponse = ErrorResponse(errorType: Consts.initializationError, errorMessage: "\(error)")
-            var body: ByteBuffer
-            switch errorResponse.toJson() {
-            case .failure(let jsonError):
-                return self.eventLoop.makeFailedFuture(RuntimeError.json(jsonError))
-            case .success(let json):
-                body = self.allocator.buffer(capacity: json.utf8.count)
-                body.writeString(json)
-                logger.warning("reporting initialization error to lambda runtime engine using \(url)")
-                return self.httpClient.post(url: url, body: body).flatMapThrowing { response in
-                    guard response.status == .accepted else {
-                        throw RuntimeError.badStatusCode(response.status)
-                    }
-                    return ()
-                }.flatMapErrorThrowing { error in
-                    switch error {
-                    case HTTPClient.Errors.timeout:
-                        throw RuntimeError.upstreamError("timeout")
-                    case HTTPClient.Errors.connectionResetByPeer:
-                        throw RuntimeError.upstreamError("connectionResetByPeer")
-                    default:
-                        throw error
-                    }
+            let bytes = errorResponse.toJSONBytes()
+            var body = self.allocator.buffer(capacity: bytes.count)
+            body.writeBytes(bytes)
+            logger.warning("reporting initialization error to lambda runtime engine using \(url)")
+            return self.httpClient.post(url: url, body: body).flatMapThrowing { response in
+                guard response.status == .accepted else {
+                    throw RuntimeError.badStatusCode(response.status)
+                }
+                return ()
+            }.flatMapErrorThrowing { error in
+                switch error {
+                case HTTPClient.Errors.timeout:
+                    throw RuntimeError.upstreamError("timeout")
+                case HTTPClient.Errors.connectionResetByPeer:
+                    throw RuntimeError.upstreamError("connectionResetByPeer")
+                default:
+                    throw error
                 }
             }
         }
@@ -142,15 +132,16 @@ internal struct ErrorResponse: Codable {
     var errorMessage: String
 }
 
-private extension ErrorResponse {
-    func toJson() -> Result<String, Error> {
-        let encoder = JSONEncoder()
-        do {
-            let data = try encoder.encode(self)
-            return .success(String(data: data, encoding: .utf8) ?? "unknown error")
-        } catch {
-            return .failure(error)
-        }
+internal extension ErrorResponse {
+    func toJSONBytes() -> [UInt8] {
+        var bytes = [UInt8]()
+        bytes.append(UInt8(ascii: "{"))
+        bytes.append(contentsOf: #""errorType":"# .utf8)
+        self.errorType.encodeAsJSONString(into: &bytes)
+        bytes.append(contentsOf: #","errorMessage":"# .utf8)
+        self.errorMessage.encodeAsJSONString(into: &bytes)
+        bytes.append(UInt8(ascii: "}"))
+        return bytes
     }
 }
 
