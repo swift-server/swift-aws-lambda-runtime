@@ -32,42 +32,43 @@ SwiftAWSLambdaRuntime is designed to simplify the implementation of an AWS Lambd
   ```
 
 2. Create a main.swift and implement your Lambda. Typically a Lambda is implemented as a closure.
-    For example, a closure that receives a JSON payload and replies with a JSON response via `Codable`:
+   For example, a closure that receives a JSON payload and replies with a JSON response via `Codable`:
 
-  ```swift
-  import AWSLambdaRuntime
+   ```swift
+   import AWSLambdaRuntime
 
-  private struct Request: Codable {
-    let name: String
-  }
+   private struct Request: Codable {
+     let name: String
+   }
 
-  private struct Response: Codable {
-    let message: String
-  }
+   private struct Response: Codable {
+     let message: String
+   }
 
-  // In this example we are receiving and responding with Codable.
-  // Request and Response above are examples of how to use Codable to model your request and response objects.
-  Lambda.run { (_, request: Request, callback) in
-    callback(.success(Response(message: "Hello, \(request.name)")))
-  }
-  ```
+   // In this example we are receiving and responding with Codable.
+   // Request and Response above are examples of how to use Codable to model
+   // request and response objects.
+   Lambda.run { (_, request: Request, callback) in
+     callback(.success(Response(message: "Hello, \(request.name)")))
+   }
+   ```
 
-  Or, a closure that receives a string payload and replies with the reverse version:
+   Or, a closure that receives a string payload and replies with the reverse version:
 
-  ```swift
-  import AWSLambdaRuntime
+   ```swift
+   import AWSLambdaRuntime
 
-  // in this example we are receiving and responding with strings
-  Lambda.run { (context, payload: String, callback) in
-    callback(.success(String(payload.reversed())))
-  }
-  ```
+   // in this example we are receiving and responding with strings
+   Lambda.run { (context, payload: String, callback) in
+     callback(.success(String(payload.reversed())))
+   }
+   ```
 
-  See a complete example in AWSLambdaRuntimeSample.
+   See a complete example in AWSLambdaRuntimeSample.
 
 3. Deploy to AWS Lambda. To do so, you need to compile your Application for Amazon 2 Linux, package it as a Zip file, and upload to AWS.
 
-  You can find sample build and deployment scripts in AWSLambdaRuntimeSample.
+   You can find sample build and deployment scripts in AWSLambdaRuntimeSample.
 
 ## Architecture
 
@@ -75,23 +76,23 @@ The library defined 3 base protcols for the implementation of a Lambda:
 
 1. `ByteBufferLambdaHandler`: `EventLoopFuture` based processing protocol for a Lambda that takes a `ByteBuffer` and returns a `ByteBuffer?` asynchronously.
 
-  `ByteBufferLambdaHandler` is a low level protocol designed to power the higher level `EventLoopLambdaHandler` and `LambdaHandler` based APIs.
+   `ByteBufferLambdaHandler` is a low level protocol designed to power the higher level `EventLoopLambdaHandler` and `LambdaHandler` based APIs.
 
-  Most users are not expected to use this protocol.
+   Most users are not expected to use this protocol.
 
 2. `EventLoopLambdaHandler`: Strongly typed, `EventLoopFuture` based processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` asynchronously.
 
-  `EventLoopLambdaHandler` extends `ByteBufferLambdaHandler`, performing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
+   `EventLoopLambdaHandler` extends `ByteBufferLambdaHandler`, performing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
 
-  `EventLoopLambdaHandler` executes the Lambda on the same `EventLoop` as the core runtime engine, making the processing faster but requires more care from the implementation to never block the `EventLoop`.
+   `EventLoopLambdaHandler` executes the Lambda on the same `EventLoop` as the core runtime engine, making the processing faster but requires more care from the implementation to never block the `EventLoop`.
 
 3. `LambdaHandler`: Strongly typed, callback based processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` asynchronously.
 
-  `LambdaHandler` extends `ByteBufferLambdaHandler`, performing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
+   `LambdaHandler` extends `ByteBufferLambdaHandler`, performing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
 
-  `LambdaHandler` offloads the Lambda execution to a `DispatchQueue` making processing safer but slower.
+   `LambdaHandler` offloads the Lambda execution to a `DispatchQueue` making processing safer but slower.
 
-In addition to protocol based Lambda, the library provides support for Closure based ones, as demosrated in the getting started section.
+In addition to protocol based Lambda, the library provides support for Closure based ones, as demonstrated in the getting started section.
 
 Closure based Lambda are based on the `LambdaHandler` protocol which mean the are safer but slower.
 For most use cases, Closure based Lambda is a great fit.
@@ -102,7 +103,7 @@ The library includes built-in codec for `String` and `Codable` into `ByteBuffer`
 
 Since AWS Lambda is primarily JSON based, this covers the most common use cases.
 
-The design does allow for other payload types as well, and such Lambda implementaion can extend one of the above protocols and provided their own `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
+The design does allow for other payload types as well, and such Lambda implementation can extend one of the above protocols and provided their own `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
 
 The library is designed to integrate with AWS Lambda Runtime Engine, via the BYOL Native Runtime API. The latter is an HTTP server that exposes three main RESTful endpoint:
 * `/runtime/invocation/next`
@@ -118,7 +119,7 @@ The library encapsulates these endpoints and the expected lifecycle via `Lambda.
 2. The library parses the response HTTP headers and populate the `Lambda.Context` object.
 
 3. The library reads the response body and attempt to decode it, if required.
-  Typically it decodes to user provided type which extends `Decodable`, but users may choose to write Lambdas that receive the input as `String` or `ByteBuffer` which require less, or no decoding.
+   Typically it decodes to user provided type which extends `Decodable`, but users may choose to write Lambdas that receive the input as `String` or `ByteBuffer` which require less, or no decoding.
 
 4. The library hands off the `Context` and `Request` to the user provided handler.
   In the case of `LambdaHandler` based Lambda this is done on a dedicated `DispatchQueue`, providing isolation between user's and the library's code.
@@ -128,8 +129,8 @@ The library encapsulates these endpoints and the expected lifecycle via `Lambda.
 6. In case of error, the library posts to AWS Lambda Runtime Engine `/error` endpoint to provide the error details, which will show up on AWS Lambda logs.
 
 7. In case of success, the library will attempt to encode the response, if required.
-  Typically it encodes from user provided type which extends `Encodable`, but users may choose to write Lambdas that return a `String` or `ByteBuffer`, which require less, or no encoding.
-  The library then posts to AWS Lambda Runtime Engine `/response` endpoint to provide the response.
+   Typically it encodes from user provided type which extends `Encodable`, but users may choose to write Lambdas that return a `String` or `ByteBuffer`, which require less, or no encoding.
+   The library then posts to AWS Lambda Runtime Engine `/response` endpoint to provide the response.
 
 **Lifecycle Management**
 
