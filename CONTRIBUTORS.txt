@@ -11,7 +11,11 @@ needs to be listed here.
 
 ### Contributors
 
-- tomer doron <tomerd@apple.com>
+- Fabian Fett <fabianfett@mac.com>
+- George Barnett <gbarnett@apple.com>
+- Johannes Weiss <johannesweiss@apple.com>
+- Norman Maurer <norman_maurer@apple.com>
+- Tomer Doron <tomer@apple.com>
 
 **Updating this list**
 
