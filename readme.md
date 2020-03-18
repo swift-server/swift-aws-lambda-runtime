@@ -25,14 +25,34 @@ SwiftAWSLambdaRuntime is designed to simplify the implementation of an AWS Lambd
       ],
       targets: [
           .target(name: "MyLambda", dependencies: [
-            .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda"),
+            .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
           ]),
       ]
   )
   ```
 
 2. Create a main.swift and implement your Lambda. Typically a Lambda is implemented as a closure.
-    For example, a closure that receives a string payload and replies with the reverse version:
+    For example, a closure that receives a JSON payload and replies with a JSON response via `Codable`:
+
+  ```swift
+  import AWSLambdaRuntime
+
+  private struct Request: Codable {
+    let name: String
+  }
+
+  private struct Response: Codable {
+    let message: String
+  }
+
+  // In this example we are receiving and responding with Codable.
+  // Request and Response above are examples of how to use Codable to model your request and response objects.
+  Lambda.run { (_, request: Request, callback) in
+    callback(.success(Response(message: "Hello, \(request.name)")))
+  }
+  ```
+
+  Or, a closure that receives a string payload and replies with the reverse version:
 
   ```swift
   import AWSLambdaRuntime
@@ -40,21 +60,6 @@ SwiftAWSLambdaRuntime is designed to simplify the implementation of an AWS Lambd
   // in this example we are receiving and responding with strings
   Lambda.run { (context, payload: String, callback) in
     callback(.success(String(payload.reversed())))
-  }
-  ```
-
-  Or more typically, a closure that receives a JSON payload and replies with a JSON response via `Codable`:
-
-  ```swift
-  import AWSLambdaRuntime
-
-  private struct Request: Codable {}
-  private struct Response: Codable {}
-
-  // in this example we are receiving and responding with codables. Request and Response above are examples of how to use
-  // codables to model your request and response objects
-  Lambda.run { (_, _: Request, callback) in
-    callback(.success(Response()))
   }
   ```
 
