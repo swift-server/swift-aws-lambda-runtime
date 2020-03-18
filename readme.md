@@ -10,26 +10,26 @@ SwiftAWSLambdaRuntime is designed to simplify the implementation of an AWS Lambd
 
 1. Create a SwiftPM project and pull SwiftAWSLambdaRuntime as dependency into your project
 
-  ```swift
-  // swift-tools-version:5.2
+   ```swift
+   // swift-tools-version:5.2
 
-  import PackageDescription
+   import PackageDescription
 
-  let package = Package(
-      name: "my-lambda",
-      products: [
-          .executable(name: "MyLambda", targets: ["MyLambda"]),
-      ],
-      dependencies: [
-          .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", .branch("master")),
-      ],
-      targets: [
-          .target(name: "MyLambda", dependencies: [
-            .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-          ]),
-      ]
-  )
-  ```
+   let package = Package(
+       name: "my-lambda",
+       products: [
+           .executable(name: "MyLambda", targets: ["MyLambda"]),
+       ],
+       dependencies: [
+           .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", .branch("master")),
+       ],
+       targets: [
+           .target(name: "MyLambda", dependencies: [
+             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+           ]),
+       ]
+   )
+   ```
 
 2. Create a main.swift and implement your Lambda. Typically a Lambda is implemented as a closure.
    For example, a closure that receives a JSON payload and replies with a JSON response via `Codable`:
