@@ -30,7 +30,7 @@ RUN chmod 755 $HOME/.tools/symbolicate-linux-fatal
 
 # swiftformat (until part of the toolchain)
 
-ARG swiftformat_version=0.40.12
+ARG swiftformat_version=0.44.0
 RUN git clone --branch $swiftformat_version --depth 1 https://github.com/nicklockwood/SwiftFormat $HOME/.tools/swift-format
 RUN cd $HOME/.tools/swift-format && swift build -c release
 RUN ln -s $HOME/.tools/swift-format/.build/release/swiftformat $HOME/.tools/swiftformat
