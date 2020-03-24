@@ -4,8 +4,12 @@ import PackageDescription
 
 let package = Package(
     name: "swift-aws-lambda-runtime",
+    platforms: [
+        .macOS(.v10_13),
+    ],
     products: [
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
+        .library(name: "AWSLambdaEvents", targets: ["AWSLambdaEvents"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.8.0"),
@@ -20,6 +24,8 @@ let package = Package(
             .product(name: "NIOFoundationCompat", package: "swift-nio"),
         ]),
         .testTarget(name: "AWSLambdaRuntimeTests", dependencies: ["AWSLambdaRuntime"]),
+        .target(name: "AWSLambdaEvents", dependencies: []),
+        .testTarget(name: "AWSLambdaEventsTests", dependencies: ["AWSLambdaEvents"]),
         // samples
         .target(name: "StringSample", dependencies: ["AWSLambdaRuntime"]),
         .target(name: "CodableSample", dependencies: ["AWSLambdaRuntime"]),
