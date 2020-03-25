@@ -24,7 +24,10 @@ let package = Package(
             .product(name: "NIOFoundationCompat", package: "swift-nio"),
         ]),
         .testTarget(name: "AWSLambdaRuntimeTests", dependencies: ["AWSLambdaRuntime"]),
-        .target(name: "AWSLambdaEvents", dependencies: []),
+        .target(name: "AWSLambdaEvents", dependencies: [
+            .product(name: "NIOHTTP1", package: "swift-nio"),
+            .product(name: "NIOFoundationCompat", package: "swift-nio"),
+        ]),
         .testTarget(name: "AWSLambdaEventsTests", dependencies: ["AWSLambdaEvents"]),
         // samples
         .target(name: "StringSample", dependencies: ["AWSLambdaRuntime"]),
