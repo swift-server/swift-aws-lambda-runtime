@@ -1,0 +1,11 @@
+.DS_Store
+/.build
+/Packages
+/*.xcodeproj
+Package.pins
+*.pem
+/docs
+Package.resolved
+.podspecs
+function.zip
+.swiftpm
