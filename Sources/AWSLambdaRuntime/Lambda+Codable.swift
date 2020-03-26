@@ -88,16 +88,22 @@ internal struct CodableVoidLambdaClosureWrapper<In: Decodable>: LambdaHandler {
 public extension EventLoopLambdaHandler where In: Decodable, Out: Encodable {
     func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer? {
         // nio will resize the buffer if necessary
-        // FIXME: reusable JSONEncoder and buffer
         var buffer = allocator.buffer(capacity: 1024)
-        try JSONEncoder().encode(value, into: &buffer)
+        try Lambda.defaultJSONEncoder.encode(value, into: &buffer)
         return buffer
     }
 
     func decode(buffer: ByteBuffer) throws -> In {
-        // FIXME: reusable JSONDecoder
-        try JSONDecoder().decode(In.self, from: buffer)
+        try Lambda.defaultJSONDecoder.decode(In.self, from: buffer)
     }
+}
+
+private extension Lambda {
+    /// the default json encoder used in `EventLoopLambdaHandler` if Out == Encodable
+    static let defaultJSONEncoder = JSONEncoder()
+
+    /// the default json decoder used in `EventLoopLambdaHandler` if In == Decodable
+    static let defaultJSONDecoder = JSONDecoder()
 }
 
 public extension EventLoopLambdaHandler where In: Decodable, Out == Void {
@@ -106,7 +112,6 @@ public extension EventLoopLambdaHandler where In: Decodable, Out == Void {
     }
 
     func decode(buffer: ByteBuffer) throws -> In {
-        // FIXME: reusable JSONDecoder
-        try JSONDecoder().decode(In.self, from: buffer)
+        try Lambda.defaultJSONDecoder.decode(In.self, from: buffer)
     }
 }
