@@ -28,7 +28,7 @@ public struct ISO8601Coding: Decodable {
         let dateString = try container.decode(String.self)
         guard let date = Self.dateFormatter.date(from: dateString) else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription:
-                "Expected date to be in iso8601 date format, but `\(dateString) does not forfill format`")
+                "Expected date to be in iso8601 date format, but `\(dateString)` does not forfill format")
         }
         self.wrappedValue = date
     }
@@ -49,7 +49,7 @@ public struct ISO8601WithFractionalSecondsCoding: Decodable {
         let dateString = try container.decode(String.self)
         guard let date = Self.dateFormatter.date(from: dateString) else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription:
-                "Expected date to be in iso8601 date format with fractional seconds, but `\(dateString) does not forfill format`")
+                "Expected date to be in iso8601 date format with fractional seconds, but `\(dateString)` does not forfill format")
         }
         self.wrappedValue = date
     }

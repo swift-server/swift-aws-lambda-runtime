@@ -20,7 +20,7 @@ public enum S3 {
         public struct Record: Decodable {
             public let eventVersion: String
             public let eventSource: String
-            public let awsRegion: String
+            public let awsRegion: AWSRegion
 
             @ISO8601WithFractionalSecondsCoding
             public var eventTime: Date

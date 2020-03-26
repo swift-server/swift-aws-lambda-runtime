@@ -46,7 +46,7 @@ class CloudwatchTests: XCTestCase {
         XCTAssertEqual(event.source, "aws.events")
         XCTAssertEqual(event.accountId, "123456789012")
         XCTAssertEqual(event.time, Date(timeIntervalSince1970: 0))
-        XCTAssertEqual(event.region, "us-east-1")
+        XCTAssertEqual(event.region, .us_east_1)
         XCTAssertEqual(event.resources, ["arn:aws:events:us-east-1:123456789012:rule/ExampleRule"])
     }
 }

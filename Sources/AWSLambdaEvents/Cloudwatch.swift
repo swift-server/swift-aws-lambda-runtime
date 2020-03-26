@@ -15,16 +15,20 @@
 import struct Foundation.Date
 
 public enum Cloudwatch {
+    /// CloudWatch.Event is the outer structure of an event sent via CloudWatch Events.
+    ///
+    /// **NOTE**: For examples of events that come via CloudWatch Events, see https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/EventTypes.html
     public struct Event<Detail: Decodable>: Decodable {
         public let id: String
-        public let detailType: String
         public let source: String
         public let accountId: String
 
         @ISO8601Coding
         public var time: Date
-        public let region: String
+        public let region: AWSRegion
         public let resources: [String]
+
+        public let detailType: String
         public let detail: Detail
 
         enum CodingKeys: String, CodingKey {
