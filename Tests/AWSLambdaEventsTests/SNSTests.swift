@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 @testable import AWSLambdaEvents
-import NIO
 import XCTest
 
 class SNSTests: XCTestCase {

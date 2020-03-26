@@ -158,7 +158,7 @@ extension Base64 {
         static let base64UrlAlphabet = DecodingOptions(rawValue: UInt(1 << 0))
     }
 
-    enum DecodingError: Error {
+    enum DecodingError: Error, Equatable {
         case invalidLength
         case invalidCharacter(UInt8)
         case unexpectedPaddingCharacter
