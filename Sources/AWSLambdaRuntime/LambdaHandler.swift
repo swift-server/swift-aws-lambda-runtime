@@ -25,17 +25,28 @@ import NIO
 ///         The `EventLoopLambdaHandler` will execute the Lambda on the same `EventLoop` as the core runtime engine, making the processing faster but requires
 ///         more care from the implementation to never block the `EventLoop`.
 public protocol LambdaHandler: EventLoopLambdaHandler {
+    var offloadQueue: DispatchQueue { get }
+
     func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void)
 }
 
+private extension Lambda {
+    static let defaultOffloadQueue = DispatchQueue(label: "LambdaHandler.offload")
+}
+
 public extension LambdaHandler {
+    /// The queue on which `handle` is invoked on.
+    var offloadQueue: DispatchQueue {
+        Lambda.defaultOffloadQueue
+    }
+
     /// `LambdaHandler` is offloading the processing to a `DispatchQueue`
     /// This is slower but safer, in case the implementation blocks the `EventLoop`
     /// Performance sensitive Lambdas should be based on `EventLoopLambdaHandler` which does not offload.
     func handle(context: Lambda.Context, payload: In) -> EventLoopFuture<Out> {
         let promise = context.eventLoop.makePromise(of: Out.self)
         // FIXME: reusable DispatchQueue
-        DispatchQueue(label: "LambdaHandler.offload").async {
+        self.offloadQueue.async {
             self.handle(context: context, payload: payload, callback: promise.completeWith)
         }
         return promise.futureResult
