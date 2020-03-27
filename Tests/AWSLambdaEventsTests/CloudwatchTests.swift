@@ -33,20 +33,22 @@ class CloudwatchTests: XCTestCase {
 
     func testScheduledEventFromJSON() {
         let data = CloudwatchTests.scheduledEventPayload.data(using: .utf8)!
-        var maybeEvent: Cloudwatch.Event<Cloudwatch.ScheduledEvent>?
-        XCTAssertNoThrow(maybeEvent = try JSONDecoder().decode(Cloudwatch.Event<Cloudwatch.ScheduledEvent>.self, from: data))
+        var maybeEvent: Cloudwatch.Event?
+        XCTAssertNoThrow(maybeEvent = try JSONDecoder().decode(Cloudwatch.Event.self, from: data))
 
         guard let event = maybeEvent else {
-            XCTFail("Expected to have an event")
-            return
+            XCTFail("Expected to have an event"); return
         }
 
         XCTAssertEqual(event.id, "cdc73f9d-aea9-11e3-9d5a-835b769c0d9c")
-        XCTAssertEqual(event.detailType, "Scheduled Event")
         XCTAssertEqual(event.source, "aws.events")
         XCTAssertEqual(event.accountId, "123456789012")
         XCTAssertEqual(event.time, Date(timeIntervalSince1970: 0))
         XCTAssertEqual(event.region, .us_east_1)
         XCTAssertEqual(event.resources, ["arn:aws:events:us-east-1:123456789012:rule/ExampleRule"])
+
+        guard case Cloudwatch.Event.Detail.scheduled = event.detail else {
+            XCTFail("Unexpected detail: \(event.detail)"); return
+        }
     }
 }
