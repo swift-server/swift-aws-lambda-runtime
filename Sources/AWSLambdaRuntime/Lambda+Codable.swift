@@ -82,36 +82,51 @@ internal struct CodableVoidLambdaClosureWrapper<In: Decodable>: LambdaHandler {
     }
 }
 
-/// Implementation of  a`ByteBuffer` to `In` and `Out` to `ByteBuffer` codec
-/// Using Foundation's JSONEncoder and JSONDecoder
-/// Advanced users that want to inject their own codec can do it by overriding these functions.
-public extension EventLoopLambdaHandler where In: Decodable, Out: Encodable {
+/// Implementation of  a`ByteBuffer` to `In` decoding
+public extension EventLoopLambdaHandler where In: Decodable {
+    func decode(buffer: ByteBuffer) throws -> In {
+        try self.decoder.decode(In.self, from: buffer)
+    }
+}
+
+/// Implementation of  `Out` to `ByteBuffer` encoding
+public extension EventLoopLambdaHandler where Out: Encodable {
     func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer? {
         // nio will resize the buffer if necessary
         var buffer = allocator.buffer(capacity: 1024)
-        try Lambda.defaultJSONEncoder.encode(value, into: &buffer)
+        try self.encoder.encode(value, into: &buffer)
         return buffer
     }
+}
 
-    func decode(buffer: ByteBuffer) throws -> In {
-        try Lambda.defaultJSONDecoder.decode(In.self, from: buffer)
+/// Default `ByteBuffer` to `In` decoder using Foundation's JSONDecoder
+/// Advanced users that want to inject their own codec can do it by overriding these functions.
+public extension EventLoopLambdaHandler where In: Decodable {
+    var decoder: LambdaCodableDecoder {
+        Lambda.defaultJSONDecoder
     }
+}
+
+/// Default `Out` to `ByteBuffer` encoder using Foundation's JSONEncoder
+/// Advanced users that want to inject their own codec can do it by overriding these functions.
+public extension EventLoopLambdaHandler where Out: Encodable {
+    var encoder: LambdaCodableEncoder {
+        Lambda.defaultJSONEncoder
+    }
+}
+
+public protocol LambdaCodableDecoder {
+    func decode<T: Decodable>(_ type: T.Type, from buffer: ByteBuffer) throws -> T
+}
+
+public protocol LambdaCodableEncoder {
+    func encode<T: Encodable>(_ value: T, into buffer: inout ByteBuffer) throws
 }
 
 private extension Lambda {
-    /// the default json encoder used in `EventLoopLambdaHandler` if Out == Encodable
-    static let defaultJSONEncoder = JSONEncoder()
-
-    /// the default json decoder used in `EventLoopLambdaHandler` if In == Decodable
     static let defaultJSONDecoder = JSONDecoder()
+    static let defaultJSONEncoder = JSONEncoder()
 }
 
-public extension EventLoopLambdaHandler where In: Decodable, Out == Void {
-    func encode(allocator: ByteBufferAllocator, value: Void) throws -> ByteBuffer? {
-        nil
-    }
-
-    func decode(buffer: ByteBuffer) throws -> In {
-        try Lambda.defaultJSONDecoder.decode(In.self, from: buffer)
-    }
-}
+extension JSONDecoder: LambdaCodableDecoder {}
+extension JSONEncoder: LambdaCodableEncoder {}

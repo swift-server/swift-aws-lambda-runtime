@@ -107,6 +107,13 @@ public extension EventLoopLambdaHandler {
     }
 }
 
+/// Implementation of  `ByteBuffer` to `Void` decoding
+public extension EventLoopLambdaHandler where Out == Void {
+    func encode(allocator: ByteBufferAllocator, value: Void) throws -> ByteBuffer? {
+        nil
+    }
+}
+
 // MARK: - ByteBufferLambdaHandler
 
 /// An `EventLoopFuture` based processing protocol for a Lambda that takes a `ByteBuffer` and returns a `ByteBuffer?` asynchronously.
