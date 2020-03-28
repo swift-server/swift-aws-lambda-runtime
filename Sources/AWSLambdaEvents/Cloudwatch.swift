@@ -23,14 +23,13 @@ public enum Cloudwatch {
     /// **NOTE**: For examples of events that come via CloudWatch Events, see
     /// https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/EventTypes.html
     /// https://docs.aws.amazon.com/eventbridge/latest/userguide/event-types.html
-    public struct Event: Decodable {
+    public struct Event<Detail: Decodable>: Decodable {
         public let id: String
         public let source: String
         public let accountId: String
         public let time: Date
         public let region: AWSRegion
         public let resources: [String]
-
         public let detail: Detail
 
         enum CodingKeys: String, CodingKey {
@@ -49,59 +48,63 @@ public enum Cloudwatch {
             self.id = try container.decode(String.self, forKey: .id)
             self.source = try container.decode(String.self, forKey: .source)
             self.accountId = try container.decode(String.self, forKey: .accountId)
-            let time = try container.decode(ISO8601Coding.self, forKey: .time)
-            self.time = time.wrappedValue
+            self.time = (try container.decode(ISO8601Coding.self, forKey: .time)).wrappedValue
             self.region = try container.decode(AWSRegion.self, forKey: .region)
             self.resources = try container.decode([String].self, forKey: .resources)
-
-            self.detail = try Detail(from: decoder)
+            self.detail = (try DetailCoding(from: decoder)).guts
         }
 
-        public enum Detail: Decodable {
-            case scheduled
-            case ec2InstanceStateChangeNotification(EC2.InstanceStateChangeNotification)
-            case ec2SpotInstanceInterruptionWarning(EC2.SpotInstanceInterruptionNotice)
-            case custom(label: String, detail: Decodable)
+        private struct DetailCoding {
+            public let guts: Detail
 
-            enum CodingKeys: String, CodingKey {
+            internal enum CodingKeys: String, CodingKey {
                 case detailType = "detail-type"
                 case detail
-            }
-
-            // FIXME: make thread safe
-            static var registry = [String: (Decoder) throws -> Decodable]()
-            public static func register<T: Decodable>(label: String, type: T.Type) {
-                registry[label] = type.init
             }
 
             public init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 let detailType = try container.decode(String.self, forKey: .detailType)
+                let detailFactory: (Decoder) throws -> Decodable
                 switch detailType {
-                case "Scheduled Event":
-                    self = .scheduled
-                case "EC2 Instance State-change Notification":
-                    self = .ec2InstanceStateChangeNotification(
-                        try container.decode(EC2.InstanceStateChangeNotification.self, forKey: .detail))
-                case "EC2 Spot Instance Interruption Warning":
-                    self = .ec2SpotInstanceInterruptionWarning(
-                        try container.decode(EC2.SpotInstanceInterruptionNotice.self, forKey: .detail))
+                case ScheduledEvent.name:
+                    detailFactory = Empty.init
+                case EC2.InstanceStateChangeNotificationEvent.name:
+                    detailFactory = EC2.InstanceStateChangeNotification.init
+                case EC2.SpotInstanceInterruptionNoticeEvent.name:
+                    detailFactory = EC2.SpotInstanceInterruptionNotice.init
                 default:
-                    guard let factory = Detail.registry[detailType] else {
-                        throw UnknownPayload()
+                    guard let factory = Cloudwatch.detailPayloadRegistry[detailType] else {
+                        throw UnknownPayload(name: detailType)
                     }
-                    let detailsDecoder = try container.superDecoder(forKey: .detail)
-                    self = .custom(label: detailType, detail: try factory(detailsDecoder))
+                    detailFactory = factory
                 }
+                let detailsDecoder = try container.superDecoder(forKey: .detail)
+                guard let detail = try detailFactory(detailsDecoder) as? Detail else {
+                    throw PayloadTypeMismatch(name: detailType, type: Detail.self)
+                }
+                self.guts = detail
             }
         }
     }
 
-    public struct CodePipelineStateChange: Decodable {
-        let foo: String
+    // MARK: - Detail Payload Registry
+
+    // FIXME: make thread safe
+    private static var detailPayloadRegistry = [String: (Decoder) throws -> Decodable]()
+
+    public static func registerDetailPayload<T: Decodable>(label: String, type: T.Type) {
+        detailPayloadRegistry[label] = type.init
     }
 
+    // MARK: - Common Event Types
+
+    public typealias ScheduledEvent = Event<Empty>
+
+    public struct Empty: Decodable {}
+
     public enum EC2 {
+        public typealias InstanceStateChangeNotificationEvent = Event<InstanceStateChangeNotification>
         public struct InstanceStateChangeNotification: Decodable {
             public enum State: String, Codable {
                 case running
@@ -120,6 +123,7 @@ public enum Cloudwatch {
             }
         }
 
+        public typealias SpotInstanceInterruptionNoticeEvent = Event<SpotInstanceInterruptionNotice>
         public struct SpotInstanceInterruptionNotice: Decodable {
             public enum Action: String, Codable {
                 case hibernate
@@ -137,5 +141,24 @@ public enum Cloudwatch {
         }
     }
 
-    struct UnknownPayload: Error {}
+    struct UnknownPayload: Error {
+        let name: String
+    }
+
+    struct PayloadTypeMismatch: Error {
+        let name: String
+        let type: Any
+    }
+}
+
+extension Cloudwatch.ScheduledEvent {
+    static var name: String { "Scheduled Event" }
+}
+
+extension Cloudwatch.EC2.InstanceStateChangeNotificationEvent {
+    static var name: String { "EC2 Instance State-change Notification" }
+}
+
+extension Cloudwatch.EC2.SpotInstanceInterruptionNoticeEvent {
+    static var name: String { "EC2 Spot Instance Interruption Warning" }
 }
