@@ -39,7 +39,7 @@ public enum SQS {
         public let messageAttributes: [String: Attribute]
         public let eventSourceArn: String
         public let eventSource: String
-        public let awsRegion: String
+        public let awsRegion: AWSRegion
     }
 }
 
@@ -67,7 +67,7 @@ extension SQS.Message: Decodable {
         self.messageAttributes = try container.decode([String: Attribute].self, forKey: .messageAttributes)
         self.eventSourceArn = try container.decode(String.self, forKey: .eventSourceArn)
         self.eventSource = try container.decode(String.self, forKey: .eventSource)
-        self.awsRegion = try container.decode(String.self, forKey: .awsRegion)
+        self.awsRegion = try container.decode(AWSRegion.self, forKey: .awsRegion)
 
         let body = try container.decode(String?.self, forKey: .body)
         self.body = body != "" ? body : nil

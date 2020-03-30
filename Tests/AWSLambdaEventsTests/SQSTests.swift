@@ -82,6 +82,6 @@ class SQSTests: XCTestCase {
         XCTAssertEqual(message.md5OfBody, "7b270e59b47ff90a553787216d55d91d")
         XCTAssertEqual(message.eventSource, "aws:sqs")
         XCTAssertEqual(message.eventSourceArn, "arn:aws:sqs:us-east-1:123456789012:MyQueue")
-        XCTAssertEqual(message.awsRegion, "us-east-1")
+        XCTAssertEqual(message.awsRegion, .us_east_1)
     }
 }
