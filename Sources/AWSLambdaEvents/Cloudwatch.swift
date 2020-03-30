@@ -64,7 +64,7 @@ public enum Cloudwatch {
             self.resources = try container.decode([String].self, forKey: .resources)
 
             let detailType = try container.decode(String.self, forKey: .detailType)
-            guard detailType == Detail.name else {
+            guard detailType.lowercased() == Detail.name.lowercased() else {
                 throw PayloadTypeMismatch(name: detailType, type: Detail.self)
             }
 
@@ -119,10 +119,6 @@ public enum Cloudwatch {
                 case action = "instance-action"
             }
         }
-    }
-
-    struct UnknownPayload: Error {
-        let name: String
     }
 
     struct PayloadTypeMismatch: Error {
