@@ -69,7 +69,7 @@ class S3Tests: XCTestCase {
 
         XCTAssertEqual(record.eventVersion, "2.1")
         XCTAssertEqual(record.eventSource, "aws:s3")
-        XCTAssertEqual(record.awsRegion, "eu-central-1")
+        XCTAssertEqual(record.awsRegion, .eu_central_1)
         XCTAssertEqual(record.eventName, "ObjectCreated:Put")
         XCTAssertEqual(record.eventTime, Date(timeIntervalSince1970: 1_578_907_540.621))
         XCTAssertEqual(record.userIdentity, S3.UserIdentity(principalId: "AWS:AAAAAAAJ2MQ4YFQZ7AULJ"))
