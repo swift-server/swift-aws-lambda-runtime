@@ -75,7 +75,7 @@ class SQSTests: XCTestCase {
         XCTAssertEqual(message.attributes.count, 4)
 
         XCTAssertEqual(message.messageAttributes, [
-            "number": .number(AWSNumber(int: 123)),
+            "number": .number("123"),
             "string": .string("abc123"),
             "binary": .binary([UInt8]("base64".utf8)),
         ])

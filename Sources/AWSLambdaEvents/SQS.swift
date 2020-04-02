@@ -27,7 +27,7 @@ public enum SQS {
         public enum Attribute {
             case string(String)
             case binary([UInt8])
-            case number(AWSNumber)
+            case number(String)
         }
 
         public let messageId: String
@@ -96,7 +96,7 @@ extension SQS.Message.Attribute: Decodable {
             let value = try container.decode(String.self, forKey: .stringValue)
             self = .string(value)
         case "Number":
-            let value = try container.decode(AWSNumber.self, forKey: .stringValue)
+            let value = try container.decode(String.self, forKey: .stringValue)
             self = .number(value)
         case "Binary":
             let base64encoded = try container.decode(String.self, forKey: .binaryValue)
