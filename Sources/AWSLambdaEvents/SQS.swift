@@ -32,7 +32,8 @@ public enum SQS {
 
         public let messageId: String
         public let receiptHandle: String
-        public let body: String?
+        @OptionalStringCoding
+        public var body: String?
         public let md5OfBody: String
         public let md5OfMessageAttributes: String?
         public let attributes: [String: String]
@@ -55,22 +56,6 @@ extension SQS.Message: Decodable {
         case eventSourceArn = "eventSourceARN"
         case eventSource
         case awsRegion
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.messageId = try container.decode(String.self, forKey: .messageId)
-        self.receiptHandle = try container.decode(String.self, forKey: .receiptHandle)
-        self.md5OfBody = try container.decode(String.self, forKey: .md5OfBody)
-        self.md5OfMessageAttributes = try container.decodeIfPresent(String.self, forKey: .md5OfMessageAttributes)
-        self.attributes = try container.decode([String: String].self, forKey: .attributes)
-        self.messageAttributes = try container.decode([String: Attribute].self, forKey: .messageAttributes)
-        self.eventSourceArn = try container.decode(String.self, forKey: .eventSourceArn)
-        self.eventSource = try container.decode(String.self, forKey: .eventSource)
-        self.awsRegion = try container.decode(AWSRegion.self, forKey: .awsRegion)
-
-        let body = try container.decode(String?.self, forKey: .body)
-        self.body = body != "" ? body : nil
     }
 }
 
