@@ -32,8 +32,7 @@ public enum SQS {
 
         public let messageId: String
         public let receiptHandle: String
-        @OptionalStringCoding
-        public var body: String?
+        public var body: String
         public let md5OfBody: String
         public let md5OfMessageAttributes: String?
         public let attributes: [String: String]
