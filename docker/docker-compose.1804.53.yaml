@@ -1,0 +1,15 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: swift-aws-lambda:18.04-5.3
+    build:
+      args:
+        base_image: "swiftlang/swift:nightly-bionic"
+
+  test:
+    image: swift-aws-lambda:18.04-5.3
+
+  shell:
+    image: swift-aws-lambda:18.04-5.3
