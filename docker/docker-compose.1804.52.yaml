@@ -6,7 +6,8 @@ services:
     image: swift-aws-lambda:18.04-5.2
     build:
       args:
-        base_image: "swiftlang/swift:nightly-5.2-bionic"
+        ubuntu_version: "bionic"
+        swift_version: "5.2"
 
   test:
     image: swift-aws-lambda:18.04-5.2
