@@ -1,4 +1,4 @@
-FROM fabianfett/amazonlinux-swift:5.2-branch-amazonlinux2
+FROM fabianfett/amazonlinux-swift:5.2-amazonlinux2
 
 RUN yum -y install \
     git \

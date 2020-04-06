@@ -18,7 +18,7 @@ set -eu
 
 executable=$1
 
-target=.build/lambda
+target=.build/lambda/$executable
 rm -rf "$target"
 mkdir -p "$target"
 cp ".build/release/$executable" "$target/"
