@@ -17,7 +17,7 @@ import NIO
 import NIOConcurrencyHelpers
 
 extension Lambda {
-    internal final class Lifecycle {
+    public final class Lifecycle {
         private let eventLoop: EventLoop
         private let logger: Logger
         private let configuration: Configuration
@@ -25,6 +25,10 @@ extension Lambda {
 
         private var _state = State.idle
         private let stateLock = Lock()
+
+        public convenience init(eventLoop: EventLoop, logger: Logger, factory: @escaping LambdaHandlerFactory) {
+            self.init(eventLoop: eventLoop, logger: logger, configuration: .init(), factory: factory)
+        }
 
         init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, factory: @escaping LambdaHandlerFactory) {
             self.eventLoop = eventLoop
@@ -53,7 +57,7 @@ extension Lambda {
             }
         }
 
-        func start() -> EventLoopFuture<Int> {
+        public func start() -> EventLoopFuture<Int> {
             logger.info("lambda lifecycle starting with \(self.configuration)")
             self.state = .initializing
             var logger = self.logger
@@ -65,12 +69,12 @@ extension Lambda {
             }
         }
 
-        func stop() {
+        public func stop() {
             self.logger.debug("lambda lifecycle stopping")
             self.state = .stopping
         }
 
-        func shutdown() {
+        public func shutdown() {
             self.logger.debug("lambda lifecycle shutdown")
             self.state = .shutdown
         }
