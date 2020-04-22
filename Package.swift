@@ -33,7 +33,7 @@ let package = Package(
         // testing helper
         .target(name: "AWSLambdaTesting", dependencies: [
             "AWSLambdaRuntime",
-            .product(name: "NIOHTTP1", package: "swift-nio"),
+            .product(name: "NIO", package: "swift-nio"),
         ]),
         .testTarget(name: "AWSLambdaTestingTests", dependencies: ["AWSLambdaTesting"]),
         // samples

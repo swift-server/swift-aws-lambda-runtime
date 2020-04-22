@@ -19,43 +19,70 @@ import Logging
 import NIO
 
 extension Lambda {
+    public struct TestConfig {
+        public var requestId: String
+        public var traceId: String
+        public var invokedFunctionArn: String
+        public var timeout: Double
+
+        public init(requestId: String = "\(DispatchTime.now().uptimeNanoseconds)",
+                    traceId: String = "Root=\(DispatchTime.now().uptimeNanoseconds);Parent=\(DispatchTime.now().uptimeNanoseconds);Sampled=1",
+                    invokedFunctionArn: String = "arn:aws:lambda:us-west-1:\(DispatchTime.now().uptimeNanoseconds):function:custom-runtime",
+                    timeout: Double = 5) {
+            self.requestId = requestId
+            self.traceId = traceId
+            self.invokedFunctionArn = invokedFunctionArn
+            self.timeout = timeout
+        }
+    }
+
     public static func test(_ closure: @escaping StringLambdaClosure,
-                            with payload: String,
-                            _ body: @escaping (Result<String, Error>) -> Void) {
-        Self.test(StringLambdaClosureWrapper(closure), with: payload, body)
+                            config: TestConfig = .init(),
+                            with payload: String) throws -> String {
+        try Self.test(StringLambdaClosureWrapper(closure), config: config, with: payload)
     }
 
     public static func test(_ closure: @escaping StringVoidLambdaClosure,
-                            with payload: String,
-                            _ body: @escaping (Result<Void, Error>) -> Void) {
-        Self.test(StringVoidLambdaClosureWrapper(closure), with: payload, body)
+                            config: TestConfig = .init(),
+                            with payload: String) throws {
+        _ = try Self.test(StringVoidLambdaClosureWrapper(closure), config: config, with: payload)
     }
 
-    public static func test<In: Decodable, Out: Encodable>(_ closure: @escaping CodableLambdaClosure<In, Out>,
-                                                           with payload: In,
-                                                           _ body: @escaping (Result<Out, Error>) -> Void) {
-        Self.test(CodableLambdaClosureWrapper(closure), with: payload, body)
+    public static func test<In: Decodable, Out: Encodable>(
+        _ closure: @escaping CodableLambdaClosure<In, Out>,
+        config: TestConfig = .init(),
+        with payload: In
+    ) throws -> Out {
+        try Self.test(CodableLambdaClosureWrapper(closure), config: config, with: payload)
     }
 
     public static func test<In: Decodable>(_ closure: @escaping CodableVoidLambdaClosure<In>,
-                                           with payload: In,
-                                           _ body: @escaping (Result<Void, Error>) -> Void) {
-        Self.test(CodableVoidLambdaClosureWrapper(closure), with: payload, body)
+                                           config: TestConfig = .init(),
+                                           with payload: In) throws {
+        _ = try Self.test(CodableVoidLambdaClosureWrapper(closure), config: config, with: payload)
     }
 
-    public static func test<In, Out, Handler: EventLoopLambdaHandler>(_ handler: Handler,
-                                                                      with payload: In,
-                                                                      _ body: @escaping (Result<Out, Error>) -> Void) where Handler.In == In, Handler.Out == Out {
+    public static func test<In, Out, Handler: EventLoopLambdaHandler>(
+        _ handler: Handler,
+        config: TestConfig = .init(),
+        with payload: In
+    ) throws -> Out where Handler.In == In, Handler.Out == Out {
         let logger = Logger(label: "test")
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        let context = Context(requestId: "\(DispatchTime.now().uptimeNanoseconds)",
-                              traceId: "Root=\(DispatchTime.now().uptimeNanoseconds);Parent=\(DispatchTime.now().uptimeNanoseconds);Sampled=1",
-                              invokedFunctionArn: "arn:aws:lambda:us-west-1:\(DispatchTime.now().uptimeNanoseconds):function:custom-runtime",
-                              deadline: .now() + 5,
+        let eventLoop = eventLoopGroup.next()
+
+        let context = Context(requestId: config.requestId,
+                              traceId: config.traceId,
+                              invokedFunctionArn: config.invokedFunctionArn,
+                              deadline: .now() + config.timeout,
                               logger: logger,
-                              eventLoop: eventLoopGroup.next())
-        handler.handle(context: context, payload: payload).whenComplete { result in
-            body(result)
-        }
+                              eventLoop: eventLoop)
+
+        let result = try eventLoop.flatSubmit {
+            handler.handle(context: context, payload: payload)
+        }.wait()
+
+        try eventLoopGroup.syncShutdownGracefully()
+        return result
     }
 }
