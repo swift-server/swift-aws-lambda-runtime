@@ -19,6 +19,7 @@ import NIOConcurrencyHelpers
 extension Lambda {
     public final class Lifecycle {
         private let eventLoop: EventLoop
+        private let shutdownPromise: EventLoopPromise<Int>
         private let logger: Logger
         private let configuration: Configuration
         private let factory: LambdaHandlerFactory
@@ -32,6 +33,7 @@ extension Lambda {
 
         init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, factory: @escaping LambdaHandlerFactory) {
             self.eventLoop = eventLoop
+            self.shutdownPromise = eventLoop.makePromise(of: Int.self)
             self.logger = logger
             self.configuration = configuration
             self.factory = factory
@@ -51,38 +53,43 @@ extension Lambda {
             }
             set {
                 self.stateLock.withLockVoid {
-                    precondition(newValue.order > _state.order, "invalid state \(newValue) after \(self._state)")
+                    precondition(newValue.order > self._state.order, "invalid state \(newValue) after \(self._state)")
                     self._state = newValue
                 }
+                self.logger.debug("lambda lifecycle state: \(newValue)")
             }
         }
 
-        public func start() -> EventLoopFuture<Int> {
+        public var shutdownFuture: EventLoopFuture<Int> {
+            self.shutdownPromise.futureResult
+        }
+
+        public func start() -> EventLoopFuture<Void> {
             logger.info("lambda lifecycle starting with \(self.configuration)")
             self.state = .initializing
+            let promise = self.eventLoop.makePromise(of: Int.self)
+            promise.futureResult.always { _ in
+                self.markShutdown()
+            }.cascade(to: self.shutdownPromise)
             var logger = self.logger
             logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
             let runner = Runner(eventLoop: self.eventLoop, configuration: self.configuration)
-            return runner.initialize(logger: logger, factory: self.factory).flatMap { handler in
+            return runner.initialize(logger: logger, factory: self.factory).map { handler in
                 self.state = .active(runner, handler)
-                return self.run()
+                self.run(promise: promise)
             }
         }
 
-        public func stop() {
-            self.logger.debug("lambda lifecycle stopping")
-            self.state = .stopping
+        public func shutdown() {
+            self.state = .shuttingdown
         }
 
-        public func shutdown() {
-            self.logger.debug("lambda lifecycle shutdown")
+        private func markShutdown() {
             self.state = .shutdown
         }
 
         @inline(__always)
-        private func run() -> EventLoopFuture<Int> {
-            let promise = self.eventLoop.makePromise(of: Int.self)
-
+        private func run(promise: EventLoopPromise<Int>) {
             func _run(_ count: Int) {
                 switch self.state {
                 case .active(let runner, let handler):
@@ -100,7 +107,7 @@ extension Lambda {
                             promise.fail(error)
                         }
                     }
-                case .stopping, .shutdown:
+                case .shuttingdown:
                     promise.succeed(count)
                 default:
                     preconditionFailure("invalid run state: \(self.state)")
@@ -108,15 +115,13 @@ extension Lambda {
             }
 
             _run(0)
-
-            return promise.futureResult
         }
 
         private enum State {
             case idle
             case initializing
             case active(Runner, ByteBufferLambdaHandler)
-            case stopping
+            case shuttingdown
             case shutdown
 
             internal var order: Int {
@@ -127,7 +132,7 @@ extension Lambda {
                     return 1
                 case .active:
                     return 2
-                case .stopping:
+                case .shuttingdown:
                     return 3
                 case .shutdown:
                     return 4
