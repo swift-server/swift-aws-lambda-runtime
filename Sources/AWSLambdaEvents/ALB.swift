@@ -32,14 +32,14 @@ public enum ALB {
         ///
         /// For more information visit:
         /// https://docs.aws.amazon.com/elasticloadbalancing/latest/application/lambda-functions.html#multi-value-headers
-        public let headers: [String: String]?
+        public let headers: HTTPHeaders?
 
         /// Depending on your configuration of your target group either `headers` or `multiValueHeaders`
         /// are set.
         ///
         /// For more information visit:
         /// https://docs.aws.amazon.com/elasticloadbalancing/latest/application/lambda-functions.html#multi-value-headers
-        public let multiValueHeaders: [String: [String]]?
+        public let multiValueHeaders: HTTPMultiValueHeaders?
         public let requestContext: Context
         public let isBase64Encoded: Bool
         public let body: String?
@@ -53,16 +53,16 @@ public enum ALB {
     public struct TargetGroupResponse: Codable {
         public let statusCode: HTTPResponseStatus
         public let statusDescription: String?
-        public let headers: [String: String]?
-        public let multiValueHeaders: [String: [String]]?
+        public let headers: HTTPHeaders?
+        public let multiValueHeaders: HTTPMultiValueHeaders?
         public let body: String
         public let isBase64Encoded: Bool
 
         public init(
             statusCode: HTTPResponseStatus,
             statusDescription: String? = nil,
-            headers: [String: String]? = nil,
-            multiValueHeaders: [String: [String]]? = nil,
+            headers: HTTPHeaders? = nil,
+            multiValueHeaders: HTTPMultiValueHeaders? = nil,
             body: String = "",
             isBase64Encoded: Bool = false
         ) {

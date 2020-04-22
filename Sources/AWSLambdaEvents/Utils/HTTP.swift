@@ -14,6 +14,9 @@
 
 // MARK: HTTPMethod
 
+public typealias HTTPHeaders = [String: String]
+public typealias HTTPMultiValueHeaders = [String: [String]]
+
 public struct HTTPMethod: RawRepresentable, Equatable {
     public var rawValue: String
 

@@ -54,8 +54,8 @@ public enum APIGateway {
 
         public let queryStringParameters: [String: String]?
         public let multiValueQueryStringParameters: [String: [String]]?
-        public let headers: [String: String]
-        public let multiValueHeaders: [String: [String]]
+        public let headers: HTTPHeaders
+        public let multiValueHeaders: HTTPMultiValueHeaders
         public let pathParameters: [String: String]?
         public let stageVariables: [String: String]?
 
@@ -70,15 +70,15 @@ public enum APIGateway {
 extension APIGateway {
     public struct Response: Codable {
         public let statusCode: HTTPResponseStatus
-        public let headers: [String: String]?
-        public let multiValueHeaders: [String: [String]]?
+        public let headers: HTTPHeaders?
+        public let multiValueHeaders: HTTPMultiValueHeaders?
         public let body: String?
         public let isBase64Encoded: Bool?
 
         public init(
             statusCode: HTTPResponseStatus,
-            headers: [String: String]? = nil,
-            multiValueHeaders: [String: [String]]? = nil,
+            headers: HTTPHeaders? = nil,
+            multiValueHeaders: HTTPMultiValueHeaders? = nil,
             body: String? = nil,
             isBase64Encoded: Bool? = nil
         ) {
