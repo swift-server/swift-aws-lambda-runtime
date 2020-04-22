@@ -18,7 +18,7 @@ import class Foundation.JSONEncoder
 
 public enum APIGateway {
     /// APIGatewayRequest contains data coming from the API Gateway
-    public struct Request {
+    public struct Request: Codable {
         public struct Context: Codable {
             public struct Identity: Codable {
                 public let cognitoIdentityPoolId: String?
@@ -54,7 +54,8 @@ public enum APIGateway {
 
         public let queryStringParameters: [String: String]?
         public let multiValueQueryStringParameters: [String: [String]]?
-        public let headers: HTTPHeaders
+        public let headers: [String: String]
+        public let multiValueHeaders: [String: [String]]
         public let pathParameters: [String: String]?
         public let stageVariables: [String: String]?
 
@@ -64,54 +65,28 @@ public enum APIGateway {
     }
 }
 
-// MARK: - Request -
-
-extension APIGateway.Request: Decodable {
-    enum CodingKeys: String, CodingKey {
-        case resource
-        case path
-        case httpMethod
-
-        case queryStringParameters
-        case multiValueQueryStringParameters
-        case headers = "multiValueHeaders"
-        case pathParameters
-        case stageVariables
-
-        case requestContext
-        case body
-        case isBase64Encoded
-    }
-}
-
 // MARK: - Response -
 
 extension APIGateway {
-    public struct Response {
+    public struct Response: Codable {
         public let statusCode: HTTPResponseStatus
-        public let headers: HTTPHeaders?
+        public let headers: [String: String]?
+        public let multiValueHeaders: [String: [String]]?
         public let body: String?
         public let isBase64Encoded: Bool?
 
         public init(
             statusCode: HTTPResponseStatus,
-            headers: HTTPHeaders? = nil,
+            headers: [String: String]? = nil,
+            multiValueHeaders: [String: [String]]? = nil,
             body: String? = nil,
             isBase64Encoded: Bool? = nil
         ) {
             self.statusCode = statusCode
             self.headers = headers
+            self.multiValueHeaders = multiValueHeaders
             self.body = body
             self.isBase64Encoded = isBase64Encoded
         }
-    }
-}
-
-extension APIGateway.Response: Encodable {
-    enum CodingKeys: String, CodingKey {
-        case statusCode
-        case headers = "multiValueHeaders"
-        case body
-        case isBase64Encoded
     }
 }

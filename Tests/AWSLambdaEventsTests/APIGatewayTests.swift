@@ -73,7 +73,7 @@ class APIGatewayTests: XCTestCase {
     func testResponseEncoding() {
         let resp = APIGateway.Response(
             statusCode: .ok,
-            headers: HTTPHeaders(["Server": ["Test"]]),
+            headers: ["Server": "Test"],
             body: "abc123"
         )
 
@@ -84,6 +84,7 @@ class APIGatewayTests: XCTestCase {
             XCTAssertEqual(json.statusCode, resp.statusCode.code)
             XCTAssertEqual(json.body, resp.body)
             XCTAssertEqual(json.isBase64Encoded, resp.isBase64Encoded)
+            XCTAssertEqual(json.headers?["Server"], "Test")
         } catch {
             XCTFail("unexpected error: \(error)")
         }

@@ -52,97 +52,13 @@ class ALBTests: XCTestCase {
             let event = try decoder.decode(ALB.TargetGroupRequest.self, from: data)
 
             XCTAssertEqual(event.httpMethod, .GET)
-            XCTAssertEqual(event.body, nil)
+            XCTAssertEqual(event.body, "")
             XCTAssertEqual(event.isBase64Encoded, false)
-//            XCTAssertEqual(event.headers.count, 11)
+            XCTAssertEqual(event.headers?.count, 11)
             XCTAssertEqual(event.path, "/")
             XCTAssertEqual(event.queryStringParameters, [:])
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
-    }
-
-    // MARK: - Response -
-
-    private struct TestStruct: Codable {
-        let hello: String
-    }
-
-    private struct SingleValueHeadersResponse: Codable, Equatable {
-        let statusCode: Int
-        let body: String
-        let isBase64Encoded: Bool
-        let headers: [String: String]
-    }
-
-    private struct MultiValueHeadersResponse: Codable, Equatable {
-        let statusCode: Int
-        let body: String
-        let isBase64Encoded: Bool
-        let multiValueHeaders: [String: [String]]
-    }
-
-    func testJSONResponseWithSingleValueHeaders() throws {
-        let response = try ALB.TargetGroupResponse(statusCode: .ok, payload: TestStruct(hello: "world"))
-        let encoder = JSONEncoder()
-        encoder.userInfo[ALB.TargetGroupResponse.MultiValueHeadersEnabledKey] = false
-        let data = try encoder.encode(response)
-
-        let expected = SingleValueHeadersResponse(
-            statusCode: 200, body: "{\"hello\":\"world\"}",
-            isBase64Encoded: false,
-            headers: ["Content-Type": "application/json"]
-        )
-
-        let result = try JSONDecoder().decode(SingleValueHeadersResponse.self, from: data)
-        XCTAssertEqual(result, expected)
-    }
-
-    func testJSONResponseWithMultiValueHeaders() throws {
-        let response = try ALB.TargetGroupResponse(statusCode: .ok, payload: TestStruct(hello: "world"))
-        let encoder = JSONEncoder()
-        encoder.userInfo[ALB.TargetGroupResponse.MultiValueHeadersEnabledKey] = true
-        let data = try encoder.encode(response)
-
-        let expected = MultiValueHeadersResponse(
-            statusCode: 200, body: "{\"hello\":\"world\"}",
-            isBase64Encoded: false,
-            multiValueHeaders: ["Content-Type": ["application/json"]]
-        )
-
-        let result = try JSONDecoder().decode(MultiValueHeadersResponse.self, from: data)
-        XCTAssertEqual(result, expected)
-    }
-
-    func testEmptyResponseWithMultiValueHeaders() throws {
-        let response = ALB.TargetGroupResponse(statusCode: .ok)
-        let encoder = JSONEncoder()
-        encoder.userInfo[ALB.TargetGroupResponse.MultiValueHeadersEnabledKey] = true
-        let data = try encoder.encode(response)
-
-        let expected = MultiValueHeadersResponse(
-            statusCode: 200, body: "",
-            isBase64Encoded: false,
-            multiValueHeaders: [:]
-        )
-
-        let result = try JSONDecoder().decode(MultiValueHeadersResponse.self, from: data)
-        XCTAssertEqual(result, expected)
-    }
-
-    func testEmptyResponseWithSingleValueHeaders() throws {
-        let response = ALB.TargetGroupResponse(statusCode: .ok)
-        let encoder = JSONEncoder()
-        encoder.userInfo[ALB.TargetGroupResponse.MultiValueHeadersEnabledKey] = false
-        let data = try encoder.encode(response)
-
-        let expected = SingleValueHeadersResponse(
-            statusCode: 200, body: "",
-            isBase64Encoded: false,
-            headers: [:]
-        )
-
-        let result = try JSONDecoder().decode(SingleValueHeadersResponse.self, from: data)
-        XCTAssertEqual(result, expected)
     }
 }
