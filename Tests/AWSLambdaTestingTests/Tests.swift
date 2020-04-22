@@ -123,11 +123,12 @@ class LambdaTestingTests: XCTestCase {
     }
 
     func testConfigValues() {
+        let timeout: TimeInterval = 4
         let config = Lambda.TestConfig(
             requestId: "abc123",
             traceId: "hahahihi",
             invokedFunctionArn: "arn:hihi",
-            timeout: 4
+            timeout: .seconds(4)
         )
 
         let myLambda = { (ctx: Lambda.Context, _: String, callback: @escaping (Result<Void, Error>) -> Void) in
@@ -136,11 +137,11 @@ class LambdaTestingTests: XCTestCase {
             XCTAssertEqual(ctx.invokedFunctionArn, config.invokedFunctionArn)
 
             let secondsSinceEpoch = Double(Int64(bitPattern: ctx.deadline.rawValue)) / -1_000_000_000
-            XCTAssertLessThanOrEqual(Date(timeIntervalSince1970: secondsSinceEpoch).timeIntervalSinceNow, config.timeout)
+            XCTAssertEqual(Date(timeIntervalSince1970: secondsSinceEpoch).timeIntervalSinceNow, timeout, accuracy: 0.1)
 
             callback(.success(()))
         }
 
-        XCTAssertNoThrow(try Lambda.test(myLambda, config: config, with: UUID().uuidString))
+        XCTAssertNoThrow(try Lambda.test(myLambda, with: UUID().uuidString, using: config))
     }
 }

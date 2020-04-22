@@ -23,12 +23,12 @@ extension Lambda {
         public var requestId: String
         public var traceId: String
         public var invokedFunctionArn: String
-        public var timeout: Double
+        public var timeout: DispatchTimeInterval
 
         public init(requestId: String = "\(DispatchTime.now().uptimeNanoseconds)",
                     traceId: String = "Root=\(DispatchTime.now().uptimeNanoseconds);Parent=\(DispatchTime.now().uptimeNanoseconds);Sampled=1",
                     invokedFunctionArn: String = "arn:aws:lambda:us-west-1:\(DispatchTime.now().uptimeNanoseconds):function:custom-runtime",
-                    timeout: Double = 5) {
+                    timeout: DispatchTimeInterval = .seconds(5)) {
             self.requestId = requestId
             self.traceId = traceId
             self.invokedFunctionArn = invokedFunctionArn
@@ -37,28 +37,30 @@ extension Lambda {
     }
 
     public static func test(_ closure: @escaping StringLambdaClosure,
-                            config: TestConfig = .init(),
-                            with payload: String) throws -> String {
+                            with payload: String,
+                            using config: TestConfig = .init()) throws -> String {
         try Self.test(StringLambdaClosureWrapper(closure), config: config, with: payload)
     }
 
     public static func test(_ closure: @escaping StringVoidLambdaClosure,
-                            config: TestConfig = .init(),
-                            with payload: String) throws {
+                            with payload: String,
+                            using config: TestConfig = .init()) throws {
         _ = try Self.test(StringVoidLambdaClosureWrapper(closure), config: config, with: payload)
     }
 
     public static func test<In: Decodable, Out: Encodable>(
         _ closure: @escaping CodableLambdaClosure<In, Out>,
-        config: TestConfig = .init(),
-        with payload: In
+        with payload: In,
+        using config: TestConfig = .init()
     ) throws -> Out {
         try Self.test(CodableLambdaClosureWrapper(closure), config: config, with: payload)
     }
 
-    public static func test<In: Decodable>(_ closure: @escaping CodableVoidLambdaClosure<In>,
-                                           config: TestConfig = .init(),
-                                           with payload: In) throws {
+    public static func test<In: Decodable>(
+        _ closure: @escaping CodableVoidLambdaClosure<In>,
+        with payload: In,
+        using config: TestConfig = .init()
+    ) throws {
         _ = try Self.test(CodableVoidLambdaClosureWrapper(closure), config: config, with: payload)
     }
 
