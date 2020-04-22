@@ -83,11 +83,12 @@ public enum Lambda {
         let lifecycle = Lifecycle(eventLoop: eventLoopGroup.next(), logger: logger, configuration: configuration, factory: factory)
         let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
             logger.info("intercepted signal: \(signal)")
-            lifecycle.stop()
-        }
-        return lifecycle.start().always { _ in
             lifecycle.shutdown()
-            signalSource.cancel()
+        }
+        return lifecycle.start().flatMap {
+            return lifecycle.shutdownFuture.always { _ in
+                signalSource.cancel()
+            }
         }
     }
 }

@@ -17,8 +17,10 @@ import NIO
 import NIOConcurrencyHelpers
 
 extension Lambda {
-    internal final class Lifecycle {
+    /// `Lifecycle` manages the Lambda process lifecycle.
+    public final class Lifecycle {
         private let eventLoop: EventLoop
+        private let shutdownPromise: EventLoopPromise<Int>
         private let logger: Logger
         private let configuration: Configuration
         private let factory: LambdaHandlerFactory
@@ -26,8 +28,19 @@ extension Lambda {
         private var _state = State.idle
         private let stateLock = Lock()
 
+        /// Create a new `Lifecycle`.
+        ///
+        /// - parameters:
+        ///     - eventLoop: An `EventLoop` to run the Lambda on.
+        ///     - logger: A `Logger` to log the Lambda events.
+        ///     - factory: A `LambdaHandlerFactory` to create the concrete  Lambda handler.
+        public convenience init(eventLoop: EventLoop, logger: Logger, factory: @escaping LambdaHandlerFactory) {
+            self.init(eventLoop: eventLoop, logger: logger, configuration: .init(), factory: factory)
+        }
+
         init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, factory: @escaping LambdaHandlerFactory) {
             self.eventLoop = eventLoop
+            self.shutdownPromise = eventLoop.makePromise(of: Int.self)
             self.logger = logger
             self.configuration = configuration
             self.factory = factory
@@ -39,46 +52,46 @@ extension Lambda {
             }
         }
 
-        private var state: State {
-            get {
-                self.stateLock.withLock {
-                    self._state
-                }
-            }
-            set {
-                self.stateLock.withLockVoid {
-                    precondition(newValue.order > _state.order, "invalid state \(newValue) after \(self._state)")
-                    self._state = newValue
-                }
-            }
+        /// The `Lifecycle` shutdown future.
+        ///
+        /// - Returns: An `EventLoopFuture` that is fulfilled after the Lambda lifecycle has fully shutdown.
+        public var shutdownFuture: EventLoopFuture<Int> {
+            self.shutdownPromise.futureResult
         }
 
-        func start() -> EventLoopFuture<Int> {
+        /// Start the `Lifecycle`.
+        ///
+        /// - Returns: An `EventLoopFuture` that is fulfilled after the Lambda hander has been created and initiliazed, and a first run has been schduled.
+        public func start() -> EventLoopFuture<Void> {
             logger.info("lambda lifecycle starting with \(self.configuration)")
             self.state = .initializing
+            // triggered when the Lambda has finished its last run
+            let finishedPromise = self.eventLoop.makePromise(of: Int.self)
+            finishedPromise.futureResult.always { _ in
+                self.markShutdown()
+            }.cascade(to: self.shutdownPromise)
             var logger = self.logger
             logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
             let runner = Runner(eventLoop: self.eventLoop, configuration: self.configuration)
-            return runner.initialize(logger: logger, factory: self.factory).flatMap { handler in
+            return runner.initialize(logger: logger, factory: self.factory).map { handler in
                 self.state = .active(runner, handler)
-                return self.run()
+                self.run(promise: finishedPromise)
             }
         }
 
-        func stop() {
-            self.logger.debug("lambda lifecycle stopping")
-            self.state = .stopping
+        // MARK: -  Private
+
+        /// Begin the `Lifecycle` shutdown.
+        public func shutdown() {
+            self.state = .shuttingdown
         }
 
-        func shutdown() {
-            self.logger.debug("lambda lifecycle shutdown")
+        private func markShutdown() {
             self.state = .shutdown
         }
 
         @inline(__always)
-        private func run() -> EventLoopFuture<Int> {
-            let promise = self.eventLoop.makePromise(of: Int.self)
-
+        private func run(promise: EventLoopPromise<Int>) {
             func _run(_ count: Int) {
                 switch self.state {
                 case .active(let runner, let handler):
@@ -96,7 +109,7 @@ extension Lambda {
                             promise.fail(error)
                         }
                     }
-                case .stopping, .shutdown:
+                case .shuttingdown:
                     promise.succeed(count)
                 default:
                     preconditionFailure("invalid run state: \(self.state)")
@@ -104,15 +117,28 @@ extension Lambda {
             }
 
             _run(0)
+        }
 
-            return promise.futureResult
+        private var state: State {
+            get {
+                self.stateLock.withLock {
+                    self._state
+                }
+            }
+            set {
+                self.stateLock.withLockVoid {
+                    precondition(newValue.order > self._state.order, "invalid state \(newValue) after \(self._state)")
+                    self._state = newValue
+                }
+                self.logger.debug("lambda lifecycle state: \(newValue)")
+            }
         }
 
         private enum State {
             case idle
             case initializing
             case active(Runner, ByteBufferLambdaHandler)
-            case stopping
+            case shuttingdown
             case shutdown
 
             internal var order: Int {
@@ -123,7 +149,7 @@ extension Lambda {
                     return 1
                 case .active:
                     return 2
-                case .stopping:
+                case .shuttingdown:
                     return 3
                 case .shutdown:
                     return 4
