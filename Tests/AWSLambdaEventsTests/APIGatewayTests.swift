@@ -29,34 +29,21 @@ class APIGatewayTests: XCTestCase {
     // MARK: Decoding
 
     func testRequestDecodingExampleGetRequest() {
-        do {
-            let data = APIGatewayTests.exampleGetPayload.data(using: .utf8)!
-            let request = try JSONDecoder().decode(APIGateway.Request.self, from: data)
+        let data = APIGatewayTests.exampleGetPayload.data(using: .utf8)!
+        var req: APIGateway.Request?
+        XCTAssertNoThrow(req = try JSONDecoder().decode(APIGateway.Request.self, from: data))
 
-            XCTAssertEqual(request.path, "/test")
-            XCTAssertEqual(request.httpMethod, .GET)
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
+        XCTAssertEqual(req?.path, "/test")
+        XCTAssertEqual(req?.httpMethod, .GET)
     }
 
     func testRequestDecodingTodoPostRequest() {
-        struct Todo: Decodable {
-            let title: String
-        }
+        let data = APIGatewayTests.todoPostPayload.data(using: .utf8)!
+        var req: APIGateway.Request?
+        XCTAssertNoThrow(req = try JSONDecoder().decode(APIGateway.Request.self, from: data))
 
-        do {
-            let data = APIGatewayTests.todoPostPayload.data(using: .utf8)!
-            let request = try JSONDecoder().decode(APIGateway.Request.self, from: data)
-
-            XCTAssertEqual(request.path, "/todos")
-            XCTAssertEqual(request.httpMethod, .POST)
-
-//            let todo = try request.decodeBody(Todo.self)
-//            XCTAssertEqual(todo.title, "a todo")
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
+        XCTAssertEqual(req?.path, "/todos")
+        XCTAssertEqual(req?.httpMethod, .POST)
     }
 
     // MARK: - Response -
@@ -77,16 +64,14 @@ class APIGatewayTests: XCTestCase {
             body: "abc123"
         )
 
-        do {
-            let data = try JSONEncoder().encode(resp)
-            let json = try JSONDecoder().decode(JSONResponse.self, from: data)
+        var data: Data?
+        XCTAssertNoThrow(data = try JSONEncoder().encode(resp))
+        var json: JSONResponse?
+        XCTAssertNoThrow(json = try JSONDecoder().decode(JSONResponse.self, from: XCTUnwrap(data)))
 
-            XCTAssertEqual(json.statusCode, resp.statusCode.code)
-            XCTAssertEqual(json.body, resp.body)
-            XCTAssertEqual(json.isBase64Encoded, resp.isBase64Encoded)
-            XCTAssertEqual(json.headers?["Server"], "Test")
-        } catch {
-            XCTFail("unexpected error: \(error)")
-        }
+        XCTAssertEqual(json?.statusCode, resp.statusCode.code)
+        XCTAssertEqual(json?.body, resp.body)
+        XCTAssertEqual(json?.isBase64Encoded, resp.isBase64Encoded)
+        XCTAssertEqual(json?.headers?["Server"], "Test")
     }
 }
