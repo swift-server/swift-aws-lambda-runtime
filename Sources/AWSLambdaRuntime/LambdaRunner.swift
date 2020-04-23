@@ -45,12 +45,17 @@ extension Lambda {
 
         func run(logger: Logger, handler: ByteBufferLambdaHandler) -> EventLoopFuture<Void> {
             logger.debug("lambda invocation sequence starting")
+          
+            // this logger is only used for user provided code
+            var handerLogger = Logger(label: "Lambda")
+            handerLogger.logLevel = .info
+          
             // 1. request work from lambda runtime engine
             return self.runtimeClient.requestWork(logger: logger).peekError { error in
-                logger.error("could not fetch work from lambda runtime engine: \(error)")
+                logger.error("Could not fetch work from lambda runtime engine. Are you sure you are running this within Lambda? For local testing use Lambda.test() or sam-cli. error: \(error)")
             }.flatMap { invocation, payload in
                 // 2. send work to handler
-                let context = Context(logger: logger, eventLoop: self.eventLoop, invocation: invocation)
+                let context = Context(logger: handerLogger, eventLoop: self.eventLoop, invocation: invocation)
                 logger.debug("sending work to lambda handler \(handler)")
                 return handler.handle(context: context, payload: payload)
                     .mapResult { result in
@@ -66,7 +71,7 @@ extension Lambda {
                 }
             }.always { result in
                 // we are done!
-                logger.log(level: result.successful ? .debug : .warning, "lambda invocation sequence completed \(result.successful ? "successfully" : "with failure")")
+                logger.log(level: .debug, "lambda invocation sequence completed \(result.successful ? "successfully" : "with failure")")
             }
         }
     }

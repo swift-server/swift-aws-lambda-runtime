@@ -63,7 +63,7 @@ extension Lambda {
         ///
         /// - Returns: An `EventLoopFuture` that is fulfilled after the Lambda hander has been created and initiliazed, and a first run has been schduled.
         public func start() -> EventLoopFuture<Void> {
-            logger.info("lambda lifecycle starting with \(self.configuration)")
+            logger.debug("lambda lifecycle starting with \(self.configuration)")
             self.state = .initializing
             // triggered when the Lambda has finished its last run
             let finishedPromise = self.eventLoop.makePromise(of: Int.self)

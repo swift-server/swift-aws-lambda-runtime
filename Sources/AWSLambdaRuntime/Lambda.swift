@@ -78,7 +78,7 @@ public enum Lambda {
 
     internal static func runAsync(eventLoopGroup: EventLoopGroup, configuration: Configuration, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<Int> {
         Backtrace.install()
-        var logger = Logger(label: "Lambda")
+        var logger = Logger(label: "Lambda.Runtime")
         logger.logLevel = configuration.general.logLevel
         let lifecycle = Lifecycle(eventLoop: eventLoopGroup.next(), logger: logger, configuration: configuration, factory: factory)
         let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
