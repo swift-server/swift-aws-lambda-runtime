@@ -125,7 +125,7 @@ class LambdaTestingTests: XCTestCase {
     func testConfigValues() {
         let timeout: TimeInterval = 4
         let config = Lambda.TestConfig(
-            requestId: "abc123",
+            requestId: UUID().uuidString,
             traceId: "hahahihi",
             invokedFunctionArn: "arn:hihi",
             timeout: .seconds(4)
