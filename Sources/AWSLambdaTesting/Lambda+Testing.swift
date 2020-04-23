@@ -39,13 +39,13 @@ extension Lambda {
     public static func test(_ closure: @escaping StringLambdaClosure,
                             with payload: String,
                             using config: TestConfig = .init()) throws -> String {
-        try Self.test(StringLambdaClosureWrapper(closure), config: config, with: payload)
+        try Self.test(StringLambdaClosureWrapper(closure), with: payload, using: config)
     }
 
     public static func test(_ closure: @escaping StringVoidLambdaClosure,
                             with payload: String,
                             using config: TestConfig = .init()) throws {
-        _ = try Self.test(StringVoidLambdaClosureWrapper(closure), config: config, with: payload)
+        _ = try Self.test(StringVoidLambdaClosureWrapper(closure), with: payload, using: config)
     }
 
     public static func test<In: Decodable, Out: Encodable>(
@@ -53,7 +53,7 @@ extension Lambda {
         with payload: In,
         using config: TestConfig = .init()
     ) throws -> Out {
-        try Self.test(CodableLambdaClosureWrapper(closure), config: config, with: payload)
+        try Self.test(CodableLambdaClosureWrapper(closure), with: payload, using: config)
     }
 
     public static func test<In: Decodable>(
@@ -61,18 +61,20 @@ extension Lambda {
         with payload: In,
         using config: TestConfig = .init()
     ) throws {
-        _ = try Self.test(CodableVoidLambdaClosureWrapper(closure), config: config, with: payload)
+        _ = try Self.test(CodableVoidLambdaClosureWrapper(closure), with: payload, using: config)
     }
 
     public static func test<In, Out, Handler: EventLoopLambdaHandler>(
         _ handler: Handler,
-        config: TestConfig = .init(),
-        with payload: In
+        with payload: In,
+        using config: TestConfig = .init()
     ) throws -> Out where Handler.In == In, Handler.Out == Out {
         let logger = Logger(label: "test")
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            try! eventLoopGroup.syncShutdownGracefully()
+        }
         let eventLoop = eventLoopGroup.next()
-
         let context = Context(requestId: config.requestId,
                               traceId: config.traceId,
                               invokedFunctionArn: config.invokedFunctionArn,
@@ -80,11 +82,8 @@ extension Lambda {
                               logger: logger,
                               eventLoop: eventLoop)
 
-        let result = try eventLoop.flatSubmit {
+        return try eventLoop.flatSubmit {
             handler.handle(context: context, payload: payload)
         }.wait()
-
-        try eventLoopGroup.syncShutdownGracefully()
-        return result
     }
 }
