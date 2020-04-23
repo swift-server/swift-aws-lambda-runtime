@@ -127,7 +127,7 @@ class LambdaTestingTests: XCTestCase {
         let config = Lambda.TestConfig(
             requestId: UUID().uuidString,
             traceId: UUID().uuidString,
-            invokedFunctionArn: "arn:hihi",
+            invokedFunctionArn: "arn:\(UUID().uuidString)",
             timeout: .seconds(4)
         )
 
