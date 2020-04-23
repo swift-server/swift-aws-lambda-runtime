@@ -8,8 +8,12 @@ let package = Package(
         .macOS(.v10_13),
     ],
     products: [
+        // core library
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
+        // common AWS events
         .library(name: "AWSLambdaEvents", targets: ["AWSLambdaEvents"]),
+        // for testing only
+        .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.8.0"),
@@ -26,6 +30,12 @@ let package = Package(
         .testTarget(name: "AWSLambdaRuntimeTests", dependencies: ["AWSLambdaRuntime"]),
         .target(name: "AWSLambdaEvents", dependencies: []),
         .testTarget(name: "AWSLambdaEventsTests", dependencies: ["AWSLambdaEvents"]),
+        // testing helper
+        .target(name: "AWSLambdaTesting", dependencies: [
+            "AWSLambdaRuntime",
+            .product(name: "NIO", package: "swift-nio"),
+        ]),
+        .testTarget(name: "AWSLambdaTestingTests", dependencies: ["AWSLambdaTesting"]),
         // samples
         .target(name: "StringSample", dependencies: ["AWSLambdaRuntime"]),
         .target(name: "CodableSample", dependencies: ["AWSLambdaRuntime"]),
