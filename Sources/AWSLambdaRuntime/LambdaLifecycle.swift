@@ -23,7 +23,7 @@ extension Lambda {
         private let shutdownPromise: EventLoopPromise<Int>
         private let logger: Logger
         private let configuration: Configuration
-        private let factory: LambdaHandlerFactory
+        private let factory: ByteBufferLambdaHandlerFactory
 
         private var _state = State.idle
         private let stateLock = Lock()
@@ -34,11 +34,11 @@ extension Lambda {
         ///     - eventLoop: An `EventLoop` to run the Lambda on.
         ///     - logger: A `Logger` to log the Lambda events.
         ///     - factory: A `LambdaHandlerFactory` to create the concrete  Lambda handler.
-        public convenience init(eventLoop: EventLoop, logger: Logger, factory: @escaping LambdaHandlerFactory) {
+        public convenience init(eventLoop: EventLoop, logger: Logger, factory: @escaping ByteBufferLambdaHandlerFactory) {
             self.init(eventLoop: eventLoop, logger: logger, configuration: .init(), factory: factory)
         }
 
-        init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, factory: @escaping LambdaHandlerFactory) {
+        init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, factory: @escaping ByteBufferLambdaHandlerFactory) {
             self.eventLoop = eventLoop
             self.shutdownPromise = eventLoop.makePromise(of: Int.self)
             self.logger = logger

@@ -21,7 +21,7 @@ func runLambda(behavior: LambdaServerBehavior, handler: ByteBufferLambdaHandler)
     try runLambda(behavior: behavior, factory: { $0.makeSucceededFuture(handler) })
 }
 
-func runLambda(behavior: LambdaServerBehavior, factory: @escaping LambdaHandlerFactory) throws {
+func runLambda(behavior: LambdaServerBehavior, factory: @escaping ByteBufferLambdaHandlerFactory) throws {
     let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")

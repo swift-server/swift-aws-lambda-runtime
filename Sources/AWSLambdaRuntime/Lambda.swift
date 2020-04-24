@@ -25,6 +25,9 @@ import NIO
 public enum Lambda {
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
     ///
+    /// - parameters:
+    ///     - handler: `ByteBufferLambdaHandler` based Lambda.
+    ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ handler: ByteBufferLambdaHandler) {
         self.run(handler: handler)
@@ -32,12 +35,18 @@ public enum Lambda {
 
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol provided via a `LambdaHandlerFactory`.
     ///
+    /// - parameters:
+    ///     - factory: A `ByteBufferLambdaHandler` factory.
+    ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ factory: @escaping LambdaHandlerFactory) {
+    public static func run(_ factory: @escaping ByteBufferLambdaHandlerFactory) {
         self.run(factory: factory)
     }
 
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol provided via a factory, typically a constructor.
+    ///
+    /// - parameters:
+    ///     - factory: A `ByteBufferLambdaHandler` factory.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ factory: @escaping (EventLoop) throws -> ByteBufferLambdaHandler) {
@@ -65,7 +74,7 @@ public enum Lambda {
 
     // for testing and internal use
     @discardableResult
-    internal static func run(configuration: Configuration = .init(), factory: @escaping LambdaHandlerFactory) -> Result<Int, Error> {
+    internal static func run(configuration: Configuration = .init(), factory: @escaping ByteBufferLambdaHandlerFactory) -> Result<Int, Error> {
         do {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1) // only need one thread, will improve performance
             defer { try! eventLoopGroup.syncShutdownGracefully() }
@@ -76,7 +85,7 @@ public enum Lambda {
         }
     }
 
-    internal static func runAsync(eventLoopGroup: EventLoopGroup, configuration: Configuration, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<Int> {
+    internal static func runAsync(eventLoopGroup: EventLoopGroup, configuration: Configuration, factory: @escaping ByteBufferLambdaHandlerFactory) -> EventLoopFuture<Int> {
         Backtrace.install()
         var logger = Logger(label: "Lambda")
         logger.logLevel = configuration.general.logLevel
@@ -93,4 +102,7 @@ public enum Lambda {
     }
 }
 
-public typealias LambdaHandlerFactory = (EventLoop) -> EventLoopFuture<ByteBufferLambdaHandler>
+/// `ByteBufferLambdaHandler` factory.
+///
+/// A function that takes a `EventLoop` and returns an `EventLoopFuture` of a `ByteBufferLambdaHandler`
+public typealias ByteBufferLambdaHandlerFactory = (EventLoop) -> EventLoopFuture<ByteBufferLambdaHandler>
