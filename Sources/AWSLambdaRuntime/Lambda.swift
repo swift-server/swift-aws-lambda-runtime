@@ -34,6 +34,8 @@ public enum Lambda {
     }
 
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol provided via a `LambdaHandlerFactory`.
+    /// Use this to initialize all your resources, that you want to cache between invocations. This could be database connections and http clients for example.
+    /// It is encouraged to use the given EventLoop's conformance to `EventLoopGroup` when initializing NIO dependencies. This will improve overall performance.
     ///
     /// - parameters:
     ///     - factory: A `ByteBufferLambdaHandler` factory.

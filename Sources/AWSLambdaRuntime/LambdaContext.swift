@@ -43,14 +43,14 @@ extension Lambda {
         /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
         public let logger: Logger
 
-        /// `EventLoop` to schdule work with .
-        /// This is useful when implementing `EventLoopLambdaHandler`
+        /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
+        /// This is useful when implementing the `EventLoopLambdaHandler` protocol.
         ///
-        /// - note: The `EventLoop` is a shared with the Lambda runtime engine and should be handled with extra care
-        ///         Most importantly the `EventLoop` must never be blocked
+        /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
+        ///         Most importantly the `EventLoop` must never be blocked.
         public let eventLoop: EventLoop
 
-        /// ByteBufferAllocator to allocate `ByteBuffer`
+        /// `ByteBufferAllocator` to allocate `ByteBuffer`
         /// This is useful when implementing `EventLoopLambdaHandler`
         public let allocator: ByteBufferAllocator
 

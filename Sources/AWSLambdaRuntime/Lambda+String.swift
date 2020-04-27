@@ -85,7 +85,7 @@ internal struct StringVoidLambdaClosureWrapper: LambdaHandler {
 }
 
 public extension EventLoopLambdaHandler where In == String {
-    /// Implementation of  a`ByteBuffer` to `String` encoding
+    /// Implementation of a `ByteBuffer` to `String` encoding
     func decode(buffer: ByteBuffer) throws -> String {
         var buffer = buffer
         guard let string = buffer.readString(length: buffer.readableBytes) else {
@@ -96,7 +96,7 @@ public extension EventLoopLambdaHandler where In == String {
 }
 
 public extension EventLoopLambdaHandler where Out == String {
-    /// Implementation of  `String` to `ByteBuffer` decoding
+    /// Implementation of `String` to `ByteBuffer` decoding
     func encode(allocator: ByteBufferAllocator, value: String) throws -> ByteBuffer? {
         // FIXME: reusable buffer
         var buffer = allocator.buffer(capacity: value.utf8.count)

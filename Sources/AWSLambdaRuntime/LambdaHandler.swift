@@ -25,17 +25,17 @@ import NIO
 ///         The `EventLoopLambdaHandler` will execute the Lambda on the same `EventLoop` as the core runtime engine, making the processing faster but requires
 ///         more care from the implementation to never block the `EventLoop`.
 public protocol LambdaHandler: EventLoopLambdaHandler {
-    /// Defines which `DispatchQueue` the Lambda execution would be offloaded to.
+    /// Defines to which `DispatchQueue` the Lambda execution is offloaded to.
     var offloadQueue: DispatchQueue { get }
 
     /// The Lambda handling method
-    /// Concerete Lambda handlers implement this method to provide the Lambda functionality.
+    /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
     ///     - context: Runtime `Context`.
     ///     - payload: Payload of type `In` representing the event or request.
     ///     - callback: Completion handler to report the result of the Lambda back to the runtime engine.
-    ///                 The completion handler expecs a `Result` with either a response of type `Out` or an `Error`
+    ///                 The completion handler expects a `Result` with either a response of type `Out` or an `Error`
     func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void)
 }
 
@@ -76,27 +76,27 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
     associatedtype Out
 
     /// The Lambda handling method
-    /// Concerete Lambda handlers implement this method to provide the Lambda functionality.
+    /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
     ///     - context: Runtime `Context`.
     ///     - payload: Payload of type `In` representing the event or request.
     ///
-    /// - Returns: An `EventLoopFuture`  to report the result of the Lambda back to the runtime engine.
+    /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     ///            The `EventLoopFuture` should be completed with either a response of type `Out` or an `Error`
     func handle(context: Lambda.Context, payload: In) -> EventLoopFuture<Out>
 
     /// Encode a response of type `Out` to `ByteBuffer`
-    /// Concerete Lambda handlers implement this method to provide coding functionality.
+    /// Concrete Lambda handlers implement this method to provide coding functionality.
     /// - parameters:
     ///     - allocator: A `ByteBufferAllocator` to help allocate the `ByteBuffer`.
     ///     - value: Response of type `Out`.
     ///
-    /// - Returns: A `ByteBuffer` with the encoded version of the `value` .
+    /// - Returns: A `ByteBuffer` with the encoded version of the `value`.
     func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer?
 
     /// Decode a`ByteBuffer` to a request or event of type `In`
-    /// Concerete Lambda handlers implement this method to provide coding functionality.
+    /// Concrete Lambda handlers implement this method to provide coding functionality.
     ///
     /// - parameters:
     ///     - buffer: The `ByteBuffer` to decode.
@@ -155,13 +155,13 @@ public extension EventLoopLambdaHandler where Out == Void {
 ///         Most users are not expected to use this protocol.
 public protocol ByteBufferLambdaHandler {
     /// The Lambda handling method
-    /// Concerete Lambda handlers implement this method to provide the Lambda functionality.
+    /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
     ///     - context: Runtime `Context`.
     ///     - payload: The event or request payload encoded as `ByteBuffer`.
     ///
-    /// - Returns: An `EventLoopFuture`  to report the result of the Lambda back to the runtime engine.
+    /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     ///            The `EventLoopFuture` should be completed with either a response encoded as `ByteBuffer` or an `Error`
     func handle(context: Lambda.Context, payload: ByteBuffer) -> EventLoopFuture<ByteBuffer?>
 }
