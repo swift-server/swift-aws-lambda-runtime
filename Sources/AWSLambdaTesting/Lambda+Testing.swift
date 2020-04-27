@@ -12,7 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// @testable for access of internal functions - this would only work for testing by design
+// this is designed to only work for testing
+// #if filter required for release builds which do not support @testable import
+// @testable is used to access of internal functions
+#if DEBUG
 @testable import AWSLambdaRuntime
 import Dispatch
 import Logging
@@ -87,3 +90,4 @@ extension Lambda {
         }.wait()
     }
 }
+#endif
