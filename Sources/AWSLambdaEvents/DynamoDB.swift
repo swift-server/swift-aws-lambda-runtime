@@ -62,7 +62,7 @@ public struct DynamoDB {
 
     public struct EventRecord: Decodable {
         /// The region in which the GetRecords request was received.
-        public let awsRegion: String
+        public let awsRegion: AWSRegion
 
         /// The main body of the stream record, containing all of the DynamoDB-specific
         /// fields.
