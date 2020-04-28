@@ -18,10 +18,10 @@ extension Lambda {
     /// An asynchronous Lambda Closure that takes a `String` and returns a `Result<String, Error>` via a completion handler.
     public typealias StringClosure = (Lambda.Context, String, @escaping (Result<String, Error>) -> Void) -> Void
 
-    /// Run a Lambda defined by implementing the `StringLambdaClosure` function.
+    /// Run a Lambda defined by implementing the `StringClosure` function.
     ///
     /// - parameters:
-    ///     - closure: `StringLambdaClosure` based Lambda.
+    ///     - closure: `StringClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ closure: @escaping StringClosure) {
@@ -31,10 +31,10 @@ extension Lambda {
     /// An asynchronous Lambda Closure that takes a `String` and returns a `Result<Void, Error>` via a completion handler.
     public typealias StringVoidClosure = (Lambda.Context, String, @escaping (Result<Void, Error>) -> Void) -> Void
 
-    /// Run a Lambda defined by implementing the `StringVoidLambdaClosure` function.
+    /// Run a Lambda defined by implementing the `StringVoidClosure` function.
     ///
     /// - parameters:
-    ///     - closure: `StringVoidLambdaClosure` based Lambda.
+    ///     - closure: `StringVoidClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ closure: @escaping StringVoidClosure) {
@@ -85,7 +85,7 @@ internal struct StringVoidClosureWrapper: LambdaHandler {
 }
 
 public extension EventLoopLambdaHandler where In == String {
-    /// Implementation of a `ByteBuffer` to `String` encoding
+    /// Implementation of a `ByteBuffer` to `String` decoding
     func decode(buffer: ByteBuffer) throws -> String {
         var buffer = buffer
         guard let string = buffer.readString(length: buffer.readableBytes) else {
@@ -96,7 +96,7 @@ public extension EventLoopLambdaHandler where In == String {
 }
 
 public extension EventLoopLambdaHandler where Out == String {
-    /// Implementation of `String` to `ByteBuffer` decoding
+    /// Implementation of `String` to `ByteBuffer` encoding
     func encode(allocator: ByteBufferAllocator, value: String) throws -> ByteBuffer? {
         // FIXME: reusable buffer
         var buffer = allocator.buffer(capacity: value.utf8.count)

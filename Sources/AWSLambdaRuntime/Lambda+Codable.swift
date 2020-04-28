@@ -22,10 +22,10 @@ extension Lambda {
     /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Out: Encodable, Error>` via a completion handler.
     public typealias CodableClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
 
-    /// Run a Lambda defined by implementing the `CodableLambdaClosure` function.
+    /// Run a Lambda defined by implementing the `CodableClosure` function.
     ///
     /// - parameters:
-    ///     - closure: `CodableLambdaClosure` based Lambda.
+    ///     - closure: `CodableClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableClosure<In, Out>) {
@@ -35,10 +35,10 @@ extension Lambda {
     /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Void, Error>` via a completion handler.
     public typealias CodableVoidClosure<In: Decodable> = (Lambda.Context, In, @escaping (Result<Void, Error>) -> Void) -> Void
 
-    /// Run a Lambda defined by implementing the `CodableVoidLambdaClosure` function.
+    /// Run a Lambda defined by implementing the `CodableVoidClosure` function.
     ///
     /// - parameters:
-    ///     - closure: `CodableVoidLambdaClosure` based Lambda.
+    ///     - closure: `CodableVoidClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run<In: Decodable>(_ closure: @escaping CodableVoidClosure<In>) {
