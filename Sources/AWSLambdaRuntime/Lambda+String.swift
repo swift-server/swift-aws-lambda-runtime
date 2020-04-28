@@ -15,15 +15,21 @@ import NIO
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `String` payloads.
 extension Lambda {
+    /// An asynchronous Lambda Closure that takes a `String` and returns a `Result<String, Error>` via a completion handler.
+    public typealias StringClosure = (Lambda.Context, String, @escaping (Result<String, Error>) -> Void) -> Void
+
     /// Run a Lambda defined by implementing the `StringLambdaClosure` function.
     ///
     /// - parameters:
     ///     - closure: `StringLambdaClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ closure: @escaping StringLambdaClosure) {
+    public static func run(_ closure: @escaping StringClosure) {
         self.run(closure: closure)
     }
+
+    /// An asynchronous Lambda Closure that takes a `String` and returns a `Result<Void, Error>` via a completion handler.
+    public typealias StringVoidClosure = (Lambda.Context, String, @escaping (Result<Void, Error>) -> Void) -> Void
 
     /// Run a Lambda defined by implementing the `StringVoidLambdaClosure` function.
     ///
@@ -31,36 +37,30 @@ extension Lambda {
     ///     - closure: `StringVoidLambdaClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ closure: @escaping StringVoidLambdaClosure) {
+    public static func run(_ closure: @escaping StringVoidClosure) {
         self.run(closure: closure)
     }
 
     // for testing
     @discardableResult
-    internal static func run(configuration: Configuration = .init(), closure: @escaping StringLambdaClosure) -> Result<Int, Error> {
-        self.run(configuration: configuration, handler: StringLambdaClosureWrapper(closure))
+    internal static func run(configuration: Configuration = .init(), closure: @escaping StringClosure) -> Result<Int, Error> {
+        self.run(configuration: configuration, handler: StringClosureWrapper(closure))
     }
 
     // for testing
     @discardableResult
-    internal static func run(configuration: Configuration = .init(), closure: @escaping StringVoidLambdaClosure) -> Result<Int, Error> {
-        self.run(configuration: configuration, handler: StringVoidLambdaClosureWrapper(closure))
+    internal static func run(configuration: Configuration = .init(), closure: @escaping StringVoidClosure) -> Result<Int, Error> {
+        self.run(configuration: configuration, handler: StringVoidClosureWrapper(closure))
     }
 }
 
-/// An asynchronous Lambda Closure that takes a `String` and returns a `Result<String, Error>` via a completion handler.
-public typealias StringLambdaClosure = (Lambda.Context, String, @escaping (Result<String, Error>) -> Void) -> Void
-
-/// An asynchronous Lambda Closure that takes a `String` and returns a `Result<Void, Error>` via a completion handler.
-public typealias StringVoidLambdaClosure = (Lambda.Context, String, @escaping (Result<Void, Error>) -> Void) -> Void
-
-internal struct StringLambdaClosureWrapper: LambdaHandler {
+internal struct StringClosureWrapper: LambdaHandler {
     typealias In = String
     typealias Out = String
 
-    private let closure: StringLambdaClosure
+    private let closure: Lambda.StringClosure
 
-    init(_ closure: @escaping StringLambdaClosure) {
+    init(_ closure: @escaping Lambda.StringClosure) {
         self.closure = closure
     }
 
@@ -69,13 +69,13 @@ internal struct StringLambdaClosureWrapper: LambdaHandler {
     }
 }
 
-internal struct StringVoidLambdaClosureWrapper: LambdaHandler {
+internal struct StringVoidClosureWrapper: LambdaHandler {
     typealias In = String
     typealias Out = Void
 
-    private let closure: StringVoidLambdaClosure
+    private let closure: Lambda.StringVoidClosure
 
-    init(_ closure: @escaping StringVoidLambdaClosure) {
+    init(_ closure: @escaping Lambda.StringVoidClosure) {
         self.closure = closure
     }
 

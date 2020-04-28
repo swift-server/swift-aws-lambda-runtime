@@ -39,32 +39,32 @@ extension Lambda {
         }
     }
 
-    public static func test(_ closure: @escaping StringLambdaClosure,
+    public static func test(_ closure: @escaping Lambda.StringClosure,
                             with payload: String,
                             using config: TestConfig = .init()) throws -> String {
-        try Self.test(StringLambdaClosureWrapper(closure), with: payload, using: config)
+        try Self.test(StringClosureWrapper(closure), with: payload, using: config)
     }
 
-    public static func test(_ closure: @escaping StringVoidLambdaClosure,
+    public static func test(_ closure: @escaping Lambda.StringVoidClosure,
                             with payload: String,
                             using config: TestConfig = .init()) throws {
-        _ = try Self.test(StringVoidLambdaClosureWrapper(closure), with: payload, using: config)
+        _ = try Self.test(StringVoidClosureWrapper(closure), with: payload, using: config)
     }
 
     public static func test<In: Decodable, Out: Encodable>(
-        _ closure: @escaping CodableLambdaClosure<In, Out>,
+        _ closure: @escaping Lambda.CodableClosure<In, Out>,
         with payload: In,
         using config: TestConfig = .init()
     ) throws -> Out {
-        try Self.test(CodableLambdaClosureWrapper(closure), with: payload, using: config)
+        try Self.test(CodableClosureWrapper(closure), with: payload, using: config)
     }
 
     public static func test<In: Decodable>(
-        _ closure: @escaping CodableVoidLambdaClosure<In>,
+        _ closure: @escaping Lambda.CodableVoidClosure<In>,
         with payload: In,
         using config: TestConfig = .init()
     ) throws {
-        _ = try Self.test(CodableVoidLambdaClosureWrapper(closure), with: payload, using: config)
+        _ = try Self.test(CodableVoidClosureWrapper(closure), with: payload, using: config)
     }
 
     public static func test<In, Out, Handler: EventLoopLambdaHandler>(

@@ -23,13 +23,20 @@ import Logging
 import NIO
 
 public enum Lambda {
+    public typealias Handler = ByteBufferLambdaHandler
+
+    /// `ByteBufferLambdaHandler` factory.
+    ///
+    /// A function that takes a `EventLoop` and returns an `EventLoopFuture` of a `ByteBufferLambdaHandler`
+    public typealias HandlerFactory = (EventLoop) -> EventLoopFuture<Handler>
+
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
     ///
     /// - parameters:
     ///     - handler: `ByteBufferLambdaHandler` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ handler: ByteBufferLambdaHandler) {
+    public static func run(_ handler: Handler) {
         self.run(handler: handler)
     }
 
@@ -41,7 +48,7 @@ public enum Lambda {
     ///     - factory: A `ByteBufferLambdaHandler` factory.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ factory: @escaping ByteBufferLambdaHandlerFactory) {
+    public static func run(_ factory: @escaping HandlerFactory) {
         self.run(factory: factory)
     }
 
@@ -51,20 +58,20 @@ public enum Lambda {
     ///     - factory: A `ByteBufferLambdaHandler` factory.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ factory: @escaping (EventLoop) throws -> ByteBufferLambdaHandler) {
+    public static func run(_ factory: @escaping (EventLoop) throws -> Handler) {
         self.run(factory: factory)
     }
 
     // for testing and internal use
     @discardableResult
-    internal static func run(configuration: Configuration = .init(), handler: ByteBufferLambdaHandler) -> Result<Int, Error> {
+    internal static func run(configuration: Configuration = .init(), handler: Handler) -> Result<Int, Error> {
         self.run(configuration: configuration, factory: { $0.makeSucceededFuture(handler) })
     }
 
     // for testing and internal use
     @discardableResult
-    internal static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> ByteBufferLambdaHandler) -> Result<Int, Error> {
-        self.run(configuration: configuration, factory: { eventloop -> EventLoopFuture<ByteBufferLambdaHandler> in
+    internal static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> Handler) -> Result<Int, Error> {
+        self.run(configuration: configuration, factory: { eventloop -> EventLoopFuture<Handler> in
             do {
                 let handler = try factory(eventloop)
                 return eventloop.makeSucceededFuture(handler)
@@ -76,7 +83,7 @@ public enum Lambda {
 
     // for testing and internal use
     @discardableResult
-    internal static func run(configuration: Configuration = .init(), factory: @escaping ByteBufferLambdaHandlerFactory) -> Result<Int, Error> {
+    internal static func run(configuration: Configuration = .init(), factory: @escaping HandlerFactory) -> Result<Int, Error> {
         do {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1) // only need one thread, will improve performance
             defer { try! eventLoopGroup.syncShutdownGracefully() }
@@ -87,7 +94,7 @@ public enum Lambda {
         }
     }
 
-    internal static func runAsync(eventLoopGroup: EventLoopGroup, configuration: Configuration, factory: @escaping ByteBufferLambdaHandlerFactory) -> EventLoopFuture<Int> {
+    internal static func runAsync(eventLoopGroup: EventLoopGroup, configuration: Configuration, factory: @escaping HandlerFactory) -> EventLoopFuture<Int> {
         Backtrace.install()
         var logger = Logger(label: "Lambda")
         logger.logLevel = configuration.general.logLevel
@@ -103,8 +110,3 @@ public enum Lambda {
         }
     }
 }
-
-/// `ByteBufferLambdaHandler` factory.
-///
-/// A function that takes a `EventLoop` and returns an `EventLoopFuture` of a `ByteBufferLambdaHandler`
-public typealias ByteBufferLambdaHandlerFactory = (EventLoop) -> EventLoopFuture<ByteBufferLambdaHandler>
