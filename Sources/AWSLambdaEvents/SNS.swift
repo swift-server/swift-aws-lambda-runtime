@@ -14,7 +14,8 @@
 
 import struct Foundation.Date
 
-/// https://github.com/aws/aws-lambda-go/blob/master/events/sns.go
+// https://docs.aws.amazon.com/lambda/latest/dg/with-sns.html
+
 public enum SNS {
     public struct Event: Decodable {
         public struct Record: Decodable {

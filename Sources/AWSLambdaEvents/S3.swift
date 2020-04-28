@@ -14,7 +14,8 @@
 
 import struct Foundation.Date
 
-// https://github.com/aws/aws-lambda-go/blob/master/events/s3.go
+// https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html
+
 public enum S3 {
     public struct Event: Decodable {
         public struct Record: Decodable {

@@ -31,6 +31,7 @@ public enum Cloudwatch {
     /// CloudWatch.Event is the outer structure of an event sent via CloudWatch Events.
     ///
     /// **NOTE**: For examples of events that come via CloudWatch Events, see
+    /// https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents.html
     /// https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/EventTypes.html
     /// https://docs.aws.amazon.com/eventbridge/latest/userguide/event-types.html
     public struct Event<Detail: CloudwatchDetail>: Decodable {
