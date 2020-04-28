@@ -17,6 +17,8 @@ import Logging
 import NIO
 
 extension Lambda {
+    /// Lambda runtime context.
+    /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
     public final class Context {
         /// The request ID, which identifies the request that triggered the function invocation.
         public let requestId: String
@@ -36,9 +38,20 @@ extension Lambda {
         /// For invocations from the AWS Mobile SDK, data about the client application and device.
         public let clientContext: String?
 
-        /// a logger to log
+        /// `Logger` to log with
+        ///
+        /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
         public let logger: Logger
+
+        /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
+        /// This is useful when implementing the `EventLoopLambdaHandler` protocol.
+        ///
+        /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
+        ///         Most importantly the `EventLoop` must never be blocked.
         public let eventLoop: EventLoop
+
+        /// `ByteBufferAllocator` to allocate `ByteBuffer`
+        /// This is useful when implementing `EventLoopLambdaHandler`
         public let allocator: ByteBufferAllocator
 
         internal init(requestId: String,

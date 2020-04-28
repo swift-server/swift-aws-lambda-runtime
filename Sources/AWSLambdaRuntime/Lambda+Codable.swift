@@ -19,46 +19,52 @@ import NIOFoundationCompat
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` payloads.
 extension Lambda {
-    /// Run a Lambda defined by implementing the `CodableLambdaClosure` function.
+    /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Out: Encodable, Error>` via a completion handler.
+    public typealias CodableClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
+
+    /// Run a Lambda defined by implementing the `CodableClosure` function.
+    ///
+    /// - parameters:
+    ///     - closure: `CodableClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableLambdaClosure<In, Out>) {
+    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableClosure<In, Out>) {
         self.run(closure: closure)
     }
 
-    /// Run a Lambda defined by implementing the `CodableVoidLambdaClosure` function.
+    /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Void, Error>` via a completion handler.
+    public typealias CodableVoidClosure<In: Decodable> = (Lambda.Context, In, @escaping (Result<Void, Error>) -> Void) -> Void
+
+    /// Run a Lambda defined by implementing the `CodableVoidClosure` function.
+    ///
+    /// - parameters:
+    ///     - closure: `CodableVoidClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<In: Decodable>(_ closure: @escaping CodableVoidLambdaClosure<In>) {
+    public static func run<In: Decodable>(_ closure: @escaping CodableVoidClosure<In>) {
         self.run(closure: closure)
     }
 
     // for testing
     @discardableResult
-    internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping CodableLambdaClosure<In, Out>) -> Result<Int, Error> {
-        self.run(configuration: configuration, handler: CodableLambdaClosureWrapper(closure))
+    internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping CodableClosure<In, Out>) -> Result<Int, Error> {
+        self.run(configuration: configuration, handler: CodableClosureWrapper(closure))
     }
 
     // for testing
     @discardableResult
-    internal static func run<In: Decodable>(configuration: Configuration = .init(), closure: @escaping CodableVoidLambdaClosure<In>) -> Result<Int, Error> {
-        self.run(configuration: configuration, handler: CodableVoidLambdaClosureWrapper(closure))
+    internal static func run<In: Decodable>(configuration: Configuration = .init(), closure: @escaping CodableVoidClosure<In>) -> Result<Int, Error> {
+        self.run(configuration: configuration, handler: CodableVoidClosureWrapper(closure))
     }
 }
 
-/// A processing closure for a Lambda that takes a `In` and returns a `Result<Out, Error>` via a `CompletionHandler` asynchronously.
-public typealias CodableLambdaClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
-
-/// A processing closure for a Lambda that takes a `In` and returns a `Result<Void, Error>` via a `CompletionHandler` asynchronously.
-public typealias CodableVoidLambdaClosure<In: Decodable> = (Lambda.Context, In, @escaping (Result<Void, Error>) -> Void) -> Void
-
-internal struct CodableLambdaClosureWrapper<In: Decodable, Out: Encodable>: LambdaHandler {
+internal struct CodableClosureWrapper<In: Decodable, Out: Encodable>: LambdaHandler {
     typealias In = In
     typealias Out = Out
 
-    private let closure: CodableLambdaClosure<In, Out>
+    private let closure: Lambda.CodableClosure<In, Out>
 
-    init(_ closure: @escaping CodableLambdaClosure<In, Out>) {
+    init(_ closure: @escaping Lambda.CodableClosure<In, Out>) {
         self.closure = closure
     }
 
@@ -67,13 +73,13 @@ internal struct CodableLambdaClosureWrapper<In: Decodable, Out: Encodable>: Lamb
     }
 }
 
-internal struct CodableVoidLambdaClosureWrapper<In: Decodable>: LambdaHandler {
+internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
     typealias In = In
     typealias Out = Void
 
-    private let closure: CodableVoidLambdaClosure<In>
+    private let closure: Lambda.CodableVoidClosure<In>
 
-    init(_ closure: @escaping CodableVoidLambdaClosure<In>) {
+    init(_ closure: @escaping Lambda.CodableVoidClosure<In>) {
         self.closure = closure
     }
 
@@ -126,6 +132,7 @@ private extension Lambda {
 }
 
 extension JSONDecoder: LambdaCodableDecoder {}
+
 extension JSONEncoder: LambdaCodableEncoder {
     public func encode<T>(_ value: T, using allocator: ByteBufferAllocator) throws -> ByteBuffer where T: Encodable {
         // nio will resize the buffer if necessary
