@@ -17,11 +17,11 @@ import Logging
 import NIO
 import XCTest
 
-func runLambda(behavior: LambdaServerBehavior, handler: ByteBufferLambdaHandler) throws {
+func runLambda(behavior: LambdaServerBehavior, handler: Lambda.Handler) throws {
     try runLambda(behavior: behavior, factory: { $0.makeSucceededFuture(handler) })
 }
 
-func runLambda(behavior: LambdaServerBehavior, factory: @escaping LambdaHandlerFactory) throws {
+func runLambda(behavior: LambdaServerBehavior, factory: @escaping Lambda.HandlerFactory) throws {
     let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")

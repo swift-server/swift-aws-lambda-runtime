@@ -30,7 +30,7 @@ extension Lambda {
         /// Run the user provided initializer. This *must* only be called once.
         ///
         /// - Returns: An `EventLoopFuture<LambdaHandler>` fulfilled with the outcome of the initialization.
-        func initialize(logger: Logger, factory: @escaping LambdaHandlerFactory) -> EventLoopFuture<ByteBufferLambdaHandler> {
+        func initialize(logger: Logger, factory: @escaping HandlerFactory) -> EventLoopFuture<Handler> {
             logger.debug("initializing lambda")
             // 1. create the handler from the factory
             // 2. report initialization error if one occured
@@ -43,7 +43,7 @@ extension Lambda {
             }
         }
 
-        func run(logger: Logger, handler: ByteBufferLambdaHandler) -> EventLoopFuture<Void> {
+        func run(logger: Logger, handler: Handler) -> EventLoopFuture<Void> {
             logger.debug("lambda invocation sequence starting")
             // 1. request work from lambda runtime engine
             return self.runtimeClient.requestWork(logger: logger).peekError { error in
