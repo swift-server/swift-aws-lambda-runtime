@@ -26,7 +26,6 @@ struct Handler: EventLoopLambdaHandler {
     }
 }
 
-
 try Lambda.withLocalServer {
     Lambda.run(Handler())
 }
