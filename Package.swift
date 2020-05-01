@@ -36,12 +36,11 @@ let package = Package(
             .product(name: "NIO", package: "swift-nio"),
         ]),
         .testTarget(name: "AWSLambdaTestingTests", dependencies: ["AWSLambdaTesting"]),
-        // samples
-        .target(name: "StringSample", dependencies: ["AWSLambdaRuntime"]),
-        .target(name: "CodableSample", dependencies: ["AWSLambdaRuntime"]),
-        // perf tests
+        // for perf testing
         .target(name: "MockServer", dependencies: [
             .product(name: "NIOHTTP1", package: "swift-nio"),
         ]),
+        .target(name: "StringSample", dependencies: ["AWSLambdaRuntime"]),
+        .target(name: "CodableSample", dependencies: ["AWSLambdaRuntime"]),
     ]
 )

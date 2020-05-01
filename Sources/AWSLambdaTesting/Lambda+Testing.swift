@@ -12,9 +12,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-// this is designed to only work for testing
+// This functionality is designed to help with Lambda unit testing with XCTest
 // #if filter required for release builds which do not support @testable import
 // @testable is used to access of internal functions
+// For exmaple:
+//
+// func test() {
+//     struct MyLambda: EventLoopLambdaHandler {
+//         typealias In = String
+//         typealias Out = String
+//
+//         func handle(context: Lambda.Context, payload: String) -> EventLoopFuture<String> {
+//             return context.eventLoop.makeSucceededFuture("echo" + payload)
+//         }
+//     }
+//
+//     let input = UUID().uuidString
+//     var result: String?
+//     XCTAssertNoThrow(result = try Lambda.test(MyLambda(), with: input))
+//     XCTAssertEqual(result, "echo" + input)
+// }
+
 #if DEBUG
 @testable import AWSLambdaRuntime
 import Dispatch
