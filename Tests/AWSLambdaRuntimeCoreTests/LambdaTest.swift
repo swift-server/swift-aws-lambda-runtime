@@ -128,6 +128,7 @@ class LambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
+    #if false
     func testStartStop() {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
@@ -150,6 +151,7 @@ class LambdaTest: XCTestCase {
         }
         XCTAssertNoThrow(try future.wait())
     }
+    #endif
 
     func testTimeout() {
         let timeout: Int64 = 100

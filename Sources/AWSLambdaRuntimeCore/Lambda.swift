@@ -92,29 +92,33 @@ public enum Lambda {
     // for testing and internal use
     @discardableResult
     internal static func run(configuration: Configuration = .init(), factory: @escaping HandlerFactory) -> Result<Int, Error> {
-        do {
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1) // only need one thread, will improve performance
-            defer { try! eventLoopGroup.syncShutdownGracefully() }
-            let result = try self.runAsync(eventLoopGroup: eventLoopGroup, configuration: configuration, factory: factory).wait()
-            return .success(result)
-        } catch {
-            return .failure(error)
-        }
-    }
-
-    internal static func runAsync(eventLoopGroup: EventLoopGroup, configuration: Configuration, factory: @escaping HandlerFactory) -> EventLoopFuture<Int> {
         Backtrace.install()
         var logger = Logger(label: "Lambda")
         logger.logLevel = configuration.general.logLevel
-        let lifecycle = Lifecycle(eventLoop: eventLoopGroup.next(), logger: logger, configuration: configuration, factory: factory)
-        let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
-            logger.info("intercepted signal: \(signal)")
-            lifecycle.shutdown()
-        }
-        return lifecycle.start().flatMap {
-            return lifecycle.shutdownFuture.always { _ in
+
+        var r: Result<Int, Error>?
+        MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
+            let lifecycle = Lifecycle(eventLoop: eventLoop, logger: logger, configuration: configuration, factory: factory)
+            let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
+                logger.info("intercepted signal: \(signal)")
+                lifecycle.shutdown()
+            }
+
+            _ = lifecycle.start().flatMap {
+                lifecycle.shutdownFuture
+            }
+            .always { result in
                 signalSource.cancel()
+                eventLoop.shutdownGracefully { _ in
+                    logger.info("shutdown")
+                }
+
+                r = result
             }
         }
+
+        logger.info("shutdown completed")
+
+        return r!
     }
 }
