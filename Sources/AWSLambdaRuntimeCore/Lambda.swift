@@ -80,12 +80,15 @@ public enum Lambda {
     @discardableResult
     internal static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> Handler) -> Result<Int, Error> {
         self.run(configuration: configuration, factory: { eventloop -> EventLoopFuture<Handler> in
-            do {
-                let handler = try factory(eventloop)
-                return eventloop.makeSucceededFuture(handler)
-            } catch {
-                return eventloop.makeFailedFuture(error)
+            let promise = eventloop.makePromise(of: Handler.self)
+            Lambda.defaultOffloadQueue.async {
+                do {
+                    promise.succeed(try factory(eventloop))
+                } catch {
+                    promise.fail(error)
+                }
             }
+            return promise.futureResult
         })
     }
 

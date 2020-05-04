@@ -39,7 +39,7 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
     func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void)
 }
 
-private extension Lambda {
+internal extension Lambda {
     static let defaultOffloadQueue = DispatchQueue(label: "LambdaHandler.offload")
 }
 
