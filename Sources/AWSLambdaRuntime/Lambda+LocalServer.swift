@@ -100,7 +100,6 @@ private enum LocalLambda {
 
         private var processing = CircularBuffer<(head: HTTPRequestHead, body: ByteBuffer?)>()
         
-        private static let lock = Lock()
         private static var queue = [Pending]()
         private static var invocationState: InvocationState = .waitingForNextRequest
 
@@ -146,7 +145,7 @@ private enum LocalLambda {
                         }
                     }
                     let pending = Pending(requestId: requestId, request: work, responsePromise: promise)
-                    switch Self.lock.withLock({ Self.invocationState }) {
+                    switch Self.invocationState {
                     case .idle(let promise):
                         promise.succeed(pending)
                     case .processing(_), .waitingForNextRequest:
@@ -155,14 +154,14 @@ private enum LocalLambda {
                 }
             } else if request.head.uri.hasSuffix("/next") {
                 // check if our server is in the correct state
-                guard case .waitingForNextRequest = Self.lock.withLock({ Self.invocationState }) else {
+                guard case .waitingForNextRequest = Self.invocationState else {
                     #warning("better error code?!")
                     self.writeResponse(context: context, response: .init(status: .conflict))
                     return
                 }
                 
                 // pop the first task from the queue
-                switch (Self.lock.withLock { !Self.queue.isEmpty ? Self.queue.removeFirst() : nil }) {
+                switch !Self.queue.isEmpty ? Self.queue.removeFirst() : nil {
                 case .none:
                     // if there is nothing in the queue, create a promise that we can succeed,
                     // when we get a new task
@@ -172,19 +171,14 @@ private enum LocalLambda {
                         case .failure(let error):
                             self.writeResponse(context: context, response: .init(status: .internalServerError))
                         case .success(let pending):
-                            Self.lock.withLock {
-                                Self.invocationState = .processing(pending)
-                            }
+                            Self.invocationState = .processing(pending)
                             self.writeResponse(context: context, response: pending.toResponse())
                         }
                     }
-                    Self.lock.withLock {
-                        Self.invocationState = .idle(promise)
-                    }
+                    Self.invocationState = .idle(promise)
                 case .some(let pending):
-                    Self.lock.withLock {
-                        Self.invocationState = .processing(pending)
-                    }
+                    // if there is a task pending, we can immediatly respond with it.
+                    Self.invocationState = .processing(pending)
                     self.writeResponse(context: context, response: pending.toResponse())
                 }
 
@@ -194,7 +188,7 @@ private enum LocalLambda {
                     // the request is malformed, since we were expecting a requestId in the path
                     return self.writeResponse(context: context, response: .init(status: .badRequest))
                 }
-                guard case .processing(let pending) = Self.lock.withLock({ Self.invocationState }) else {
+                guard case .processing(let pending) = Self.invocationState else {
                     // a response was send, but we did not expect to receive one
                     #warning("better error code?!")
                     return self.writeResponse(context: context, response: .init(status: .conflict))
@@ -206,10 +200,7 @@ private enum LocalLambda {
                 
                 pending.responsePromise.succeed(.init(status: .ok, body: request.body))
                 self.writeResponse(context: context, response: .init(status: .accepted))
-                
-                Self.lock.withLock {
-                    Self.invocationState = .waitingForNextRequest
-                }
+                Self.invocationState = .waitingForNextRequest
             } else {
                 self.writeResponse(context: context, response: .init(status: .notFound))
             }
