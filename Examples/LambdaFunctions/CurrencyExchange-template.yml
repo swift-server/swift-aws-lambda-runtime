@@ -1,0 +1,15 @@
+AWSTemplateFormatVersion : '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: A sample SAM template for deploying Lambda functions.
+
+Resources:
+# CurrencyExchange Function
+  currencyExchangeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: Provided
+      Runtime: provided
+      CodeUri: .build/lambda/CurrencyExchange/lambda.zip
+      Timeout: 300
+# Instructs new versions to be published to an alias named "live".
+      AutoPublishAlias: live
