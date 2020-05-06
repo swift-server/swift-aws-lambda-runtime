@@ -26,9 +26,7 @@ struct Handler: EventLoopLambdaHandler {
     }
 }
 
-try Lambda.withLocalServer {
-    Lambda.run(Handler())
-}
+Lambda.run(Handler())
 
 // MARK: - this can also be expressed as a closure:
 
