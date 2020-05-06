@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if DEBUG
 import Dispatch
 import Logging
 import NIO
@@ -26,8 +27,6 @@ import NIOHTTP1
 //         callback(.success("Hello, \(payload)!"))
 //     }
 // }
-
-#if DEBUG
 extension Lambda {
     /// Execute code in the context of a mock Lambda server.
     ///
@@ -88,20 +87,13 @@ private enum LocalLambda {
     }
 
     final class HTTPHandler: ChannelInboundHandler {
-        
-        enum InvocationState {
-            case waitingForNextRequest
-            case idle(EventLoopPromise<Pending>)
-            case processing(Pending)
-        }
-        
         public typealias InboundIn = HTTPServerRequestPart
         public typealias OutboundOut = HTTPServerResponsePart
 
-        private var processing = CircularBuffer<(head: HTTPRequestHead, body: ByteBuffer?)>()
-        
-        private static var queue = [Pending]()
-        private static var invocationState: InvocationState = .waitingForNextRequest
+        private var pending = CircularBuffer<(head: HTTPRequestHead, body: ByteBuffer?)>()
+
+        private static var invocations = CircularBuffer<Invocation>()
+        private static var invocationState = InvocationState.waitingForLambdaRequest
 
         private let logger: Logger
         private let invocationEndpoint: String
@@ -116,92 +108,100 @@ private enum LocalLambda {
 
             switch requestPart {
             case .head(let head):
-                self.processing.append((head: head, body: nil))
+                self.pending.append((head: head, body: nil))
             case .body(var buffer):
-                var request = self.processing.removeFirst()
+                var request = self.pending.removeFirst()
                 if request.body == nil {
                     request.body = buffer
                 } else {
                     request.body!.writeBuffer(&buffer)
                 }
-                self.processing.prepend(request)
+                self.pending.prepend(request)
             case .end:
-                let request = self.processing.removeFirst()
+                let request = self.pending.removeFirst()
                 self.processRequest(context: context, request: request)
             }
         }
 
         func processRequest(context: ChannelHandlerContext, request: (head: HTTPRequestHead, body: ByteBuffer?)) {
-            if request.head.uri.hasSuffix(self.invocationEndpoint) {
-                if let work = request.body {
-                    let requestId = "\(DispatchTime.now().uptimeNanoseconds)" // FIXME:
-                    let promise = context.eventLoop.makePromise(of: Response.self)
-                    promise.futureResult.whenComplete { result in
-                        switch result {
-                        case .success(let response):
-                            self.writeResponse(context: context, response: response)
-                        case .failure:
-                            self.writeResponse(context: context, response: .init(status: .internalServerError))
-                        }
-                    }
-                    let pending = Pending(requestId: requestId, request: work, responsePromise: promise)
-                    switch Self.invocationState {
-                    case .idle(let promise):
-                        promise.succeed(pending)
-                    case .processing(_), .waitingForNextRequest:
-                        Self.queue.append(pending)
+            switch (request.head.method, request.head.uri) {
+            // this endpoint is called by the client invoking the lambda
+            case (.POST, let url) where url.hasSuffix(self.invocationEndpoint):
+                guard let work = request.body else {
+                    return self.writeResponse(context: context, response: .init(status: .badRequest))
+                }
+                let requestID = "\(DispatchTime.now().uptimeNanoseconds)" // FIXME:
+                let promise = context.eventLoop.makePromise(of: Response.self)
+                promise.futureResult.whenComplete { result in
+                    switch result {
+                    case .failure(let error):
+                        self.logger.error("invocation error: \(error)")
+                        self.writeResponse(context: context, response: .init(status: .internalServerError))
+                    case .success(let response):
+                        self.writeResponse(context: context, response: response)
                     }
                 }
-            } else if request.head.uri.hasSuffix("/next") {
+                let invocation = Invocation(requestID: requestID, request: work, responsePromise: promise)
+                switch Self.invocationState {
+                case .waitingForInvocation(let promise):
+                    promise.succeed(invocation)
+                case .waitingForLambdaRequest, .waitingForLambdaResponse:
+                    Self.invocations.append(invocation)
+                }
+            // /next endpoint is called by the lambda polling for work
+            case (.GET, let url) where url.hasSuffix(Consts.requestWorkURLSuffix):
                 // check if our server is in the correct state
-                guard case .waitingForNextRequest = Self.invocationState else {
-                    #warning("better error code?!")
-                    self.writeResponse(context: context, response: .init(status: .conflict))
+                guard case .waitingForLambdaRequest = Self.invocationState else {
+                    self.logger.error("invalid invocation state \(Self.invocationState)")
+                    self.writeResponse(context: context, response: .init(status: .unprocessableEntity))
                     return
                 }
-                
+
                 // pop the first task from the queue
-                switch !Self.queue.isEmpty ? Self.queue.removeFirst() : nil {
+                switch Self.invocations.popFirst() {
                 case .none:
-                    // if there is nothing in the queue, create a promise that we can succeed,
-                    // when we get a new task
-                    let promise = context.eventLoop.makePromise(of: Pending.self)
-                    promise.futureResult.whenComplete { (result) in
+                    // if there is nothing in the queue,
+                    // create a promise that we can fullfill when we get a new task
+                    let promise = context.eventLoop.makePromise(of: Invocation.self)
+                    promise.futureResult.whenComplete { result in
                         switch result {
                         case .failure(let error):
+                            self.logger.error("invocation error: \(error)")
                             self.writeResponse(context: context, response: .init(status: .internalServerError))
-                        case .success(let pending):
-                            Self.invocationState = .processing(pending)
-                            self.writeResponse(context: context, response: pending.toResponse())
+                        case .success(let invocation):
+                            Self.invocationState = .waitingForLambdaResponse(invocation)
+                            self.writeResponse(context: context, response: invocation.makeResponse())
                         }
                     }
-                    Self.invocationState = .idle(promise)
-                case .some(let pending):
+                    Self.invocationState = .waitingForInvocation(promise)
+                case .some(let invocation):
                     // if there is a task pending, we can immediatly respond with it.
-                    Self.invocationState = .processing(pending)
-                    self.writeResponse(context: context, response: pending.toResponse())
+                    Self.invocationState = .waitingForLambdaResponse(invocation)
+                    self.writeResponse(context: context, response: invocation.makeResponse())
                 }
-
-            } else if request.head.uri.hasSuffix("/response") {
+            // :requestID/response endpoint is called by the lambda posting the response
+            case (.POST, let url) where url.hasSuffix(Consts.postResponseURLSuffix):
                 let parts = request.head.uri.split(separator: "/")
-                guard let requestId = parts.count > 2 ? String(parts[parts.count - 2]) : nil else {
+                guard let requestID = parts.count > 2 ? String(parts[parts.count - 2]) : nil else {
                     // the request is malformed, since we were expecting a requestId in the path
                     return self.writeResponse(context: context, response: .init(status: .badRequest))
                 }
-                guard case .processing(let pending) = Self.invocationState else {
+                guard case .waitingForLambdaResponse(let invocation) = Self.invocationState else {
                     // a response was send, but we did not expect to receive one
-                    #warning("better error code?!")
-                    return self.writeResponse(context: context, response: .init(status: .conflict))
+                    self.logger.error("invalid invocation state \(Self.invocationState)")
+                    return self.writeResponse(context: context, response: .init(status: .unprocessableEntity))
                 }
-                guard requestId == pending.requestId else {
+                guard requestID == invocation.requestID else {
                     // the request's requestId is not matching the one we are expecting
+                    self.logger.error("invalid invocation state request ID \(requestID) does not match expected \(invocation.requestID)")
                     return self.writeResponse(context: context, response: .init(status: .badRequest))
                 }
-                
-                pending.responsePromise.succeed(.init(status: .ok, body: request.body))
+
+                invocation.responsePromise.succeed(.init(status: .ok, body: request.body))
                 self.writeResponse(context: context, response: .init(status: .accepted))
-                Self.invocationState = .waitingForNextRequest
-            } else {
+                Self.invocationState = .waitingForLambdaRequest
+            // unknown call
+            default:
                 self.writeResponse(context: context, response: .init(status: .notFound))
             }
         }
@@ -234,23 +234,29 @@ private enum LocalLambda {
             var body: ByteBuffer?
         }
 
-        struct Pending {
-            let requestId: String
+        struct Invocation {
+            let requestID: String
             let request: ByteBuffer
             let responsePromise: EventLoopPromise<Response>
-            
-            func toResponse() -> Response {
+
+            func makeResponse() -> Response {
                 var response = Response()
                 response.body = self.request
                 // required headers
                 response.headers = [
-                    (AmazonHeaders.requestID, self.requestId),
+                    (AmazonHeaders.requestID, self.requestID),
                     (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:\(Int16.random(in: Int16.min ... Int16.max)):function:custom-runtime"),
                     (AmazonHeaders.traceID, "Root=\(Int16.random(in: Int16.min ... Int16.max));Parent=\(Int16.random(in: Int16.min ... Int16.max));Sampled=1"),
                     (AmazonHeaders.deadline, "\(DispatchWallTime.distantFuture.millisSinceEpoch)"),
                 ]
                 return response
             }
+        }
+
+        enum InvocationState {
+            case waitingForInvocation(EventLoopPromise<Invocation>)
+            case waitingForLambdaRequest
+            case waitingForLambdaResponse(Invocation)
         }
     }
 
