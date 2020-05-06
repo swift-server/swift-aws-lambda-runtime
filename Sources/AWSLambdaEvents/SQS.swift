@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// https://github.com/aws/aws-lambda-go/blob/master/events/sqs.go
+// https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html
+
 public enum SQS {
     public struct Event: Decodable {
         public let records: [Message]

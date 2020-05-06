@@ -14,6 +14,7 @@
 
 import class Foundation.JSONEncoder
 
+// https://docs.aws.amazon.com/lambda/latest/dg/services-apigateway.html
 // https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
 
 public enum APIGateway {
