@@ -14,7 +14,7 @@
 
 import struct Foundation.Date
 
-/// https://github.com/aws/aws-lambda-go/blob/master/events/dynamodb.go
+// https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html
 public struct DynamoDB {
     public struct Event: Decodable {
         public let records: [EventRecord]
