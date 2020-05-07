@@ -17,7 +17,7 @@
 // @testable is used to access of internal functions
 #if DEBUG
 @testable import AWSLambdaRuntime
-@testable import AWSLambdaRuntimeFoundationCompat
+@testable import AWSLambdaRuntimeCore
 import Dispatch
 import Logging
 import NIO

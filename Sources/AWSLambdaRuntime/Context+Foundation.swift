@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntime
-import Foundation
+import AWSLambdaRuntimeCore
+import struct Foundation.Date
 
 extension Lambda.Context {
     var deadlineDate: Date {

@@ -8,10 +8,10 @@ let package = Package(
         .macOS(.v10_13),
     ],
     products: [
-        // core library
+        // this library exports `AWSLambdaRuntimeCore` and adds Foundation convenience methods
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
-        // foundaation utils for the core library
-        .library(name: "AWSLambdaRuntimeFoundationCompat", targets: ["AWSLambdaRuntimeFoundationCompat"]),
+        // this has all the main functionality for lambda and it does not link Foundation
+        .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
         // common AWS events
         .library(name: "AWSLambdaEvents", targets: ["AWSLambdaEvents"]),
         // for testing only
@@ -24,27 +24,37 @@ let package = Package(
     ],
     targets: [
         .target(name: "AWSLambdaRuntime", dependencies: [
+            .byName(name: "AWSLambdaRuntimeCore"),
+            .product(name: "NIO", package: "swift-nio"),
+            .product(name: "NIOFoundationCompat", package: "swift-nio"),
+        ]),
+        .target(name: "AWSLambdaRuntimeCore", dependencies: [
             .product(name: "Logging", package: "swift-log"),
             .product(name: "Backtrace", package: "swift-backtrace"),
             .product(name: "NIOHTTP1", package: "swift-nio"),
         ]),
-        .target(name: "AWSLambdaRuntimeFoundationCompat", dependencies: [
+        .testTarget(name: "AWSLambdaRuntimeTests", dependencies: [
+            .byName(name: "AWSLambdaRuntimeCore"),
             .byName(name: "AWSLambdaRuntime"),
-            .product(name: "NIO", package: "swift-nio"),
-            .product(name: "NIOFoundationCompat", package: "swift-nio"),
         ]),
-        .testTarget(name: "AWSLambdaRuntimeTests", dependencies: ["AWSLambdaRuntime", "AWSLambdaRuntimeFoundationCompat"]),
         .target(name: "AWSLambdaEvents", dependencies: []),
         .testTarget(name: "AWSLambdaEventsTests", dependencies: ["AWSLambdaEvents"]),
         // testing helper
         .target(name: "AWSLambdaTesting", dependencies: [
-            "AWSLambdaRuntime",
+            .byName(name: "AWSLambdaRuntime"),
             .product(name: "NIO", package: "swift-nio"),
         ]),
-        .testTarget(name: "AWSLambdaTestingTests", dependencies: ["AWSLambdaTesting", "AWSLambdaRuntimeFoundationCompat"]),
+        .testTarget(name: "AWSLambdaTestingTests", dependencies: [
+            .byName(name: "AWSLambdaTesting"),
+            .byName(name: "AWSLambdaRuntime"),
+        ]),
         // samples
-        .target(name: "StringSample", dependencies: ["AWSLambdaRuntime"]),
-        .target(name: "CodableSample", dependencies: ["AWSLambdaRuntime", "AWSLambdaRuntimeFoundationCompat"]),
+        .target(name: "StringSample", dependencies: [
+            .byName(name: "AWSLambdaRuntime"),
+        ]),
+        .target(name: "CodableSample", dependencies: [
+            .byName(name: "AWSLambdaRuntime"),
+        ]),
         // perf tests
         .target(name: "MockServer", dependencies: [
             .product(name: "NIOHTTP1", package: "swift-nio"),

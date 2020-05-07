@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 @testable import AWSLambdaRuntime
-@testable import AWSLambdaRuntimeFoundationCompat
+@testable import AWSLambdaRuntimeCore
 import NIO
 import XCTest
 

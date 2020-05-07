@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntime
+@_exported import AWSLambdaRuntimeCore
 import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
 import NIO

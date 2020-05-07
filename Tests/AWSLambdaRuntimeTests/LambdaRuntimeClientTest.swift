@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 @testable import AWSLambdaRuntime
+@testable import AWSLambdaRuntimeCore
 import XCTest
 
 class LambdaRuntimeClientTest: XCTestCase {

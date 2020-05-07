@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntime
-import AWSLambdaRuntimeFoundationCompat
 import NIO
 
 struct Request: Codable {
