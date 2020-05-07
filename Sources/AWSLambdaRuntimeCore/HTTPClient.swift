@@ -25,7 +25,7 @@ internal final class HTTPClient {
     private let targetHost: String
 
     private var state = State.disconnected
-    private let executing = NIOAtomic.makeAtomic(value: false)
+    private var executing = false
 
     init(eventLoop: EventLoop, configuration: Lambda.Configuration.RuntimeEngine) {
         self.eventLoop = eventLoop
@@ -50,7 +50,7 @@ internal final class HTTPClient {
 
     /// cancels the current request if there is one
     func cancel() {
-        guard self.executing.exchange(with: true) else {
+        guard self.executing else {
             // there is no request running. nothing to cancel
             return
         }
@@ -64,7 +64,10 @@ internal final class HTTPClient {
 
     // TODO: cap reconnect attempt
     private func execute(_ request: Request, validate: Bool = true) -> EventLoopFuture<Response> {
-        precondition(!validate || self.executing.compareAndExchange(expected: false, desired: true), "expecting single request at a time")
+        if validate {
+            precondition(self.executing == false)
+            self.executing = true
+        }
 
         switch self.state {
         case .disconnected:
@@ -80,7 +83,8 @@ internal final class HTTPClient {
 
             let promise = channel.eventLoop.makePromise(of: Response.self)
             promise.futureResult.whenComplete { _ in
-                precondition(self.executing.compareAndExchange(expected: true, desired: false), "invalid execution state")
+                precondition(self.executing == true)
+                self.executing = false
             }
             let wrapper = HTTPRequestWrapper(request: request, promise: promise)
             channel.writeAndFlush(wrapper).cascadeFailure(to: promise)

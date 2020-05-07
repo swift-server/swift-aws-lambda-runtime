@@ -18,6 +18,8 @@ import NIOConcurrencyHelpers
 
 extension Lambda {
     /// `Lifecycle` manages the Lambda process lifecycle.
+    ///
+    /// - note: It is intended to be used within a single `EventLoop`. For this reason this class is not thread safe.
     public final class Lifecycle {
         private let eventLoop: EventLoop
         private let shutdownPromise: EventLoopPromise<Int>
@@ -82,8 +84,7 @@ extension Lambda {
         // MARK: -  Private
 
         #if DEBUG
-        /// Begin the `Lifecycle` shutdown.
-        /// Only needed for debugging purposes.
+        /// Begin the `Lifecycle` shutdown. Only needed for debugging purposes, hence behind a `DEBUG` flag.
         public func shutdown() {
             // make this method thread safe by dispatching onto the eventloop
             self.eventLoop.execute {
