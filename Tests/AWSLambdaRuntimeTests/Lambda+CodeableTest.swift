@@ -211,7 +211,7 @@ private struct Behavior: LambdaServerBehavior {
         self.result = result
     }
 
-    func getWork() -> GetWorkResult {
+    func getInvocation() -> GetInvocationResult {
         guard let payload = try? JSONEncoder().encode(Request(requestId: requestId)) else {
             XCTFail("encoding error")
             return .failure(.internalServerError)

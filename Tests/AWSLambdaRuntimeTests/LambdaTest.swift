@@ -100,8 +100,8 @@ class LambdaTest: XCTestCase {
 
     func testBootstrapFailureAndReportErrorFailure() {
         struct Behavior: LambdaServerBehavior {
-            func getWork() -> GetWorkResult {
-                XCTFail("should not get work")
+            func getInvocation() -> GetInvocationResult {
+                XCTFail("should not get invocation")
                 return .failure(.internalServerError)
             }
 
@@ -212,7 +212,7 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Behavior: LambdaServerBehavior {
-            func getWork() -> GetWorkResult {
+            func getInvocation() -> GetInvocationResult {
                 .failure(.internalServerError)
             }
 
@@ -299,7 +299,7 @@ private struct Behavior: LambdaServerBehavior {
         self.result = result
     }
 
-    func getWork() -> GetWorkResult {
+    func getInvocation() -> GetInvocationResult {
         .success((requestId: self.requestId, payload: self.payload))
     }
 
@@ -334,8 +334,8 @@ private struct Behavior: LambdaServerBehavior {
 }
 
 struct FailedBootstrapBehavior: LambdaServerBehavior {
-    func getWork() -> GetWorkResult {
-        XCTFail("should not get work")
+    func getInvocation() -> GetInvocationResult {
+        XCTFail("should not get invocation")
         return .failure(.internalServerError)
     }
 

@@ -36,9 +36,9 @@ class LambdaRuntimeClientTest: XCTestCase {
         XCTAssertEqual(behavior.state, 1)
     }
 
-    func testGetWorkServerInternalError() {
+    func testGetInvocationServerInternalError() {
         struct Behavior: LambdaServerBehavior {
-            func getWork() -> GetWorkResult {
+            func getInvocation() -> GetInvocationResult {
                 .failure(.internalServerError)
             }
 
@@ -62,9 +62,9 @@ class LambdaRuntimeClientTest: XCTestCase {
         }
     }
 
-    func testGetWorkServerNoBodyError() {
+    func testGetInvocationServerNoBodyError() {
         struct Behavior: LambdaServerBehavior {
-            func getWork() -> GetWorkResult {
+            func getInvocation() -> GetInvocationResult {
                 .success(("1", ""))
             }
 
@@ -88,9 +88,9 @@ class LambdaRuntimeClientTest: XCTestCase {
         }
     }
 
-    func testGetWorkServerMissingHeaderRequestIDError() {
+    func testGetInvocationServerMissingHeaderRequestIDError() {
         struct Behavior: LambdaServerBehavior {
-            func getWork() -> GetWorkResult {
+            func getInvocation() -> GetInvocationResult {
                 // no request id -> no context
                 .success(("", "hello"))
             }
@@ -117,7 +117,7 @@ class LambdaRuntimeClientTest: XCTestCase {
 
     func testProcessResponseInternalServerError() {
         struct Behavior: LambdaServerBehavior {
-            func getWork() -> GetWorkResult {
+            func getInvocation() -> GetInvocationResult {
                 .success((requestId: "1", payload: "payload"))
             }
 
@@ -142,7 +142,7 @@ class LambdaRuntimeClientTest: XCTestCase {
 
     func testProcessErrorInternalServerError() {
         struct Behavior: LambdaServerBehavior {
-            func getWork() -> GetWorkResult {
+            func getInvocation() -> GetInvocationResult {
                 .success((requestId: "1", payload: "payload"))
             }
 
@@ -167,8 +167,8 @@ class LambdaRuntimeClientTest: XCTestCase {
 
     func testProcessInitErrorOnBootstrapFailure() {
         struct Behavior: LambdaServerBehavior {
-            func getWork() -> GetWorkResult {
-                XCTFail("should not get work")
+            func getInvocation() -> GetInvocationResult {
+                XCTFail("should not get invocation")
                 return .failure(.internalServerError)
             }
 
@@ -217,7 +217,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             return .success(())
         }
 
-        func getWork() -> GetWorkResult {
+        func getInvocation() -> GetInvocationResult {
             self.state += 2
             return .success(("1", "hello"))
         }

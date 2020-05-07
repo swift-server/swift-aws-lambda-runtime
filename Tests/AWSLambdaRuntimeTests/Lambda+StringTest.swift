@@ -210,7 +210,7 @@ private struct Behavior: LambdaServerBehavior {
         self.result = result
     }
 
-    func getWork() -> GetWorkResult {
+    func getInvocation() -> GetInvocationResult {
         .success((requestId: self.requestId, payload: self.payload))
     }
 
