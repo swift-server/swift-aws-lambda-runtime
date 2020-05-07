@@ -1,11 +1,9 @@
 .DS_Store
-/.build
-/Packages
-/*.xcodeproj
-Package.pins
+*.build
+/.xcodeproj
 *.pem
-/docs
-Package.resolved
 .podspecs
 .swiftpm
 .swift-version
+xcuserdata
+Package.resolved

@@ -112,7 +112,7 @@ EOF
   (
     cd "$here/.."
     find . \
-      \( \! -path './.build/*' -a \
+      \( \! -path '*/.build/*' -a \
       \( "${matching_files[@]}" \) -a \
       \( \! \( "${exceptions[@]}" \) \) \) | while read line; do
       if [[ "$(cat "$line" | replace_acceptable_years | head -n $expected_lines | shasum)" != "$expected_sha" ]]; then

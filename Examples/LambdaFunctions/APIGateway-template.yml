@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion : '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: A sample SAM template for deploying Lambda functions.
+
+Resources:
+# APIGateway Function
+  apiGatewayFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: Provided
+      Runtime: provided
+      CodeUri: .build/lambda/APIGateway/lambda.zip
+# Add an API Gateway event source for the Lambda
+      Events:
+        HttpGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref lambdaApiGateway
+            Path: '/samples/apig'
+            Method: get
+# Instructs new versions to be published to an alias named "live".
+      AutoPublishAlias: live
+
+  lambdaApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: Lambda API Gateway
+      StageName: Beta
+
+Outputs:
+  LambdaApiGatewayEndpoint:
+    Description: 'API Gateway endpoint URL.'
+    Value: !Sub 'https://${lambdaApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Beta/samples/apig'

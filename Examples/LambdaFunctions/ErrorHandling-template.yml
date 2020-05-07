@@ -1,0 +1,14 @@
+AWSTemplateFormatVersion : '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: A sample SAM template for deploying Lambda functions.
+
+Resources:
+# ErrorHandling Function
+  errorHandlingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: Provided
+      Runtime: provided
+      CodeUri: .build/lambda/ErrorHandling/lambda.zip
+# Instructs new versions to be published to an alias named "live".      
+      AutoPublishAlias: live
