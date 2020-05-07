@@ -81,10 +81,20 @@ extension Lambda {
 
         // MARK: -  Private
 
+        #if DEBUG
         /// Begin the `Lifecycle` shutdown.
+        /// Only needed for debugging purposes.
         public func shutdown() {
-            self.state = .shuttingdown
+            // make this method thread safe by dispatching onto the eventloop
+            self.eventLoop.execute {
+                guard case .active(let runner, _) = self.state else {
+                    return
+                }
+                self.state = .shuttingdown
+                runner.cancelWaitingForNextInvocation()
+            }
         }
+        #endif
 
         private func markShutdown() {
             self.state = .shutdown

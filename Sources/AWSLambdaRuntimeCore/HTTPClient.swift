@@ -48,6 +48,20 @@ internal final class HTTPClient {
                              timeout: timeout ?? self.configuration.requestTimeout))
     }
 
+    /// cancels the current request if there is one
+    func cancel() {
+        guard self.executing.exchange(with: true) else {
+            // there is no request running. nothing to cancel
+            return
+        }
+
+        guard case .connected(let channel) = self.state else {
+            preconditionFailure("if we are executing, we expect to have an open channel")
+        }
+
+        channel.triggerUserOutboundEvent(RequestCancelEvent(), promise: nil)
+    }
+
     // TODO: cap reconnect attempt
     private func execute(_ request: Request, validate: Bool = true) -> EventLoopFuture<Response> {
         precondition(!validate || self.executing.compareAndExchange(expected: false, desired: true), "expecting single request at a time")
@@ -120,6 +134,7 @@ internal final class HTTPClient {
     internal enum Errors: Error {
         case connectionResetByPeer
         case timeout
+        case cancelled
     }
 
     private enum State {
@@ -284,6 +299,18 @@ private final class UnaryHandler: ChannelDuplexHandler {
         context.fireChannelInactive()
     }
 
+    func triggerUserOutboundEvent(context: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
+        switch event {
+        case is RequestCancelEvent:
+            guard self.pending != nil else {
+                return
+            }
+            self.completeWith(.failure(HTTPClient.Errors.cancelled))
+        default:
+            context.triggerUserOutboundEvent(event, promise: promise)
+        }
+    }
+
     private func completeWith(_ result: Result<HTTPClient.Response, Error>) {
         guard let pending = self.pending else {
             preconditionFailure("invalid state, no pending request")
@@ -299,3 +326,5 @@ private struct HTTPRequestWrapper {
     let request: HTTPClient.Request
     let promise: EventLoopPromise<HTTPClient.Response>
 }
+
+private struct RequestCancelEvent {}
