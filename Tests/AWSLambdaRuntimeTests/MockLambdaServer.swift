@@ -130,8 +130,8 @@ internal final class HTTPHandler: ChannelInboundHandler {
             case .failure(let error):
                 responseStatus = .init(statusCode: error.rawValue)
             }
-        } else if request.head.uri.hasSuffix(Consts.requestWorkURLSuffix) {
-            switch self.behavior.getWork() {
+        } else if request.head.uri.hasSuffix(Consts.getNextInvocationURLSuffix) {
+            switch self.behavior.getInvocation() {
             case .success(let (requestId, result)):
                 if requestId == "timeout" {
                     usleep((UInt32(result) ?? 0) * 1000)
@@ -213,13 +213,13 @@ internal final class HTTPHandler: ChannelInboundHandler {
 }
 
 internal protocol LambdaServerBehavior {
-    func getWork() -> GetWorkResult
+    func getInvocation() -> GetInvocationResult
     func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError>
     func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError>
     func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError>
 }
 
-internal typealias GetWorkResult = Result<(String, String), GetWorkError>
+internal typealias GetInvocationResult = Result<(String, String), GetWorkError>
 
 internal enum GetWorkError: Int, Error {
     case badRequest = 400
