@@ -64,13 +64,13 @@ public enum Lambda {
 
     // for testing and internal use
     @discardableResult
-    public static func run(configuration: Configuration = .init(), handler: Handler) -> Result<Int, Error> {
+    internal static func run(configuration: Configuration = .init(), handler: Handler) -> Result<Int, Error> {
         self.run(configuration: configuration, factory: { $0.makeSucceededFuture(handler) })
     }
 
     // for testing and internal use
     @discardableResult
-    public static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> Handler) -> Result<Int, Error> {
+    internal static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> Handler) -> Result<Int, Error> {
         self.run(configuration: configuration, factory: { eventloop -> EventLoopFuture<Handler> in
             do {
                 let handler = try factory(eventloop)

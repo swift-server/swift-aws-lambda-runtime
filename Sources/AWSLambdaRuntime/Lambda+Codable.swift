@@ -30,7 +30,7 @@ extension Lambda {
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableClosure<In, Out>) {
-        self.run(closure: closure)
+        self.run(CodableClosureWrapper(closure))
     }
 
     /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Void, Error>` via a completion handler.
@@ -43,20 +43,20 @@ extension Lambda {
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run<In: Decodable>(_ closure: @escaping CodableVoidClosure<In>) {
-        self.run(closure: closure)
+        self.run(CodableVoidClosureWrapper(closure))
     }
 
-    // for testing
-    @discardableResult
-    internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping CodableClosure<In, Out>) -> Result<Int, Error> {
-        self.run(configuration: configuration, handler: CodableClosureWrapper(closure))
-    }
-
-    // for testing
-    @discardableResult
-    internal static func run<In: Decodable>(configuration: Configuration = .init(), closure: @escaping CodableVoidClosure<In>) -> Result<Int, Error> {
-        self.run(configuration: configuration, handler: CodableVoidClosureWrapper(closure))
-    }
+//    // for testing
+//    @discardableResult
+//    internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping CodableClosure<In, Out>) -> Result<Int, Error> {
+//        self.run(configuration: configuration, handler: )
+//    }
+//
+//    // for testing
+//    @discardableResult
+//    internal static func run<In: Decodable>(configuration: Configuration = .init(), closure: @escaping CodableVoidClosure<In>) -> Result<Int, Error> {
+//        self.run(configuration: configuration, handler: CodableVoidClosureWrapper(closure))
+//    }
 }
 
 internal struct CodableClosureWrapper<In: Decodable, Out: Encodable>: LambdaHandler {

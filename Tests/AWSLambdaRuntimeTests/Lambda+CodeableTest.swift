@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if false
 @testable import AWSLambdaRuntime
 @testable import AWSLambdaRuntimeCore
 import NIO
@@ -279,3 +280,4 @@ private struct Response: Codable {
         self.requestId = requestId
     }
 }
+#endif

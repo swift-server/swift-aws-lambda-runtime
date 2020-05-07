@@ -17,12 +17,12 @@ import Logging
 import NIO
 
 extension Lambda {
-    public struct Configuration: CustomStringConvertible {
-        public let general: General
-        public let lifecycle: Lifecycle
-        public let runtimeEngine: RuntimeEngine
+    internal struct Configuration: CustomStringConvertible {
+        let general: General
+        let lifecycle: Lifecycle
+        let runtimeEngine: RuntimeEngine
 
-        public init() {
+        init() {
             self.init(general: .init(), lifecycle: .init(), runtimeEngine: .init())
         }
 
@@ -32,19 +32,19 @@ extension Lambda {
             self.runtimeEngine = runtimeEngine ?? RuntimeEngine()
         }
 
-        public struct General: CustomStringConvertible {
+        struct General: CustomStringConvertible {
             let logLevel: Logger.Level
 
             init(logLevel: Logger.Level? = nil) {
                 self.logLevel = logLevel ?? env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
             }
 
-            public var description: String {
+            var description: String {
                 "\(General.self)(logLevel: \(self.logLevel))"
             }
         }
 
-        public struct Lifecycle: CustomStringConvertible {
+        struct Lifecycle: CustomStringConvertible {
             let id: String
             let maxTimes: Int
             let stopSignal: Signal
@@ -56,12 +56,12 @@ extension Lambda {
                 precondition(self.maxTimes >= 0, "maxTimes must be equal or larger than 0")
             }
 
-            public var description: String {
+            var description: String {
                 "\(Lifecycle.self)(id: \(self.id), maxTimes: \(self.maxTimes), stopSignal: \(self.stopSignal))"
             }
         }
 
-        public struct RuntimeEngine: CustomStringConvertible {
+        struct RuntimeEngine: CustomStringConvertible {
             let ip: String
             let port: Int
             let keepAlive: Bool
@@ -78,12 +78,12 @@ extension Lambda {
                 self.requestTimeout = requestTimeout ?? env("REQUEST_TIMEOUT").flatMap(Int64.init).flatMap { .milliseconds($0) }
             }
 
-            public var description: String {
+            var description: String {
                 "\(RuntimeEngine.self)(ip: \(self.ip), port: \(self.port), keepAlive: \(self.keepAlive), requestTimeout: \(String(describing: self.requestTimeout))"
             }
         }
 
-        public var description: String {
+        var description: String {
             "\(Configuration.self)\n  \(self.general))\n  \(self.lifecycle)\n  \(self.runtimeEngine)"
         }
     }

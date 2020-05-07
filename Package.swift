@@ -33,6 +33,9 @@ let package = Package(
             .product(name: "Backtrace", package: "swift-backtrace"),
             .product(name: "NIOHTTP1", package: "swift-nio"),
         ]),
+        .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [
+            .byName(name: "AWSLambdaRuntimeCore"),
+        ]),
         .testTarget(name: "AWSLambdaRuntimeTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
             .byName(name: "AWSLambdaRuntime"),
