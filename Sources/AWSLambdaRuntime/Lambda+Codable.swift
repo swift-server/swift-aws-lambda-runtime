@@ -45,18 +45,6 @@ extension Lambda {
     public static func run<In: Decodable>(_ closure: @escaping CodableVoidClosure<In>) {
         self.run(CodableVoidClosureWrapper(closure))
     }
-
-//    // for testing
-//    @discardableResult
-//    internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping CodableClosure<In, Out>) -> Result<Int, Error> {
-//        self.run(configuration: configuration, handler: )
-//    }
-//
-//    // for testing
-//    @discardableResult
-//    internal static func run<In: Decodable>(configuration: Configuration = .init(), closure: @escaping CodableVoidClosure<In>) -> Result<Int, Error> {
-//        self.run(configuration: configuration, handler: CodableVoidClosureWrapper(closure))
-//    }
 }
 
 internal struct CodableClosureWrapper<In: Decodable, Out: Encodable>: LambdaHandler {
