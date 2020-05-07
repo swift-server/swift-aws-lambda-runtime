@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2017-2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+@_exported import AWSLambdaRuntimeCore
 import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
 import NIO
@@ -29,7 +30,7 @@ extension Lambda {
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableClosure<In, Out>) {
-        self.run(closure: closure)
+        self.run(CodableClosureWrapper(closure))
     }
 
     /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Void, Error>` via a completion handler.
@@ -42,19 +43,7 @@ extension Lambda {
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run<In: Decodable>(_ closure: @escaping CodableVoidClosure<In>) {
-        self.run(closure: closure)
-    }
-
-    // for testing
-    @discardableResult
-    internal static func run<In: Decodable, Out: Encodable>(configuration: Configuration = .init(), closure: @escaping CodableClosure<In, Out>) -> Result<Int, Error> {
-        self.run(configuration: configuration, handler: CodableClosureWrapper(closure))
-    }
-
-    // for testing
-    @discardableResult
-    internal static func run<In: Decodable>(configuration: Configuration = .init(), closure: @escaping CodableVoidClosure<In>) -> Result<Int, Error> {
-        self.run(configuration: configuration, handler: CodableVoidClosureWrapper(closure))
+        self.run(CodableVoidClosureWrapper(closure))
     }
 }
 

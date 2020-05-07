@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntime
+@testable import AWSLambdaRuntimeCore
 import Foundation // for JSON
 import Logging
 import NIO
