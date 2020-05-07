@@ -32,9 +32,9 @@ extension Lambda {
             self.httpClient = HTTPClient(eventLoop: eventLoop, configuration: configuration)
         }
 
-        /// Requests work from the Runtime Engine.
-        func requestWork(logger: Logger) -> EventLoopFuture<(Invocation, ByteBuffer)> {
-            let url = Consts.invocationURLPrefix + Consts.requestWorkURLSuffix
+        /// Requests invocation from the control plane.
+        func getNextInvocation(logger: Logger) -> EventLoopFuture<(Invocation, ByteBuffer)> {
+            let url = Consts.invocationURLPrefix + Consts.getNextInvocationURLSuffix
             logger.debug("requesting work from lambda runtime engine using \(url)")
             return self.httpClient.get(url: url).flatMapThrowing { response in
                 guard response.status == .ok else {
