@@ -214,7 +214,7 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
 
 ### Closures
 
-In addition to protocol based Lambda, the library provides support for Closure based ones, as demonstrated in the overview section above. Closure based Lambda are based on the `LambdaHandler` protocol which mean they are safer but slower. For most use cases, Closure based Lambda is a great fit and users are encouraged to use them.
+In addition to protocol based Lambda, the library provides support for Closure based ones, as demonstrated in the overview section above. Closure based Lambda are based on the `LambdaHandler` protocol which mean they are safer. For most use cases, Closure based Lambda is a great fit and users are encouraged to use them. 
 
 The library includes implementations for `Codable` and String based Lambda. Since AWS Lambda is primarily JSON based, this covers the most common use cases.
 
