@@ -37,6 +37,7 @@ let package = Package(
         ]),
         .target(name: "APIGateway", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+            .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-runtime"),
         ]),
         .target(name: "CurrencyExchange", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
