@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntime
 import AWSLambdaEvents
+import AWSLambdaRuntime
 import NIO
 
 // MARK: - Run Lambda
