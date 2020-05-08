@@ -36,14 +36,6 @@ internal enum AmazonHeaders {
     static let invokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
 }
 
-/// Utility to read environment variables
-internal func env(_ name: String) -> String? {
-    guard let value = getenv(name) else {
-        return nil
-    }
-    return String(cString: value)
-}
-
 /// Helper function to trap signals
 internal func trap(signal sig: Signal, handler: @escaping (Signal) -> Void) -> DispatchSourceSignal {
     let signalSource = DispatchSource.makeSignalSource(signal: sig.rawValue, queue: DispatchQueue.global())
