@@ -29,7 +29,7 @@ Swift AWS Lambda Runtime is a library designed to make building Lambda functions
    )
    ```
 
-2. Create a main.swift and implement your Lambda. 
+2. Create a ‘main.swift’ and implement your Lambda. 
 
    ### Using Closures
 
@@ -321,5 +321,4 @@ AWS Lambda functions can be invoked directly from the AWS Lambda console UI, AWS
 * [CloudWatch Events](https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents.html)
 
 **Note**: Each one of the integration points mentioned above includes a set of `Codable` structs the mirror AWS data model for these APIs.
-
 
