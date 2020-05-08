@@ -62,6 +62,14 @@ public enum Lambda {
         self.run(factory: factory)
     }
 
+    /// Utility to access/read environment variables
+    public static func env(_ name: String) -> String? {
+        guard let value = getenv(name) else {
+            return nil
+        }
+        return String(cString: value)
+    }
+
     // for testing and internal use
     @discardableResult
     internal static func run(configuration: Configuration = .init(), handler: Handler) -> Result<Int, Error> {
