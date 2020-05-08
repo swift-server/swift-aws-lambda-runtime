@@ -113,8 +113,7 @@ Swift AWS Lambda Runtime is a library designed to make building Lambda functions
    Beyond the small cognitive complexity of using the `EventLoopFuture` based APIs, note these APIs should be used with extra care. An `EventLoopLambdaHandler` will execute the user code on the same `EventLoop` as the core runtime engine, making the processing faster but requires more care from the implementation to never block the underlying `EventLoop`. In other words, the Lambda code should never use blocking API calls as it will prevent the underlying Lambda process from continuing to take traffic and respond to other requests
 
 
-3. Deploy to AWS Lambda. To do so, you need to compile your Application for Amazon 2 Linux, package it as a Zip file, and upload to AWS.
-
+3. Deploy to AWS Lambda. To do so, you need to compile your Application for Amazon Linux 2, package it as a Zip file, and upload to AWS. Swift.org publishes [Swift toolchains and Docker images for Amazon Linux 2](https://swift.org/download/).
    
 You can find complete sample build and deployment scripts in the [Examples Directory](/Examples)
    
