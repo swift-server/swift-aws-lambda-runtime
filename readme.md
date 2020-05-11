@@ -312,7 +312,7 @@ By default, the library also registers a Signal handler that traps `INT` and `TE
 
 ### Integration with AWS Platform Events
 
-AWS Lambda functions can be invoked directly from the AWS Lambda console UI, AWS Lambda API, AWS SDKs, AWS CLI, and AWS toolkits. More commonly, they are invoked as a reaction to an events coming from the AWS platform. To make it easier to integrate with AWS platform events, the library includes an `AWSLambdaEvents` module which provides abstractions for the many of the commonly used events. Additional events can be easily modeled when needed following the same patterns set by `AWSLambdaEvents`. Integration points with the AWS Platform include:
+AWS Lambda functions can be invoked directly from the AWS Lambda console UI, AWS Lambda API, AWS SDKs, AWS CLI, and AWS toolkits. More commonly, they are invoked as a reaction to an events coming from the AWS platform. To make it easier to integrate with AWS platform events, the library includes an `AWSLambdaEvents` target which provides abstractions for many commonly used events. Additional events can be easily modeled when needed following the same patterns set by `AWSLambdaEvents`. Integration points with the AWS Platform include:
 
 * [APIGateway Proxy](https://docs.aws.amazon.com/lambda/latest/dg/services-apigateway.html)
 * [S3 Events](https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html)
@@ -320,4 +320,4 @@ AWS Lambda functions can be invoked directly from the AWS Lambda console UI, AWS
 * [SQS Events](https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html)
 * [CloudWatch Events](https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents.html)
 
-**Note**: Each one of the integration points mentioned above includes a set of `Codable` structs the mirror AWS data model for these APIs.
+**Note**: Each one of the integration points mentioned above includes a set of `Codable` structs that mirror AWS' data model for these APIs.
