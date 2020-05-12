@@ -101,7 +101,7 @@ public enum Lambda {
         var logger = Logger(label: "Lambda")
         logger.logLevel = configuration.general.logLevel
 
-        var r: Result<Int, Error>?
+        var result: Result<Int, Error>!
         MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
             let lifecycle = Lifecycle(eventLoop: eventLoop, logger: logger, configuration: configuration, factory: factory)
             let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
@@ -112,18 +112,20 @@ public enum Lambda {
             _ = lifecycle.start().flatMap {
                 lifecycle.shutdownFuture
             }
-            .always { result in
+            .always { lifecycleResult in
                 signalSource.cancel()
-                eventLoop.shutdownGracefully { _ in
+                eventLoop.shutdownGracefully { error in
+                    if let error = error {
+                        preconditionFailure("Failed to shutdown eventloop: \(error)")
+                    }
                     logger.info("shutdown")
                 }
 
-                r = result
+                result = lifecycleResult
             }
         }
 
         logger.info("shutdown completed")
-
-        return r!
+        return result
     }
 }
