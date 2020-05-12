@@ -27,4 +27,4 @@ Resources:
 Outputs:
   LambdaApiGatewayEndpoint:
     Description: 'API Gateway endpoint URL.'
-    Value: !Sub 'https://${lambdaApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Beta/samples/apig'
+    Value: !Sub 'https://${lambdaApiGateway}.execute-api.${AWS::Region}.amazonaws.com/samples/apig'
