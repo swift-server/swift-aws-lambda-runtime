@@ -30,13 +30,14 @@ let package = Package(
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
         ]),
         .target(name: "Benchmark", dependencies: [
-            .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+            .product(name: "AWSLambdaRuntimeCore", package: "swift-aws-lambda-runtime"),
         ]),
         .target(name: "ErrorHandling", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
         ]),
         .target(name: "APIGateway", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+            .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-runtime"),
         ]),
         .target(name: "CurrencyExchange", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),

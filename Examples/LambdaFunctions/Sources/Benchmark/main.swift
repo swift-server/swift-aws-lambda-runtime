@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntime
+import AWSLambdaRuntimeCore
 import NIO
 
 // If you would like to benchmark Swift's Lambda Runtime,

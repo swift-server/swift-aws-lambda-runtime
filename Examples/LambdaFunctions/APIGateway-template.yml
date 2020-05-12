@@ -13,21 +13,18 @@ Resources:
 # Add an API Gateway event source for the Lambda
       Events:
         HttpGet:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref lambdaApiGateway
+            ApiId: !Ref lambdaApiGateway
             Path: '/samples/apig'
-            Method: get
+            Method: GET
 # Instructs new versions to be published to an alias named "live".
       AutoPublishAlias: live
 
   lambdaApiGateway:
-    Type: AWS::Serverless::Api
-    Properties:
-      Name: Lambda API Gateway
-      StageName: Beta
+    Type: AWS::Serverless::HttpApi
 
 Outputs:
   LambdaApiGatewayEndpoint:
     Description: 'API Gateway endpoint URL.'
-    Value: !Sub 'https://${lambdaApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Beta/samples/apig'
+    Value: !Sub 'https://${lambdaApiGateway}.execute-api.${AWS::Region}.amazonaws.com/samples/apig'
