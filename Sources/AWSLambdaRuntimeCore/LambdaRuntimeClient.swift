@@ -115,12 +115,10 @@ extension Lambda {
             }
         }
 
-        #if DEBUG
         /// Cancels the current request, if one is running. Only needed for debugging purposes
         func cancel() {
             self.httpClient.cancel()
         }
-        #endif
     }
 }
 

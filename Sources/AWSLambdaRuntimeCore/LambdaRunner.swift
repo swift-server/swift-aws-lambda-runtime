@@ -74,14 +74,12 @@ extension Lambda {
             }
         }
 
-        #if DEBUG
         /// cancels the current run, if we are waiting for next invocation (long poll from Lambda control plane)
         /// only needed for debugging purposes.
         func cancelWaitingForNextInvocation() {
             guard self.isGettingNextInvocation else { return }
             self.runtimeClient.cancel()
         }
-        #endif
     }
 }
 

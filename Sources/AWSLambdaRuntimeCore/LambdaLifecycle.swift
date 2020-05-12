@@ -27,8 +27,7 @@ extension Lambda {
         private let configuration: Configuration
         private let factory: HandlerFactory
 
-        private var _state = State.idle
-        private let stateLock = Lock()
+        private var state = State.idle
 
         /// Create a new `Lifecycle`.
         ///
@@ -88,11 +87,11 @@ extension Lambda {
         public func shutdown() {
             // make this method thread safe by dispatching onto the eventloop
             self.eventLoop.execute {
-                guard case .active(let runner, _) = self.state else {
-                    return
-                }
+                let oldState = self.state
                 self.state = .shuttingdown
-                runner.cancelWaitingForNextInvocation()
+                if case .active(let runner, _) = oldState {
+                    runner.cancelWaitingForNextInvocation()
+                }
             }
         }
         #endif
@@ -128,21 +127,6 @@ extension Lambda {
             }
 
             _run(0)
-        }
-
-        private var state: State {
-            get {
-                self.stateLock.withLock {
-                    self._state
-                }
-            }
-            set {
-                self.stateLock.withLockVoid {
-                    precondition(newValue.order > self._state.order, "invalid state \(newValue) after \(self._state)")
-                    self._state = newValue
-                }
-                self.logger.debug("lambda lifecycle state: \(newValue)")
-            }
         }
 
         private enum State {

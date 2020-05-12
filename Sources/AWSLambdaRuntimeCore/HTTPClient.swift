@@ -65,7 +65,7 @@ internal final class HTTPClient {
     // TODO: cap reconnect attempt
     private func execute(_ request: Request, validate: Bool = true) -> EventLoopFuture<Response> {
         if validate {
-            precondition(self.executing == false)
+            precondition(self.executing == false, "expecting single request at a time")
             self.executing = true
         }
 
@@ -83,7 +83,7 @@ internal final class HTTPClient {
 
             let promise = channel.eventLoop.makePromise(of: Response.self)
             promise.futureResult.whenComplete { _ in
-                precondition(self.executing == true)
+                precondition(self.executing == true, "invalid execution state")
                 self.executing = false
             }
             let wrapper = HTTPRequestWrapper(request: request, promise: promise)
@@ -306,10 +306,9 @@ private final class UnaryHandler: ChannelDuplexHandler {
     func triggerUserOutboundEvent(context: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
         switch event {
         case is RequestCancelEvent:
-            guard self.pending != nil else {
-                return
+            if self.pending != nil {
+                self.completeWith(.failure(HTTPClient.Errors.cancelled))
             }
-            self.completeWith(.failure(HTTPClient.Errors.cancelled))
         default:
             context.triggerUserOutboundEvent(event, promise: promise)
         }
