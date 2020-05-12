@@ -80,41 +80,49 @@ public enum Lambda {
     @discardableResult
     internal static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> Handler) -> Result<Int, Error> {
         self.run(configuration: configuration, factory: { eventloop -> EventLoopFuture<Handler> in
-            do {
-                let handler = try factory(eventloop)
-                return eventloop.makeSucceededFuture(handler)
-            } catch {
-                return eventloop.makeFailedFuture(error)
+            let promise = eventloop.makePromise(of: Handler.self)
+            // if we have a callback based handler factory, we offload the creation of the handler
+            // onto the default offload queue, to ensure that the eventloop is never blocked.
+            Lambda.defaultOffloadQueue.async {
+                do {
+                    promise.succeed(try factory(eventloop))
+                } catch {
+                    promise.fail(error)
+                }
             }
+            return promise.futureResult
         })
     }
 
     // for testing and internal use
     @discardableResult
     internal static func run(configuration: Configuration = .init(), factory: @escaping HandlerFactory) -> Result<Int, Error> {
-        do {
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1) // only need one thread, will improve performance
-            defer { try! eventLoopGroup.syncShutdownGracefully() }
-            let result = try self.runAsync(eventLoopGroup: eventLoopGroup, configuration: configuration, factory: factory).wait()
-            return .success(result)
-        } catch {
-            return .failure(error)
-        }
-    }
-
-    internal static func runAsync(eventLoopGroup: EventLoopGroup, configuration: Configuration, factory: @escaping HandlerFactory) -> EventLoopFuture<Int> {
         Backtrace.install()
         var logger = Logger(label: "Lambda")
         logger.logLevel = configuration.general.logLevel
-        let lifecycle = Lifecycle(eventLoop: eventLoopGroup.next(), logger: logger, configuration: configuration, factory: factory)
-        let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
-            logger.info("intercepted signal: \(signal)")
-            lifecycle.shutdown()
-        }
-        return lifecycle.start().flatMap {
-            return lifecycle.shutdownFuture.always { _ in
+
+        var result: Result<Int, Error>!
+        MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
+            let lifecycle = Lifecycle(eventLoop: eventLoop, logger: logger, configuration: configuration, factory: factory)
+            let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
+                logger.info("intercepted signal: \(signal)")
+                lifecycle.shutdown()
+            }
+
+            lifecycle.start().flatMap {
+                lifecycle.shutdownFuture
+            }.whenComplete { lifecycleResult in
                 signalSource.cancel()
+                eventLoop.shutdownGracefully { error in
+                    if let error = error {
+                        preconditionFailure("Failed to shutdown eventloop: \(error)")
+                    }
+                }
+                result = lifecycleResult
             }
         }
+
+        logger.info("shutdown completed")
+        return result
     }
 }

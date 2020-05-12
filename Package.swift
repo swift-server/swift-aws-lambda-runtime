@@ -18,9 +18,9 @@ let package = Package(
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.8.0"),
-        .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
-        .package(url: "https://github.com/swift-server/swift-backtrace.git", from: "1.1.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.17.0")),
+        .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.0.0")),
+        .package(url: "https://github.com/swift-server/swift-backtrace.git", .upToNextMajor(from: "1.1.0")),
     ],
     targets: [
         .target(name: "AWSLambdaRuntime", dependencies: [
