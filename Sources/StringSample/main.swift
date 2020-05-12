@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntimeCore
+import AWSLambdaRuntime
 import NIO
 
 // in this example we are receiving and responding with strings
@@ -26,7 +26,10 @@ struct Handler: EventLoopLambdaHandler {
     }
 }
 
-Lambda.run(Handler())
+
+try Lambda.withLocalServer {
+    Lambda.run(Handler())
+}
 
 // MARK: - this can also be expressed as a closure:
 

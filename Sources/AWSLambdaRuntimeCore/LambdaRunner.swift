@@ -46,7 +46,7 @@ extension Lambda {
         func run(logger: Logger, handler: Handler) -> EventLoopFuture<Void> {
             logger.debug("lambda invocation sequence starting")
             // 1. request work from lambda runtime engine
-            return self.runtimeClient.requestWork(logger: logger).peekError { error in
+            return self.runtimeClient.getNextInvocation(logger: logger).peekError { error in
                 logger.error("could not fetch work from lambda runtime engine: \(error)")
             }.flatMap { invocation, payload in
                 // 2. send invocation to handler

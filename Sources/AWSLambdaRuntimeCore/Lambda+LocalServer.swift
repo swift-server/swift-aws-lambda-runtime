@@ -149,7 +149,7 @@ private enum LocalLambda {
                     Self.invocations.append(invocation)
                 }
             // /next endpoint is called by the lambda polling for work
-            case (.GET, let url) where url.hasSuffix(Consts.requestWorkURLSuffix):
+            case (.GET, let url) where url.hasSuffix(Consts.getNextInvocationURLSuffix):
                 // check if our server is in the correct state
                 guard case .waitingForLambdaRequest = Self.invocationState else {
                     self.logger.error("invalid invocation state \(Self.invocationState)")
