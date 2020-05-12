@@ -111,16 +111,13 @@ public enum Lambda {
 
             lifecycle.start().flatMap {
                 lifecycle.shutdownFuture
-            }
-            .whenComplete { lifecycleResult in
+            }.whenComplete { lifecycleResult in
                 signalSource.cancel()
                 eventLoop.shutdownGracefully { error in
                     if let error = error {
                         preconditionFailure("Failed to shutdown eventloop: \(error)")
                     }
-                    logger.info("shutdown")
                 }
-
                 result = lifecycleResult
             }
         }
