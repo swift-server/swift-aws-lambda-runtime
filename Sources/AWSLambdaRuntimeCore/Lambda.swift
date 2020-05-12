@@ -109,10 +109,10 @@ public enum Lambda {
                 lifecycle.shutdown()
             }
 
-            _ = lifecycle.start().flatMap {
+            lifecycle.start().flatMap {
                 lifecycle.shutdownFuture
             }
-            .always { lifecycleResult in
+            .whenComplete { lifecycleResult in
                 signalSource.cancel()
                 eventLoop.shutdownGracefully { error in
                     if let error = error {
