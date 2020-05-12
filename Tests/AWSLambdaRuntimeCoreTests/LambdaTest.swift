@@ -128,8 +128,7 @@ class LambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
-    #if false
-    func testStartStop() {
+    func testStartStopInDebugMode() {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
@@ -137,21 +136,22 @@ class LambdaTest: XCTestCase {
         let signal = Signal.ALRM
         let maxTimes = 1000
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes, stopSignal: signal))
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
-        defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
 
-        let future = Lambda.runAsync(eventLoopGroup: eventLoopGroup, configuration: configuration, factory: { $0.makeSucceededFuture(EchoHandler()) })
         DispatchQueue(label: "test").async {
+            // we need to schedule the signal before we start the long running `Lambda.run`, since
+            // `Lambda.run` will block the main thread.
             usleep(100_000)
             kill(getpid(), signal.rawValue)
         }
-        future.whenSuccess { result in
-            XCTAssertGreaterThan(result, 0, "should have stopped before any request made")
-            XCTAssertLessThan(result, maxTimes, "should have stopped before \(maxTimes)")
+        let result = Lambda.run(configuration: configuration, factory: { $0.makeSucceededFuture(EchoHandler()) })
+
+        guard case .success(let invocationCount) = result else {
+            return XCTFail("expected to have not failed")
         }
-        XCTAssertNoThrow(try future.wait())
+
+        XCTAssertGreaterThan(invocationCount, 0, "should have stopped before any request made")
+        XCTAssertLessThan(invocationCount, maxTimes, "should have stopped before \(maxTimes)")
     }
-    #endif
 
     func testTimeout() {
         let timeout: Int64 = 100

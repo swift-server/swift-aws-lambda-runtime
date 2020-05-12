@@ -81,6 +81,8 @@ public enum Lambda {
     internal static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> Handler) -> Result<Int, Error> {
         self.run(configuration: configuration, factory: { eventloop -> EventLoopFuture<Handler> in
             let promise = eventloop.makePromise(of: Handler.self)
+            // if we have a callback based handler factory, we offload the creation of the handler
+            // onto the default offload queue, to ensure that the eventloop is never blocked.
             Lambda.defaultOffloadQueue.async {
                 do {
                     promise.succeed(try factory(eventloop))
