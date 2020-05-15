@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntime
+import AWSLambdaRuntimeCore
 import NIO
 
 // in this example we are receiving and responding with strings
