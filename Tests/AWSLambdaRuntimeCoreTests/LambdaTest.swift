@@ -145,12 +145,19 @@ class LambdaTest: XCTestCase {
         }
         let result = Lambda.run(configuration: configuration, factory: { $0.makeSucceededFuture(EchoHandler()) })
 
-        guard case .success(let invocationCount) = result else {
-            return XCTFail("expected to have not failed")
+        switch result {
+        case .success(let invocationCount):
+            // this is an allowed outcome. the lambda was cancelled while it was processing a task.
+            // therefore: it was shut down before asking for a new invocation
+            XCTAssertGreaterThan(invocationCount, 0, "should have stopped before any request made")
+            XCTAssertLessThan(invocationCount, maxTimes, "should have stopped before \(maxTimes)")
+        case .failure(HTTPClient.Errors.cancelled):
+            // this is an allowed outcome. while the lambda was asking for a new invocation it was
+            // cancelled. for this reason the get new invocation request failed with .cancelled.
+            break
+        case .failure(let error):
+            XCTFail("Unexpected error: \(error)")
         }
-
-        XCTAssertGreaterThan(invocationCount, 0, "should have stopped before any request made")
-        XCTAssertLessThan(invocationCount, maxTimes, "should have stopped before \(maxTimes)")
     }
 
     func testTimeout() {

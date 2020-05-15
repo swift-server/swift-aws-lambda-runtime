@@ -27,7 +27,12 @@ extension Lambda {
         private let configuration: Configuration
         private let factory: HandlerFactory
 
-        private var state = State.idle
+        private var state = State.idle {
+            willSet {
+                assert(self.eventLoop.inEventLoop, "State may only be changed on the `Lifecycle`'s `eventLoop`")
+                precondition(newValue.order > self.state.order, "invalid state \(newValue) after \(self.state.order)")
+            }
+        }
 
         /// Create a new `Lifecycle`.
         ///
@@ -62,8 +67,12 @@ extension Lambda {
 
         /// Start the `Lifecycle`.
         ///
-        /// - Returns: An `EventLoopFuture` that is fulfilled after the Lambda hander has been created and initiliazed, and a first run has been schduled.
+        /// - Returns: An `EventLoopFuture` that is fulfilled after the Lambda hander has been created and initiliazed, and a first run has been scheduled.
+        ///
+        /// - note: This method must be called  on the `EventLoop` the `Lifecycle` has been initialized with.
         public func start() -> EventLoopFuture<Void> {
+            assert(self.eventLoop.inEventLoop, "Start must be called on the `EventLoop` the `Lifecycle` has been initialized with.")
+
             logger.info("lambda lifecycle starting with \(self.configuration)")
             self.state = .initializing
             // triggered when the Lambda has finished its last run
