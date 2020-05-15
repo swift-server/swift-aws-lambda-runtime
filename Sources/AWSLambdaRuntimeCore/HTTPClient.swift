@@ -25,7 +25,7 @@ internal final class HTTPClient {
     private let targetHost: String
 
     private var state = State.disconnected
-    private let executing = NIOAtomic.makeAtomic(value: false)
+    private var executing = false
 
     init(eventLoop: EventLoop, configuration: Lambda.Configuration.RuntimeEngine) {
         self.eventLoop = eventLoop
@@ -48,9 +48,26 @@ internal final class HTTPClient {
                              timeout: timeout ?? self.configuration.requestTimeout))
     }
 
+    /// cancels the current request if there is one
+    func cancel() {
+        guard self.executing else {
+            // there is no request running. nothing to cancel
+            return
+        }
+
+        guard case .connected(let channel) = self.state else {
+            preconditionFailure("if we are executing, we expect to have an open channel")
+        }
+
+        channel.triggerUserOutboundEvent(RequestCancelEvent(), promise: nil)
+    }
+
     // TODO: cap reconnect attempt
     private func execute(_ request: Request, validate: Bool = true) -> EventLoopFuture<Response> {
-        precondition(!validate || self.executing.compareAndExchange(expected: false, desired: true), "expecting single request at a time")
+        if validate {
+            precondition(self.executing == false, "expecting single request at a time")
+            self.executing = true
+        }
 
         switch self.state {
         case .disconnected:
@@ -66,7 +83,8 @@ internal final class HTTPClient {
 
             let promise = channel.eventLoop.makePromise(of: Response.self)
             promise.futureResult.whenComplete { _ in
-                precondition(self.executing.compareAndExchange(expected: true, desired: false), "invalid execution state")
+                precondition(self.executing == true, "invalid execution state")
+                self.executing = false
             }
             let wrapper = HTTPRequestWrapper(request: request, promise: promise)
             channel.writeAndFlush(wrapper).cascadeFailure(to: promise)
@@ -120,6 +138,7 @@ internal final class HTTPClient {
     internal enum Errors: Error {
         case connectionResetByPeer
         case timeout
+        case cancelled
     }
 
     private enum State {
@@ -284,6 +303,17 @@ private final class UnaryHandler: ChannelDuplexHandler {
         context.fireChannelInactive()
     }
 
+    func triggerUserOutboundEvent(context: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
+        switch event {
+        case is RequestCancelEvent:
+            if self.pending != nil {
+                self.completeWith(.failure(HTTPClient.Errors.cancelled))
+            }
+        default:
+            context.triggerUserOutboundEvent(event, promise: promise)
+        }
+    }
+
     private func completeWith(_ result: Result<HTTPClient.Response, Error>) {
         guard let pending = self.pending else {
             preconditionFailure("invalid state, no pending request")
@@ -299,3 +329,5 @@ private struct HTTPRequestWrapper {
     let request: HTTPClient.Request
     let promise: EventLoopPromise<HTTPClient.Response>
 }
+
+private struct RequestCancelEvent {}

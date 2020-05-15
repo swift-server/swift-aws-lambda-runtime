@@ -19,7 +19,7 @@ import NIO
 extension Lambda {
     /// Lambda runtime context.
     /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
-    public final class Context {
+    public final class Context: CustomDebugStringConvertible {
         /// The request ID, which identifies the request that triggered the function invocation.
         public let requestId: String
 
@@ -84,6 +84,10 @@ extension Lambda {
 
             let remaining = deadline - now
             return .milliseconds(remaining)
+        }
+
+        public var debugDescription: String {
+            "\(Self.self)(requestId: \(self.requestId), traceId: \(self.traceId), invokedFunctionArn: \(self.invokedFunctionArn), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(self.clientContext ?? "nil"), deadline: \(self.deadline))"
         }
     }
 }

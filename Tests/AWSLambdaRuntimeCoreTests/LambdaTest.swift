@@ -145,12 +145,13 @@ class LambdaTest: XCTestCase {
         }
         let result = Lambda.run(configuration: configuration, factory: { $0.makeSucceededFuture(EchoHandler()) })
 
-        guard case .success(let invocationCount) = result else {
-            return XCTFail("expected to have not failed")
+        switch result {
+        case .success(let invocationCount):
+            XCTAssertGreaterThan(invocationCount, 0, "should have stopped before any request made")
+            XCTAssertLessThan(invocationCount, maxTimes, "should have stopped before \(maxTimes)")
+        case .failure(let error):
+            XCTFail("Unexpected error: \(error)")
         }
-
-        XCTAssertGreaterThan(invocationCount, 0, "should have stopped before any request made")
-        XCTAssertLessThan(invocationCount, maxTimes, "should have stopped before \(maxTimes)")
     }
 
     func testTimeout() {

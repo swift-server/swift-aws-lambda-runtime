@@ -18,9 +18,11 @@ import NIO
 
 extension Lambda {
     /// LambdaRunner manages the Lambda runtime workflow, or business logic.
-    internal struct Runner {
+    internal final class Runner {
         private let runtimeClient: RuntimeClient
         private let eventLoop: EventLoop
+
+        private var isGettingNextInvocation = false
 
         init(eventLoop: EventLoop, configuration: Configuration) {
             self.eventLoop = eventLoop
@@ -46,10 +48,12 @@ extension Lambda {
         func run(logger: Logger, handler: Handler) -> EventLoopFuture<Void> {
             logger.debug("lambda invocation sequence starting")
             // 1. request invocation from lambda runtime engine
+            self.isGettingNextInvocation = true
             return self.runtimeClient.getNextInvocation(logger: logger).peekError { error in
-                logger.error("could not fetch invocation from lambda runtime engine: \(error)")
+                logger.error("could not fetch work from lambda runtime engine: \(error)")
             }.flatMap { invocation, payload in
                 // 2. send invocation to handler
+                self.isGettingNextInvocation = false
                 let context = Context(logger: logger, eventLoop: self.eventLoop, invocation: invocation)
                 logger.debug("sending invocation to lambda handler \(handler)")
                 return handler.handle(context: context, payload: payload)
@@ -67,6 +71,14 @@ extension Lambda {
             }.always { result in
                 // we are done!
                 logger.log(level: result.successful ? .debug : .warning, "lambda invocation sequence completed \(result.successful ? "successfully" : "with failure")")
+            }
+        }
+
+        /// cancels the current run, if we are waiting for next invocation (long poll from Lambda control plane)
+        /// only needed for debugging purposes.
+        func cancelWaitingForNextInvocation() {
+            if self.isGettingNextInvocation {
+                self.runtimeClient.cancel()
             }
         }
     }

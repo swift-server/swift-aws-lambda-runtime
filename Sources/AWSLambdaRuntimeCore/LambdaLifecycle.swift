@@ -18,6 +18,8 @@ import NIOConcurrencyHelpers
 
 extension Lambda {
     /// `Lifecycle` manages the Lambda process lifecycle.
+    ///
+    /// - note: It is intended to be used within a single `EventLoop`. For this reason this class is not thread safe.
     public final class Lifecycle {
         private let eventLoop: EventLoop
         private let shutdownPromise: EventLoopPromise<Int>
@@ -25,8 +27,12 @@ extension Lambda {
         private let configuration: Configuration
         private let factory: HandlerFactory
 
-        private var _state = State.idle
-        private let stateLock = Lock()
+        private var state = State.idle {
+            willSet {
+                assert(self.eventLoop.inEventLoop, "State may only be changed on the `Lifecycle`'s `eventLoop`")
+                precondition(newValue.order > self.state.order, "invalid state \(newValue) after \(self.state.order)")
+            }
+        }
 
         /// Create a new `Lifecycle`.
         ///
@@ -61,8 +67,12 @@ extension Lambda {
 
         /// Start the `Lifecycle`.
         ///
-        /// - Returns: An `EventLoopFuture` that is fulfilled after the Lambda hander has been created and initiliazed, and a first run has been schduled.
+        /// - Returns: An `EventLoopFuture` that is fulfilled after the Lambda hander has been created and initiliazed, and a first run has been scheduled.
+        ///
+        /// - note: This method must be called  on the `EventLoop` the `Lifecycle` has been initialized with.
         public func start() -> EventLoopFuture<Void> {
+            assert(self.eventLoop.inEventLoop, "Start must be called on the `EventLoop` the `Lifecycle` has been initialized with.")
+
             logger.info("lambda lifecycle starting with \(self.configuration)")
             self.state = .initializing
             // triggered when the Lambda has finished its last run
@@ -81,10 +91,19 @@ extension Lambda {
 
         // MARK: -  Private
 
-        /// Begin the `Lifecycle` shutdown.
+        #if DEBUG
+        /// Begin the `Lifecycle` shutdown. Only needed for debugging purposes, hence behind a `DEBUG` flag.
         public func shutdown() {
-            self.state = .shuttingdown
+            // make this method thread safe by dispatching onto the eventloop
+            self.eventLoop.execute {
+                let oldState = self.state
+                self.state = .shuttingdown
+                if case .active(let runner, _) = oldState {
+                    runner.cancelWaitingForNextInvocation()
+                }
+            }
         }
+        #endif
 
         private func markShutdown() {
             self.state = .shutdown
@@ -105,6 +124,14 @@ extension Lambda {
                         case .success:
                             // recursive! per aws lambda runtime spec the polling requests are to be done one at a time
                             _run(count + 1)
+                        case .failure(HTTPClient.Errors.cancelled):
+                            if case .shuttingdown = self.state {
+                                // if we ware shutting down, we expect to that the get next
+                                // invocation request might have been cancelled. For this reason we
+                                // succeed the promise here.
+                                return promise.succeed(count)
+                            }
+                            promise.fail(HTTPClient.Errors.cancelled)
                         case .failure(let error):
                             promise.fail(error)
                         }
@@ -117,21 +144,6 @@ extension Lambda {
             }
 
             _run(0)
-        }
-
-        private var state: State {
-            get {
-                self.stateLock.withLock {
-                    self._state
-                }
-            }
-            set {
-                self.stateLock.withLockVoid {
-                    precondition(newValue.order > self._state.order, "invalid state \(newValue) after \(self._state)")
-                    self._state = newValue
-                }
-                self.logger.debug("lambda lifecycle state: \(newValue)")
-            }
         }
 
         private enum State {

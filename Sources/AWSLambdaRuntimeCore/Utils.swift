@@ -16,7 +16,7 @@ import Dispatch
 import NIO
 
 internal enum Consts {
-    private static let apiPrefix = "/2018-06-01"
+    static let apiPrefix = "/2018-06-01"
     static let invocationURLPrefix = "\(apiPrefix)/runtime/invocation"
     static let getNextInvocationURLSuffix = "/next"
     static let postResponseURLSuffix = "/response"
