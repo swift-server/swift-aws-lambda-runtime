@@ -124,6 +124,14 @@ extension Lambda {
                         case .success:
                             // recursive! per aws lambda runtime spec the polling requests are to be done one at a time
                             _run(count + 1)
+                        case .failure(HTTPClient.Errors.cancelled):
+                            if case .shuttingdown = self.state {
+                                // if we ware shutting down, we expect to that the get next
+                                // invocation request might have been cancelled. For this reason we
+                                // succeed the promise here.
+                                return promise.succeed(count)
+                            }
+                            promise.fail(HTTPClient.Errors.cancelled)
                         case .failure(let error):
                             promise.fail(error)
                         }
