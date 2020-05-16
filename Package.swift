@@ -52,7 +52,10 @@ let package = Package(
         .target(name: "MockServer", dependencies: [
             .product(name: "NIOHTTP1", package: "swift-nio"),
         ]),
-        .target(name: "StringSample", dependencies: ["AWSLambdaRuntime"]),
+        .target(name: "StringSample", dependencies: [
+            .byName(name: "AWSLambdaRuntime"),
+            .byName(name: "AWSLambdaTesting"),
+        ]),
         .target(name: "CodableSample", dependencies: ["AWSLambdaRuntime"]),
     ]
 )
