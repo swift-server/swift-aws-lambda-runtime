@@ -29,7 +29,7 @@ Swift AWS Lambda Runtime is a library designed to make building Lambda functions
    )
    ```
 
-2. Create a ‘main.swift’ and implement your Lambda. 
+2. Create a `main.swift` and implement your Lambda. 
 
    ### Using Closures
 
