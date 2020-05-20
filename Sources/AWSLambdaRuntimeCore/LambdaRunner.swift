@@ -68,9 +68,6 @@ extension Lambda {
                 self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError { error in
                     logger.error("could not report results to lambda runtime engine: \(error)")
                 }
-            }.always { result in
-                // we are done!
-                logger.log(level: result.successful ? .debug : .warning, "lambda invocation sequence completed \(result.successful ? "successfully" : "with failure")")
             }
         }
 
