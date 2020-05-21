@@ -122,6 +122,7 @@ extension Lambda {
                     runner.run(logger: logger, handler: handler).whenComplete { result in
                         switch result {
                         case .success:
+                            logger.log(level: .debug, "lambda invocation sequence completed successfully")
                             // recursive! per aws lambda runtime spec the polling requests are to be done one at a time
                             _run(count + 1)
                         case .failure(HTTPClient.Errors.cancelled):
@@ -129,10 +130,13 @@ extension Lambda {
                                 // if we ware shutting down, we expect to that the get next
                                 // invocation request might have been cancelled. For this reason we
                                 // succeed the promise here.
+                                logger.log(level: .info, "lambda invocation sequence has been cancelled for shutdown")
                                 return promise.succeed(count)
                             }
+                            logger.log(level: .error, "lambda invocation sequence has been cancelled unexpectedly")
                             promise.fail(HTTPClient.Errors.cancelled)
                         case .failure(let error):
+                            logger.log(level: .error, "lambda invocation sequence completed with error: \(error)")
                             promise.fail(error)
                         }
                     }
