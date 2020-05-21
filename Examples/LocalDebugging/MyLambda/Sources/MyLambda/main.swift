@@ -13,9 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntime
+import Shared
 
 try Lambda.withLocalServer {
-    Lambda.run { (_: Lambda.Context, payload: String, callback: @escaping (Result<String, Error>) -> Void) in
-        callback(.success("Hello, \(payload)!"))
+    Lambda.run { (_: Lambda.Context, request: Request, callback: @escaping (Result<Response, Error>) -> Void) in
+        // TODO: something useful
+        callback(.success(Response(message: "Hello, \(request.name)!")))
     }
 }
