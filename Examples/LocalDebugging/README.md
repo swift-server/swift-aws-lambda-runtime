@@ -18,9 +18,9 @@ between the iOS application and the Lambda function over HTTP.
 To try out this example, open the workspace in Xcode and "run" the two targets,
 using the relevant `MyLambda` and `MyApp` Xcode schemas.
 
-Start with running the `MyLambda` target on the "My Mac" destination, once up you should see a log message in Xcode console saying
+Start with running the `MyLambda` target on the "My Mac" destination, once it is up you should see a log message in the Xcode console saying
 `LocalLambdaServer started and listening on 127.0.0.1:7000, receiving payloads on /invoke`
-which means the local emulator is up and receiving traffic on port 7000 and expecting payloads on the `/invoke` endpoint.
+which means the local emulator is up and receiving traffic on port `7000` and expecting payloads on the `/invoke` endpoint.
 
 Continue to run the `MyApp` target in a simulator destination. Once up, the application's UI should appear in the simulator allowing you
 to interact with it.
