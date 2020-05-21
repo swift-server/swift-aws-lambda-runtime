@@ -314,7 +314,7 @@ private final class UnaryHandler: ChannelDuplexHandler {
             if self.pending != nil {
                 self.completeWith(.failure(HTTPClient.Errors.cancelled))
                 // after the cancel error has been send, we want to close the connection so
-                // that no more packages can be read on this connection.
+                // that no more packets can be read on this connection.
                 _ = context.channel.close()
             }
         default:
