@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 52;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -13,6 +13,7 @@
 		F7B6C204246121E900607A89 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F7B6C203246121E900607A89 /* Assets.xcassets */; };
 		F7B6C207246121E900607A89 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F7B6C206246121E900607A89 /* Preview Assets.xcassets */; };
 		F7B6C20A246121E900607A89 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F7B6C208246121E900607A89 /* LaunchScreen.storyboard */; };
+		F7EA8D6024762E4000B0D09E /* Shared in Frameworks */ = {isa = PBXBuildFile; productRef = F7EA8D5F24762E4000B0D09E /* Shared */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +32,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F7EA8D6024762E4000B0D09E /* Shared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -42,6 +44,7 @@
 			children = (
 				F7B6C1FC246121E800607A89 /* MyApp */,
 				F7B6C1FB246121E800607A89 /* Products */,
+				F7EA8D5E24762E4000B0D09E /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -75,6 +78,13 @@
 			path = "Preview Content";
 			sourceTree = "<group>";
 		};
+		F7EA8D5E24762E4000B0D09E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -91,6 +101,9 @@
 			dependencies = (
 			);
 			name = MyApp;
+			packageProductDependencies = (
+				F7EA8D5F24762E4000B0D09E /* Shared */,
+			);
 			productName = MyApp;
 			productReference = F7B6C1FA246121E800607A89 /* MyApp.app */;
 			productType = "com.apple.product-type.application";
@@ -340,6 +353,13 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F7EA8D5F24762E4000B0D09E /* Shared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Shared;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F7B6C1F2246121E800607A89 /* Project object */;
 }

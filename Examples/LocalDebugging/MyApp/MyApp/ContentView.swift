@@ -12,19 +12,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Shared
 import SwiftUI
 
 struct ContentView: View {
-    @State var name: String = "World"
+    @State var name: String = ""
+    @State var password: String = ""
     @State var response: String = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            TextField("Enter your name", text: $name)
+            TextField("Username", text: $name)
+            SecureField("Password", text: $password)
             Button(
-                action: self.sayHello,
+                action: self.register,
                 label: {
-                    Text("say hello")
+                    Text("Register")
                         .padding()
                         .foregroundColor(.white)
                         .background(Color.black)
@@ -32,18 +35,20 @@ struct ContentView: View {
                 }
             )
             Text(response)
-                .foregroundColor(response.starts(with: "CommunicationError") ? .red : .black)
         }.padding(100)
     }
 
-    func sayHello() {
+    func register() {
         guard let url = URL(string: "http://localhost:7000/invoke") else {
             fatalError("invalid url")
         }
-
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.httpBody = self.name.data(using: .utf8)
+
+        guard let jsonRequest = try? JSONEncoder().encode(Request(name: self.name, password: self.password)) else {
+            fatalError("encoding error")
+        }
+        request.httpBody = jsonRequest
 
         let task = URLSession.shared.dataTask(with: request as URLRequest) { data, response, error in
             do {
@@ -59,7 +64,8 @@ struct ContentView: View {
                 guard let data = data else {
                     throw CommunicationError(reason: "invald response, empty body")
                 }
-                self.response = String(data: data, encoding: .utf8)!
+                let response = try JSONDecoder().decode(Response.self, from: data)
+                self.response = response.message
             } catch {
                 self.response = "\(error)"
             }

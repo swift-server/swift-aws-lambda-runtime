@@ -11,5 +11,8 @@ services:
   test:
     image: swift-aws-lambda:18.04-5.3
 
+  test-samples:
+    image: swift-aws-lambda:18.04-5.3
+
   shell:
     image: swift-aws-lambda:18.04-5.3
