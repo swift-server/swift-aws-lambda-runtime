@@ -15,7 +15,7 @@ let package = Package(
         // in real-world projects this would say
         // .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "1.0.0")
         .package(name: "swift-aws-lambda-runtime", path: "../../.."),
-        .package(name: "Shared", path: "../shared"),
+        .package(name: "Shared", path: "../Shared"),
     ],
     targets: [
         .target(

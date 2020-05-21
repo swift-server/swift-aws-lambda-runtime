@@ -33,7 +33,7 @@ services:
   test-samples:
     <<: *common
     command: >-
-      /bin/bash -cl "
+      /bin/bash -clx "
       swift build --package-path Examples/LambdaFunctions &&
       swift build --package-path Examples/LocalDebugging/MyLambda"
 
