@@ -1,0 +1,50 @@
+AWSTemplateFormatVersion : '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM template for deploying the DynamoDBPutBackend Lambda function.
+
+Resources:
+# DynamoDBPutBackend Function
+  dynamoDBPutBackendFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: Provided
+      Runtime: provided
+      CodeUri: .build/lambda/DynamoDBPutBackend/lambda.zip
+      Environment:
+        Variables:
+          DYNAMO_ENDPOINT_HOST_NAME: !Sub 'dynamodb.${AWS::Region}.amazonaws.com'
+          DYNAMO_TABLE_NAME: !Ref backendTable
+          LOG_LEVEL: debug
+# Grants this function permission to perform actions on the table
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+          - Effect: "Allow"
+            Action:
+              - "dynamodb:BatchGetItem"
+              - "dynamodb:GetItem"
+              - "dynamodb:Query"
+              - "dynamodb:Scan"
+              - "dynamodb:BatchWriteItem"
+              - "dynamodb:PutItem"
+              - "dynamodb:UpdateItem"
+            Resource: !GetAtt backendTable.Arn
+# Instructs new versions to be published to an alias named "live".
+      AutoPublishAlias: live
+
+  backendTable:
+    Type: "AWS::DynamoDB::Table"
+    DeletionPolicy: Retain
+    Properties:
+# Sets the table to On-Demand billing; PROVISIONED is recommended for predictable workloads
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: "PK"
+          AttributeType: "S"
+        - AttributeName: "SK"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "PK"
+          KeyType: "HASH"
+        - AttributeName: "SK"
+          KeyType: "RANGE"
