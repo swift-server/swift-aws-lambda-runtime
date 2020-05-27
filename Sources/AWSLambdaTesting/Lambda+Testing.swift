@@ -42,18 +42,18 @@ import NIO
 
 extension Lambda {
     public struct TestConfig {
-        public var requestId: String
-        public var traceId: String
-        public var invokedFunctionArn: String
+        public var requestID: String
+        public var traceID: String
+        public var invokedFunctionARN: String
         public var timeout: DispatchTimeInterval
 
-        public init(requestId: String = "\(DispatchTime.now().uptimeNanoseconds)",
-                    traceId: String = "Root=\(DispatchTime.now().uptimeNanoseconds);Parent=\(DispatchTime.now().uptimeNanoseconds);Sampled=1",
-                    invokedFunctionArn: String = "arn:aws:lambda:us-west-1:\(DispatchTime.now().uptimeNanoseconds):function:custom-runtime",
+        public init(requestID: String = "\(DispatchTime.now().uptimeNanoseconds)",
+                    traceID: String = "Root=\(DispatchTime.now().uptimeNanoseconds);Parent=\(DispatchTime.now().uptimeNanoseconds);Sampled=1",
+                    invokedFunctionARN: String = "arn:aws:lambda:us-west-1:\(DispatchTime.now().uptimeNanoseconds):function:custom-runtime",
                     timeout: DispatchTimeInterval = .seconds(5)) {
-            self.requestId = requestId
-            self.traceId = traceId
-            self.invokedFunctionArn = invokedFunctionArn
+            self.requestID = requestID
+            self.traceID = traceID
+            self.invokedFunctionARN = invokedFunctionARN
             self.timeout = timeout
         }
     }
@@ -97,9 +97,9 @@ extension Lambda {
             try! eventLoopGroup.syncShutdownGracefully()
         }
         let eventLoop = eventLoopGroup.next()
-        let context = Context(requestId: config.requestId,
-                              traceId: config.traceId,
-                              invokedFunctionArn: config.invokedFunctionArn,
+        let context = Context(requestID: config.requestID,
+                              traceID: config.traceID,
+                              invokedFunctionARN: config.invokedFunctionARN,
                               deadline: .now() + config.timeout,
                               logger: logger,
                               eventLoop: eventLoop)

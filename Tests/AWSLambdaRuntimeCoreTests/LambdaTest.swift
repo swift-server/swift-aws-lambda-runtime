@@ -256,9 +256,9 @@ class LambdaTest: XCTestCase {
         let past2 = DispatchWallTime(millisSinceEpoch: Date(timeIntervalSinceNow: Double(-delta)).millisSinceEpoch)
         XCTAssertEqual(Double(past1.rawValue), Double(past2.rawValue), accuracy: 2_000_000.0)
 
-        let context = Lambda.Context(requestId: UUID().uuidString,
-                                     traceId: UUID().uuidString,
-                                     invokedFunctionArn: UUID().uuidString,
+        let context = Lambda.Context(requestID: UUID().uuidString,
+                                     traceID: UUID().uuidString,
+                                     invokedFunctionARN: UUID().uuidString,
                                      deadline: .now() + .seconds(1),
                                      cognitoIdentity: nil,
                                      clientContext: nil,
@@ -266,9 +266,9 @@ class LambdaTest: XCTestCase {
                                      eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next())
         XCTAssertGreaterThan(context.deadline, .now())
 
-        let expiredContext = Lambda.Context(requestId: context.requestId,
-                                            traceId: context.traceId,
-                                            invokedFunctionArn: context.invokedFunctionArn,
+        let expiredContext = Lambda.Context(requestID: context.requestID,
+                                            traceID: context.traceID,
+                                            invokedFunctionARN: context.invokedFunctionARN,
                                             deadline: .now() - .seconds(1),
                                             cognitoIdentity: context.cognitoIdentity,
                                             clientContext: context.clientContext,
@@ -278,9 +278,9 @@ class LambdaTest: XCTestCase {
     }
 
     func testGetRemainingTime() {
-        let context = Lambda.Context(requestId: UUID().uuidString,
-                                     traceId: UUID().uuidString,
-                                     invokedFunctionArn: UUID().uuidString,
+        let context = Lambda.Context(requestID: UUID().uuidString,
+                                     traceID: UUID().uuidString,
+                                     invokedFunctionARN: UUID().uuidString,
                                      deadline: .now() + .seconds(1),
                                      cognitoIdentity: nil,
                                      clientContext: nil,
