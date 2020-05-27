@@ -235,13 +235,13 @@ When calling the user provided Lambda function, the library provides a `Context`
 ```swift
 public final class Context {
     /// The request ID, which identifies the request that triggered the function invocation.
-    public let requestId: String
+    public let requestID: String
 
     /// The AWS X-Ray tracing header.
-    public let traceId: String
+    public let traceID: String
 
     /// The ARN of the Lambda function, version, or alias that's specified in the invocation.
-    public let invokedFunctionArn: String
+    public let invokedFunctionARN: String
 
     /// The timestamp that the function times out
     public let deadline: DispatchWallTime

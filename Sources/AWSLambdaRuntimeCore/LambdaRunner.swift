@@ -83,9 +83,9 @@ extension Lambda {
 
 private extension Lambda.Context {
     convenience init(logger: Logger, eventLoop: EventLoop, invocation: Lambda.Invocation) {
-        self.init(requestId: invocation.requestId,
-                  traceId: invocation.traceId,
-                  invokedFunctionArn: invocation.invokedFunctionArn,
+        self.init(requestID: invocation.requestID,
+                  traceID: invocation.traceID,
+                  invokedFunctionARN: invocation.invokedFunctionARN,
                   deadline: DispatchWallTime(millisSinceEpoch: invocation.deadlineInMillisSinceEpoch),
                   cognitoIdentity: invocation.cognitoIdentity,
                   clientContext: invocation.clientContext,

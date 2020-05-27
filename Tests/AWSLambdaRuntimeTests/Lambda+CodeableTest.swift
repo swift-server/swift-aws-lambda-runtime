@@ -65,9 +65,9 @@ class CodableLambdaTest: XCTestCase {
 
     // convencience method
     func newContext() -> Lambda.Context {
-        Lambda.Context(requestId: UUID().uuidString,
-                       traceId: "abc123",
-                       invokedFunctionArn: "aws:arn:",
+        Lambda.Context(requestID: UUID().uuidString,
+                       traceID: "abc123",
+                       invokedFunctionARN: "aws:arn:",
                        deadline: .now() + .seconds(3),
                        cognitoIdentity: nil,
                        clientContext: nil,

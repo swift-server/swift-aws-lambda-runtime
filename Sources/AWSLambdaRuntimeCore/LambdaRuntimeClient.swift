@@ -59,7 +59,7 @@ extension Lambda {
 
         /// Reports a result to the Runtime Engine.
         func reportResults(logger: Logger, invocation: Invocation, result: Result<ByteBuffer?, Error>) -> EventLoopFuture<Void> {
-            var url = Consts.invocationURLPrefix + "/" + invocation.requestId
+            var url = Consts.invocationURLPrefix + "/" + invocation.requestID
             var body: ByteBuffer?
             switch result {
             case .success(let buffer):
@@ -152,15 +152,15 @@ internal extension ErrorResponse {
 
 extension Lambda {
     internal struct Invocation {
-        let requestId: String
+        let requestID: String
         let deadlineInMillisSinceEpoch: Int64
-        let invokedFunctionArn: String
-        let traceId: String
+        let invokedFunctionARN: String
+        let traceID: String
         let clientContext: String?
         let cognitoIdentity: String?
 
         init(headers: HTTPHeaders) throws {
-            guard let requestId = headers.first(name: AmazonHeaders.requestID), !requestId.isEmpty else {
+            guard let requestID = headers.first(name: AmazonHeaders.requestID), !requestID.isEmpty else {
                 throw RuntimeError.invocationMissingHeader(AmazonHeaders.requestID)
             }
 
@@ -169,18 +169,18 @@ extension Lambda {
                 throw RuntimeError.invocationMissingHeader(AmazonHeaders.deadline)
             }
 
-            guard let invokedFunctionArn = headers.first(name: AmazonHeaders.invokedFunctionARN) else {
+            guard let invokedFunctionARN = headers.first(name: AmazonHeaders.invokedFunctionARN) else {
                 throw RuntimeError.invocationMissingHeader(AmazonHeaders.invokedFunctionARN)
             }
 
-            guard let traceId = headers.first(name: AmazonHeaders.traceID) else {
+            guard let traceID = headers.first(name: AmazonHeaders.traceID) else {
                 throw RuntimeError.invocationMissingHeader(AmazonHeaders.traceID)
             }
 
-            self.requestId = requestId
+            self.requestID = requestID
             self.deadlineInMillisSinceEpoch = unixTimeInMilliseconds
-            self.invokedFunctionArn = invokedFunctionArn
-            self.traceId = traceId
+            self.invokedFunctionARN = invokedFunctionARN
+            self.traceID = traceID
             self.clientContext = headers["Lambda-Runtime-Client-Context"].first
             self.cognitoIdentity = headers["Lambda-Runtime-Cognito-Identity"].first
         }

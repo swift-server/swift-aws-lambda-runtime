@@ -21,13 +21,13 @@ extension Lambda {
     /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
     public final class Context: CustomDebugStringConvertible {
         /// The request ID, which identifies the request that triggered the function invocation.
-        public let requestId: String
+        public let requestID: String
 
         /// The AWS X-Ray tracing header.
-        public let traceId: String
+        public let traceID: String
 
         /// The ARN of the Lambda function, version, or alias that's specified in the invocation.
-        public let invokedFunctionArn: String
+        public let invokedFunctionARN: String
 
         /// The timestamp that the function times out
         public let deadline: DispatchWallTime
@@ -54,17 +54,17 @@ extension Lambda {
         /// This is useful when implementing `EventLoopLambdaHandler`
         public let allocator: ByteBufferAllocator
 
-        internal init(requestId: String,
-                      traceId: String,
-                      invokedFunctionArn: String,
+        internal init(requestID: String,
+                      traceID: String,
+                      invokedFunctionARN: String,
                       deadline: DispatchWallTime,
                       cognitoIdentity: String? = nil,
                       clientContext: String? = nil,
                       logger: Logger,
                       eventLoop: EventLoop) {
-            self.requestId = requestId
-            self.traceId = traceId
-            self.invokedFunctionArn = invokedFunctionArn
+            self.requestID = requestID
+            self.traceID = traceID
+            self.invokedFunctionARN = invokedFunctionARN
             self.cognitoIdentity = cognitoIdentity
             self.clientContext = clientContext
             self.deadline = deadline
@@ -73,8 +73,8 @@ extension Lambda {
             self.allocator = ByteBufferAllocator()
             // mutate logger with context
             var logger = logger
-            logger[metadataKey: "awsRequestId"] = .string(requestId)
-            logger[metadataKey: "awsTraceId"] = .string(traceId)
+            logger[metadataKey: "awsRequestID"] = .string(requestID)
+            logger[metadataKey: "awsTraceID"] = .string(traceID)
             self.logger = logger
         }
 
@@ -87,7 +87,7 @@ extension Lambda {
         }
 
         public var debugDescription: String {
-            "\(Self.self)(requestId: \(self.requestId), traceId: \(self.traceId), invokedFunctionArn: \(self.invokedFunctionArn), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(self.clientContext ?? "nil"), deadline: \(self.deadline))"
+            "\(Self.self)(requestID: \(self.requestID), traceID: \(self.traceID), invokedFunctionARN: \(self.invokedFunctionARN), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(self.clientContext ?? "nil"), deadline: \(self.deadline))"
         }
     }
 }

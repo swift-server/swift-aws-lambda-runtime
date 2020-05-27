@@ -125,16 +125,16 @@ class LambdaTestingTests: XCTestCase {
     func testConfigValues() {
         let timeout: TimeInterval = 4
         let config = Lambda.TestConfig(
-            requestId: UUID().uuidString,
-            traceId: UUID().uuidString,
-            invokedFunctionArn: "arn:\(UUID().uuidString)",
+            requestID: UUID().uuidString,
+            traceID: UUID().uuidString,
+            invokedFunctionARN: "arn:\(UUID().uuidString)",
             timeout: .seconds(4)
         )
 
         let myLambda = { (ctx: Lambda.Context, _: String, callback: @escaping (Result<Void, Error>) -> Void) in
-            XCTAssertEqual(ctx.requestId, config.requestId)
-            XCTAssertEqual(ctx.traceId, config.traceId)
-            XCTAssertEqual(ctx.invokedFunctionArn, config.invokedFunctionArn)
+            XCTAssertEqual(ctx.requestID, config.requestID)
+            XCTAssertEqual(ctx.traceID, config.traceID)
+            XCTAssertEqual(ctx.invokedFunctionARN, config.invokedFunctionARN)
 
             let secondsSinceEpoch = Double(Int64(bitPattern: ctx.deadline.rawValue)) / -1_000_000_000
             XCTAssertEqual(Date(timeIntervalSince1970: secondsSinceEpoch).timeIntervalSinceNow, timeout, accuracy: 0.1)
