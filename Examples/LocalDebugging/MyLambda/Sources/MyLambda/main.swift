@@ -15,9 +15,9 @@
 import AWSLambdaRuntime
 import Shared
 
-try Lambda.withLocalServer {
-    Lambda.run { (_: Lambda.Context, request: Request, callback: @escaping (Result<Response, Error>) -> Void) in
-        // TODO: something useful
-        callback(.success(Response(message: "Hello, \(request.name)!")))
-    }
+// set LOCAL_SERVER_ENABLED env variable to "true" to start the local server simulator
+// which will allow local debugging
+Lambda.run { (_, request: Request, callback: @escaping (Result<Response, Error>) -> Void) in
+    // TODO: something useful
+    callback(.success(Response(message: "Hello, \(request.name)!")))
 }
