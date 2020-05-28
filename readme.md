@@ -98,7 +98,7 @@ Next, create a `main.swift` and implement your Lambda.
  }
  ```
 
- Modeling Lambda functions as Closures is both simple and safe. Swift AWS Lambda Runtime will ensure that the user-provided code is offloaded to the network processing thread such that even if the code becomes slow to respond or gets hang, the underlying Lambda process can continue to take traffic and respond to other requests. This safety comes at a a small performance penalty from context switching between the networking and the user-land threads. In low volume use cases, or other non-performance sensitive applications, the simplicity and safety of using the Closure based API is often preferred over the complexity of the performance-oriented API.
+ Modeling Lambda functions as Closures is both simple and safe. Swift AWS Lambda Runtime will ensure that the user-provided code is offloaded from the network processing thread such that even if the code becomes slow to respond or gets hang, the underlying process can continue to function. This safety comes at a small performance penalty from context switching between threads. In many cases, the simplicity and safety of using the Closure based API is often preferred over the complexity of the performance-oriented API.
 
  ### Using EventLoopLambdaHandler
 
@@ -125,7 +125,7 @@ Next, create a `main.swift` and implement your Lambda.
  Lambda.run(Handler())
  ```
 
- Beyond the small cognitive complexity of using the `EventLoopFuture` based APIs, note these APIs should be used with extra care. An `EventLoopLambdaHandler` will execute the user code on the same `EventLoop` (thread) as the library, making processing faster but requiring the Lambda code to never use blocking API calls as it might prevent the underlying process from functioning.
+ Beyond the small cognitive complexity of using the `EventLoopFuture` based APIs, note these APIs should be used with extra care. An `EventLoopLambdaHandler` will execute the user code on the same `EventLoop` (thread) as the library, making processing faster but requiring the user code to never call blocking APIs as it might prevent the underlying process from functioning.
 
 ## Deploying to AWS Lambda   
 
