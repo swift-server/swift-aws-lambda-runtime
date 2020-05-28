@@ -16,6 +16,7 @@ needs to be listed here.
 - Johannes Weiss <johannesweiss@apple.com>
 - Norman Maurer <norman_maurer@apple.com>
 - Tomer Doron <tomer@apple.com>
+- tachyonics <simon@tachyonics.io>
 
 **Updating this list**
 
