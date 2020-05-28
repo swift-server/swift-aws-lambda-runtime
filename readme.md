@@ -6,7 +6,7 @@ Serverless functions are increasingly becoming a popular choice for running even
 
 When using serverless functions, attention must be given to resource utilization as it directly impacts the costs of the system. This is where Swift shines! With its low memory footprint, deterministic performance, and quick start time, Swift is a fantastic match for the serverless functions architecture.
 
-Combine this with Swift’s developer friendliness, expressiveness, and emphasis on safety, and we have a solution that is great for developers at all skill levels, scalable, and cost effective.
+Combine this with Swift's developer friendliness, expressiveness, and emphasis on safety, and we have a solution that is great for developers at all skill levels, scalable, and cost effective.
 
 Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift simple and safe. The library is an implementation of the [AWS Lambda Runtime API](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-custom.html) and uses an embedded asynchronous HTTP Client based on [SwiftNIO](http://github.com/apple/swift-nio) that is fine-tuned for performance in the AWS Runtime context. The library provides a multi-tier API that allows building a range of Lambda functions: From quick and simple closures to complex, performance-sensitive event handlers.
 
@@ -23,7 +23,7 @@ There are several areas which need additional attention, including but not limit
 
 ## Getting started
 
-First, create a SwiftPM project and pull SwiftAWSLambdaRuntime as dependency into your project
+First, create a SwiftPM project and pull Swift AWS Lambda Runtime as dependency into your project
 
  ```swift
  // swift-tools-version:5.2
@@ -50,7 +50,7 @@ Next, create a `main.swift` and implement your Lambda.
 
  ### Using Closures
 
- The simplest way to use AWS Lambda Runtime is to pass in a closure, for example:
+ The simplest way to use `AWSLambdaRuntime` is to pass in a closure, for example:
 
  ```swift
  // Import the module
@@ -62,7 +62,7 @@ Next, create a `main.swift` and implement your Lambda.
  }
  ```
 
- More commonly, the payload would be a JSON, which is modeled using Codable, for example:
+ More commonly, the payload would be a JSON, which is modeled using `Codable`, for example:
 
  ```swift
  // Import the module
@@ -98,11 +98,11 @@ Next, create a `main.swift` and implement your Lambda.
  }
  ```
 
- Modeling Lambda functions as Closures is both simple and safe. The Swift AWS Lambda Runtime will ensure that the user provided code is offloaded off the network processing thread such that even if the code becomes slow to respond or gets hang, the underlying Lambda process can continue to take traffic and respond to other requests. This safety comes at a a small performance penalty from context switching between the networking and the user-land threads. In low volume use cases, or other non-performance sensitive applications, the simplicity & safety of using the Closure based API is often preferred over the complexity of the performance oriented API.
+ Modeling Lambda functions as Closures is both simple and safe. Swift AWS Lambda Runtime will ensure that the user-provided code is offloaded to the network processing thread such that even if the code becomes slow to respond or gets hang, the underlying Lambda process can continue to take traffic and respond to other requests. This safety comes at a a small performance penalty from context switching between the networking and the user-land threads. In low volume use cases, or other non-performance sensitive applications, the simplicity and safety of using the Closure based API is often preferred over the complexity of the performance-oriented API.
 
  ### Using EventLoopLambdaHandler
 
- Performance sensitive Lambda functions may choose to use a more complex API which allows the user code to run on the same thread as the networking handlers. AWS Lambda Runtime uses [SwiftNIO](https://github.com/apple/swift-nio) as its underlying  networking engine which means the APIs are based on [SwiftNIO](https://github.com/apple/swift-nio) concurrency primitives like the `EventLoop` and `EventLoopFuture`. For example:
+ Performance sensitive Lambda functions may choose to use a more complex API which allows user code to run on the same thread as the networking handlers. Swift AWS Lambda Runtime uses [SwiftNIO](https://github.com/apple/swift-nio) as its underlying networking engine which means the APIs are based on [SwiftNIO](https://github.com/apple/swift-nio) concurrency primitives like the `EventLoop` and `EventLoopFuture`. For example:
 
  ```swift
  // Import the modules
@@ -233,7 +233,7 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
 
 ### Closures
 
-In addition to protocol based Lambda, the library provides support for Closure based ones, as demonstrated in the overview section above. Closure based Lambda are based on the `LambdaHandler` protocol which mean they are safer. For most use cases, Closure based Lambda is a great fit and users are encouraged to use them.
+In addition to protocol-based Lambda, the library provides support for Closure-based ones, as demonstrated in the overview section above. Closure-based Lambdas are based on the `LambdaHandler` protocol which mean they are safer. For most use cases, Closure-based Lambda is a great fit and users are encouraged to use them.
 
 The library includes implementations for `Codable` and String based Lambda. Since AWS Lambda is primarily JSON based, this covers the most common use cases.
 
@@ -349,6 +349,6 @@ Lambda functions performance is usually measured across two axes:
 
 - **Warm invocation times**: The time it takes for a Lambda function to process an invocation after the Lambda has been invoked at least once.
 
-Larger packages size (Zipfile uploaded to AWS Lambda) negatively impact the cold start time, since AWS needs to download and unpack the package before starting the process.
+Larger packages size (Zip file uploaded to AWS Lambda) negatively impact the cold start time, since AWS needs to download and unpack the package before starting the process.
 
-Swift provides great Unicode support via [ICU](http://site.icu-project.org/home). Therefore, Swift based Lambda functions include the ICU libraries which tend to be large. This impacts the download time mentioned above and an area for further optimization. Some of the alternatives worth exploring are using the system ICU that comes with Amazon Linux (albeit older than the one Swift ships with) or working to remove the ICU dependency altogether. We welcome ideas and contributions to this end.
+Swift provides great Unicode support via [ICU](http://site.icu-project.org/home). Therefore, Swift-based Lambda functions include the ICU libraries which tend to be large. This impacts the download time mentioned above and an area for further optimization. Some of the alternatives worth exploring are using the system ICU that comes with Amazon Linux (albeit older than the one Swift ships with) or working to remove the ICU dependency altogether. We welcome ideas and contributions to this end.
