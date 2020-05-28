@@ -65,12 +65,18 @@ struct ContentView: View {
                     throw CommunicationError(reason: "invald response, empty body")
                 }
                 let response = try JSONDecoder().decode(Response.self, from: data)
-                self.response = response.message
+                self.setResponse(response.message)
             } catch {
-                self.response = "\(error)"
+                self.setResponse("\(error)")
             }
         }
         task.resume()
+    }
+
+    func setResponse(_ text: String) {
+        DispatchQueue.main.async {
+            self.response = text
+        }
     }
 }
 
