@@ -7,7 +7,7 @@ FROM $base_image
 ARG swift_version
 
 # dependencies
-RUN yum install -y wget
+RUN yum install -y wget perl-Digest-SHA
 RUN yum install -y lsof dnsutils netcat-openbsd net-tools curl jq # used by integration tests
 
 # tools
