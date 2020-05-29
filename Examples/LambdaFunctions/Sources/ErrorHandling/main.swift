@@ -16,7 +16,7 @@ import AWSLambdaRuntime
 
 // MARK: - Run Lambda
 
-// switch over the error type "requested" by thr request, and trigger such error accordingly
+// switch over the error type "requested" by the request, and trigger such error accordingly
 Lambda.run { (context: Lambda.Context, request: Request, callback: (Result<Response, Error>) -> Void) in
     switch request.error {
     // no error here!
