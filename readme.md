@@ -13,7 +13,7 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 ## Project status
 
 This is the beginning of a community-driven open-source project actively seeking contributions.
-While the core API is considered stable, the API may still evolved as we closer to a `1.0` version.
+While the core API is considered stable, the API may still evolve as we get closer to a `1.0` version.
 There are several areas which need additional attention, including but not limited to:
 
 * Further performance tuning
