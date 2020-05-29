@@ -13,7 +13,7 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 ## Project status
 
 This is the beginning of a community-driven open-source project actively seeking contributions.
-While the core API is considered stable, the API may still evolved as we closer to a `1.0` version.
+While the core API is considered stable, the API may still evolve as we get closer to a `1.0` version.
 There are several areas which need additional attention, including but not limited to:
 
 * Further performance tuning
@@ -133,7 +133,7 @@ To deploy Lambda functions to AWS Lambda, you need to compile the code for Amazo
 
 AWS offers several tools to interact and deploy Lambda functions to AWS Lambda including [SAM](https://aws.amazon.com/serverless/sam/) and the [AWS CLI](https://aws.amazon.com/cli/). The [Examples Directory](/Examples) includes complete sample build and deployment scripts that utilize these tools.
 
-Note the examples mentioned above use dynamic linking, therefore bundle the required Swift libraries in the Zip package along side the executable. You may choose to link the Lambda function statically (using `-static-stdlib`) which could improve performance but requires addition linker flags.
+Note the examples mentioned above use dynamic linking, therefore bundle the required Swift libraries in the Zip package along side the executable. You may choose to link the Lambda function statically (using `-static-stdlib`) which could improve performance but requires additional linker flags.
 
 To build the Lambda function for Amazon Linux, use the Docker image published by Swift.org on [Swift toolchains and Docker images for Amazon Linux 2](https://swift.org/download/), as demonstrated in the examples.
 
