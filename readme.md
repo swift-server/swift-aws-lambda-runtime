@@ -341,7 +341,7 @@ AWS Lambda functions can be invoked directly from the AWS Lambda console UI, AWS
 
 **Note**: Each one of the integration points mentioned above includes a set of `Codable` structs that mirror AWS' data model for these APIs.
 
-## Perfromance
+## Performance
 
 Lambda functions performance is usually measured across two axes:
 
