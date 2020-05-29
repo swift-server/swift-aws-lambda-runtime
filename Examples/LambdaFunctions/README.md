@@ -18,7 +18,9 @@ Steps to deploy this sample to AWS Lambda using the AWS CLI:
   ./scripts/deploy.sh
   ```
 
-  Note: This script assumes you have AWS CLI installed and credentials setup in `~/.aws/credentials`.
+  Notes: 
+  - This script assumes you have AWS CLI installed and credentials setup in `~/.aws/credentials`.
+  - Update `s3_bucket=swift-lambda-test` in `deploy.sh` before running (AWS S3 buckets require a unique global name)
 
 ### Deployment instructions using AWS SAM (Serverless Application Model)
 
