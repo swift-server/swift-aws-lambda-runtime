@@ -26,7 +26,8 @@ internal final class HTTPClient {
 
     private var state = State.disconnected
     private var executing = false
-    private let headers = HTTPHeaders([("User-Agent", "Swift-Lambda/Unknown")])
+
+    private static let headers = HTTPHeaders([("user-agent", "Swift-Lambda/Unknown")])
 
     init(eventLoop: EventLoop, configuration: Lambda.Configuration.RuntimeEngine) {
         self.eventLoop = eventLoop
@@ -38,7 +39,7 @@ internal final class HTTPClient {
         self.execute(Request(targetHost: self.targetHost,
                              url: url,
                              method: .GET,
-                             headers: headers,
+                             headers: HTTPClient.headers,
                              timeout: timeout ?? self.configuration.requestTimeout))
     }
 
@@ -46,7 +47,7 @@ internal final class HTTPClient {
         self.execute(Request(targetHost: self.targetHost,
                              url: url,
                              method: .POST,
-                             headers: headers,
+                             headers: HTTPClient.headers,
                              body: body,
                              timeout: timeout ?? self.configuration.requestTimeout))
     }
