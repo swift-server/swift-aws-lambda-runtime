@@ -32,11 +32,12 @@ extension Lambda {
     ///
     /// - parameters:
     ///     - invocationEndpoint: The endpoint  to post payloads to.
+    ///     - port: Port for local server to listen to.
     ///     - body: Code to run within the context of the mock server. Typically this would be a Lambda.run function call.
     ///
     /// - note: This API is designed stricly for local testing and is behind a DEBUG flag
-    public static func withLocalServer(invocationEndpoint: String? = nil, _ body: @escaping () -> Void) throws {
-        let server = LocalLambda.Server(invocationEndpoint: invocationEndpoint)
+    public static func withLocalServer(invocationEndpoint: String? = nil, port: Int? = nil, _ body: @escaping () -> Void) throws {
+        let server = LocalLambda.Server(invocationEndpoint: invocationEndpoint, port: port)
         try server.start().wait()
         defer { try! server.stop() } // FIXME:
         body()
@@ -53,14 +54,14 @@ private enum LocalLambda {
         private let port: Int
         private let invocationEndpoint: String
 
-        public init(invocationEndpoint: String?) {
+        public init(invocationEndpoint: String?, port: Int?) {
             let configuration = Lambda.Configuration()
             var logger = Logger(label: "LocalLambdaServer")
             logger.logLevel = configuration.general.logLevel
             self.logger = logger
             self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
             self.host = configuration.runtimeEngine.ip
-            self.port = configuration.runtimeEngine.port
+            self.port = port ?? configuration.runtimeEngine.port
             self.invocationEndpoint = invocationEndpoint ?? "/invoke"
         }
 
