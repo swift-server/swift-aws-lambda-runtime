@@ -36,7 +36,7 @@ extension Lambda {
     ///
     /// - note: This API is designed stricly for local testing and is behind a DEBUG flag
     @discardableResult
-    public static func withLocalServer<Value>(invocationEndpoint: String? = nil, _ body: @escaping () -> Value) throws -> Value {
+    static func withLocalServer<Value>(invocationEndpoint: String? = nil, _ body: @escaping () -> Value) throws -> Value {
         let server = LocalLambda.Server(invocationEndpoint: invocationEndpoint)
         try server.start().wait()
         defer { try! server.stop() } // FIXME:
