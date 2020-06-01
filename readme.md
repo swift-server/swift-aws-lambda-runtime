@@ -13,7 +13,7 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 ## Project status
 
 This is the beginning of a community-driven open-source project actively seeking contributions.
-While the core API is considered stable, the API may still evolved as we closer to a `1.0` version.
+While the core API is considered stable, the API may still evolve as we get closer to a `1.0` version.
 There are several areas which need additional attention, including but not limited to:
 
 * Further performance tuning
@@ -22,6 +22,8 @@ There are several areas which need additional attention, including but not limit
 * Additional examples
 
 ## Getting started
+
+If you have never used AWS Lambda or Docker before, check out this [getting started guide](https://fabianfett.de/getting-started-with-swift-aws-lambda-runtime) which helps you with every step from zero to a running Lambda.
 
 First, create a SwiftPM project and pull Swift AWS Lambda Runtime as dependency into your project
 
@@ -100,7 +102,7 @@ Next, create a `main.swift` and implement your Lambda.
 
  Modeling Lambda functions as Closures is both simple and safe. Swift AWS Lambda Runtime will ensure that the user-provided code is offloaded from the network processing thread such that even if the code becomes slow to respond or gets hang, the underlying process can continue to function. This safety comes at a small performance penalty from context switching between threads. In many cases, the simplicity and safety of using the Closure based API is often preferred over the complexity of the performance-oriented API.
 
- ### Using EventLoopLambdaHandler
+### Using EventLoopLambdaHandler
 
  Performance sensitive Lambda functions may choose to use a more complex API which allows user code to run on the same thread as the networking handlers. Swift AWS Lambda Runtime uses [SwiftNIO](https://github.com/apple/swift-nio) as its underlying networking engine which means the APIs are based on [SwiftNIO](https://github.com/apple/swift-nio) concurrency primitives like the `EventLoop` and `EventLoopFuture`. For example:
 
@@ -133,7 +135,7 @@ To deploy Lambda functions to AWS Lambda, you need to compile the code for Amazo
 
 AWS offers several tools to interact and deploy Lambda functions to AWS Lambda including [SAM](https://aws.amazon.com/serverless/sam/) and the [AWS CLI](https://aws.amazon.com/cli/). The [Examples Directory](/Examples) includes complete sample build and deployment scripts that utilize these tools.
 
-Note the examples mentioned above use dynamic linking, therefore bundle the required Swift libraries in the Zip package along side the executable. You may choose to link the Lambda function statically (using `-static-stdlib`) which could improve performance but requires addition linker flags.
+Note the examples mentioned above use dynamic linking, therefore bundle the required Swift libraries in the Zip package along side the executable. You may choose to link the Lambda function statically (using `-static-stdlib`) which could improve performance but requires additional linker flags.
 
 To build the Lambda function for Amazon Linux, use the Docker image published by Swift.org on [Swift toolchains and Docker images for Amazon Linux 2](https://swift.org/download/), as demonstrated in the examples.
 
@@ -145,7 +147,7 @@ The library defines three protocols for the implementation of a Lambda Handler. 
 
 An `EventLoopFuture` based processing protocol for a Lambda that takes a `ByteBuffer` and returns a `ByteBuffer?` asynchronously.  
 
-`ByteBufferLambdaHandler` is the lowest level protocol designed to power the higher level `EventLoopLambdaHandler` and `LambdaHandler` based APIs. Users are not expected to use this protocol, though some performance sensitive applications that operate at he `ByteBuffer` level or have special serialization needs may choose to do so.
+`ByteBufferLambdaHandler` is the lowest level protocol designed to power the higher level `EventLoopLambdaHandler` and `LambdaHandler` based APIs. Users are not expected to use this protocol, though some performance sensitive applications that operate at the `ByteBuffer` level or have special serialization needs may choose to do so.
 
 ```swift
 public protocol ByteBufferLambdaHandler {
@@ -341,7 +343,7 @@ AWS Lambda functions can be invoked directly from the AWS Lambda console UI, AWS
 
 **Note**: Each one of the integration points mentioned above includes a set of `Codable` structs that mirror AWS' data model for these APIs.
 
-## Perfromance
+## Performance
 
 Lambda functions performance is usually measured across two axes:
 
