@@ -4,6 +4,8 @@ This sample project is a collection of Lambda functions that demonstrates
 how to write a simple Lambda function in Swift, and how to package and deploy it
 to the AWS Lambda platform.
 
+Note: You must have the [jq](https://stedolan.github.io/jq/download/) command line tool installed.
+
 ## Deployment instructions using AWS CLI
 
 Steps to deploy this sample to AWS Lambda using the AWS CLI:
@@ -19,8 +21,6 @@ Steps to deploy this sample to AWS Lambda using the AWS CLI:
   ```
 
   Note: This script assumes you have AWS CLI installed and credentials setup in `~/.aws/credentials`.
-  
-  Note: You must also have the [jq](https://stedolan.github.io/jq/download/) command line tool installed.
 
 ### Deployment instructions using AWS SAM (Serverless Application Model)
 
