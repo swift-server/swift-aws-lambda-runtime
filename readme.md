@@ -91,7 +91,7 @@ Next, create a `main.swift` and implement your Lambda.
  ```swift
  // Import the modules
  import AWSLambdaRuntime
- Import AWSLambdaEvents
+ import AWSLambdaEvents
 
  // In this example we are receiving an SQS Message, with no response (Void).
  Lambda.run { (context, message: SQS.Message, callback) in
