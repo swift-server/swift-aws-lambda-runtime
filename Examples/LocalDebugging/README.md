@@ -23,8 +23,8 @@ Start with running the `MyLambda` target.
 * Set the `LOCAL_LAMBDA_SERVER_ENABLED` environment variable to `true` by editing the `MyLambda` scheme under `Run`.
 * Hit `Run`
 * Once it is up you should see a log message in the Xcode console saying
-`LocalLambdaServer started and listening on 127.0.0.1:7000, receiving payloads on /invoke`
-which means the local emulator is up and receiving traffic on port `7000` and expecting payloads on the `/invoke` endpoint.
+`LocalLambdaServer started and listening on 127.0.0.1:7000, receiving events on /invoke`
+which means the local emulator is up and receiving traffic on port `7000` and expecting events on the `/invoke` endpoint.
 
 Continue to run the `MyApp` target
 * Switch to the `MyApp` scheme and select a simulator destination.

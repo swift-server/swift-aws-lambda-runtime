@@ -63,9 +63,9 @@ class LambdaTestingTests: XCTestCase {
             typealias In = Request
             typealias Out = Response
 
-            func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
+            func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
                 XCTAssertFalse(context.eventLoop.inEventLoop)
-                callback(.success(Response(message: "echo" + payload.name)))
+                callback(.success(Response(message: "echo" + event.name)))
             }
         }
 
@@ -80,9 +80,9 @@ class LambdaTestingTests: XCTestCase {
             typealias In = String
             typealias Out = String
 
-            func handle(context: Lambda.Context, payload: String) -> EventLoopFuture<String> {
+            func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
                 XCTAssertTrue(context.eventLoop.inEventLoop)
-                return context.eventLoop.makeSucceededFuture("echo" + payload)
+                return context.eventLoop.makeSucceededFuture("echo" + event)
             }
         }
 
@@ -99,7 +99,7 @@ class LambdaTestingTests: XCTestCase {
             typealias In = String
             typealias Out = Void
 
-            func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
+            func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
                 callback(.failure(MyError()))
             }
         }

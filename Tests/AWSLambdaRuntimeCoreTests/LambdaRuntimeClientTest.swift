@@ -118,7 +118,7 @@ class LambdaRuntimeClientTest: XCTestCase {
     func testProcessResponseInternalServerError() {
         struct Behavior: LambdaServerBehavior {
             func getInvocation() -> GetInvocationResult {
-                .success((requestId: "1", payload: "payload"))
+                .success((requestId: "1", event: "event"))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
@@ -143,7 +143,7 @@ class LambdaRuntimeClientTest: XCTestCase {
     func testProcessErrorInternalServerError() {
         struct Behavior: LambdaServerBehavior {
             func getInvocation() -> GetInvocationResult {
-                .success((requestId: "1", payload: "payload"))
+                .success((requestId: "1", event: "event"))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {

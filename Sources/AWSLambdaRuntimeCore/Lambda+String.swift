@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import NIO
 
-/// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `String` payloads.
+/// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `String` events.
 extension Lambda {
     /// An asynchronous Lambda Closure that takes a `String` and returns a `Result<String, Error>` via a completion handler.
     public typealias StringClosure = (Lambda.Context, String, @escaping (Result<String, Error>) -> Void) -> Void
@@ -64,8 +64,8 @@ internal struct StringClosureWrapper: LambdaHandler {
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, event, callback)
     }
 }
 
@@ -79,8 +79,8 @@ internal struct StringVoidClosureWrapper: LambdaHandler {
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, event, callback)
     }
 }
 

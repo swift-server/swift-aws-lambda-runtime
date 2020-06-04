@@ -14,7 +14,7 @@
 
 import struct Foundation.Date
 
-/// EventBridge has the same payloads/notification types as CloudWatch
+/// EventBridge has the same events/notification types as CloudWatch
 typealias EventBridge = Cloudwatch
 
 public protocol CloudwatchDetail: Decodable {
@@ -66,7 +66,7 @@ public enum Cloudwatch {
 
             let detailType = try container.decode(String.self, forKey: .detailType)
             guard detailType.lowercased() == Detail.name.lowercased() else {
-                throw PayloadTypeMismatch(name: detailType, type: Detail.self)
+                throw DetailTypeMismatch(name: detailType, type: Detail.self)
             }
 
             self.detail = try container.decode(Detail.self, forKey: .detail)
@@ -122,7 +122,7 @@ public enum Cloudwatch {
         }
     }
 
-    struct PayloadTypeMismatch: Error {
+    struct DetailTypeMismatch: Error {
         let name: String
         let type: Any
     }

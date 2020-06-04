@@ -16,7 +16,7 @@
 import XCTest
 
 class DynamoDBTests: XCTestCase {
-    static let streamEventPayload = """
+    static let streamEventBody = """
     {
       "Records": [
         {
@@ -113,7 +113,7 @@ class DynamoDBTests: XCTestCase {
     """
 
     func testEventFromJSON() {
-        let data = DynamoDBTests.streamEventPayload.data(using: .utf8)!
+        let data = DynamoDBTests.streamEventBody.data(using: .utf8)!
         var event: DynamoDB.Event?
         XCTAssertNoThrow(event = try JSONDecoder().decode(DynamoDB.Event.self, from: data))
 
