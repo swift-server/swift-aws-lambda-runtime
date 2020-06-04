@@ -56,7 +56,7 @@ extension Lambda {
                 self.isGettingNextInvocation = false
                 let context = Context(logger: logger, eventLoop: self.eventLoop, invocation: invocation)
                 logger.debug("sending invocation to lambda handler \(handler)")
-                return handler.handle(context: context, payload: payload)
+                return handler.handle(context: context, event: payload)
                     .mapResult { result in
                         if case .failure(let error) = result {
                             logger.warning("lambda handler returned an error: \(error)")

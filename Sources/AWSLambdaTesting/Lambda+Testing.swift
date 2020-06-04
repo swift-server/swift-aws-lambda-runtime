@@ -88,7 +88,7 @@ extension Lambda {
 
     public static func test<In, Out, Handler: EventLoopLambdaHandler>(
         _ handler: Handler,
-        with payload: In,
+        with event: In,
         using config: TestConfig = .init()
     ) throws -> Out where Handler.In == In, Handler.Out == Out {
         let logger = Logger(label: "test")
@@ -105,7 +105,7 @@ extension Lambda {
                               eventLoop: eventLoop)
 
         return try eventLoop.flatSubmit {
-            handler.handle(context: context, payload: payload)
+            handler.handle(context: context, event: event)
         }.wait()
     }
 }

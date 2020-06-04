@@ -56,8 +56,8 @@ class LambdaTest: XCTestCase {
                 self.initialized = true
             }
 
-            func handle(context: Lambda.Context, payload: String, callback: (Result<String, Error>) -> Void) {
-                callback(.success(payload))
+            func handle(context: Lambda.Context, event: String, callback: (Result<String, Error>) -> Void) {
+                callback(.success(event))
             }
         }
 
@@ -89,7 +89,7 @@ class LambdaTest: XCTestCase {
                 throw TestError("kaboom")
             }
 
-            func handle(context: Lambda.Context, payload: String, callback: (Result<Void, Error>) -> Void) {
+            func handle(context: Lambda.Context, event: String, callback: (Result<Void, Error>) -> Void) {
                 callback(.failure(TestError("should not be called")))
             }
         }

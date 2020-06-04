@@ -64,8 +64,8 @@ internal struct StringClosureWrapper: LambdaHandler {
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, event, callback)
     }
 }
 
@@ -79,8 +79,8 @@ internal struct StringVoidClosureWrapper: LambdaHandler {
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, event, callback)
     }
 }
 
