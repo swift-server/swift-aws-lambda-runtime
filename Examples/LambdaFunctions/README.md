@@ -85,3 +85,81 @@ The SAM template will provide an output labelled `LambdaApiGatewayEndpoint` whic
 ***Warning:*** This SAM template is only intended as a sample and creates a publicly accessible HTTP endpoint.
 
 For all other samples use the AWS Lambda console.
+
+### Deployment instructions using AWS Serverless Framework
+
+[Serverless framework](https://www.serverless.com/open-source/) (Serverless) is a provider agnostic, open-source framework for building serverless applications. This framework allows you to easily deploy other AWS resources and more complex deployment mechanisms such a CI pipelines. Serverless Framework offers solutions for not only deploying but also testing, monitoring, alerting, and security and is widely adopted by the industry and offers along the open-source version a paid one.
+
+***Note:*** Deploying using Serverless will automatically create resources within your AWS account. Charges may apply for these resources.
+
+To use Serverless to deploy this sample to AWS:
+
+1. Install the AWS CLI by following the [instructions](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html).
+
+2. Install Serverless by following the [instructions](https://www.serverless.com/framework/docs/getting-started/).
+If you already have installed be sure you have the latest version.
+The examples have been tested with the version 1.72.0.
+
+```
+Serverless --version
+Framework Core: 1.72.0 (standalone)
+Plugin: 3.6.13
+SDK: 2.3.1
+Components: 2.30.12
+```
+
+3. Build, package and deploy the Lambda
+
+  ```
+  ./scripts/serverless-deploy.sh
+  ```
+
+The script will ask you which sample Lambda you wish to deploy.
+
+The `serverless-deploy.sh` script passes through any parameters to the Serverless deploy command.
+
+4. Testing
+
+For the HelloWorld and APIGateway sample:
+
+The Serverless template will provide an endpoint which you can use to test the Lambda. 
+
+Outuput example:
+
+```
+...
+...
+Serverless: Stack update finished...
+Service Information
+service: helloworld-swift-aws
+stage: dev
+region: us-east-1
+stack: helloworld-swift-aws-dev
+resources: 11
+api keys:
+  None
+endpoints:
+  GET - https://jm3b9p4bu2.execute-api.us-east-1.amazonaws.com/dev/hello
+functions:
+  hello: helloworld-swift-aws-dev-hello
+layers:
+  None
+```
+
+For example:
+
+  ```
+  curl https://jm3b9p4bu2.execute-api.us-east-1.amazonaws.com/dev/hello
+  ```  
+
+***Warning:*** This Serverless template is only intended as a sample and creates a publicly accessible HTTP endpoint.
+
+For all other samples use the AWS Lambda console.
+
+4. Remove
+
+ ```
+  ./scripts/serverless-remove.sh
+  ```
+
+The script will ask you which sample Lambda you wish to remove from the previous depolyment.
