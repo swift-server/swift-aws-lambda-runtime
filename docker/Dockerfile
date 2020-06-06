@@ -1,7 +1,6 @@
 ARG swift_version=5.2
 # FIXME when 5.2 images are available
-#ARG base_image=swift:$swift_version-amazonlinux2
-ARG base_image=swiftlang/swift:nightly-amazonlinux2
+ARG base_image=swift:$swift_version-amazonlinux2
 FROM $base_image
 # needed to do again after FROM due to docker limitation
 ARG swift_version
