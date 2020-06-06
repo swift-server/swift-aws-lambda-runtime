@@ -22,7 +22,9 @@ Steps to deploy this sample to AWS Lambda using the AWS CLI:
 
   Notes: 
   - This script assumes you have AWS CLI installed and credentials setup in `~/.aws/credentials`.
+  - The default lambda function name is `SwiftSample`. You can specify a different one updating `lambda_name` in `deploy.sh`
   - Update `s3_bucket=swift-lambda-test` in `deploy.sh` before running (AWS S3 buckets require a unique global name)
+  - Both lambda function and S3 bucket must exist before deploying for the first time.
 
 ### Deployment instructions using AWS SAM (Serverless Application Model)
 
