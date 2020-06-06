@@ -17,3 +17,4 @@ provider:
 functions:
     benchmarkFunction:
         handler: Benchmark
+        memorySize: 128

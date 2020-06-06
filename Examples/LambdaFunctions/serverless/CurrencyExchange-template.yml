@@ -17,3 +17,4 @@ provider:
 functions:
     currencyExchangeFunction:
         handler: CurrencyExchange
+        memorySize: 128

@@ -21,6 +21,7 @@ provider:
 functions:
     httpGet:
         handler: APIGateway
+        memorySize: 128
         events:
         - httpApi:
             method: GET
