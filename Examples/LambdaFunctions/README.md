@@ -120,7 +120,7 @@ The `serverless-deploy.sh` script passes through any parameters to the Serverles
 
 4. Testing
 
-For the HelloWorld and APIGateway sample:
+For the APIGateway sample:
 
 The Serverless template will provide an endpoint which you can use to test the Lambda. 
 
@@ -131,25 +131,30 @@ Outuput example:
 ...
 Serverless: Stack update finished...
 Service Information
-service: helloworld-swift-aws
+service: apigateway-swift-aws
 stage: dev
 region: us-east-1
-stack: helloworld-swift-aws-dev
-resources: 11
+stack: apigateway-swift-aws-dev
+resources: 12
 api keys:
   None
 endpoints:
-  GET - https://jm3b9p4bu2.execute-api.us-east-1.amazonaws.com/dev/hello
+  GET - https://r39lvhfng3.execute-api.us-east-1.amazonaws.com/api
 functions:
-  hello: helloworld-swift-aws-dev-hello
+  httpGet: apigateway-swift-aws-dev-httpGet
 layers:
   None
+
+Stack Outputs
+HttpGetLambdaFunctionQualifiedArn: arn:aws:lambda:us-east-1:XXXXXXXXX:function:apigateway-swift-aws-dev-httpGet:1
+ServerlessDeploymentBucketName: apigateway-swift-aws-dev-serverlessdeploymentbuck-ud51msgcrj1e
+HttpApiUrl: https://r39lvhfng3.execute-api.us-east-1.amazonaws.com
 ```
 
 For example:
 
   ```
-  curl https://jm3b9p4bu2.execute-api.us-east-1.amazonaws.com/dev/hello
+  curl https://r39lvhfng3.execute-api.us-east-1.amazonaws.com/api
   ```  
 
 ***Warning:*** This Serverless template is only intended as a sample and creates a publicly accessible HTTP endpoint.

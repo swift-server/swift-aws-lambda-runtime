@@ -18,8 +18,3 @@ functions:
     hello:
         handler: HelloWorld
         memorySize: 128
-        events:
-            - http:
-                method: GET
-                path: /hello
-                integration: lambda
