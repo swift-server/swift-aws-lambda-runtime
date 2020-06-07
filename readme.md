@@ -59,8 +59,8 @@ Next, create a `main.swift` and implement your Lambda.
  import AWSLambdaRuntime
 
  // in this example we are receiving and responding with strings
- Lambda.run { (context, event: String, callback) in
-   callback(.success("Hello, \(event)"))
+ Lambda.run { (context, name: String, callback: @escaping (Result<String, Error>) -> Void) in
+   callback(.success("Hello, \(name)"))
  }
  ```
 
@@ -81,7 +81,7 @@ Next, create a `main.swift` and implement your Lambda.
  }
 
  // In this example we are receiving and responding with `Codable`.
- Lambda.run { (context, request: Request, callback) in
+ Lambda.run { (context, request: Request, callback: @escaping (Result<Response, Error>) -> Void) in
    callback(.success(Response(message: "Hello, \(request.name)")))
  }
  ```
@@ -94,7 +94,7 @@ Next, create a `main.swift` and implement your Lambda.
  import AWSLambdaEvents
 
  // In this example we are receiving an SQS Message, with no response (Void).
- Lambda.run { (context, message: SQS.Message, callback) in
+ Lambda.run { (context, message: SQS.Message, callback: @escaping (Result<Void, Error>) -> Void) in
    ...
    callback(.success(Void()))
  }
