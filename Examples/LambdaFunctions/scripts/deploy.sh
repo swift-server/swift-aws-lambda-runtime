@@ -15,8 +15,12 @@
 
 set -eu
 
+# Lambda Function name (must exist in AWS Lambda)
 lambda_name=SwiftSample
+
+# S3 bucket name to upload zip file (must exist in AWS S3)
 s3_bucket=swift-lambda-test
+
 executables=( $(swift package dump-package | sed -e 's|: null|: ""|g' | jq '.products[] | (select(.type.executable)) | .name' | sed -e 's|"||g') )
 
 if [[ ${#executables[@]} = 0 ]]; then
