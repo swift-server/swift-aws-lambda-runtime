@@ -41,10 +41,10 @@ extension Lambda {
                     throw RuntimeError.badStatusCode(response.status)
                 }
                 let invocation = try Invocation(headers: response.headers)
-                guard let payload = response.body else {
+                guard let event = response.body else {
                     throw RuntimeError.noBody
                 }
-                return (invocation, payload)
+                return (invocation, event)
             }.flatMapErrorThrowing { error in
                 switch error {
                 case HTTPClient.Errors.timeout:

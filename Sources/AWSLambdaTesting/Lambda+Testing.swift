@@ -22,8 +22,8 @@
 //         typealias In = String
 //         typealias Out = String
 //
-//         func handle(context: Lambda.Context, payload: String) -> EventLoopFuture<String> {
-//             return context.eventLoop.makeSucceededFuture("echo" + payload)
+//         func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
+//             return context.eventLoop.makeSucceededFuture("echo" + event)
 //         }
 //     }
 //
@@ -59,36 +59,36 @@ extension Lambda {
     }
 
     public static func test(_ closure: @escaping Lambda.StringClosure,
-                            with payload: String,
+                            with event: String,
                             using config: TestConfig = .init()) throws -> String {
-        try Self.test(StringClosureWrapper(closure), with: payload, using: config)
+        try Self.test(StringClosureWrapper(closure), with: event, using: config)
     }
 
     public static func test(_ closure: @escaping Lambda.StringVoidClosure,
-                            with payload: String,
+                            with event: String,
                             using config: TestConfig = .init()) throws {
-        _ = try Self.test(StringVoidClosureWrapper(closure), with: payload, using: config)
+        _ = try Self.test(StringVoidClosureWrapper(closure), with: event, using: config)
     }
 
     public static func test<In: Decodable, Out: Encodable>(
         _ closure: @escaping Lambda.CodableClosure<In, Out>,
-        with payload: In,
+        with event: In,
         using config: TestConfig = .init()
     ) throws -> Out {
-        try Self.test(CodableClosureWrapper(closure), with: payload, using: config)
+        try Self.test(CodableClosureWrapper(closure), with: event, using: config)
     }
 
     public static func test<In: Decodable>(
         _ closure: @escaping Lambda.CodableVoidClosure<In>,
-        with payload: In,
+        with event: In,
         using config: TestConfig = .init()
     ) throws {
-        _ = try Self.test(CodableVoidClosureWrapper(closure), with: payload, using: config)
+        _ = try Self.test(CodableVoidClosureWrapper(closure), with: event, using: config)
     }
 
     public static func test<In, Out, Handler: EventLoopLambdaHandler>(
         _ handler: Handler,
-        with payload: In,
+        with event: In,
         using config: TestConfig = .init()
     ) throws -> Out where Handler.In == In, Handler.Out == Out {
         let logger = Logger(label: "test")
@@ -105,7 +105,7 @@ extension Lambda {
                               eventLoop: eventLoop)
 
         return try eventLoop.flatSubmit {
-            handler.handle(context: context, payload: payload)
+            handler.handle(context: context, event: event)
         }.wait()
     }
 }

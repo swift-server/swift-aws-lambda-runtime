@@ -18,7 +18,7 @@ import class Foundation.JSONEncoder
 import NIO
 import NIOFoundationCompat
 
-/// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` payloads.
+/// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` events.
 extension Lambda {
     /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Out: Encodable, Error>` via a completion handler.
     public typealias CodableClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
@@ -57,8 +57,8 @@ internal struct CodableClosureWrapper<In: Decodable, Out: Encodable>: LambdaHand
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, event, callback)
     }
 }
 
@@ -72,8 +72,8 @@ internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, event, callback)
     }
 }
 

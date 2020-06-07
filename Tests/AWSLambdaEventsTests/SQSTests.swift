@@ -16,7 +16,7 @@
 import XCTest
 
 class SQSTests: XCTestCase {
-    static let testPayload = """
+    static let eventBody = """
     {
       "Records": [
         {
@@ -60,7 +60,7 @@ class SQSTests: XCTestCase {
     """
 
     func testSimpleEventFromJSON() {
-        let data = SQSTests.testPayload.data(using: .utf8)!
+        let data = SQSTests.eventBody.data(using: .utf8)!
         var event: SQS.Event?
         XCTAssertNoThrow(event = try JSONDecoder().decode(SQS.Event.self, from: data))
 

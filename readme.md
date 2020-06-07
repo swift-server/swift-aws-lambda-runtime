@@ -59,12 +59,12 @@ Next, create a `main.swift` and implement your Lambda.
  import AWSLambdaRuntime
 
  // in this example we are receiving and responding with strings
- Lambda.run { (context, payload: String, callback) in
-   callback(.success("Hello, \(payload)"))
+ Lambda.run { (context, event: String, callback) in
+   callback(.success("Hello, \(event)"))
  }
  ```
 
- More commonly, the payload would be a JSON, which is modeled using `Codable`, for example:
+ More commonly, the event would be a JSON, which is modeled using `Codable`, for example:
 
  ```swift
  // Import the module
@@ -118,7 +118,7 @@ Next, create a `main.swift` and implement your Lambda.
      typealias Out = Void // Response type
 
      // In this example we are receiving an SNS Message, with no response (Void).
-     func handle(context: Lambda.Context, payload: In) -> EventLoopFuture<Out> {
+     func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
          ...
          context.eventLoop.makeSucceededFuture(Void())
      }
@@ -156,11 +156,11 @@ public protocol ByteBufferLambdaHandler {
     ///
     /// - parameters:
     ///  - context: Runtime `Context`.
-    ///  - payload: The event or request payload encoded as `ByteBuffer`.
+    ///  - event: The event or request payload encoded as `ByteBuffer`.
     ///
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     /// The `EventLoopFuture` should be completed with either a response encoded as `ByteBuffer` or an `Error`
-    func handle(context: Lambda.Context, payload: ByteBuffer) -> EventLoopFuture<ByteBuffer?>
+    func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?>
 }
 ```
 
@@ -182,11 +182,11 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
     ///
     /// - parameters:
     ///  - context: Runtime `Context`.
-    ///  - payload: Payload of type `In` representing the event or request.
+    ///  - event: Event of type `In` representing the event or request.
     ///
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     /// The `EventLoopFuture` should be completed with either a response of type `Out` or an `Error`
-    func handle(context: Lambda.Context, payload: In) -> EventLoopFuture<Out>
+    func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out>
 
     /// Encode a response of type `Out` to `ByteBuffer`
     /// Concrete Lambda handlers implement this method to provide coding functionality.
@@ -226,10 +226,10 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
     ///
     /// - parameters:
     ///  - context: Runtime `Context`.
-    ///  - payload: Payload of type `In` representing the event or request.
+    ///  - event: Event of type `In` representing the event or request.
     ///  - callback: Completion handler to report the result of the Lambda back to the runtime engine.
     ///  The completion handler expects a `Result` with either a response of type `Out` or an `Error`
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void)
+    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void)
 }
 ```
 
@@ -247,7 +247,7 @@ public typealias CodableClosure<In: Decodable, Out: Encodable> = (Lambda.Context
 public typealias StringClosure = (Lambda.Context, String, @escaping (Result<String, Error>) -> Void) -> Void
 ```
 
-This design allows for addition payload types as well, and such Lambda implementation can extend one of the above protocols and provided their own `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
+This design allows for additional event types as well, and such Lambda implementation can extend one of the above protocols and provided their own `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
 
 ### Context
 
@@ -314,7 +314,7 @@ A single Lambda execution workflow is made of the following steps:
 1. The library calls AWS Lambda Runtime Engine `/next` endpoint to retrieve the next invocation request.
 2. The library parses the response HTTP headers and populate the Context object.
 3. The library reads the `/next` response body and attempt to decode it. Typically it decodes to user provided `In` type which extends `Decodable`, but users may choose to write Lambda functions that receive the input as String or `ByteBuffer` which require less, or no decoding.
-4. The library hands off the `Context` and `In` payload to the user provided handler. In the case of `LambdaHandler` based handler this is done on a dedicated `DispatchQueue`, providing isolation between user's and the library's code.
+4. The library hands off the `Context` and `In` event to the user provided handler. In the case of `LambdaHandler` based handler this is done on a dedicated `DispatchQueue`, providing isolation between user's and the library's code.
 5. User provided handler processes the request asynchronously, invoking a callback or returning a future upon completion, which returns a Result type with the Out or Error populated.
 6.  In case of error, the library posts to AWS Lambda Runtime Engine `/error` endpoint to provide the error details, which will show up on AWS Lambda logs.
 7. In case of success, the library will attempt to encode the  response. Typically it encodes from user provided `Out` type which extends `Encodable`, but users may choose to write Lambda functions that return a String or `ByteBuffer`, which require less, or no encoding. The library then posts the response to AWS Lambda Runtime Engine `/response` endpoint to provide the response to the callee.

@@ -23,15 +23,15 @@ import NIOHTTP1
 // For example:
 //
 // try Lambda.withLocalServer {
-//     Lambda.run { (context: Lambda.Context, payload: String, callback: @escaping (Result<String, Error>) -> Void) in
-//         callback(.success("Hello, \(payload)!"))
+//     Lambda.run { (context: Lambda.Context, event: String, callback: @escaping (Result<String, Error>) -> Void) in
+//         callback(.success("Hello, \(event)!"))
 //     }
 // }
 extension Lambda {
     /// Execute code in the context of a mock Lambda server.
     ///
     /// - parameters:
-    ///     - invocationEndpoint: The endpoint  to post payloads to.
+    ///     - invocationEndpoint: The endpoint  to post events to.
     ///     - body: Code to run within the context of the mock server. Typically this would be a Lambda.run function call.
     ///
     /// - note: This API is designed stricly for local testing and is behind a DEBUG flag
@@ -77,7 +77,7 @@ private enum LocalLambda {
                 guard channel.localAddress != nil else {
                     return channel.eventLoop.makeFailedFuture(ServerError.cantBind)
                 }
-                self.logger.info("LocalLambdaServer started and listening on \(self.host):\(self.port), receiving payloads on \(self.invocationEndpoint)")
+                self.logger.info("LocalLambdaServer started and listening on \(self.host):\(self.port), receiving events on \(self.invocationEndpoint)")
                 return channel.eventLoop.makeSucceededFuture(())
             }
         }
