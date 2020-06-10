@@ -1,15 +1,15 @@
 AWSTemplateFormatVersion : '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: A sample SAM template for APIGatewayREST.
+Description: A sample SAM template for APIGatewayEndpoint.
 
 Resources:
 # APIGateway Function
-  apiGatewayRESTFunction:
+  apiGatewayEndpointFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: Provided
       Runtime: provided
-      CodeUri: .build/lambda/APIGatewayREST/lambda.zip
+      CodeUri: .build/lambda/APIGatewayEndpoint/lambda.zip
 # Add an API Gateway event source for the Lambda
       Events:
         HttpGet:
@@ -26,5 +26,5 @@ Resources:
 
 Outputs:
   LambdaApiGatewayEndpoint:
-    Description: 'API Gateway TEST endpoint URL.'
+    Description: 'API Gateway Endpoint Example'
     Value: !Sub 'https://${lambdaApiGateway}.execute-api.${AWS::Region}.amazonaws.com/articles'
