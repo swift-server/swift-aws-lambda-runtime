@@ -16,6 +16,8 @@ let package = Package(
         .executable(name: "ErrorHandling", targets: ["ErrorHandling"]),
         // demostrate how to integrate with AWS API Gateway
         .executable(name: "APIGateway", targets: ["APIGateway"]),
+        // REST demo on how to create a mobile REST API with the APIGateway logic
+        .executable(name: "APIGatewayREST", targets: ["APIGatewayREST"]),
         // fully featured example with domain specific business logic
         .executable(name: "CurrencyExchange", targets: ["CurrencyExchange"]),
     ],
@@ -36,6 +38,10 @@ let package = Package(
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
         ]),
         .target(name: "APIGateway", dependencies: [
+            .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+            .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-runtime"),
+        ]),
+        .target(name: "APIGatewayREST", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
             .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-runtime"),
         ]),
