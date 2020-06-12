@@ -3,7 +3,7 @@
 ##
 ## This source file is part of the SwiftAWSLambdaRuntime open source project
 ##
-## Copyright (c) 2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+## Copyright (c) 2017-2018 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -13,19 +13,20 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-set -eu
+DIR="$(cd "$(dirname "$0")" && pwd)"
+source $DIR/config.sh
 
-executable=$1
-workspace="$(pwd)/.."
-sources=$2
-
-echo "-------------------------------------------------------------------------"
-echo "building \"$executable\" lambda"
-echo "-------------------------------------------------------------------------"
-docker run --rm -v "$workspace":/workspace -w /workspace/Examples/$sources builder bash -cl "swift build --product $executable -c release -Xswiftc -g"
-echo "done"
+echo -e "\ndeploying $executable"
 
 echo "-------------------------------------------------------------------------"
-echo "packaging \"$executable\" lambda"
+echo "preparing docker build image"
 echo "-------------------------------------------------------------------------"
-docker run --rm -v "$workspace":/workspace -w /workspace/Examples builder bash -cl "./scripts/package.sh $executable $sources"
+docker build . -q -t builder
+
+$DIR/build-and-package.sh ${executable}
+
+echo "-------------------------------------------------------------------------"
+echo "deploying using SAM"
+echo "-------------------------------------------------------------------------"
+
+sam deploy --template "./scripts/SAM/${executable}-template.yml" $@

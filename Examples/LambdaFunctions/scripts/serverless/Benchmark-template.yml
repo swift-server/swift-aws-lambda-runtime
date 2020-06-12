@@ -1,7 +1,7 @@
-service: helloworld-swift-aws
+service: benchmark-swift-aws
 
 package:
-    artifact: LambdaFunctions/.build/lambda/HelloWorld/lambda.zip
+    artifact: .build/lambda/Benchmark/lambda.zip
 
 provider:
     name: aws
@@ -15,6 +15,6 @@ provider:
           Resource: "*"        
 
 functions:
-    hello:
-        handler: HelloWorld
+    benchmarkFunction:
+        handler: Benchmark
         memorySize: 128

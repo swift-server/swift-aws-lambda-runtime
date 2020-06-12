@@ -3,12 +3,13 @@ Transform: AWS::Serverless-2016-10-31
 Description: A sample SAM template for deploying Lambda functions.
 
 Resources:
-# HelloWorld Function
-  helloWorldFunction:
+# CurrencyExchange Function
+  currencyExchangeFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: Provided
       Runtime: provided
-      CodeUri: LambdaFunctions/.build/lambda/HelloWorld/lambda.zip
+      CodeUri: .build/lambda/CurrencyExchange/lambda.zip
+      Timeout: 300
 # Instructs new versions to be published to an alias named "live".
       AutoPublishAlias: live

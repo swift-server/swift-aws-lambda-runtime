@@ -9,7 +9,7 @@ Resources:
     Properties:
       Handler: Provided
       Runtime: provided
-      CodeUri: LambdaFunctions/.build/lambda/APIGateway/lambda.zip
+      CodeUri: .build/lambda/APIGateway/lambda.zip
 # Add an API Gateway event source for the Lambda
       Events:
         HttpGet:

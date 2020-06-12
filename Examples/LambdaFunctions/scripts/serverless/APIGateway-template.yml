@@ -1,7 +1,7 @@
 service: apigateway-swift-aws
 
 package:
-    artifact: LambdaFunctions/.build/lambda/APIGateway/lambda.zip
+    artifact: .build/lambda/APIGateway/lambda.zip
 
 provider:
     name: aws

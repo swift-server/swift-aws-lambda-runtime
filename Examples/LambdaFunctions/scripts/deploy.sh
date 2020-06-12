@@ -21,9 +21,7 @@ lambda_name=SwiftSample
 # S3 bucket name to upload zip file (must exist in AWS S3)
 s3_bucket=swift-lambda-test
 
-workspace="$(pwd)/.."
-
-sources="LambdaFunctions"
+workspace="$(pwd)/../.."
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 source $DIR/config.sh
@@ -46,13 +44,13 @@ echo "done"
 echo "-------------------------------------------------------------------------"
 echo "packaging \"$executable\" lambda"
 echo "-------------------------------------------------------------------------"
-docker run --rm -v "$workspace/Examples":/workspace -w /workspace builder bash -cl "./scripts/package.sh $executable $sources"
+docker run --rm -v `pwd`:/workspace -w /workspace builder bash -cl "./scripts/package.sh $executable"
 
 echo "-------------------------------------------------------------------------"
 echo "uploading \"$executable\" lambda to s3"
 echo "-------------------------------------------------------------------------"
 
-aws s3 cp $sources/.build/lambda/$executable/lambda.zip s3://$s3_bucket/
+aws s3 cp .build/lambda/$executable/lambda.zip s3://$s3_bucket/
 
 echo "-------------------------------------------------------------------------"
 echo "updating \"$lambda_name\" to latest \"$executable\""

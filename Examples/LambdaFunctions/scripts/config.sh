@@ -15,11 +15,7 @@
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-sources="LambdaFunctions"
-
-cd $sources
 executables=( $(swift package dump-package | sed -e 's|: null|: ""|g' | jq '.products[] | (select(.type.executable)) | .name' | sed -e 's|"||g') )
-cd ..
 
 if [[ ${#executables[@]} = 0 ]]; then
     echo "no executables found"
@@ -39,6 +35,5 @@ echo "-------------------------------------------------------------------------"
 echo "CONFIG"
 echo "-------------------------------------------------------------------------"
 echo "DIR: $DIR"
-echo "sources: $sources"
 echo "executable: $executable"
 echo "-------------------------------------------------------------------------"
