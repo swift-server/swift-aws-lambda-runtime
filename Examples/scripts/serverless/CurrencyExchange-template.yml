@@ -1,7 +1,7 @@
 service: currency-swift-aws
 
 package:
-    artifact: .build/lambda/CurrencyExchange/lambda.zip
+    artifact: LambdaFunctions/.build/lambda/CurrencyExchange/lambda.zip
 
 provider:
     name: aws

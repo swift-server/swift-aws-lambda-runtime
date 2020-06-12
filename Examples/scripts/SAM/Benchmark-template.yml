@@ -3,12 +3,12 @@ Transform: AWS::Serverless-2016-10-31
 Description: A sample SAM template for deploying Lambda functions.
 
 Resources:
-# HelloWorld Function
-  helloWorldFunction:
+# Benchmark Function
+  benchmarkFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: Provided
       Runtime: provided
-      CodeUri: .build/lambda/HelloWorld/lambda.zip
+      CodeUri: LambdaFunctions/.build/lambda/Benchmark/lambda.zip
 # Instructs new versions to be published to an alias named "live".
       AutoPublishAlias: live

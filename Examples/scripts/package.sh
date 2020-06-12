@@ -16,11 +16,12 @@
 set -eu
 
 executable=$1
+sources=$2
 
-target=.build/lambda/$executable
+target=$sources/.build/lambda/$executable
 rm -rf "$target"
 mkdir -p "$target"
-cp ".build/release/$executable" "$target/"
+cp "$sources/.build/release/$executable" "$target/"
 cp -Pv /usr/lib/swift/linux/lib*so* "$target"
 cd "$target"
 ln -s "$executable" "bootstrap"

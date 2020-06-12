@@ -1,7 +1,7 @@
 service: errorhandling-swift-aws
 
 package:
-    artifact: .build/lambda/ErrorHandling/lambda.zip
+    artifact: LambdaFunctions/.build/lambda/ErrorHandling/lambda.zip
 
 provider:
     name: aws

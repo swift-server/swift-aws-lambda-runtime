@@ -15,7 +15,11 @@
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
+sources="LambdaFunctions"
+
+cd $sources
 executables=( $(swift package dump-package | sed -e 's|: null|: ""|g' | jq '.products[] | (select(.type.executable)) | .name' | sed -e 's|"||g') )
+cd ..
 
 if [[ ${#executables[@]} = 0 ]]; then
     echo "no executables found"
@@ -31,17 +35,10 @@ elif [[ ${#executables[@]} > 1 ]]; then
     read -p "select which executables to deploy: " executable
 fi
 
-echo -e "\ndeploying $executable"
-
 echo "-------------------------------------------------------------------------"
-echo "preparing docker build image"
+echo "CONFIG"
 echo "-------------------------------------------------------------------------"
-docker build . -q -t builder
-
-$DIR/build-and-package.sh ${executable}
-
+echo "DIR: $DIR"
+echo "sources: $sources"
+echo "executable: $executable"
 echo "-------------------------------------------------------------------------"
-echo "deploying using Serverless"
-echo "-------------------------------------------------------------------------"
-
-serverless deploy --config "serverless/${executable}-template.yml" --stage dev -v
