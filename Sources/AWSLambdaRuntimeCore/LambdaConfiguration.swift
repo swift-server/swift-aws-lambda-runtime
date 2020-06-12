@@ -67,8 +67,8 @@ extension Lambda {
             let keepAlive: Bool
             let requestTimeout: TimeAmount?
 
-            init(baseURL: String? = nil, keepAlive: Bool? = nil, requestTimeout: TimeAmount? = nil, ipPort: String? = nil) {
-                let ipPort = (ipPort ?? env("AWS_LAMBDA_RUNTIME_API"))?.split(separator: ":") ?? ["127.0.0.1", "7000"]
+            init(baseURL: String? = nil, keepAlive: Bool? = nil, requestTimeout: TimeAmount? = nil) {
+                let ipPort = (baseURL ?? env("AWS_LAMBDA_RUNTIME_API"))?.split(separator: ":") ?? ["127.0.0.1", "7000"]
                 guard ipPort.count == 2, let port = Int(ipPort[1]) else {
                     preconditionFailure("invalid ip+port configuration \(ipPort)")
                 }
