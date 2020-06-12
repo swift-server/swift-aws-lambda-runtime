@@ -28,7 +28,7 @@ extension Lambda {
         private let allocator = ByteBufferAllocator()
         private let httpClient: HTTPClient
         
-        /// Headers that must be sent along an invocation or initialization error response
+        /// Headers that must be sent along an invocation or initialization error report
         private static let errorHeaders = HTTPHeaders([("Lambda-Runtime-Function-Error-Type", "Unhandled")])
 
         init(eventLoop: EventLoop, configuration: Configuration.RuntimeEngine) {
@@ -65,6 +65,8 @@ extension Lambda {
         func reportResults(logger: Logger, invocation: Invocation, result: Result<ByteBuffer?, Error>) -> EventLoopFuture<Void> {
             var url = Consts.invocationURLPrefix + "/" + invocation.requestID
             var body: ByteBuffer?
+            var additionalHeaders: HTTPHeaders?
+            
             switch result {
             case .success(let buffer):
                 url += Consts.postResponseURLSuffix
@@ -75,9 +77,10 @@ extension Lambda {
                 let bytes = errorResponse.toJSONBytes()
                 body = self.allocator.buffer(capacity: bytes.count)
                 body!.writeBytes(bytes)
+                additionalHeaders = RuntimeClient.errorHeaders
             }
             logger.debug("reporting results to lambda runtime engine using \(url)")
-            return self.httpClient.post(url: url, body: body).flatMapThrowing { response in
+            return self.httpClient.post(url: url, body: body, additionalHeaders: additionalHeaders).flatMapThrowing { response in
                 guard response.status == .accepted else {
                     throw RuntimeError.badStatusCode(response.status)
                 }
