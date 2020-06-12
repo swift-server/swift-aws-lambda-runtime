@@ -93,7 +93,7 @@ The SAM template will provide an output labelled `LambdaApiGatewayEndpoint` whic
 
 For all other samples use the AWS Lambda console.
 
-### Deployment instructions using AWS Serverless Framework
+### Deployment instructions using Serverless Framework (serverless.com)
 
 [Serverless framework](https://www.serverless.com/open-source/) (Serverless) is a provider agnostic, open-source framework for building serverless applications. This framework allows you to easily deploy other AWS resources and more complex deployment mechanisms such a CI pipelines. Serverless Framework offers solutions for not only deploying but also testing, monitoring, alerting, and security and is widely adopted by the industry and offers along the open-source version a paid one.
 
