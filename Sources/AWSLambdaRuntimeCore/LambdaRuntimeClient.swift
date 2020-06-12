@@ -22,10 +22,14 @@ import NIOHTTP1
 /// * /runtime/invocation/error
 /// * /runtime/init/error
 extension Lambda {
+    
     internal struct RuntimeClient {
         private let eventLoop: EventLoop
         private let allocator = ByteBufferAllocator()
         private let httpClient: HTTPClient
+        
+        /// Headers that must be sent along an invocation or initialization error response
+        private static let errorHeaders = HTTPHeaders([("Lambda-Runtime-Function-Error-Type", "Unhandled")])
 
         init(eventLoop: EventLoop, configuration: Configuration.RuntimeEngine) {
             self.eventLoop = eventLoop
@@ -98,7 +102,7 @@ extension Lambda {
             var body = self.allocator.buffer(capacity: bytes.count)
             body.writeBytes(bytes)
             logger.warning("reporting initialization error to lambda runtime engine using \(url)")
-            return self.httpClient.post(url: url, body: body).flatMapThrowing { response in
+            return self.httpClient.post(url: url, body: body, additionalHeaders: RuntimeClient.errorHeaders).flatMapThrowing { response in
                 guard response.status == .accepted else {
                     throw RuntimeError.badStatusCode(response.status)
                 }
