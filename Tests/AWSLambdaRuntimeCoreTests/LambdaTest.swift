@@ -51,7 +51,7 @@ class LambdaTest: XCTestCase {
 
             var initialized = false
 
-            init(eventLoop: EventLoop) {
+            init(context: Lambda.InitializationContext) {
                 XCTAssertFalse(self.initialized)
                 self.initialized = true
             }
@@ -72,7 +72,7 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(factory: { $0.makeFailedFuture(TestError("kaboom")) })
+        let result = Lambda.run(factory: { $0.eventLoop.makeFailedFuture(TestError("kaboom")) })
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
@@ -85,7 +85,7 @@ class LambdaTest: XCTestCase {
             typealias In = String
             typealias Out = Void
 
-            init(eventLoop: EventLoop) throws {
+            init(context: Lambda.InitializationContext) throws {
                 throw TestError("kaboom")
             }
 
@@ -124,7 +124,7 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(factory: { $0.makeFailedFuture(TestError("kaboom")) })
+        let result = Lambda.run(factory: { $0.eventLoop.makeFailedFuture(TestError("kaboom")) })
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
@@ -143,7 +143,7 @@ class LambdaTest: XCTestCase {
             usleep(100_000)
             kill(getpid(), signal.rawValue)
         }
-        let result = Lambda.run(configuration: configuration, factory: { $0.makeSucceededFuture(EchoHandler()) })
+        let result = Lambda.run(configuration: configuration, factory: { $0.eventLoop.makeSucceededFuture(EchoHandler()) })
 
         switch result {
         case .success(let invocationCount):

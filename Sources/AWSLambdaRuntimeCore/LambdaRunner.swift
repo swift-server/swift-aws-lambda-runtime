@@ -36,7 +36,8 @@ extension Lambda {
             logger.debug("initializing lambda")
             // 1. create the handler from the factory
             // 2. report initialization error if one occured
-            return factory(self.eventLoop).hop(to: self.eventLoop).peekError { error in
+            let context = InitializationContext(logger: logger, eventLoop: self.eventLoop)
+            return factory(context).hop(to: self.eventLoop).peekError { error in
                 self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
                     // We're going to bail out because the init failed, so there's not a lot we can do other than log
                     // that we couldn't report this error back to the runtime.
@@ -57,6 +58,7 @@ extension Lambda {
                 let context = Context(logger: logger, eventLoop: self.eventLoop, invocation: invocation)
                 logger.debug("sending invocation to lambda handler \(handler)")
                 return handler.handle(context: context, event: event)
+                    .hop(to: self.eventLoop)
                     .mapResult { result in
                         if case .failure(let error) = result {
                             logger.warning("lambda handler returned an error: \(error)")

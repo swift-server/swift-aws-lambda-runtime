@@ -16,6 +16,33 @@ import Dispatch
 import Logging
 import NIO
 
+// MARK: - InitializationContext
+
+extension Lambda {
+    /// Lambda runtime initialization context.
+    /// The Lambda runtime generates and passes the `InitializationContext` to the Lambda handler as an argument.
+    public final class InitializationContext {
+        /// `Logger` to log with
+        ///
+        /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
+        public let logger: Logger
+
+        /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
+        /// This is useful when implementing the `EventLoopLambdaHandler` protocol.
+        ///
+        /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
+        ///         Most importantly the `EventLoop` must never be blocked.
+        public let eventLoop: EventLoop
+
+        internal init(logger: Logger, eventLoop: EventLoop) {
+            self.eventLoop = eventLoop
+            self.logger = logger
+        }
+    }
+}
+
+// MARK: - Context
+
 extension Lambda {
     /// Lambda runtime context.
     /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
