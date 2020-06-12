@@ -21,21 +21,10 @@ lambda_name=SwiftSample
 # S3 bucket name to upload zip file (must exist in AWS S3)
 s3_bucket=swift-lambda-test
 
-executables=( $(swift package dump-package | sed -e 's|: null|: ""|g' | jq '.products[] | (select(.type.executable)) | .name' | sed -e 's|"||g') )
+workspace="$(pwd)/../.."
 
-if [[ ${#executables[@]} = 0 ]]; then
-    echo "no executables found"
-    exit 1
-elif [[ ${#executables[@]} = 1 ]]; then
-    executable=${executables[0]}
-elif [[ ${#executables[@]} > 1 ]]; then
-    echo "multiple executables found:"
-    for executable in ${executables[@]}; do
-      echo "  * $executable"
-    done
-    echo ""
-    read -p "select which executables to deploy: " executable
-fi
+DIR="$(cd "$(dirname "$0")" && pwd)"
+source $DIR/config.sh
 
 echo -e "\ndeploying $executable"
 
@@ -47,7 +36,7 @@ docker build . -t builder
 echo "-------------------------------------------------------------------------"
 echo "building \"$executable\" lambda"
 echo "-------------------------------------------------------------------------"
-docker run --rm -v `pwd`/../..:/workspace -w /workspace builder \
+docker run --rm -v $workspace:/workspace -w /workspace builder \
        bash -cl "cd Examples/LambdaFunctions && \
                  swift build --product $executable -c release -Xswiftc -g"
 echo "done"

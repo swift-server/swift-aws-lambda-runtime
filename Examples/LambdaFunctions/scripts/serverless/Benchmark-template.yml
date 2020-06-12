@@ -1,0 +1,20 @@
+service: benchmark-swift-aws
+
+package:
+    artifact: .build/lambda/Benchmark/lambda.zip
+
+provider:
+    name: aws
+    runtime: provided
+    iamRoleStatements:
+        - Effect: Allow
+          Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+          Resource: "*"        
+
+functions:
+    benchmarkFunction:
+        handler: Benchmark
+        memorySize: 128

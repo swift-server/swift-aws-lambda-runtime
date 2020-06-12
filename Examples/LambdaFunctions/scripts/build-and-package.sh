@@ -16,14 +16,15 @@
 set -eu
 
 executable=$1
+workspace="$(pwd)/../.."
 
 echo "-------------------------------------------------------------------------"
 echo "building \"$executable\" lambda"
 echo "-------------------------------------------------------------------------"
-docker run --rm -v "$(pwd)/../..":/workspace -w /workspace/Examples/LambdaFunctions builder bash -cl "swift build --product $executable -c release -Xswiftc -g"
+docker run --rm -v "$workspace":/workspace -w /workspace/Examples/LambdaFunctions builder bash -cl "swift build --product $executable -c release -Xswiftc -g"
 echo "done"
 
 echo "-------------------------------------------------------------------------"
 echo "packaging \"$executable\" lambda"
 echo "-------------------------------------------------------------------------"
-docker run --rm -v "$(pwd)/../..":/workspace -w /workspace/Examples/LambdaFunctions builder bash -cl "./scripts/package.sh $executable"
+docker run --rm -v "$workspace":/workspace -w /workspace/Examples/LambdaFunctions builder bash -cl "./scripts/package.sh $executable"
