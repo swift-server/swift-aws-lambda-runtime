@@ -1,0 +1,105 @@
+AWSTemplateFormatVersion : '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: A sample SAM template for deploying Lambda functions.
+
+Globals:
+  Function:
+    MemorySize: 256
+    Runtime: provided
+    CodeUri: ../../.build/lambda/LambdaAPI/lambda.zip
+    Environment:
+      Variables:
+        PRODUCTS_TABLE_NAME: product-table-sam
+
+Resources:
+# APIGateway Function
+  createProduct:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: create
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductTable
+      Events:
+        createProduct:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref lambdaApiGateway
+            Path: '/products'
+            Method: POST
+  readProduct:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: read
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductTable
+      Events:
+        readProduct:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref lambdaApiGateway
+            Path: '/products/{sku}'
+            Method: GET
+  updateProduct:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: update
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductTable
+      Events:
+        updateProduct:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref lambdaApiGateway
+            Path: '/products'
+            Method: PUT
+  deleteProduct:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: delete
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductTable
+      Events:
+        deleteProduct:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref lambdaApiGateway
+            Path: '/products/{sku}'
+            Method: DELETE
+  listProducts:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: list
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductTable
+      Events:
+        listProducts:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref lambdaApiGateway
+            Path: '/products'
+            Method: GET
+
+  lambdaApiGateway:
+    Type: AWS::Serverless::HttpApi
+
+  ProductTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: product-table-sam
+        AttributeDefinitions:
+          - AttributeName: sku
+            AttributeType: S
+        KeySchema:
+          - AttributeName: sku
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+Outputs:
+  LambdaApiGatewayEndpoint:
+    Description: 'API Gateway endpoint URL.'
+    Value: !Sub 'https://${lambdaApiGateway}.execute-api.${AWS::Region}.amazonaws.com'

@@ -18,12 +18,20 @@ let package = Package(
         .executable(name: "APIGateway", targets: ["APIGateway"]),
         // fully featured example with domain specific business logic
         .executable(name: "CurrencyExchange", targets: ["CurrencyExchange"]),
+        // Full REST API Example using APIGateway, Lambda, DynamoDB
+        .executable(name: "LambdaAPI", targets: ["LambdaAPI"]),
     ],
     dependencies: [
         // this is the dependency on the swift-aws-lambda-runtime library
         // in real-world projects this would say
         // .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "1.0.0")
         .package(name: "swift-aws-lambda-runtime", path: "../.."),
+
+        // The following packages are required by LambdaAPI
+        // AWS SDK Swift
+        .package(url: "https://github.com/swift-aws/aws-sdk-swift.git", from: "5.0.0-alpha.3"),
+        // Logging
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
     ],
     targets: [
         .target(name: "HelloWorld", dependencies: [
@@ -42,5 +50,12 @@ let package = Package(
         .target(name: "CurrencyExchange", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
         ]),
+        .target(name: "LambdaAPI", dependencies: [
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+                .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-runtime"),
+                .product(name: "AWSDynamoDB", package: "aws-sdk-swift"),
+                .product(name: "Logging", package: "swift-log"),
+            ]
+        )
     ]
 )
