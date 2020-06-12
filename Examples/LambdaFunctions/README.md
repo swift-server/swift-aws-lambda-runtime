@@ -4,11 +4,11 @@ This sample project is a collection of Lambda functions that demonstrates
 how to write a simple Lambda function in Swift, and how to package and deploy it
 to the AWS Lambda platform.
 
-The scripts are prepared to work from the `Examples` folder.
+The scripts are prepared to work from the `LambdaFunctions` folder.
 
 ```
 git clone https://github.com/swift-server/swift-aws-lambda-runtime.git
-cd swift-aws-lambda-runtime/Examples
+cd swift-aws-lambda-runtime/Examples/LambdaFunctions
 ```
 
 Note: The example scripts assume you have [jq](https://stedolan.github.io/jq/download/) command line tool installed.
