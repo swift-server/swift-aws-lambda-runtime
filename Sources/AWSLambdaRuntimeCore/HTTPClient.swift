@@ -35,21 +35,27 @@ internal final class HTTPClient {
         self.targetHost = "\(self.configuration.ip):\(self.configuration.port)"
     }
 
-    func get(url: String, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
-        self.execute(Request(targetHost: self.targetHost,
+    func get(url: String, timeout: TimeAmount? = nil, additionalHeaders: HTTPHeaders? = nil) -> EventLoopFuture<Response> {
+        var headers = HTTPClient.headers
+        additionalHeaders.flatMap { headers.add(contentsOf: $0) }
+        
+        return self.execute(Request(targetHost: self.targetHost,
                              url: url,
                              method: .GET,
-                             headers: HTTPClient.headers,
+                             headers: headers,
                              timeout: timeout ?? self.configuration.requestTimeout))
     }
 
-    func post(url: String, body: ByteBuffer?, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
-        self.execute(Request(targetHost: self.targetHost,
-                             url: url,
-                             method: .POST,
-                             headers: HTTPClient.headers,
-                             body: body,
-                             timeout: timeout ?? self.configuration.requestTimeout))
+    func post(url: String, body: ByteBuffer?, timeout: TimeAmount? = nil, additionalHeaders: HTTPHeaders? = nil) -> EventLoopFuture<Response> {
+        var headers = HTTPClient.headers
+        additionalHeaders.flatMap { headers.add(contentsOf: $0) }
+        
+        return self.execute(Request(targetHost: self.targetHost,
+                                    url: url,
+                                    method: .POST,
+                                    headers: headers,
+                                    body: body,
+                                    timeout: timeout ?? self.configuration.requestTimeout))
     }
 
     /// cancels the current request if there is one
