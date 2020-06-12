@@ -29,7 +29,7 @@ extension Lambda {
         private let httpClient: HTTPClient
         
         /// Headers that must be sent along an invocation or initialization error report
-        private static let errorHeaders = HTTPHeaders([("Lambda-Runtime-Function-Error-Type", "Unhandled")])
+        internal static let errorHeaders = HTTPHeaders([("Lambda-Runtime-Function-Error-Type", "Unhandled")])
 
         init(eventLoop: EventLoop, configuration: Configuration.RuntimeEngine) {
             self.eventLoop = eventLoop
