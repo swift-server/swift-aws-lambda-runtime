@@ -164,6 +164,17 @@ public protocol ByteBufferLambdaHandler {
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     ///            The `EventLoopFuture` should be completed with either a response encoded as `ByteBuffer` or an `Error`
     func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?>
+
+    /// The method to clean up your resources.
+    /// Concrete Lambda handlers implement this method to shutdown their `HTTPClient`s and database connections.
+    ///
+    /// - Note: In case your Lambda fails while creating your LambdaHandler in the `HandlerFactory`, this method
+    ///         **is not invoked**. In this case you must cleanup the created resources immediately in the `HandlerFactory`.
+    func syncShutdown() throws
+}
+
+public extension ByteBufferLambdaHandler {
+    func syncShutdown() throws {}
 }
 
 private enum CodecError: Error {

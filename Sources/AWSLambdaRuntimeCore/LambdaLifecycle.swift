@@ -29,7 +29,7 @@ extension Lambda {
 
         private var state = State.idle {
             willSet {
-                assert(self.eventLoop.inEventLoop, "State may only be changed on the `Lifecycle`'s `eventLoop`")
+                self.eventLoop.assertInEventLoop()
                 precondition(newValue.order > self.state.order, "invalid state \(newValue) after \(self.state.order)")
             }
         }
@@ -71,22 +71,37 @@ extension Lambda {
         ///
         /// - note: This method must be called  on the `EventLoop` the `Lifecycle` has been initialized with.
         public func start() -> EventLoopFuture<Void> {
-            assert(self.eventLoop.inEventLoop, "Start must be called on the `EventLoop` the `Lifecycle` has been initialized with.")
+            self.eventLoop.assertInEventLoop()
 
             logger.info("lambda lifecycle starting with \(self.configuration)")
             self.state = .initializing
-            // triggered when the Lambda has finished its last run
-            let finishedPromise = self.eventLoop.makePromise(of: Int.self)
-            finishedPromise.futureResult.always { _ in
-                self.markShutdown()
-            }.cascade(to: self.shutdownPromise)
+
             var logger = self.logger
             logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
             let runner = Runner(eventLoop: self.eventLoop, configuration: self.configuration)
-            return runner.initialize(logger: logger, factory: self.factory).map { handler in
+
+            let startupFuture = runner.initialize(logger: logger, factory: self.factory)
+            startupFuture.flatMap { handler in
+                // after the startup future has succeeded, we have a handler that we can use
+                // to `run` the lambda.
+                let finishedPromise = self.eventLoop.makePromise(of: Int.self)
                 self.state = .active(runner, handler)
                 self.run(promise: finishedPromise)
-            }
+                return finishedPromise.futureResult.always { _ in
+                    // If the lambda is terminated (e.g. LocalServer shutdown), we make sure
+                    // developers have the chance to cleanup their resources.
+                    do {
+                        try handler.syncShutdown()
+                    } catch {
+                        logger.error("Error shutting down handler: \(error)")
+                    }
+                }
+            }.always { _ in
+                // triggered when the Lambda has finished its last run or has a startup failure.
+                self.markShutdown()
+            }.cascade(to: self.shutdownPromise)
+
+            return startupFuture.map { _ in }
         }
 
         // MARK: -  Private
