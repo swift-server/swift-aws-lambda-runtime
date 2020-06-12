@@ -9,6 +9,6 @@ Resources:
     Properties:
       Handler: Provided
       Runtime: provided
-      CodeUri: .build/lambda/ErrorHandling/lambda.zip
+      CodeUri: ../../.build/lambda/ErrorHandling/lambda.zip
 # Instructs new versions to be published to an alias named "live".      
       AutoPublishAlias: live
