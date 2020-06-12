@@ -16,6 +16,7 @@
 @testable import NIOHTTP1
 import NIOTestUtils
 import NIO
+import NIOFoundationCompat
 import Logging
 import XCTest
 
@@ -214,30 +215,31 @@ class LambdaRuntimeClientTest: XCTestCase {
     }
     
     func testInitializationErrorReportHeaders() {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
-        let server = NIOHTTP1TestServer(group: eventLoopGroup)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
         
-        defer {
-            XCTAssertNoThrow(try server.stop())
-            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
-        }
+        let server = NIOHTTP1TestServer(group: eventLoopGroup)
+        defer { XCTAssertNoThrow(try server.stop()) }
         
         let logger = Logger(label: "TestLogger")
-        let engine = Lambda.Configuration.RuntimeEngine(requestTimeout: .milliseconds(100), ipPort: "127.0.0.1:\(server.serverPort)")
-        let configuration = Lambda.Configuration(runtimeEngine: engine)
-        let runner = Lambda.Runner(eventLoop: eventLoopGroup.next(), configuration: configuration)
-
-        let failingInitializer: Lambda.HandlerFactory = { $0.makeFailedFuture(TestError("boom")) }
-        let result = runner.initialize(logger: logger, factory: failingInitializer)
+        let client = Lambda.RuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(baseURL: "127.0.0.1:\(server.serverPort)"))
+        let result = client.reportInitializationError(logger: logger, error: TestError("boom"))
         
-        let headerContent = Lambda.RuntimeClient.errorHeaders.headers
-        XCTAssertNoThrow(try server.readInbound().assertHead(expectedMethod: .POST, expectedHeaderContent: headerContent))
-        XCTAssertNoThrow(try server.readInbound().assertBody())
-        XCTAssertNoThrow(try server.readInbound().assertEnd())
+        var inboundHeader: HTTPServerRequestPart?
+        XCTAssertNoThrow(inboundHeader = try server.readInbound())
+        guard case .head(let head) = try? XCTUnwrap(inboundHeader) else { XCTFail("Expected to get a head first"); return }
+        XCTAssertEqual(head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
         
-        XCTAssertThrowsError(try result.wait()) { (error) in
-            XCTAssertEqual(error as? TestError, TestError("boom"))
-        }
+        var inboundBody: HTTPServerRequestPart?
+        XCTAssertNoThrow(inboundBody = try server.readInbound())
+        guard case .body(let body) = try? XCTUnwrap(inboundBody) else { XCTFail("Expected body after head"); return }
+        XCTAssertEqual(try JSONDecoder().decode(ErrorResponse.self, from: body).errorMessage, "boom")
+        
+        XCTAssertEqual(try server.readInbound(), .end(nil))
+        
+        XCTAssertNoThrow(try server.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .accepted))))
+        XCTAssertNoThrow(try server.writeOutbound(.end(nil)))
+        XCTAssertNoThrow(try result.wait())
     }
 
     class Behavior: LambdaServerBehavior {
@@ -263,48 +265,4 @@ class LambdaRuntimeClientTest: XCTestCase {
             return .success(())
         }
     }
-}
-
-private extension HTTPServerRequestPart {
-    
-    func assertHead(expectedMethod: HTTPMethod? = nil, expectedHeaderContent: [(String,String)]? = nil, file: StaticString = (#file), line: UInt = #line) {
-        let head: HTTPRequestHead
-        
-        switch self {
-        case .head(let h):
-            head = h
-        default:
-            XCTFail("Expected head, got \(self)", file: file, line: line)
-            return
-        }
-        
-        if let expectedMethod = expectedMethod {
-            XCTAssertEqual(head.method, expectedMethod)
-        }
-        
-        if let expectedHeaderContent = expectedHeaderContent {
-            for (key, value) in expectedHeaderContent {
-                XCTAssertTrue(head.headers[key].contains(value), "Could not find \(value) for \(key) in head")
-            }
-        }
-    }
-    
-    func assertBody(file: StaticString = (#file), line: UInt = #line) {
-        switch self {
-        case .body(_):
-            ()
-        default:
-            XCTFail("Expected body, got \(self)", file: file, line: line)
-        }
-    }
-    
-    func assertEnd(file: StaticString = (#file), line: UInt = #line) {
-        switch self {
-        case .end(_):
-            ()
-        default:
-            XCTFail("Expected end, got \(self)", file: file, line: line)
-        }
-    }
-    
 }
