@@ -13,6 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 @testable import AWSLambdaRuntimeCore
+@testable import NIOHTTP1
+import NIOTestUtils
+import NIO
+import Logging
 import XCTest
 
 class LambdaRuntimeClientTest: XCTestCase {
@@ -208,6 +212,33 @@ class LambdaRuntimeClientTest: XCTestCase {
         let emojiBytes = emojiError.toJSONBytes()
         XCTAssertEqual(#"{"errorType":"error","errorMessage":"🥑👨‍👩‍👧‍👧👩‍👩‍👧‍👧👨‍👨‍👧"}"#, String(decoding: emojiBytes, as: Unicode.UTF8.self))
     }
+    
+    func testInitializationErrorReportHeaders() {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+        let server = NIOHTTP1TestServer(group: eventLoopGroup)
+        
+        defer {
+            XCTAssertNoThrow(try server.stop())
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+        
+        let logger = Logger(label: "TestLogger")
+        let engine = Lambda.Configuration.RuntimeEngine(requestTimeout: .milliseconds(100), ipPort: "127.0.0.1:\(server.serverPort)")
+        let configuration = Lambda.Configuration(runtimeEngine: engine)
+        let runner = Lambda.Runner(eventLoop: eventLoopGroup.next(), configuration: configuration)
+
+        let failingInitializer: Lambda.HandlerFactory = { $0.makeFailedFuture(TestError("boom")) }
+        let result = runner.initialize(logger: logger, factory: failingInitializer)
+        
+        let headerContent = Lambda.RuntimeClient.errorHeaders.headers
+        XCTAssertNoThrow(try server.readInbound().assertHead(expectedMethod: .POST, expectedHeaderContent: headerContent))
+        XCTAssertNoThrow(try server.readInbound().assertBody())
+        XCTAssertNoThrow(try server.readInbound().assertEnd())
+        
+        XCTAssertThrowsError(try result.wait()) { (error) in
+            XCTAssertEqual(error as? TestError, TestError("boom"))
+        }
+    }
 
     class Behavior: LambdaServerBehavior {
         var state = 0
@@ -232,4 +263,48 @@ class LambdaRuntimeClientTest: XCTestCase {
             return .success(())
         }
     }
+}
+
+private extension HTTPServerRequestPart {
+    
+    func assertHead(expectedMethod: HTTPMethod? = nil, expectedHeaderContent: [(String,String)]? = nil, file: StaticString = (#file), line: UInt = #line) {
+        let head: HTTPRequestHead
+        
+        switch self {
+        case .head(let h):
+            head = h
+        default:
+            XCTFail("Expected head, got \(self)", file: file, line: line)
+            return
+        }
+        
+        if let expectedMethod = expectedMethod {
+            XCTAssertEqual(head.method, expectedMethod)
+        }
+        
+        if let expectedHeaderContent = expectedHeaderContent {
+            for (key, value) in expectedHeaderContent {
+                XCTAssertTrue(head.headers[key].contains(value), "Could not find \(value) for \(key) in head")
+            }
+        }
+    }
+    
+    func assertBody(file: StaticString = (#file), line: UInt = #line) {
+        switch self {
+        case .body(_):
+            ()
+        default:
+            XCTFail("Expected body, got \(self)", file: file, line: line)
+        }
+    }
+    
+    func assertEnd(file: StaticString = (#file), line: UInt = #line) {
+        switch self {
+        case .end(_):
+            ()
+        default:
+            XCTFail("Expected end, got \(self)", file: file, line: line)
+        }
+    }
+    
 }
