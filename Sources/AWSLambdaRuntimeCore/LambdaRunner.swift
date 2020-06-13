@@ -37,13 +37,19 @@ extension Lambda {
             // 1. create the handler from the factory
             // 2. report initialization error if one occured
             let context = InitializationContext(logger: logger, eventLoop: self.eventLoop)
-            return factory(context).hop(to: self.eventLoop).peekError { error in
-                self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
-                    // We're going to bail out because the init failed, so there's not a lot we can do other than log
-                    // that we couldn't report this error back to the runtime.
-                    logger.error("failed reporting initialization error to lambda runtime engine: \(reportingError)")
+            return factory(context)
+                // hopping back to "our" EventLoop is importnant in case the factory returns
+                // a future that originiated from a different EventLoop
+                // this can happen if the factory uses a library (lets say a DB client) that manages it's own EventLoops
+                // for whatever reason and returns a future that originated from that foreign EventLoop.
+                .hop(to: self.eventLoop)
+                .peekError { error in
+                    self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
+                        // We're going to bail out because the init failed, so there's not a lot we can do other than log
+                        // that we couldn't report this error back to the runtime.
+                        logger.error("failed reporting initialization error to lambda runtime engine: \(reportingError)")
+                    }
                 }
-            }
         }
 
         func run(logger: Logger, handler: Handler) -> EventLoopFuture<Void> {
@@ -58,6 +64,10 @@ extension Lambda {
                 let context = Context(logger: logger, eventLoop: self.eventLoop, invocation: invocation)
                 logger.debug("sending invocation to lambda handler \(handler)")
                 return handler.handle(context: context, event: event)
+                    // hopping back to the "our" EventLoop is importnant in case the handler returns
+                    // a future that originiated from a different EventLoop
+                    // this can happen if the handler uses a library (lets say a DB client) that manages it's own EventLoops
+                    // for whatever reason and returns a future that originated from that foreign EventLoop.
                     .hop(to: self.eventLoop)
                     .mapResult { result in
                         if case .failure(let error) = result {
