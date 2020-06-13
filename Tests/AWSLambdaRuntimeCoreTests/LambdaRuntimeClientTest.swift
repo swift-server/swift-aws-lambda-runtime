@@ -16,7 +16,7 @@
 import Logging
 import NIO
 import NIOFoundationCompat
-@testable import NIOHTTP1
+import NIOHTTP1
 import NIOTestUtils
 import XCTest
 
