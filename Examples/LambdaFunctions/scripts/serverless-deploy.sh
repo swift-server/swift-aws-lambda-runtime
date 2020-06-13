@@ -26,7 +26,7 @@ docker build . -q -t builder
 $DIR/build-and-package.sh ${executable}
 
 echo "-------------------------------------------------------------------------"
-echo "deploying using SAM"
+echo "deploying using Serverless"
 echo "-------------------------------------------------------------------------"
 
-sam deploy --template "./scripts/SAM/${executable}-template.yml" $@
+serverless deploy --config "./scripts/serverless/${executable}-template.yml" --stage dev -v
