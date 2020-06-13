@@ -16,17 +16,10 @@
 DIR="$(cd "$(dirname "$0")" && pwd)"
 source $DIR/config.sh
 
-echo -e "\ndeploying $executable"
+echo -e "\nremoving $executable"
 
 echo "-------------------------------------------------------------------------"
-echo "preparing docker build image"
-echo "-------------------------------------------------------------------------"
-docker build . -q -t builder
-
-$DIR/build-and-package.sh ${executable}
-
-echo "-------------------------------------------------------------------------"
-echo "deploying using SAM"
+echo "removing using Serverless"
 echo "-------------------------------------------------------------------------"
 
-sam deploy --template "./scripts/SAM/${executable}-template.yml" $@
+serverless remove --config "./scripts/serverless/${executable}-template.yml" --stage dev -v
