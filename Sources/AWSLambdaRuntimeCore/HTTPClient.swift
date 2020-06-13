@@ -35,14 +35,11 @@ internal final class HTTPClient {
         self.targetHost = "\(self.configuration.ip):\(self.configuration.port)"
     }
 
-    func get(url: String, timeout: TimeAmount? = nil, additionalHeaders: HTTPHeaders? = nil) -> EventLoopFuture<Response> {
-        var headers = HTTPClient.headers
-        additionalHeaders.flatMap { headers.add(contentsOf: $0) }
-        
+    func get(url: String, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
         return self.execute(Request(targetHost: self.targetHost,
                              url: url,
                              method: .GET,
-                             headers: headers,
+                             headers: HTTPClient.headers,
                              timeout: timeout ?? self.configuration.requestTimeout))
     }
 
