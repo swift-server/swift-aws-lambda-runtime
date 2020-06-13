@@ -13,11 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 @testable import AWSLambdaRuntimeCore
-@testable import NIOHTTP1
-import NIOTestUtils
+import Logging
 import NIO
 import NIOFoundationCompat
-import Logging
+@testable import NIOHTTP1
+import NIOTestUtils
 import XCTest
 
 class LambdaRuntimeClientTest: XCTestCase {
@@ -213,31 +213,31 @@ class LambdaRuntimeClientTest: XCTestCase {
         let emojiBytes = emojiError.toJSONBytes()
         XCTAssertEqual(#"{"errorType":"error","errorMessage":"🥑👨‍👩‍👧‍👧👩‍👩‍👧‍👧👨‍👨‍👧"}"#, String(decoding: emojiBytes, as: Unicode.UTF8.self))
     }
-    
+
     func testInitializationErrorReport() {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-        
+
         let server = NIOHTTP1TestServer(group: eventLoopGroup)
         defer { XCTAssertNoThrow(try server.stop()) }
-        
+
         let logger = Logger(label: "TestLogger")
         let client = Lambda.RuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(baseURL: "127.0.0.1:\(server.serverPort)"))
         let result = client.reportInitializationError(logger: logger, error: TestError("boom"))
-        
+
         var inboundHeader: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundHeader = try server.readInbound())
         guard case .head(let head) = try? XCTUnwrap(inboundHeader) else { XCTFail("Expected to get a head first"); return }
         XCTAssertEqual(head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
         XCTAssertEqual(head.headers["user-agent"], ["Swift-Lambda/Unknown"])
-        
+
         var inboundBody: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundBody = try server.readInbound())
         guard case .body(let body) = try? XCTUnwrap(inboundBody) else { XCTFail("Expected body after head"); return }
         XCTAssertEqual(try JSONDecoder().decode(ErrorResponse.self, from: body).errorMessage, "boom")
-        
+
         XCTAssertEqual(try server.readInbound(), .end(nil))
-        
+
         XCTAssertNoThrow(try server.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .accepted))))
         XCTAssertNoThrow(try server.writeOutbound(.end(nil)))
         XCTAssertNoThrow(try result.wait())
@@ -246,79 +246,78 @@ class LambdaRuntimeClientTest: XCTestCase {
     func testInvocationErrorReport() {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-        
+
         let server = NIOHTTP1TestServer(group: eventLoopGroup)
         defer { XCTAssertNoThrow(try server.stop()) }
-        
+
         let logger = Logger(label: "TestLogger")
         let client = Lambda.RuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(baseURL: "127.0.0.1:\(server.serverPort)"))
-        
+
         let header = HTTPHeaders([
             (AmazonHeaders.requestID, "test"),
             (AmazonHeaders.deadline, String(Date(timeIntervalSinceNow: 60).millisSinceEpoch)),
             (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),
-            (AmazonHeaders.traceID, "Root=1-5bef4de7-ad49b0e87f6ef6c87fc2e700;Parent=9a9197af755a6419;Sampled=1")
+            (AmazonHeaders.traceID, "Root=1-5bef4de7-ad49b0e87f6ef6c87fc2e700;Parent=9a9197af755a6419;Sampled=1"),
         ])
         var inv: Lambda.Invocation?
         XCTAssertNoThrow(inv = try Lambda.Invocation(headers: header))
         guard let invocation = inv else { return }
-        
+
         let result = client.reportResults(logger: logger, invocation: invocation, result: Result.failure(TestError("boom")))
-        
+
         var inboundHeader: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundHeader = try server.readInbound())
         guard case .head(let head) = try? XCTUnwrap(inboundHeader) else { XCTFail("Expected to get a head first"); return }
         XCTAssertEqual(head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
         XCTAssertEqual(head.headers["user-agent"], ["Swift-Lambda/Unknown"])
-        
+
         var inboundBody: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundBody = try server.readInbound())
         guard case .body(let body) = try? XCTUnwrap(inboundBody) else { XCTFail("Expected body after head"); return }
         XCTAssertEqual(try JSONDecoder().decode(ErrorResponse.self, from: body).errorMessage, "boom")
-        
+
         XCTAssertEqual(try server.readInbound(), .end(nil))
-        
+
         XCTAssertNoThrow(try server.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .accepted))))
         XCTAssertNoThrow(try server.writeOutbound(.end(nil)))
         XCTAssertNoThrow(try result.wait())
     }
-    
+
     func testSuccessHeaders() {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-        
+
         let server = NIOHTTP1TestServer(group: eventLoopGroup)
         defer { XCTAssertNoThrow(try server.stop()) }
-        
+
         let logger = Logger(label: "TestLogger")
         let client = Lambda.RuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(baseURL: "127.0.0.1:\(server.serverPort)"))
-        
+
         let header = HTTPHeaders([
             (AmazonHeaders.requestID, "test"),
             (AmazonHeaders.deadline, String(Date(timeIntervalSinceNow: 60).millisSinceEpoch)),
             (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),
-            (AmazonHeaders.traceID, "Root=1-5bef4de7-ad49b0e87f6ef6c87fc2e700;Parent=9a9197af755a6419;Sampled=1")
+            (AmazonHeaders.traceID, "Root=1-5bef4de7-ad49b0e87f6ef6c87fc2e700;Parent=9a9197af755a6419;Sampled=1"),
         ])
         var inv: Lambda.Invocation?
         XCTAssertNoThrow(inv = try Lambda.Invocation(headers: header))
         guard let invocation = inv else { return }
-        
+
         let result = client.reportResults(logger: logger, invocation: invocation, result: Result.success(nil))
-        
+
         var inboundHeader: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundHeader = try server.readInbound())
         guard case .head(let head) = try? XCTUnwrap(inboundHeader) else { XCTFail("Expected to get a head first"); return }
         XCTAssertFalse(head.headers.contains(name: "lambda-runtime-function-error-type"))
         XCTAssertEqual(head.headers["user-agent"], ["Swift-Lambda/Unknown"])
-    
+
         XCTAssertEqual(try server.readInbound(), .end(nil))
-        
+
         XCTAssertNoThrow(try server.writeOutbound(.head(.init(version: .init(major: 1, minor: 1), status: .accepted))))
         XCTAssertNoThrow(try server.writeOutbound(.end(nil)))
         XCTAssertNoThrow(try result.wait())
     }
-    
-    
+
     class Behavior: LambdaServerBehavior {
         var state = 0
 

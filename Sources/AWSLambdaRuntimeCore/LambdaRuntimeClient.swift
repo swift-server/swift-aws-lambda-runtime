@@ -22,12 +22,11 @@ import NIOHTTP1
 /// * /runtime/invocation/error
 /// * /runtime/init/error
 extension Lambda {
-    
     internal struct RuntimeClient {
         private let eventLoop: EventLoop
         private let allocator = ByteBufferAllocator()
         private let httpClient: HTTPClient
-        
+
         /// Headers that must be sent along an invocation or initialization error report
         internal static let errorHeaders = HTTPHeaders([("lambda-runtime-function-error-type", "Unhandled")])
 
@@ -66,7 +65,7 @@ extension Lambda {
             var url = Consts.invocationURLPrefix + "/" + invocation.requestID
             var body: ByteBuffer?
             var additionalHeaders: HTTPHeaders?
-            
+
             switch result {
             case .success(let buffer):
                 url += Consts.postResponseURLSuffix

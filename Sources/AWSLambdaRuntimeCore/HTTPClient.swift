@@ -36,7 +36,7 @@ internal final class HTTPClient {
     }
 
     func get(url: String, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
-        return self.execute(Request(targetHost: self.targetHost,
+        self.execute(Request(targetHost: self.targetHost,
                              url: url,
                              method: .GET,
                              headers: HTTPClient.headers,
@@ -46,7 +46,7 @@ internal final class HTTPClient {
     func post(url: String, body: ByteBuffer?, timeout: TimeAmount? = nil, additionalHeaders: HTTPHeaders? = nil) -> EventLoopFuture<Response> {
         var headers = HTTPClient.headers
         additionalHeaders.flatMap { headers.add(contentsOf: $0) }
-        
+
         return self.execute(Request(targetHost: self.targetHost,
                                     url: url,
                                     method: .POST,
