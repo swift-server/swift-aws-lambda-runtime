@@ -38,8 +38,8 @@ extension Lambda {
             // 2. report initialization error if one occured
             let context = InitializationContext(logger: logger, eventLoop: self.eventLoop)
             return factory(context)
-                // hopping back to "our" EventLoop is importnant in case the factory returns
-                // a future that originiated from a different EventLoop
+                // hopping back to "our" EventLoop is importnant in case the factory returns a future
+                // that originiated from a different EventLoop/EventLoopGroup
                 // this can happen if the factory uses a library (lets say a DB client) that manages it's own EventLoops
                 // for whatever reason and returns a future that originated from that foreign EventLoop.
                 .hop(to: self.eventLoop)
@@ -64,8 +64,8 @@ extension Lambda {
                 let context = Context(logger: logger, eventLoop: self.eventLoop, invocation: invocation)
                 logger.debug("sending invocation to lambda handler \(handler)")
                 return handler.handle(context: context, event: event)
-                    // hopping back to the "our" EventLoop is importnant in case the handler returns
-                    // a future that originiated from a different EventLoop
+                    // hopping back to "our" EventLoop is importnant in case the handler returns a future that
+                    // originiated from a different EventLoop/EventLoopGroup
                     // this can happen if the handler uses a library (lets say a DB client) that manages it's own EventLoops
                     // for whatever reason and returns a future that originated from that foreign EventLoop.
                     .hop(to: self.eventLoop)
