@@ -229,6 +229,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         XCTAssertNoThrow(inboundHeader = try server.readInbound())
         guard case .head(let head) = try? XCTUnwrap(inboundHeader) else { XCTFail("Expected to get a head first"); return }
         XCTAssertEqual(head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
+        XCTAssertEqual(head.headers["user-agent"], ["Swift-Lambda/Unknown"])
         
         var inboundBody: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundBody = try server.readInbound())
@@ -268,6 +269,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         XCTAssertNoThrow(inboundHeader = try server.readInbound())
         guard case .head(let head) = try? XCTUnwrap(inboundHeader) else { XCTFail("Expected to get a head first"); return }
         XCTAssertEqual(head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
+        XCTAssertEqual(head.headers["user-agent"], ["Swift-Lambda/Unknown"])
         
         var inboundBody: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundBody = try server.readInbound())
