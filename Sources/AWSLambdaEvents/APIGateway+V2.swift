@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Foundation
+
 extension APIGateway {
     public struct V2 {}
 }
@@ -122,6 +124,7 @@ extension APIGateway.V2 {
 
 extension APIGateway.V2.Request {
     /// Generic body decoder for JSON payloads
+    ///
     /// Example:
     /// ```
     /// struct Request: Codable {
@@ -139,6 +142,7 @@ extension APIGateway.V2.Request {
     ///   }
     /// }
     /// ```
+    ///
     /// - Throws: `DecodingError` if body contains a value that couldn't be decoded
     /// - Returns: Decoded payload. Returns `nil` if body property is `nil`.
     public func decodedBody<Payload: Codable>() throws -> Payload? {
@@ -154,7 +158,8 @@ extension APIGateway.V2.Request {
 
 extension APIGateway.V2.Response {
     /// Codable initializer for Response payload
-    /// Example use:
+    ///
+    /// Example:
     /// ```
     /// struct Response: Codable {
     ///   let message: String
@@ -165,6 +170,7 @@ extension APIGateway.V2.Response {
     ///   callback(.success(APIGateway.V2.Response(statusCode: .ok, body: Response(message: "Hello, World!")))
     /// }
     /// ```
+    ///
     /// - Parameters:
     ///   - statusCode: Response HTTP status code
     ///   - headers: Response HTTP headers
