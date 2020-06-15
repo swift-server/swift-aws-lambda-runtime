@@ -115,7 +115,7 @@ private extension Lambda.Context {
 }
 
 // TODO: move to nio?
-private extension EventLoopFuture {
+extension EventLoopFuture {
     // callback does not have side effects, failing with original result
     func peekError(_ callback: @escaping (Error) -> Void) -> EventLoopFuture<Value> {
         self.flatMapError { error in

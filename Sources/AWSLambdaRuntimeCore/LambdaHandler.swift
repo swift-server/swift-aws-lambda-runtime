@@ -170,11 +170,13 @@ public protocol ByteBufferLambdaHandler {
     ///
     /// - Note: In case your Lambda fails while creating your LambdaHandler in the `HandlerFactory`, this method
     ///         **is not invoked**. In this case you must cleanup the created resources immediately in the `HandlerFactory`.
-    func syncShutdown() throws
+    func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void>
 }
 
 public extension ByteBufferLambdaHandler {
-    func syncShutdown() throws {}
+    func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
+        context.eventLoop.makeSucceededFuture(Void())
+    }
 }
 
 private enum CodecError: Error {

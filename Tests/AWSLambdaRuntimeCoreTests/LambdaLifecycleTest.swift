@@ -47,9 +47,9 @@ class LambdaLifecycleTest: XCTestCase {
     func testSyncShutdownIsCalledWhenLambdaShutsdown() {
         struct CallbackLambdaHandler: ByteBufferLambdaHandler {
             let handler: (Lambda.Context, ByteBuffer) -> (EventLoopFuture<ByteBuffer?>)
-            let shutdown: () throws -> Void
+            let shutdown: (Lambda.ShutdownContext) -> EventLoopFuture<Void>
 
-            init(_ handler: @escaping (Lambda.Context, ByteBuffer) -> (EventLoopFuture<ByteBuffer?>), shutdown: @escaping () throws -> Void) {
+            init(_ handler: @escaping (Lambda.Context, ByteBuffer) -> (EventLoopFuture<ByteBuffer?>), shutdown: @escaping (Lambda.ShutdownContext) -> EventLoopFuture<Void>) {
                 self.handler = handler
                 self.shutdown = shutdown
             }
@@ -58,8 +58,8 @@ class LambdaLifecycleTest: XCTestCase {
                 self.handler(context, event)
             }
 
-            func syncShutdown() throws {
-                try self.shutdown()
+            func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
+                self.shutdown(context)
             }
         }
 
@@ -70,8 +70,9 @@ class LambdaLifecycleTest: XCTestCase {
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
 
         var count = 0
-        let handler = CallbackLambdaHandler({ XCTFail("Should not be reached"); return $0.eventLoop.makeSucceededFuture($1) }) {
+        let handler = CallbackLambdaHandler({ XCTFail("Should not be reached"); return $0.eventLoop.makeSucceededFuture($1) }) { context in
             count += 1
+            return context.eventLoop.makeSucceededFuture(Void())
         }
 
         let eventLoop = eventLoopGroup.next()

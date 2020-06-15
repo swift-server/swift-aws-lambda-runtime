@@ -81,21 +81,19 @@ extension Lambda {
             let runner = Runner(eventLoop: self.eventLoop, configuration: self.configuration)
 
             let startupFuture = runner.initialize(logger: logger, factory: self.factory)
-            startupFuture.flatMap { handler in
+            startupFuture.flatMap { handler -> EventLoopFuture<(ByteBufferLambdaHandler, Result<Int, Error>)> in
                 // after the startup future has succeeded, we have a handler that we can use
                 // to `run` the lambda.
                 let finishedPromise = self.eventLoop.makePromise(of: Int.self)
                 self.state = .active(runner, handler)
                 self.run(promise: finishedPromise)
-                return finishedPromise.futureResult.always { _ in
-                    // If the lambda is terminated (e.g. LocalServer shutdown), we make sure
-                    // developers have the chance to cleanup their resources.
-                    do {
-                        try handler.syncShutdown()
-                    } catch {
-                        logger.error("Error shutting down handler: \(error)")
-                    }
-                }
+                return finishedPromise.futureResult.mapResult { (handler, $0) }
+            }
+            .flatMap { (handler, result) -> EventLoopFuture<Int> in
+                let shutdownContext = ShutdownContext(logger: logger, eventLoop: self.eventLoop)
+                return handler.shutdown(context: shutdownContext).recover { error in
+                    logger.error("Error shutting down handler: \(error)")
+                }.flatMapResult { _ in result }
             }.always { _ in
                 // triggered when the Lambda has finished its last run or has a startup failure.
                 self.markShutdown()
