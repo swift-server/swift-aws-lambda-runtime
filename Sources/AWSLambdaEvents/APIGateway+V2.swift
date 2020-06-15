@@ -145,12 +145,12 @@ extension APIGateway.V2.Request {
     ///
     /// - Throws: `DecodingError` if body contains a value that couldn't be decoded
     /// - Returns: Decoded payload. Returns `nil` if body property is `nil`.
-    public func decodedBody<Payload: Codable>() throws -> Payload? {
+    public func decodedBody<Payload: Codable>(decoder: JSONDecoder = JSONDecoder()) throws -> Payload? {
         guard let bodyString = body else {
             return nil
         }
         let data = Data(bodyString.utf8)
-        return try JSONDecoder().decode(Payload.self, from: data)
+        return try decoder.decode(Payload.self, from: data)
     }
 }
 
@@ -183,9 +183,10 @@ extension APIGateway.V2.Response {
         headers: HTTPHeaders? = nil,
         multiValueHeaders: HTTPMultiValueHeaders? = nil,
         body: Payload? = nil,
-        cookies: [String]? = nil
+        cookies: [String]? = nil,
+        encoder: JSONEncoder = JSONEncoder()
     ) throws {
-        let data = try JSONEncoder().encode(body)
+        let data = try encoder.encode(body)
         let bodyString = String(data: data, encoding: .utf8)
         self.init(statusCode: statusCode,
                   headers: headers,
