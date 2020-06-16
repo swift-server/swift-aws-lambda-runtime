@@ -18,7 +18,7 @@ import NIO
 import XCTest
 
 func runLambda(behavior: LambdaServerBehavior, handler: Lambda.Handler) throws {
-    try runLambda(behavior: behavior, factory: { $0.makeSucceededFuture(handler) })
+    try runLambda(behavior: behavior, factory: { $0.eventLoop.makeSucceededFuture(handler) })
 }
 
 func runLambda(behavior: LambdaServerBehavior, factory: @escaping Lambda.HandlerFactory) throws {
