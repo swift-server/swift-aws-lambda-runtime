@@ -21,12 +21,14 @@ extension Lambda {
     internal final class Runner {
         private let runtimeClient: RuntimeClient
         private let eventLoop: EventLoop
+        private let allocator: ByteBufferAllocator
 
         private var isGettingNextInvocation = false
 
         init(eventLoop: EventLoop, configuration: Configuration) {
             self.eventLoop = eventLoop
             self.runtimeClient = RuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine)
+            self.allocator = ByteBufferAllocator()
         }
 
         /// Run the user provided initializer. This *must* only be called once.
@@ -36,7 +38,9 @@ extension Lambda {
             logger.debug("initializing lambda")
             // 1. create the handler from the factory
             // 2. report initialization error if one occured
-            let context = InitializationContext(logger: logger, eventLoop: self.eventLoop)
+            let context = InitializationContext(logger: logger,
+                                                eventLoop: self.eventLoop,
+                                                allocator: self.allocator)
             return factory(context)
                 // Hopping back to "our" EventLoop is importnant in case the factory returns a future
                 // that originated from a foreign EventLoop/EventLoopGroup.
@@ -61,7 +65,10 @@ extension Lambda {
             }.flatMap { invocation, event in
                 // 2. send invocation to handler
                 self.isGettingNextInvocation = false
-                let context = Context(logger: logger, eventLoop: self.eventLoop, invocation: invocation)
+                let context = Context(logger: logger,
+                                      eventLoop: self.eventLoop,
+                                      allocator: self.allocator,
+                                      invocation: invocation)
                 logger.debug("sending invocation to lambda handler \(handler)")
                 return handler.handle(context: context, event: event)
                     // Hopping back to "our" EventLoop is importnant in case the handler returns a future that
@@ -94,7 +101,7 @@ extension Lambda {
 }
 
 private extension Lambda.Context {
-    convenience init(logger: Logger, eventLoop: EventLoop, invocation: Lambda.Invocation) {
+    convenience init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Lambda.Invocation) {
         self.init(requestID: invocation.requestID,
                   traceID: invocation.traceID,
                   invokedFunctionARN: invocation.invokedFunctionARN,
@@ -102,7 +109,8 @@ private extension Lambda.Context {
                   cognitoIdentity: invocation.cognitoIdentity,
                   clientContext: invocation.clientContext,
                   logger: logger,
-                  eventLoop: eventLoop)
+                  eventLoop: eventLoop,
+                  allocator: allocator)
     }
 }
 

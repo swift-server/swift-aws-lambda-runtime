@@ -102,7 +102,8 @@ extension Lambda {
                               invokedFunctionARN: config.invokedFunctionARN,
                               deadline: .now() + config.timeout,
                               logger: logger,
-                              eventLoop: eventLoop)
+                              eventLoop: eventLoop,
+                              allocator: ByteBufferAllocator())
 
         return try eventLoop.flatSubmit {
             handler.handle(context: context, event: event)

@@ -33,9 +33,13 @@ extension Lambda {
         ///         Most importantly the `EventLoop` must never be blocked.
         public let eventLoop: EventLoop
 
-        internal init(logger: Logger, eventLoop: EventLoop) {
+        /// `ByteBufferAllocator` to allocate `ByteBuffer`
+        public let allocator: ByteBufferAllocator
+
+        internal init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator) {
             self.eventLoop = eventLoop
             self.logger = logger
+            self.allocator = allocator
         }
     }
 }
@@ -87,7 +91,8 @@ extension Lambda {
                       cognitoIdentity: String? = nil,
                       clientContext: String? = nil,
                       logger: Logger,
-                      eventLoop: EventLoop) {
+                      eventLoop: EventLoop,
+                      allocator: ByteBufferAllocator) {
             self.requestID = requestID
             self.traceID = traceID
             self.invokedFunctionARN = invokedFunctionARN
@@ -96,7 +101,7 @@ extension Lambda {
             self.deadline = deadline
             // utility
             self.eventLoop = eventLoop
-            self.allocator = ByteBufferAllocator()
+            self.allocator = allocator
             // mutate logger with context
             var logger = logger
             logger[metadataKey: "awsRequestID"] = .string(requestID)
