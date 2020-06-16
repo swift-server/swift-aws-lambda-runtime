@@ -222,7 +222,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop()) }
 
         let logger = Logger(label: "TestLogger")
-        let client = Lambda.RuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(baseURL: "127.0.0.1:\(server.serverPort)"))
+        let client = Lambda.RuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(address: "127.0.0.1:\(server.serverPort)"))
         let result = client.reportInitializationError(logger: logger, error: TestError("boom"))
 
         var inboundHeader: HTTPServerRequestPart?
@@ -251,7 +251,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop()) }
 
         let logger = Logger(label: "TestLogger")
-        let client = Lambda.RuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(baseURL: "127.0.0.1:\(server.serverPort)"))
+        let client = Lambda.RuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(address: "127.0.0.1:\(server.serverPort)"))
 
         let header = HTTPHeaders([
             (AmazonHeaders.requestID, "test"),
@@ -291,7 +291,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop()) }
 
         let logger = Logger(label: "TestLogger")
-        let client = Lambda.RuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(baseURL: "127.0.0.1:\(server.serverPort)"))
+        let client = Lambda.RuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(address: "127.0.0.1:\(server.serverPort)"))
 
         let header = HTTPHeaders([
             (AmazonHeaders.requestID, "test"),
