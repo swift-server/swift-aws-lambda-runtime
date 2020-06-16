@@ -35,7 +35,7 @@ class LambdaRuntimeClientTest: XCTestCase {
 
     func testBootstrapFailure() {
         let behavior = Behavior()
-        XCTAssertThrowsError(try runLambda(behavior: behavior, factory: { $0.makeFailedFuture(TestError("boom")) })) { error in
+        XCTAssertThrowsError(try runLambda(behavior: behavior, factory: { $0.eventLoop.makeFailedFuture(TestError("boom")) })) { error in
             XCTAssertEqual(error as? TestError, TestError("boom"))
         }
         XCTAssertEqual(behavior.state, 1)
@@ -191,7 +191,7 @@ class LambdaRuntimeClientTest: XCTestCase {
                 .failure(.internalServerError)
             }
         }
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), factory: { $0.makeFailedFuture(TestError("boom")) })) { error in
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), factory: { $0.eventLoop.makeFailedFuture(TestError("boom")) })) { error in
             XCTAssertEqual(error as? TestError, TestError("boom"))
         }
     }
