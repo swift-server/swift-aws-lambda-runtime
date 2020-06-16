@@ -123,19 +123,19 @@ extension APIGateway.V2 {
 // MARK: - Codable Request body
 
 extension APIGateway.V2.Request {
-    /// Generic body decoder for JSON payloads
+    /// Generic decoder for JSON body
     ///
     /// Example:
     /// ```
-    /// struct Request: Codable {
+    /// struct Body: Codable {
     ///   let value: String
     /// }
     ///
     /// func handle(context: Context, event: APIGateway.V2.Request, callback: @escaping (Result<APIGateway.V2.Response, Error>) -> Void) {
     ///   do {
-    ///     let request: Request? = try event.decodedBody()
-    ///     // Do something with `request`
-    ///     callback(.success(APIGateway.V2.Response(statusCode: .ok, body:"")))
+    ///     let body: Body? = try event.decodedBody()
+    ///     // Do something with `body`
+    ///     callback(.success(APIGateway.V2.Response(statusCode: .ok, body: "")))
     ///   }
     ///   catch {
     ///     callback(.failure(error))
@@ -144,20 +144,20 @@ extension APIGateway.V2.Request {
     /// ```
     ///
     /// - Throws: `DecodingError` if body contains a value that couldn't be decoded
-    /// - Returns: Decoded payload. Returns `nil` if body property is `nil`.
-    public func decodedBody<Payload: Codable>(decoder: JSONDecoder = JSONDecoder()) throws -> Payload? {
+    /// - Returns: Decoded body. Returns `nil` if body property is `nil`.
+    public func decodedBody<Body: Codable>(decoder: JSONDecoder = JSONDecoder()) throws -> Body? {
         guard let bodyString = body else {
             return nil
         }
         let data = Data(bodyString.utf8)
-        return try decoder.decode(Payload.self, from: data)
+        return try decoder.decode(Body.self, from: data)
     }
 }
 
 // MARK: - Codable Response body
 
 extension APIGateway.V2.Response {
-    /// Codable initializer for Response payload
+    /// Codable initializer for Response body
     ///
     /// Example:
     /// ```
@@ -175,14 +175,14 @@ extension APIGateway.V2.Response {
     ///   - statusCode: Response HTTP status code
     ///   - headers: Response HTTP headers
     ///   - multiValueHeaders: Resposne multi-value headers
-    ///   - body: `Codable` response payload
+    ///   - body: `Codable` response body
     ///   - cookies: Response cookies
-    /// - Throws: `EncodingError` if payload could not be encoded into a JSON string
-    public init<Payload: Codable>(
+    /// - Throws: `EncodingError` if body could not be encoded into a JSON string
+    public init<Body: Codable>(
         statusCode: HTTPResponseStatus,
         headers: HTTPHeaders? = nil,
         multiValueHeaders: HTTPMultiValueHeaders? = nil,
-        body: Payload? = nil,
+        body: Body? = nil,
         cookies: [String]? = nil,
         encoder: JSONEncoder = JSONEncoder()
     ) throws {

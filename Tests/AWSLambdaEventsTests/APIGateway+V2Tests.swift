@@ -73,8 +73,8 @@ class APIGatewayV2Tests: XCTestCase {
     }
     """
 
-    static let exampleResponse = """
-    {"isBase64Encoded":false,"statusCode":200,"body":"{\\"message\\":\\"Foo Bar\\",\\"code\\":42}"}
+    static let exampleResponseBody = """
+    {\"code\":42,\"message\":\"Foo Bar\"}
     """
 
     // MARK: - Request -
@@ -94,8 +94,8 @@ class APIGatewayV2Tests: XCTestCase {
         XCTAssertNotNil(req?.body)
     }
 
-    func testRquestPayloadDecoding() throws {
-        struct Payload: Codable {
+    func testRequestBodyDecoding() throws {
+        struct Body: Codable {
             let some: String
             let number: Int
         }
@@ -103,21 +103,22 @@ class APIGatewayV2Tests: XCTestCase {
         let data = APIGatewayV2Tests.exampleGetEventBody.data(using: .utf8)!
         let request = try JSONDecoder().decode(APIGateway.V2.Request.self, from: data)
 
-        let payload: Payload? = try request.decodedBody()
-        XCTAssertEqual(payload?.some, "json")
-        XCTAssertEqual(payload?.number, 42)
+        let body: Body? = try request.decodedBody()
+        XCTAssertEqual(body?.some, "json")
+        XCTAssertEqual(body?.number, 42)
     }
 
-    func testResponsePayloadEncoding() throws {
-        struct Payload: Codable {
+    func testResponseBodyEncoding() throws {
+        struct Body: Codable {
             let code: Int
             let message: String
         }
 
-        let response = try APIGateway.V2.Response(statusCode: .ok, body: Payload(code: 42, message: "Foo Bar"))
-        let data = try JSONEncoder().encode(response)
-        let json = String(data: data, encoding: .utf8)
-        XCTAssertEqual(json, APIGatewayV2Tests.exampleResponse)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let body = Body(code: 42, message: "Foo Bar")
+        let response = try APIGateway.V2.Response(statusCode: .ok, body: body, encoder: encoder)
+        XCTAssertEqual(response.body, APIGatewayV2Tests.exampleResponseBody)
     }
 
 }
