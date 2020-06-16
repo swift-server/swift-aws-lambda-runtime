@@ -20,7 +20,7 @@ import NIO
 
 extension Lambda {
     /// Lambda runtime initialization context.
-    /// The Lambda runtime generates and passes the `InitializationContext` to the Lambda handler as an argument.
+    /// The Lambda runtime generates and passes the `InitializationContext` to the Lambda factory as an argument.
     public final class InitializationContext {
         /// `Logger` to log with
         ///
@@ -28,7 +28,6 @@ extension Lambda {
         public let logger: Logger
 
         /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
-        /// This is useful when implementing the `EventLoopLambdaHandler` protocol.
         ///
         /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
         ///         Most importantly the `EventLoop` must never be blocked.
