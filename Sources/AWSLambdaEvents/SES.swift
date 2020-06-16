@@ -35,7 +35,7 @@ public enum SES {
         public let mail: Mail
         public let receipt: Receipt
     }
-    
+
     public struct Mail: Decodable {
         public let commonHeaders: CommonHeaders
         public let destination: [String]
@@ -45,7 +45,7 @@ public enum SES {
         public let source: String
         @ISO8601WithFractionalSecondsCoding public var timestamp: Date
     }
-    
+
     public struct CommonHeaders: Decodable {
         public let bcc: [String]?
         public let cc: [String]?
@@ -56,12 +56,12 @@ public enum SES {
         public let subject: String?
         public let to: [String]?
     }
-    
+
     public struct Header: Decodable {
         public let name: String
         public let value: String
     }
-    
+
     public struct Receipt: Decodable {
         public let action: Action
         public let dmarcPolicy: DMARCPolicy?
@@ -74,23 +74,23 @@ public enum SES {
         @ISO8601WithFractionalSecondsCoding public var timestamp: Date
         public let virusVerdict: Verdict
     }
-    
+
     public struct Action: Decodable {
         public let functionArn: String
         public let invocationType: String
         public let type: String
     }
-    
+
     public struct Verdict: Decodable {
         public let status: Status
     }
-    
+
     public enum DMARCPolicy: String, Decodable {
         case none
         case quarantine
         case reject
     }
-    
+
     public enum Status: String, Decodable {
         case pass = "PASS"
         case fail = "FAIL"
@@ -98,4 +98,3 @@ public enum SES {
         case processingFailed = "PROCESSING_FAILED"
     }
 }
-
