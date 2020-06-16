@@ -16,6 +16,8 @@ import Logging
 import NIO
 import NIOHTTP1
 
+
+
 /// An HTTP based client for AWS Runtime Engine. This encapsulates the RESTful methods exposed by the Runtime Engine:
 /// * /runtime/invocation/next
 /// * /runtime/invocation/response
@@ -26,10 +28,7 @@ extension Lambda {
         private let eventLoop: EventLoop
         private let allocator = ByteBufferAllocator()
         private let httpClient: HTTPClient
-
-        /// Headers that must be sent along an invocation or initialization error report
-        internal static let errorHeaders = HTTPHeaders([("lambda-runtime-function-error-type", "Unhandled")])
-
+        
         init(eventLoop: EventLoop, configuration: Configuration.RuntimeEngine) {
             self.eventLoop = eventLoop
             self.httpClient = HTTPClient(eventLoop: eventLoop, configuration: configuration)
@@ -39,7 +38,7 @@ extension Lambda {
         func getNextInvocation(logger: Logger) -> EventLoopFuture<(Invocation, ByteBuffer)> {
             let url = Consts.invocationURLPrefix + Consts.getNextInvocationURLSuffix
             logger.debug("requesting work from lambda runtime engine using \(url)")
-            return self.httpClient.get(url: url).flatMapThrowing { response in
+            return self.httpClient.get(url: url, headers: RuntimeClient.defaultHeaders).flatMapThrowing { response in
                 guard response.status == .ok else {
                     throw RuntimeError.badStatusCode(response.status)
                 }
@@ -64,22 +63,23 @@ extension Lambda {
         func reportResults(logger: Logger, invocation: Invocation, result: Result<ByteBuffer?, Error>) -> EventLoopFuture<Void> {
             var url = Consts.invocationURLPrefix + "/" + invocation.requestID
             var body: ByteBuffer?
-            var additionalHeaders: HTTPHeaders?
+            let headers: HTTPHeaders
 
             switch result {
             case .success(let buffer):
                 url += Consts.postResponseURLSuffix
                 body = buffer
+                headers = RuntimeClient.defaultHeaders
             case .failure(let error):
                 url += Consts.postErrorURLSuffix
                 let errorResponse = ErrorResponse(errorType: Consts.functionError, errorMessage: "\(error)")
                 let bytes = errorResponse.toJSONBytes()
                 body = self.allocator.buffer(capacity: bytes.count)
                 body!.writeBytes(bytes)
-                additionalHeaders = RuntimeClient.errorHeaders
+                headers = RuntimeClient.errorHeaders
             }
             logger.debug("reporting results to lambda runtime engine using \(url)")
-            return self.httpClient.post(url: url, body: body, additionalHeaders: additionalHeaders).flatMapThrowing { response in
+            return self.httpClient.post(url: url, headers: headers, body: body).flatMapThrowing { response in
                 guard response.status == .accepted else {
                     throw RuntimeError.badStatusCode(response.status)
                 }
@@ -104,7 +104,7 @@ extension Lambda {
             var body = self.allocator.buffer(capacity: bytes.count)
             body.writeBytes(bytes)
             logger.warning("reporting initialization error to lambda runtime engine using \(url)")
-            return self.httpClient.post(url: url, body: body, additionalHeaders: RuntimeClient.errorHeaders).flatMapThrowing { response in
+            return self.httpClient.post(url: url, headers: RuntimeClient.errorHeaders, body: body).flatMapThrowing { response in
                 guard response.status == .accepted else {
                     throw RuntimeError.badStatusCode(response.status)
                 }
@@ -191,4 +191,16 @@ extension Lambda {
             self.cognitoIdentity = headers["Lambda-Runtime-Cognito-Identity"].first
         }
     }
+}
+
+extension Lambda.RuntimeClient {
+    
+    internal static let defaultHeaders = HTTPHeaders([("user-agent", "Swift-Lambda/Unknown")])
+     
+     /// These headers must be sent along an invocation or initialization error report
+     internal static let errorHeaders = HTTPHeaders([
+         ("user-agent", "Swift-Lambda/Unknown"),
+         ("lambda-runtime-function-error-type", "Unhandled"),
+     ])
+    
 }
