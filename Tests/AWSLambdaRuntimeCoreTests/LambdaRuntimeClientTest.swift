@@ -283,7 +283,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         XCTAssertNoThrow(try result.wait())
     }
 
-    func testSuccessHeaders() {
+    func testInvocationSuccessResponse() {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
 
