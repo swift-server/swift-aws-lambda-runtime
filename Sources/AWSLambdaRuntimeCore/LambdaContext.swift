@@ -122,3 +122,27 @@ extension Lambda {
         }
     }
 }
+
+// MARK: - ShutdownContext
+
+extension Lambda {
+    /// Lambda runtime shutdown context.
+    /// The Lambda runtime generates and passes the `ShutdownContext` to the Lambda handler as an argument.
+    public final class ShutdownContext {
+        /// `Logger` to log with
+        ///
+        /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
+        public let logger: Logger
+
+        /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
+        ///
+        /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
+        ///         Most importantly the `EventLoop` must never be blocked.
+        public let eventLoop: EventLoop
+
+        internal init(logger: Logger, eventLoop: EventLoop) {
+            self.eventLoop = eventLoop
+            self.logger = logger
+        }
+    }
+}
