@@ -27,27 +27,25 @@ internal final class HTTPClient {
     private var state = State.disconnected
     private var executing = false
 
-    private static let headers = HTTPHeaders([("user-agent", "Swift-Lambda/Unknown")])
-
     init(eventLoop: EventLoop, configuration: Lambda.Configuration.RuntimeEngine) {
         self.eventLoop = eventLoop
         self.configuration = configuration
         self.targetHost = "\(self.configuration.ip):\(self.configuration.port)"
     }
 
-    func get(url: String, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
+    func get(url: String, headers: HTTPHeaders, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
         self.execute(Request(targetHost: self.targetHost,
                              url: url,
                              method: .GET,
-                             headers: HTTPClient.headers,
+                             headers: headers,
                              timeout: timeout ?? self.configuration.requestTimeout))
     }
 
-    func post(url: String, body: ByteBuffer?, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
+    func post(url: String, headers: HTTPHeaders, body: ByteBuffer?, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
         self.execute(Request(targetHost: self.targetHost,
                              url: url,
                              method: .POST,
-                             headers: HTTPClient.headers,
+                             headers: headers,
                              body: body,
                              timeout: timeout ?? self.configuration.requestTimeout))
     }
