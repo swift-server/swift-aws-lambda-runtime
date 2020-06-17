@@ -133,6 +133,7 @@ internal extension Lambda {
         case invocationMissingHeader(String)
         case noBody
         case json(Error)
+        case shutdownError(shutdownError: Error, runnerResult: Result<Int, Error>)
     }
 }
 
