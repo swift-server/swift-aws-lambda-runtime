@@ -49,7 +49,7 @@ public enum SES {
     public struct CommonHeaders: Decodable {
         public let bcc: [String]?
         public let cc: [String]?
-        @DateTimeCoding public var date: Date
+        @RFC5322DateTimeCoding public var date: Date
         public let from: [String]
         public let messageId: String
         public let returnPath: String?
