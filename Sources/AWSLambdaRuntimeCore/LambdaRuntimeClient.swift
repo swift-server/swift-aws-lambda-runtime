@@ -16,8 +16,6 @@ import Logging
 import NIO
 import NIOHTTP1
 
-
-
 /// An HTTP based client for AWS Runtime Engine. This encapsulates the RESTful methods exposed by the Runtime Engine:
 /// * /runtime/invocation/next
 /// * /runtime/invocation/response
@@ -28,7 +26,7 @@ extension Lambda {
         private let eventLoop: EventLoop
         private let allocator = ByteBufferAllocator()
         private let httpClient: HTTPClient
-        
+
         init(eventLoop: EventLoop, configuration: Configuration.RuntimeEngine) {
             self.eventLoop = eventLoop
             self.httpClient = HTTPClient(eventLoop: eventLoop, configuration: configuration)
@@ -194,13 +192,11 @@ extension Lambda {
 }
 
 extension Lambda.RuntimeClient {
-    
     internal static let defaultHeaders = HTTPHeaders([("user-agent", "Swift-Lambda/Unknown")])
-     
-     /// These headers must be sent along an invocation or initialization error report
-     internal static let errorHeaders = HTTPHeaders([
-         ("user-agent", "Swift-Lambda/Unknown"),
-         ("lambda-runtime-function-error-type", "Unhandled"),
-     ])
-    
+
+    /// These headers must be sent along an invocation or initialization error report
+    internal static let errorHeaders = HTTPHeaders([
+        ("user-agent", "Swift-Lambda/Unknown"),
+        ("lambda-runtime-function-error-type", "Unhandled"),
+    ])
 }
