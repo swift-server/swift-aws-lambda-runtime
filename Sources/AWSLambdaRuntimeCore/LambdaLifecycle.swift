@@ -89,11 +89,19 @@ extension Lambda {
                 self.run(promise: finishedPromise)
                 return finishedPromise.futureResult.mapResult { (handler, $0) }
             }
-            .flatMap { (handler, result) -> EventLoopFuture<Int> in
+            .flatMap { (handler, runnerResult) -> EventLoopFuture<Int> in
+                // after the lambda finishPromise has succeeded or failed we need to
+                // shutdown the handler
                 let shutdownContext = ShutdownContext(logger: logger, eventLoop: self.eventLoop)
-                return handler.shutdown(context: shutdownContext).recover { error in
+                return handler.shutdown(context: shutdownContext).flatMapErrorThrowing { error in
+                    // if, we had an error shuting down the lambda, we want to concatenate it with
+                    // the runner result
                     logger.error("Error shutting down handler: \(error)")
-                }.flatMapResult { _ in result }
+                    throw RuntimeError.shutdownError(shutdownError: error, runnerResult: runnerResult)
+                }.flatMapResult { (_) -> Result<Int, Error> in
+                    // we had no error shutting down the lambda. let's return the runner's result
+                    runnerResult
+                }
             }.always { _ in
                 // triggered when the Lambda has finished its last run or has a startup failure.
                 self.markShutdown()
