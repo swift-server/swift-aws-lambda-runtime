@@ -27,8 +27,8 @@ public enum Lambda {
 
     /// `ByteBufferLambdaHandler` factory.
     ///
-    /// A function that takes a `EventLoop` and returns an `EventLoopFuture` of a `ByteBufferLambdaHandler`
-    public typealias HandlerFactory = (EventLoop) -> EventLoopFuture<Handler>
+    /// A function that takes a `InitializationContext` and returns an `EventLoopFuture` of a `ByteBufferLambdaHandler`
+    public typealias HandlerFactory = (InitializationContext) -> EventLoopFuture<Handler>
 
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
     ///
@@ -58,7 +58,7 @@ public enum Lambda {
     ///     - factory: A `ByteBufferLambdaHandler` factory.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ factory: @escaping (EventLoop) throws -> Handler) {
+    public static func run(_ factory: @escaping (InitializationContext) throws -> Handler) {
         self.run(factory: factory)
     }
 
@@ -73,19 +73,19 @@ public enum Lambda {
     // for testing and internal use
     @discardableResult
     internal static func run(configuration: Configuration = .init(), handler: Handler) -> Result<Int, Error> {
-        self.run(configuration: configuration, factory: { $0.makeSucceededFuture(handler) })
+        self.run(configuration: configuration, factory: { $0.eventLoop.makeSucceededFuture(handler) })
     }
 
     // for testing and internal use
     @discardableResult
-    internal static func run(configuration: Configuration = .init(), factory: @escaping (EventLoop) throws -> Handler) -> Result<Int, Error> {
-        self.run(configuration: configuration, factory: { eventloop -> EventLoopFuture<Handler> in
-            let promise = eventloop.makePromise(of: Handler.self)
+    internal static func run(configuration: Configuration = .init(), factory: @escaping (InitializationContext) throws -> Handler) -> Result<Int, Error> {
+        self.run(configuration: configuration, factory: { context -> EventLoopFuture<Handler> in
+            let promise = context.eventLoop.makePromise(of: Handler.self)
             // if we have a callback based handler factory, we offload the creation of the handler
             // onto the default offload queue, to ensure that the eventloop is never blocked.
             Lambda.defaultOffloadQueue.async {
                 do {
-                    promise.succeed(try factory(eventloop))
+                    promise.succeed(try factory(context))
                 } catch {
                     promise.fail(error)
                 }

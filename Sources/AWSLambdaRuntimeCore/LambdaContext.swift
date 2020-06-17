@@ -16,6 +16,36 @@ import Dispatch
 import Logging
 import NIO
 
+// MARK: - InitializationContext
+
+extension Lambda {
+    /// Lambda runtime initialization context.
+    /// The Lambda runtime generates and passes the `InitializationContext` to the Lambda factory as an argument.
+    public final class InitializationContext {
+        /// `Logger` to log with
+        ///
+        /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
+        public let logger: Logger
+
+        /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
+        ///
+        /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
+        ///         Most importantly the `EventLoop` must never be blocked.
+        public let eventLoop: EventLoop
+
+        /// `ByteBufferAllocator` to allocate `ByteBuffer`
+        public let allocator: ByteBufferAllocator
+
+        internal init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator) {
+            self.eventLoop = eventLoop
+            self.logger = logger
+            self.allocator = allocator
+        }
+    }
+}
+
+// MARK: - Context
+
 extension Lambda {
     /// Lambda runtime context.
     /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
@@ -61,7 +91,8 @@ extension Lambda {
                       cognitoIdentity: String? = nil,
                       clientContext: String? = nil,
                       logger: Logger,
-                      eventLoop: EventLoop) {
+                      eventLoop: EventLoop,
+                      allocator: ByteBufferAllocator) {
             self.requestID = requestID
             self.traceID = traceID
             self.invokedFunctionARN = invokedFunctionARN
@@ -70,7 +101,7 @@ extension Lambda {
             self.deadline = deadline
             // utility
             self.eventLoop = eventLoop
-            self.allocator = ByteBufferAllocator()
+            self.allocator = allocator
             // mutate logger with context
             var logger = logger
             logger[metadataKey: "awsRequestID"] = .string(requestID)
@@ -88,6 +119,30 @@ extension Lambda {
 
         public var debugDescription: String {
             "\(Self.self)(requestID: \(self.requestID), traceID: \(self.traceID), invokedFunctionARN: \(self.invokedFunctionARN), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(self.clientContext ?? "nil"), deadline: \(self.deadline))"
+        }
+    }
+}
+
+// MARK: - ShutdownContext
+
+extension Lambda {
+    /// Lambda runtime shutdown context.
+    /// The Lambda runtime generates and passes the `ShutdownContext` to the Lambda handler as an argument.
+    public final class ShutdownContext {
+        /// `Logger` to log with
+        ///
+        /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
+        public let logger: Logger
+
+        /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
+        ///
+        /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
+        ///         Most importantly the `EventLoop` must never be blocked.
+        public let eventLoop: EventLoop
+
+        internal init(logger: Logger, eventLoop: EventLoop) {
+            self.eventLoop = eventLoop
+            self.logger = logger
         }
     }
 }

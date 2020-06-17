@@ -51,7 +51,7 @@ class LambdaTest: XCTestCase {
 
             var initialized = false
 
-            init(eventLoop: EventLoop) {
+            init(context: Lambda.InitializationContext) {
                 XCTAssertFalse(self.initialized)
                 self.initialized = true
             }
@@ -72,7 +72,7 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(factory: { $0.makeFailedFuture(TestError("kaboom")) })
+        let result = Lambda.run(factory: { $0.eventLoop.makeFailedFuture(TestError("kaboom")) })
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
@@ -85,7 +85,7 @@ class LambdaTest: XCTestCase {
             typealias In = String
             typealias Out = Void
 
-            init(eventLoop: EventLoop) throws {
+            init(context: Lambda.InitializationContext) throws {
                 throw TestError("kaboom")
             }
 
@@ -124,7 +124,7 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(factory: { $0.makeFailedFuture(TestError("kaboom")) })
+        let result = Lambda.run(factory: { $0.eventLoop.makeFailedFuture(TestError("kaboom")) })
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
@@ -143,7 +143,7 @@ class LambdaTest: XCTestCase {
             usleep(100_000)
             kill(getpid(), signal.rawValue)
         }
-        let result = Lambda.run(configuration: configuration, factory: { $0.makeSucceededFuture(EchoHandler()) })
+        let result = Lambda.run(configuration: configuration, factory: { $0.eventLoop.makeSucceededFuture(EchoHandler()) })
 
         switch result {
         case .success(let invocationCount):
@@ -263,7 +263,8 @@ class LambdaTest: XCTestCase {
                                      cognitoIdentity: nil,
                                      clientContext: nil,
                                      logger: Logger(label: "test"),
-                                     eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next())
+                                     eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next(),
+                                     allocator: ByteBufferAllocator())
         XCTAssertGreaterThan(context.deadline, .now())
 
         let expiredContext = Lambda.Context(requestID: context.requestID,
@@ -273,7 +274,8 @@ class LambdaTest: XCTestCase {
                                             cognitoIdentity: context.cognitoIdentity,
                                             clientContext: context.clientContext,
                                             logger: context.logger,
-                                            eventLoop: context.eventLoop)
+                                            eventLoop: context.eventLoop,
+                                            allocator: context.allocator)
         XCTAssertLessThan(expiredContext.deadline, .now())
     }
 
@@ -285,7 +287,8 @@ class LambdaTest: XCTestCase {
                                      cognitoIdentity: nil,
                                      clientContext: nil,
                                      logger: Logger(label: "test"),
-                                     eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next())
+                                     eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next(),
+                                     allocator: ByteBufferAllocator())
         XCTAssertLessThanOrEqual(context.getRemainingTime(), .seconds(1))
         XCTAssertGreaterThan(context.getRemainingTime(), .milliseconds(800))
     }

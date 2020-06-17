@@ -79,4 +79,36 @@ class DateWrapperTests: XCTestCase {
             XCTAssertNil(context.underlyingError)
         }
     }
+
+    func testRFC5322DateTimeCodingWrapperSuccess() {
+        struct TestEvent: Decodable {
+            @RFC5322DateTimeCoding
+            var date: Date
+        }
+
+        let json = #"{"date":"Thu, 5 Apr 2012 23:47:37 +0200"}"#
+        var event: TestEvent?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(TestEvent.self, from: json.data(using: .utf8)!))
+
+        XCTAssertEqual(event?.date.description, "2012-04-05 21:47:37 +0000")
+    }
+
+    func testRFC5322DateTimeCodingWrapperFailure() {
+        struct TestEvent: Decodable {
+            @RFC5322DateTimeCoding
+            var date: Date
+        }
+
+        let date = "Thu, 5 Apr 2012 23:47 +0200" // missing seconds
+        let json = #"{"date":"\#(date)"}"#
+        XCTAssertThrowsError(_ = try JSONDecoder().decode(TestEvent.self, from: json.data(using: .utf8)!)) { error in
+            guard case DecodingError.dataCorrupted(let context) = error else {
+                XCTFail("Unexpected error: \(error)"); return
+            }
+
+            XCTAssertEqual(context.codingPath.compactMap { $0.stringValue }, ["date"])
+            XCTAssertEqual(context.debugDescription, "Expected date to be in RFC5322 date-time format with fractional seconds, but `\(date)` does not forfill format")
+            XCTAssertNil(context.underlyingError)
+        }
+    }
 }

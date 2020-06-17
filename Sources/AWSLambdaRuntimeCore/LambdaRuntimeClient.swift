@@ -36,7 +36,7 @@ extension Lambda {
         func getNextInvocation(logger: Logger) -> EventLoopFuture<(Invocation, ByteBuffer)> {
             let url = Consts.invocationURLPrefix + Consts.getNextInvocationURLSuffix
             logger.debug("requesting work from lambda runtime engine using \(url)")
-            return self.httpClient.get(url: url).flatMapThrowing { response in
+            return self.httpClient.get(url: url, headers: RuntimeClient.defaultHeaders).flatMapThrowing { response in
                 guard response.status == .ok else {
                     throw RuntimeError.badStatusCode(response.status)
                 }
@@ -61,19 +61,23 @@ extension Lambda {
         func reportResults(logger: Logger, invocation: Invocation, result: Result<ByteBuffer?, Error>) -> EventLoopFuture<Void> {
             var url = Consts.invocationURLPrefix + "/" + invocation.requestID
             var body: ByteBuffer?
+            let headers: HTTPHeaders
+
             switch result {
             case .success(let buffer):
                 url += Consts.postResponseURLSuffix
                 body = buffer
+                headers = RuntimeClient.defaultHeaders
             case .failure(let error):
                 url += Consts.postErrorURLSuffix
                 let errorResponse = ErrorResponse(errorType: Consts.functionError, errorMessage: "\(error)")
                 let bytes = errorResponse.toJSONBytes()
                 body = self.allocator.buffer(capacity: bytes.count)
                 body!.writeBytes(bytes)
+                headers = RuntimeClient.errorHeaders
             }
             logger.debug("reporting results to lambda runtime engine using \(url)")
-            return self.httpClient.post(url: url, body: body).flatMapThrowing { response in
+            return self.httpClient.post(url: url, headers: headers, body: body).flatMapThrowing { response in
                 guard response.status == .accepted else {
                     throw RuntimeError.badStatusCode(response.status)
                 }
@@ -98,7 +102,7 @@ extension Lambda {
             var body = self.allocator.buffer(capacity: bytes.count)
             body.writeBytes(bytes)
             logger.warning("reporting initialization error to lambda runtime engine using \(url)")
-            return self.httpClient.post(url: url, body: body).flatMapThrowing { response in
+            return self.httpClient.post(url: url, headers: RuntimeClient.errorHeaders, body: body).flatMapThrowing { response in
                 guard response.status == .accepted else {
                     throw RuntimeError.badStatusCode(response.status)
                 }
@@ -129,6 +133,7 @@ internal extension Lambda {
         case invocationMissingHeader(String)
         case noBody
         case json(Error)
+        case shutdownError(shutdownError: Error, runnerResult: Result<Int, Error>)
     }
 }
 
@@ -185,4 +190,14 @@ extension Lambda {
             self.cognitoIdentity = headers["Lambda-Runtime-Cognito-Identity"].first
         }
     }
+}
+
+extension Lambda.RuntimeClient {
+    internal static let defaultHeaders = HTTPHeaders([("user-agent", "Swift-Lambda/Unknown")])
+
+    /// These headers must be sent along an invocation or initialization error report
+    internal static let errorHeaders = HTTPHeaders([
+        ("user-agent", "Swift-Lambda/Unknown"),
+        ("lambda-runtime-function-error-type", "Unhandled"),
+    ])
 }

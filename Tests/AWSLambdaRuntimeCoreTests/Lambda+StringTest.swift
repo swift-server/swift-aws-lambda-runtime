@@ -185,7 +185,7 @@ class StringLambdaTest: XCTestCase {
             typealias In = String
             typealias Out = String
 
-            init(eventLoop: EventLoop) throws {
+            init(context: Lambda.InitializationContext) throws {
                 throw TestError("kaboom")
             }
 
