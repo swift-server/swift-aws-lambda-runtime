@@ -62,6 +62,27 @@ public extension LambdaHandler {
     }
 }
 
+public extension LambdaHandler {
+    func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
+        let promise = context.eventLoop.makePromise(of: Void.self)
+        self.offloadQueue.async {
+            do {
+                try self.syncShutdown()
+                promise.succeed(())
+            } catch {
+                promise.fail(error)
+            }
+        }
+        return promise.futureResult
+    }
+
+    /// Clean up the `LambdaHandler` resources synchronously.
+    /// Concrete Lambda handlers implement this method to shutdown resources like `HTTPClient`s and database connections.
+    func syncShutdown() throws {
+        // noop
+    }
+}
+
 // MARK: - EventLoopLambdaHandler
 
 /// Strongly typed, `EventLoopFuture` based processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` asynchronously.
@@ -175,7 +196,7 @@ public protocol ByteBufferLambdaHandler {
 
 public extension ByteBufferLambdaHandler {
     func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
-        context.eventLoop.makeSucceededFuture(Void())
+        context.eventLoop.makeSucceededFuture(())
     }
 }
 
