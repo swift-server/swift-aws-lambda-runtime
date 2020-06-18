@@ -62,6 +62,27 @@ public extension LambdaHandler {
     }
 }
 
+public extension LambdaHandler {
+    func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
+        let promise = context.eventLoop.makePromise(of: Void.self)
+        self.offloadQueue.async {
+            do {
+                try self.syncShutdown(context: context)
+                promise.succeed(())
+            } catch {
+                promise.fail(error)
+            }
+        }
+        return promise.futureResult
+    }
+
+    /// Clean up the Lambda resources synchronously.
+    /// Concrete Lambda handlers implement this method to shutdown resources like `HTTPClient`s and database connections.
+    func syncShutdown(context: Lambda.ShutdownContext) throws {
+        // noop
+    }
+}
+
 // MARK: - EventLoopLambdaHandler
 
 /// Strongly typed, `EventLoopFuture` based processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` asynchronously.
@@ -165,8 +186,8 @@ public protocol ByteBufferLambdaHandler {
     ///            The `EventLoopFuture` should be completed with either a response encoded as `ByteBuffer` or an `Error`
     func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?>
 
-    /// The method to clean up your resources.
-    /// Concrete Lambda handlers implement this method to shutdown their `HTTPClient`s and database connections.
+    /// Clean up the Lambda resources asynchronously.
+    /// Concrete Lambda handlers implement this method to shutdown resources like `HTTPClient`s and database connections.
     ///
     /// - Note: In case your Lambda fails while creating your LambdaHandler in the `HandlerFactory`, this method
     ///         **is not invoked**. In this case you must cleanup the created resources immediately in the `HandlerFactory`.
@@ -175,7 +196,7 @@ public protocol ByteBufferLambdaHandler {
 
 public extension ByteBufferLambdaHandler {
     func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
-        context.eventLoop.makeSucceededFuture(Void())
+        context.eventLoop.makeSucceededFuture(())
     }
 }
 
