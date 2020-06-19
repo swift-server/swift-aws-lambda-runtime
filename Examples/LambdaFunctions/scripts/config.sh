@@ -14,7 +14,6 @@
 ##===----------------------------------------------------------------------===##
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
-
 executables=( $(swift package dump-package | sed -e 's|: null|: ""|g' | jq '.products[] | (select(.type.executable)) | .name' | sed -e 's|"||g') )
 
 if [[ ${#executables[@]} = 0 ]]; then
@@ -32,8 +31,8 @@ elif [[ ${#executables[@]} > 1 ]]; then
 fi
 
 echo "-------------------------------------------------------------------------"
-echo "CONFIG"
+echo "configuration"
 echo "-------------------------------------------------------------------------"
-echo "DIR: $DIR"
+echo "current dir: $DIR"
 echo "executable: $executable"
 echo "-------------------------------------------------------------------------"

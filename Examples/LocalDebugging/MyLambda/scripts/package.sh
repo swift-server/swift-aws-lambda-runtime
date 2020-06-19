@@ -17,11 +17,15 @@ set -eu
 
 executable=$1
 
-target=.build/lambda/$executable
+target=".build/lambda/$executable"
 rm -rf "$target"
 mkdir -p "$target"
 cp ".build/release/$executable" "$target/"
-cp -Pv /usr/lib/swift/linux/lib*so* "$target"
+#cp -Pv /usr/lib/swift/linux/lib*so* "$target"
+# add the target deps based on ldd
+ldd ".build/release/$executable" | grep swift | awk '{print $3}' | xargs cp -Pv -t "$target"
+# add icu (ldd just gets the symlink)
+cp -Pv /usr/lib/swift/linux/libicu*so* "$target"
 cd "$target"
 ln -s "$executable" "bootstrap"
 zip --symlinks lambda.zip *

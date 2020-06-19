@@ -13,20 +13,17 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+set -eu
+
 DIR="$(cd "$(dirname "$0")" && pwd)"
 source $DIR/config.sh
 
 echo -e "\ndeploying $executable"
 
-echo "-------------------------------------------------------------------------"
-echo "preparing docker build image"
-echo "-------------------------------------------------------------------------"
-docker build . -q -t builder
-
-$DIR/build-and-package.sh ${executable}
+$DIR/build-and-package.sh "$executable"
 
 echo "-------------------------------------------------------------------------"
 echo "deploying using Serverless"
 echo "-------------------------------------------------------------------------"
 
-serverless deploy --config "./scripts/serverless/${executable}-template.yml" --stage dev -v
+serverless deploy --config "./scripts/serverless/$executable-template.yml" --stage dev -v
