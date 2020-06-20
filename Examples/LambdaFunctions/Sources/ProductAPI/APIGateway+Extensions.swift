@@ -13,30 +13,36 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaEvents
-import Foundation
+import class Foundation.JSONEncoder
+import class Foundation.JSONDecoder
 
 extension APIGateway.V2.Request {
-    public func object<T: Codable>() throws -> T {
-        let decoder = JSONDecoder()
+    
+    static private let decoder = JSONDecoder()
+    
+    public func bodyObject<T: Codable>() throws -> T {
         guard let body = self.body,
             let dataBody = body.data(using: .utf8)
             else {
                 throw APIError.invalidRequest
         }
-        return try decoder.decode(T.self, from: dataBody)
+        return try Self.decoder.decode(T.self, from: dataBody)
     }
 }
 
 extension APIGateway.V2.Response {
     
-    static let defaultHeaders = [
+    private static let encoder = JSONEncoder()
+    
+    public static let defaultHeaders = [
         "Content-Type": "application/json",
+        //Security warning: XSS are enabled
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT,DELETE",
         "Access-Control-Allow-Credentials": "true",
     ]
     
-    init(with error: Error, statusCode: AWSLambdaEvents.HTTPResponseStatus) {
+    public init(with error: Error, statusCode: AWSLambdaEvents.HTTPResponseStatus) {
         self.init(
             statusCode: statusCode,
             headers: APIGateway.V2.Response.defaultHeaders,
@@ -46,10 +52,9 @@ extension APIGateway.V2.Response {
         )
     }
     
-    init<Out: Encodable>(with object: Out, statusCode: AWSLambdaEvents.HTTPResponseStatus) {
-        let encoder = JSONEncoder()
+    public init<Out: Encodable>(with object: Out, statusCode: AWSLambdaEvents.HTTPResponseStatus) {
         var body: String = "{}"
-        if let data = try? encoder.encode(object) {
+        if let data = try? Self.encoder.encode(object) {
             body = String(data: data, encoding: .utf8) ?? body
         }
         self.init(
@@ -59,14 +64,5 @@ extension APIGateway.V2.Response {
             body: body,
             isBase64Encoded: false
         )
-    }
-    
-    init<Out: Encodable>(with result: Result<Out, Error>, statusCode: AWSLambdaEvents.HTTPResponseStatus) {
-        switch result {
-        case .success(let value):
-            self.init(with: value, statusCode: statusCode)
-        case .failure(let error):
-            self.init(with: error, statusCode: statusCode)
-        }
     }
 }

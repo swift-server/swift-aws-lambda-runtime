@@ -42,7 +42,7 @@ struct ProductLambdaHandler: EventLoopLambdaHandler {
     }
     
     func createLambdaHandler(context: Lambda.Context, event: APIGateway.V2.Request) -> EventLoopFuture<APIGateway.V2.Response> {
-        guard let product: Product = try? event.object() else {
+        guard let product: Product = try? event.bodyObject() else {
             let error = APIError.invalidRequest
             return context.eventLoop.makeFailedFuture(error)
         }
@@ -70,7 +70,7 @@ struct ProductLambdaHandler: EventLoopLambdaHandler {
     }
     
     func updateLambdaHandler(context: Lambda.Context, event: APIGateway.V2.Request) -> EventLoopFuture<APIGateway.V2.Response> {
-        guard let product: Product = try? event.object() else {
+        guard let product: Product = try? event.bodyObject() else {
             let error = APIError.invalidRequest
             return context.eventLoop.makeFailedFuture(error)
         }
