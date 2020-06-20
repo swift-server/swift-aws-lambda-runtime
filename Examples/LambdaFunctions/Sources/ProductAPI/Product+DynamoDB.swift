@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import AWSDynamoDB
+import Foundation
 
 extension Product {
     
@@ -22,12 +23,12 @@ extension Product {
             Field.name: DynamoDB.AttributeValue(s: name),
             Field.description: DynamoDB.AttributeValue(s: description),
         ]
-        if let createdAt = createdAt {
-            dictionary[Field.createdAt] = DynamoDB.AttributeValue(s: createdAt)
+        if let createdAt = createdAt?.timeIntervalSince1970String {
+            dictionary[Field.createdAt] = DynamoDB.AttributeValue(n: createdAt)
         }
         
-        if let updatedAt = updatedAt {
-            dictionary[Field.updatedAt] = DynamoDB.AttributeValue(s: updatedAt)
+        if let updatedAt = updatedAt?.timeIntervalSince1970String {
+            dictionary[Field.updatedAt] = DynamoDB.AttributeValue(n: updatedAt)
         }
         return dictionary
     }
@@ -42,7 +43,15 @@ extension Product {
         self.name = name
         self.sku = sku
         self.description = description
-        self.createdAt = dictionary[Field.createdAt]?.s
-        self.updatedAt = dictionary[Field.updatedAt]?.s
+        if let value = dictionary[Field.createdAt]?.n,
+            let timeInterval = TimeInterval(value) {
+            let date = Date(timeIntervalSince1970: timeInterval)
+            self.createdAt = date.iso8601
+        }
+        if let value = dictionary[Field.updatedAt]?.n,
+            let timeInterval = TimeInterval(value) {
+            let date = Date(timeIntervalSince1970: timeInterval)
+            self.updatedAt = date.iso8601
+        }
     }
 }

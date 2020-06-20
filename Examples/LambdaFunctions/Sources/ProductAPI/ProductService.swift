@@ -39,6 +39,20 @@ extension Date {
     }
 }
 
+extension String {
+    var iso8601: Date? {
+        let formatter = DateFormatter.iso8061
+        return formatter.date(from: self)
+    }
+    
+    var timeIntervalSince1970String: String? {
+        guard let timeInterval = self.iso8601?.timeIntervalSince1970 else {
+            return nil
+        }
+        return "\(timeInterval)"
+    }
+}
+
 public class ProductService {
     
     let db: DynamoDB
@@ -78,18 +92,21 @@ public class ProductService {
     public func updateItem(product: Product) -> EventLoopFuture<Product> {
         var product = product
         let date = Date()
+        let updatedAt = "\(date.timeIntervalSince1970)"
         product.updatedAt = date.iso8601
         
         let input = DynamoDB.UpdateItemInput(
+            conditionExpression: "attribute_exists(#createdAt)",
             expressionAttributeNames: [
                 "#name": Product.Field.name,
                 "#description": Product.Field.description,
                 "#updatedAt": Product.Field.updatedAt,
+                "#createdAt": Product.Field.createdAt
             ],
             expressionAttributeValues: [
                 ":name": DynamoDB.AttributeValue(s: product.name),
                 ":description": DynamoDB.AttributeValue(s: product.description),
-                ":updatedAt": DynamoDB.AttributeValue(s: product.updatedAt),
+                ":updatedAt": DynamoDB.AttributeValue(n: updatedAt)
             ],
             key: [Product.Field.sku: DynamoDB.AttributeValue(s: product.sku)],
             returnValues: DynamoDB.ReturnValue.allNew,
