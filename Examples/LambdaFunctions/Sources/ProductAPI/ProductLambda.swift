@@ -12,16 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-#if canImport(FoundationNetworking)
-import FoundationNetworking
-#endif
-import AWSLambdaRuntime
 import AWSDynamoDB
-import NIO
-import Logging
-import AsyncHTTPClient
 import AWSLambdaEvents
+import AWSLambdaRuntime
+import AsyncHTTPClient
+import Logging
+import NIO
 
 enum Operation: String {
     case create
@@ -42,19 +38,19 @@ struct ProductLambda: LambdaHandler {
     typealias In = APIGateway.V2.Request
     typealias Out = APIGateway.V2.Response
     
-    let dbTimeout:Int64 = 30
+    let dbTimeout: Int64 = 30
     
     let region: Region
     let db: AWSDynamoDB.DynamoDB
     let service: ProductService
     let tableName: String
     let operation: Operation
-
+    
     var httpClient: HTTPClient
     
     static func currentRegion() -> Region {
         
-        if let awsRegion = ProcessInfo.processInfo.environment["AWS_REGION"] {
+        if let awsRegion = Lambda.env("AWS_REGION") {
             let value = Region(rawValue: awsRegion)
             return value
             
@@ -78,7 +74,7 @@ struct ProductLambda: LambdaHandler {
         
         self.region = Self.currentRegion()
         logger.info("\(Self.currentRegion())")
-
+        
         let lambdaRuntimeTimeout: TimeAmount = .seconds(dbTimeout)
         let timeout = HTTPClient.Configuration.Timeout(
             connect: lambdaRuntimeTimeout,
@@ -102,9 +98,14 @@ struct ProductLambda: LambdaHandler {
         )
         logger.info("ProductService")
     }
-
-    func handle(context: Lambda.Context, event: APIGateway.V2.Request, callback: @escaping (Result<APIGateway.V2.Response, Error>) -> Void) {
-        let _ = ProductLambdaHandler(service: service, operation: operation).handle(context: context, event: event)
+    
+    func handle(
+        context: Lambda.Context, event: APIGateway.V2.Request,
+        callback: @escaping (Result<APIGateway.V2.Response, Error>) -> Void
+    ) {
+        let _ = ProductLambdaHandler(service: service, operation: operation).handle(
+            context: context, event: event
+        )
             .always { (result) in
                 callback(result)
         }

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import AWSDynamoDB
+import Foundation
 import NIO
 
 public enum APIError: Error {
@@ -74,12 +74,12 @@ public class ProductService {
             expressionAttributeNames: [
                 "#name": ProductField.name,
                 "#description": ProductField.description,
-                "#updatedAt": ProductField.updatedAt
+                "#updatedAt": ProductField.updatedAt,
             ],
             expressionAttributeValues: [
-                ":name": DynamoDB.AttributeValue(s:product.name),
-                ":description": DynamoDB.AttributeValue(s:product.description),
-                ":updatedAt": DynamoDB.AttributeValue(s:product.updatedAt)
+                ":name": DynamoDB.AttributeValue(s: product.name),
+                ":description": DynamoDB.AttributeValue(s: product.description),
+                ":updatedAt": DynamoDB.AttributeValue(s: product.updatedAt),
             ],
             key: [ProductField.sku: DynamoDB.AttributeValue(s: product.sku)],
             returnValues: DynamoDB.ReturnValue.allNew,

@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import AWSDynamoDB
 
 public struct ProductField {
@@ -23,25 +22,28 @@ public struct ProductField {
     static let updatedAt = "updatedAt"
 }
 
-public extension Product {
-    var dynamoDictionary: [String : DynamoDB.AttributeValue] {
-        var dictionary = [ProductField.sku: DynamoDB.AttributeValue(s:sku),
-                          ProductField.name: DynamoDB.AttributeValue(s:name),
-                          ProductField.description: DynamoDB.AttributeValue(s:description)]
+extension Product {
+    public var dynamoDictionary: [String: DynamoDB.AttributeValue] {
+        var dictionary = [
+            ProductField.sku: DynamoDB.AttributeValue(s: sku),
+            ProductField.name: DynamoDB.AttributeValue(s: name),
+            ProductField.description: DynamoDB.AttributeValue(s: description),
+        ]
         if let createdAt = createdAt {
-            dictionary[ProductField.createdAt] = DynamoDB.AttributeValue(s:createdAt)
+            dictionary[ProductField.createdAt] = DynamoDB.AttributeValue(s: createdAt)
         }
         
         if let updatedAt = updatedAt {
-            dictionary[ProductField.updatedAt] = DynamoDB.AttributeValue(s:updatedAt)
+            dictionary[ProductField.updatedAt] = DynamoDB.AttributeValue(s: updatedAt)
         }
         return dictionary
     }
     
-    init(dictionary: [String: DynamoDB.AttributeValue]) throws {
+    public init(dictionary: [String: DynamoDB.AttributeValue]) throws {
         guard let name = dictionary[ProductField.name]?.s,
             let sku = dictionary[ProductField.sku]?.s,
-            let description = dictionary[ProductField.description]?.s else {
+            let description = dictionary[ProductField.description]?.s
+            else {
                 throw APIError.invalidItem
         }
         self.name = name

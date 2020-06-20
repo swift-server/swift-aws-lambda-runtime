@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
 public struct Product: Codable {
     public let sku: String
     public let name: String
@@ -21,4 +19,3 @@ public struct Product: Codable {
     public var createdAt: String?
     public var updatedAt: String?
 }
-
