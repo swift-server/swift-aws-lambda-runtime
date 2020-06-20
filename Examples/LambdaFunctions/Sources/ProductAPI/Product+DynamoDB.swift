@@ -14,42 +14,35 @@
 
 import AWSDynamoDB
 
-public struct ProductField {
-    static let sku = "sku"
-    static let name = "name"
-    static let description = "description"
-    static let createdAt = "createdAt"
-    static let updatedAt = "updatedAt"
-}
-
 extension Product {
+    
     public var dynamoDictionary: [String: DynamoDB.AttributeValue] {
         var dictionary = [
-            ProductField.sku: DynamoDB.AttributeValue(s: sku),
-            ProductField.name: DynamoDB.AttributeValue(s: name),
-            ProductField.description: DynamoDB.AttributeValue(s: description),
+            Field.sku: DynamoDB.AttributeValue(s: sku),
+            Field.name: DynamoDB.AttributeValue(s: name),
+            Field.description: DynamoDB.AttributeValue(s: description),
         ]
         if let createdAt = createdAt {
-            dictionary[ProductField.createdAt] = DynamoDB.AttributeValue(s: createdAt)
+            dictionary[Field.createdAt] = DynamoDB.AttributeValue(s: createdAt)
         }
         
         if let updatedAt = updatedAt {
-            dictionary[ProductField.updatedAt] = DynamoDB.AttributeValue(s: updatedAt)
+            dictionary[Field.updatedAt] = DynamoDB.AttributeValue(s: updatedAt)
         }
         return dictionary
     }
     
     public init(dictionary: [String: DynamoDB.AttributeValue]) throws {
-        guard let name = dictionary[ProductField.name]?.s,
-            let sku = dictionary[ProductField.sku]?.s,
-            let description = dictionary[ProductField.description]?.s
+        guard let name = dictionary[Field.name]?.s,
+            let sku = dictionary[Field.sku]?.s,
+            let description = dictionary[Field.description]?.s
             else {
                 throw APIError.invalidItem
         }
         self.name = name
         self.sku = sku
         self.description = description
-        self.createdAt = dictionary[ProductField.createdAt]?.s
-        self.updatedAt = dictionary[ProductField.updatedAt]?.s
+        self.createdAt = dictionary[Field.createdAt]?.s
+        self.updatedAt = dictionary[Field.updatedAt]?.s
     }
 }

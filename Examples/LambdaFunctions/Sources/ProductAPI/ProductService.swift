@@ -23,11 +23,18 @@ public enum APIError: Error {
     case invalidHandler
 }
 
-extension Date {
-    var iso8601: String {
+extension DateFormatter {
+    static var iso8061: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        return formatter
+    }
+}
+
+extension Date {
+    var iso8601: String {
+        let formatter = DateFormatter.iso8061
         return formatter.string(from: self)
     }
 }
@@ -45,9 +52,9 @@ public class ProductService {
     public func createItem(product: Product) -> EventLoopFuture<Product> {
         
         var product = product
-        let date = Date().iso8601
-        product.createdAt = date
-        product.updatedAt = date
+        let date = Date()
+        product.createdAt = date.iso8601
+        product.updatedAt = date.iso8601
         
         let input = DynamoDB.PutItemInput(
             item: product.dynamoDictionary,
@@ -60,7 +67,7 @@ public class ProductService {
     
     public func readItem(key: String) -> EventLoopFuture<Product> {
         let input = DynamoDB.GetItemInput(
-            key: [ProductField.sku: DynamoDB.AttributeValue(s: key)],
+            key: [Product.Field.sku: DynamoDB.AttributeValue(s: key)],
             tableName: tableName
         )
         return db.getItem(input).flatMapThrowing { data -> Product in
@@ -70,21 +77,21 @@ public class ProductService {
     
     public func updateItem(product: Product) -> EventLoopFuture<Product> {
         var product = product
-        let date = Date().iso8601
-        product.updatedAt = date
+        let date = Date()
+        product.updatedAt = date.iso8601
         
         let input = DynamoDB.UpdateItemInput(
             expressionAttributeNames: [
-                "#name": ProductField.name,
-                "#description": ProductField.description,
-                "#updatedAt": ProductField.updatedAt,
+                "#name": Product.Field.name,
+                "#description": Product.Field.description,
+                "#updatedAt": Product.Field.updatedAt,
             ],
             expressionAttributeValues: [
                 ":name": DynamoDB.AttributeValue(s: product.name),
                 ":description": DynamoDB.AttributeValue(s: product.description),
                 ":updatedAt": DynamoDB.AttributeValue(s: product.updatedAt),
             ],
-            key: [ProductField.sku: DynamoDB.AttributeValue(s: product.sku)],
+            key: [Product.Field.sku: DynamoDB.AttributeValue(s: product.sku)],
             returnValues: DynamoDB.ReturnValue.allNew,
             tableName: tableName,
             updateExpression: "SET #name = :name, #description = :description, #updatedAt = :updatedAt"
@@ -96,7 +103,7 @@ public class ProductService {
     
     public func deleteItem(key: String) -> EventLoopFuture<Void> {
         let input = DynamoDB.DeleteItemInput(
-            key: [ProductField.sku: DynamoDB.AttributeValue(s: key)],
+            key: [Product.Field.sku: DynamoDB.AttributeValue(s: key)],
             tableName: tableName
         )
         return db.deleteItem(input).map { _ in Void() }

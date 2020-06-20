@@ -12,10 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Foundation
+
 public struct Product: Codable {
     public let sku: String
     public let name: String
     public let description: String
     public var createdAt: String?
     public var updatedAt: String?
+    
+    public struct Field {
+        static let sku = "sku"
+        static let name = "name"
+        static let description = "description"
+        static let createdAt = "createdAt"
+        static let updatedAt = "updatedAt"
+    }
 }
