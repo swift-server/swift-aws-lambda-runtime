@@ -25,12 +25,9 @@ enum Operation: String {
     case update
     case delete
     case list
-    case unknown
 }
 
-struct EmptyResponse: Codable {
-    
-}
+struct EmptyResponse: Codable {}
 
 struct ProductLambda: LambdaHandler {
     
@@ -61,20 +58,21 @@ struct ProductLambda: LambdaHandler {
         return tableName
     }
     
-    init(context: Lambda.InitializationContext) {
+    init(context: Lambda.InitializationContext) throws {
         
-        let handler = Lambda.env("_HANDLER") ?? ""
-        self.operation = Operation(rawValue: handler) ?? .unknown
-        
+        guard let handler = Lambda.env("_HANDLER"),
+            let operation = Operation(rawValue: handler) else {
+                throw APIError.invalidHandler
+        }
+        self.operation = operation
         self.region = Self.currentRegion()
-        logger.info("\(Self.currentRegion())")
         
         let lambdaRuntimeTimeout: TimeAmount = .seconds(dbTimeout)
         let timeout = HTTPClient.Configuration.Timeout(
             connect: lambdaRuntimeTimeout,
             read: lambdaRuntimeTimeout
         )
-        
+    
         let configuration = HTTPClient.Configuration(timeout: timeout)
         self.httpClient = HTTPClient(
             eventLoopGroupProvider: .shared(context.eventLoop),
@@ -82,14 +80,12 @@ struct ProductLambda: LambdaHandler {
         )
         
         self.db = AWSDynamoDB.DynamoDB(region: region, httpClientProvider: .shared(self.httpClient))
-        logger.info("DynamoDB")
-        self.tableName = (try? Self.tableName()) ?? ""
-        
+        self.tableName = try Self.tableName()
+
         self.service = ProductService(
             db: db,
             tableName: tableName
         )
-        logger.info("ProductService")
     }
     
     func handle(

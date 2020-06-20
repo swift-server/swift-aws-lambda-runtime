@@ -102,10 +102,6 @@ struct ProductLambdaHandler: EventLoopLambdaHandler {
                         }
                 }
                 return list
-            case .unknown:
-                logger.info("unknown")
-                let value = APIGateway.V2.Response(with: APIError.handlerNotFound, statusCode: .forbidden)
-                return context.eventLoop.makeSucceededFuture(value)
             }
     }
     

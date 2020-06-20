@@ -20,7 +20,7 @@ public enum APIError: Error {
     case invalidItem
     case tableNameNotFound
     case invalidRequest
-    case handlerNotFound
+    case invalidHandler
 }
 
 extension Date {
