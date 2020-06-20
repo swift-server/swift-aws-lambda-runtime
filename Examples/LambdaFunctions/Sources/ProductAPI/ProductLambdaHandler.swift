@@ -25,13 +25,10 @@ struct ProductLambdaHandler: EventLoopLambdaHandler {
     let service: ProductService
     let operation: Operation
     
-    func handle(context: Lambda.Context, event: APIGateway.V2.Request) -> EventLoopFuture<
-        APIGateway.V2.Response
-        > {
+    func handle(context: Lambda.Context, event: APIGateway.V2.Request) -> EventLoopFuture<APIGateway.V2.Response> {
             
             switch operation {
             case .create:
-                logger.info("create")
                 let create = CreateLambdaHandler(service: service).handle(context: context, event: event)
                     .flatMap { response -> EventLoopFuture<APIGateway.V2.Response> in
                         switch response {
@@ -45,7 +42,6 @@ struct ProductLambdaHandler: EventLoopLambdaHandler {
                 }
                 return create
             case .read:
-                logger.info("read")
                 let read = ReadLambdaHandler(service: service).handle(context: context, event: event)
                     .flatMap { response -> EventLoopFuture<APIGateway.V2.Response> in
                         switch response {
@@ -59,7 +55,6 @@ struct ProductLambdaHandler: EventLoopLambdaHandler {
                 }
                 return read
             case .update:
-                logger.info("update")
                 let update = UpdateLambdaHandler(service: service).handle(context: context, event: event)
                     .flatMap { response -> EventLoopFuture<APIGateway.V2.Response> in
                         switch response {
@@ -73,7 +68,6 @@ struct ProductLambdaHandler: EventLoopLambdaHandler {
                 }
                 return update
             case .delete:
-                logger.info("delete")
                 let delete = DeleteUpdateLambdaHandler(service: service).handle(
                     context: context, event: event
                 )
@@ -89,7 +83,6 @@ struct ProductLambdaHandler: EventLoopLambdaHandler {
                 }
                 return delete
             case .list:
-                logger.info("list")
                 let list = ListUpdateLambdaHandler(service: service).handle(context: context, event: event)
                     .flatMap { response -> EventLoopFuture<APIGateway.V2.Response> in
                         switch response {
@@ -113,9 +106,7 @@ struct ProductLambdaHandler: EventLoopLambdaHandler {
             self.service = service
         }
         
-        func handle(context: Lambda.Context, event: APIGateway.V2.Request) -> EventLoopFuture<
-            Result<Product, Error>
-            > {
+        func handle(context: Lambda.Context, event: APIGateway.V2.Request) -> EventLoopFuture<Result<Product, Error>> {
                 
                 guard let product: Product = try? event.object() else {
                     let error = APIError.invalidRequest
@@ -137,9 +128,7 @@ struct ProductLambdaHandler: EventLoopLambdaHandler {
             self.service = service
         }
         
-        func handle(context: Lambda.Context, event: APIGateway.V2.Request) -> EventLoopFuture<
-            Result<Product, Error>
-            > {
+        func handle(context: Lambda.Context, event: APIGateway.V2.Request) -> EventLoopFuture<Result<Product, Error>> {
                 
                 guard let sku = event.pathParameters?["sku"] else {
                     let error = APIError.invalidRequest

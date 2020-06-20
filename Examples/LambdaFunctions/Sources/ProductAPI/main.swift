@@ -13,8 +13,5 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntime
-import Logging
-
-let logger = Logger(label: "AWS.Lambda.Products")
 
 Lambda.run(ProductLambda.init)
