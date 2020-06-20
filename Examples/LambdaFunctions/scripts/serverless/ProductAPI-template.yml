@@ -3,7 +3,7 @@ service: swift-awslambda-runtime-api
 # package:
 #     individually: true
 package:
-    artifact: .build/lambda/LambdaAPI/lambda.zip
+    artifact: .build/lambda/ProductAPI/lambda.zip
 
 provider:
     name: aws

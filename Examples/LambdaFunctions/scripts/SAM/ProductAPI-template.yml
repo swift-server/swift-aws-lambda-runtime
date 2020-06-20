@@ -6,7 +6,7 @@ Globals:
   Function:
     MemorySize: 256
     Runtime: provided
-    CodeUri: ../../.build/lambda/LambdaAPI/lambda.zip
+    CodeUri: ../../.build/lambda/ProductAPI/lambda.zip
     Environment:
       Variables:
         PRODUCTS_TABLE_NAME: product-table-sam

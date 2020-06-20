@@ -65,13 +65,13 @@ struct ProductLambda: LambdaHandler {
     }
     
     static func tableName() throws -> String {
-        guard let tableName = ProcessInfo.processInfo.environment["PRODUCTS_TABLE_NAME"] else {
+        guard let tableName = Lambda.env("PRODUCTS_TABLE_NAME") else {
             throw APIError.tableNameNotFound
         }
         return tableName
     }
     
-    init(eventLoop: EventLoop) {
+    init(context: Lambda.InitializationContext) {
         
         let handler = Lambda.env("_HANDLER") ?? ""
         self.operation = Operation(rawValue: handler) ?? .unknown
@@ -80,11 +80,17 @@ struct ProductLambda: LambdaHandler {
         logger.info("\(Self.currentRegion())")
 
         let lambdaRuntimeTimeout: TimeAmount = .seconds(dbTimeout)
-        let timeout = HTTPClient.Configuration.Timeout(connect: lambdaRuntimeTimeout,
-                                                           read: lambdaRuntimeTimeout)
+        let timeout = HTTPClient.Configuration.Timeout(
+            connect: lambdaRuntimeTimeout,
+            read: lambdaRuntimeTimeout
+        )
+        
         let configuration = HTTPClient.Configuration(timeout: timeout)
-        self.httpClient = HTTPClient(eventLoopGroupProvider: .createNew, configuration: configuration)
-    
+        self.httpClient = HTTPClient(
+            eventLoopGroupProvider: .shared(context.eventLoop),
+            configuration: configuration
+        )
+        
         self.db = AWSDynamoDB.DynamoDB(region: region, httpClientProvider: .shared(self.httpClient))
         logger.info("DynamoDB")
         

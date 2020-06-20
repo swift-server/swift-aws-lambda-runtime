@@ -19,7 +19,7 @@ let package = Package(
         // fully featured example with domain specific business logic
         .executable(name: "CurrencyExchange", targets: ["CurrencyExchange"]),
         // Full REST API Example using APIGateway, Lambda, DynamoDB
-        .executable(name: "LambdaAPI", targets: ["LambdaAPI"]),
+        .executable(name: "ProductAPI", targets: ["ProductAPI"]),
     ],
     dependencies: [
         // this is the dependency on the swift-aws-lambda-runtime library
@@ -50,7 +50,7 @@ let package = Package(
         .target(name: "CurrencyExchange", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
         ]),
-        .target(name: "LambdaAPI", dependencies: [
+        .target(name: "ProductAPI", dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
                 .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-runtime"),
                 .product(name: "AWSDynamoDB", package: "aws-sdk-swift"),
