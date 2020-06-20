@@ -34,28 +34,22 @@ struct EmptyResponse: Codable {
 
 struct ProductLambda: LambdaHandler {
     
-    //typealias In = APIGateway.SimpleRequest
     typealias In = APIGateway.V2.Request
     typealias Out = APIGateway.V2.Response
     
     let dbTimeout: Int64 = 30
-    
     let region: Region
     let db: AWSDynamoDB.DynamoDB
     let service: ProductService
     let tableName: String
     let operation: Operation
-    
     var httpClient: HTTPClient
     
     static func currentRegion() -> Region {
-        
         if let awsRegion = Lambda.env("AWS_REGION") {
             let value = Region(rawValue: awsRegion)
             return value
-            
         } else {
-            //Default configuration
             return .useast1
         }
     }
@@ -89,7 +83,6 @@ struct ProductLambda: LambdaHandler {
         
         self.db = AWSDynamoDB.DynamoDB(region: region, httpClientProvider: .shared(self.httpClient))
         logger.info("DynamoDB")
-        
         self.tableName = (try? Self.tableName()) ?? ""
         
         self.service = ProductService(
@@ -103,9 +96,8 @@ struct ProductLambda: LambdaHandler {
         context: Lambda.Context, event: APIGateway.V2.Request,
         callback: @escaping (Result<APIGateway.V2.Response, Error>) -> Void
     ) {
-        let _ = ProductLambdaHandler(service: service, operation: operation).handle(
-            context: context, event: event
-        )
+        let _ = ProductLambdaHandler(service: service, operation: operation)
+            .handle(context: context, event: event)
             .always { (result) in
                 callback(result)
         }

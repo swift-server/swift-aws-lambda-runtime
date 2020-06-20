@@ -37,7 +37,6 @@ extension APIGateway.V2.Response {
     ]
     
     init(with error: Error, statusCode: AWSLambdaEvents.HTTPResponseStatus) {
-        
         self.init(
             statusCode: statusCode,
             headers: APIGateway.V2.Response.defaultHeaders,
@@ -49,7 +48,6 @@ extension APIGateway.V2.Response {
     
     init<Out: Encodable>(with object: Out, statusCode: AWSLambdaEvents.HTTPResponseStatus) {
         let encoder = JSONEncoder()
-        
         var body: String = "{}"
         if let data = try? encoder.encode(object) {
             body = String(data: data, encoding: .utf8) ?? body
@@ -61,7 +59,6 @@ extension APIGateway.V2.Response {
             body: body,
             isBase64Encoded: false
         )
-        
     }
     
     init<Out: Encodable>(with result: Result<Out, Error>, statusCode: AWSLambdaEvents.HTTPResponseStatus) {
