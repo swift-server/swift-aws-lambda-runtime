@@ -15,9 +15,9 @@
 
 set -eu
 
+executable=MyLambda
 lambda_name=SwiftSample
 s3_bucket=swift-lambda-test
-executable=MyLambda
 
 echo -e "\ndeploying $executable"
 
