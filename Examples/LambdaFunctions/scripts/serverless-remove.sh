@@ -13,6 +13,8 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+set -eu
+
 DIR="$(cd "$(dirname "$0")" && pwd)"
 source $DIR/config.sh
 
@@ -22,4 +24,4 @@ echo "-------------------------------------------------------------------------"
 echo "removing using Serverless"
 echo "-------------------------------------------------------------------------"
 
-serverless remove --config "./scripts/serverless/${executable}-template.yml" --stage dev -v
+serverless remove --config "./scripts/serverless/$executable-template.yml" --stage dev -v

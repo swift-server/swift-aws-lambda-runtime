@@ -18,15 +18,10 @@ source $DIR/config.sh
 
 echo -e "\ndeploying $executable"
 
-echo "-------------------------------------------------------------------------"
-echo "preparing docker build image"
-echo "-------------------------------------------------------------------------"
-docker build . -q -t builder
-
-$DIR/build-and-package.sh ${executable}
+$DIR/build-and-package.sh "$executable"
 
 echo "-------------------------------------------------------------------------"
 echo "deploying using SAM"
 echo "-------------------------------------------------------------------------"
 
-sam deploy --template "./scripts/SAM/${executable}-template.yml" $@
+sam deploy --template "./scripts/SAM/$executable-template.yml" $@
