@@ -80,10 +80,12 @@ public struct RFC5322DateTimeCoding: Decodable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        let dateString = try container.decode(String.self)
+        let string = try container.decode(String.self)
+        let bracket = string.firstIndex(of: "(") ?? string.endIndex
+        let dateString = String(string[string.startIndex..<bracket])
         guard let date = Self.dateFormatter.date(from: dateString) else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription:
-                "Expected date to be in RFC5322 date-time format with fractional seconds, but `\(dateString)` does not forfill format")
+                "Expected date to be in RFC5322 date-time format with fractional seconds, but `\(string)` does not forfill format")
         }
         self.wrappedValue = date
     }
