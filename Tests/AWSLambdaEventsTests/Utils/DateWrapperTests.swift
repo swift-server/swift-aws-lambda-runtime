@@ -98,11 +98,11 @@ class DateWrapperTests: XCTestCase {
             @RFC5322DateTimeCoding
             var date: Date
         }
-        
+
         let json = #"{"date":"Fri, 26 Jun 2020 03:04:03 -0500 (CDT)"}"#
         var event: TestEvent?
         XCTAssertNoThrow(event = try JSONDecoder().decode(TestEvent.self, from: json.data(using: .utf8)!))
-        
+
         XCTAssertEqual(event?.date.description, "2020-06-26 08:04:03 +0000")
     }
 
@@ -111,11 +111,11 @@ class DateWrapperTests: XCTestCase {
             @RFC5322DateTimeCoding
             var date: Date
         }
-        
+
         let json = #"{"date":"Fri, 26 Jun 2020 03:04:03 CDT"}"#
         var event: TestEvent?
         XCTAssertNoThrow(event = try JSONDecoder().decode(TestEvent.self, from: json.data(using: .utf8)!))
-        
+
         XCTAssertEqual(event?.date.description, "2020-06-26 08:04:03 +0000")
     }
 

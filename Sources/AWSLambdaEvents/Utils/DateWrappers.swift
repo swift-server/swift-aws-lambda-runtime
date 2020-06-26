@@ -82,7 +82,7 @@ public struct RFC5322DateTimeCoding: Decodable {
         let container = try decoder.singleValueContainer()
         let string = try container.decode(String.self)
         let bracket = string.firstIndex(of: "(") ?? string.endIndex
-        let dateString = String(string[string.startIndex..<bracket])
+        let dateString = String(string[string.startIndex ..< bracket])
         guard let date = Self.dateFormatter.date(from: dateString) else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription:
                 "Expected date to be in RFC5322 date-time format with fractional seconds, but `\(string)` does not forfill format")
