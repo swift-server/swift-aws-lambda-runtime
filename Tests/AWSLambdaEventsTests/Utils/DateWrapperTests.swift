@@ -93,6 +93,32 @@ class DateWrapperTests: XCTestCase {
         XCTAssertEqual(event?.date.description, "2012-04-05 21:47:37 +0000")
     }
 
+    func testRFC5322DateTimeCodingWrapperWithExtraTimeZoneSuccess() {
+        struct TestEvent: Decodable {
+            @RFC5322DateTimeCoding
+            var date: Date
+        }
+
+        let json = #"{"date":"Fri, 26 Jun 2020 03:04:03 -0500 (CDT)"}"#
+        var event: TestEvent?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(TestEvent.self, from: json.data(using: .utf8)!))
+
+        XCTAssertEqual(event?.date.description, "2020-06-26 08:04:03 +0000")
+    }
+
+    func testRFC5322DateTimeCodingWrapperWithAlphabeticTimeZoneSuccess() {
+        struct TestEvent: Decodable {
+            @RFC5322DateTimeCoding
+            var date: Date
+        }
+
+        let json = #"{"date":"Fri, 26 Jun 2020 03:04:03 CDT"}"#
+        var event: TestEvent?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(TestEvent.self, from: json.data(using: .utf8)!))
+
+        XCTAssertEqual(event?.date.description, "2020-06-26 08:04:03 +0000")
+    }
+
     func testRFC5322DateTimeCodingWrapperFailure() {
         struct TestEvent: Decodable {
             @RFC5322DateTimeCoding
