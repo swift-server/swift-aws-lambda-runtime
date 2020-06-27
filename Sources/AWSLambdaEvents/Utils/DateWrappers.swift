@@ -84,7 +84,7 @@ public struct RFC5322DateTimeCoding: Decodable {
         // RFC5322 dates sometimes have the alphabetic version of the timezone in brackets after the numeric version. The date formatter
         // fails to parse this so we need to remove this before parsing.
         if let bracket = string.firstIndex(of: "(") {
-            string = String(string[string.startIndex ..< bracket])
+            string = String(string[string.startIndex ..< bracket].trimmingCharacters(in: .whitespaces))
         }
         guard let date = Self.dateFormatter.date(from: string) else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription:
