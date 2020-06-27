@@ -337,6 +337,7 @@ AWS Lambda functions can be invoked directly from the AWS Lambda console UI, AWS
 
 * [APIGateway Proxy](https://docs.aws.amazon.com/lambda/latest/dg/services-apigateway.html)
 * [S3 Events](https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html)
+* [SES Events](https://docs.aws.amazon.com/lambda/latest/dg/services-ses.html)
 * [SNS Events](https://docs.aws.amazon.com/lambda/latest/dg/with-sns.html)
 * [SQS Events](https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html)
 * [CloudWatch Events](https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents.html)
