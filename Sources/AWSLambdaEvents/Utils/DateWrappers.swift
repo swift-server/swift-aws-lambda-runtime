@@ -80,10 +80,13 @@ public struct RFC5322DateTimeCoding: Decodable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        let string = try container.decode(String.self)
-        let bracket = string.firstIndex(of: "(") ?? string.endIndex
-        let dateString = String(string[string.startIndex ..< bracket])
-        guard let date = Self.dateFormatter.date(from: dateString) else {
+        var string = try container.decode(String.self)
+        // RFC5322 dates sometimes have the alphabetic version of the timezone in brackets after the numeric version. The date formatter
+        // fails to parse this so we need to remove this before parsing.
+        if let bracket = string.firstIndex(of: "(") {
+            string = String(string[string.startIndex ..< bracket])
+        }
+        guard let date = Self.dateFormatter.date(from: string) else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription:
                 "Expected date to be in RFC5322 date-time format with fractional seconds, but `\(string)` does not forfill format")
         }
