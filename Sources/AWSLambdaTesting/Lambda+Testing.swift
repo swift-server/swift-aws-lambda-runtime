@@ -22,7 +22,7 @@
 //         typealias In = String
 //         typealias Out = String
 //
-//         func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
+//         func handle(event: String, context: Lambda.Context) -> EventLoopFuture<String> {
 //             return context.eventLoop.makeSucceededFuture("echo" + event)
 //         }
 //     }
@@ -106,7 +106,7 @@ extension Lambda {
                               allocator: ByteBufferAllocator())
 
         return try eventLoop.flatSubmit {
-            handler.handle(context: context, event: event)
+            handler.handle(event: event, context: context)
         }.wait()
     }
 }

@@ -53,7 +53,7 @@ class LambdaLifecycleTest: XCTestCase {
             self.shutdown = shutdown
         }
 
-        func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
+        func handle(event: ByteBuffer, context: Lambda.Context) -> EventLoopFuture<ByteBuffer?> {
             self.handler(context, event)
         }
 

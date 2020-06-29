@@ -29,7 +29,7 @@ struct Handler: EventLoopLambdaHandler {
     typealias In = Request
     typealias Out = Response
 
-    func handle(context: Lambda.Context, event: Request) -> EventLoopFuture<Response> {
+    func handle(event: Request, context: Lambda.Context) -> EventLoopFuture<Response> {
         // as an example, respond with the input event's reversed body
         context.eventLoop.makeSucceededFuture(Response(body: String(event.body.reversed())))
     }
@@ -40,7 +40,7 @@ Lambda.run(Handler())
 // MARK: - this can also be expressed as a closure:
 
 /*
- Lambda.run { (_, request: Request, callback) in
+ Lambda.run { (request: Request, context, callback) in
    callback(.success(Response(body: String(request.body.reversed()))))
  }
  */

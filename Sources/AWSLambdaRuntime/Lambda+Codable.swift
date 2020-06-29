@@ -21,7 +21,7 @@ import NIOFoundationCompat
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` events.
 extension Lambda {
     /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Out: Encodable, Error>` via a completion handler.
-    public typealias CodableClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
+    public typealias CodableClosure<In: Decodable, Out: Encodable> = (In, Lambda.Context, @escaping (Result<Out, Error>) -> Void) -> Void
 
     /// Run a Lambda defined by implementing the `CodableClosure` function.
     ///
@@ -34,7 +34,7 @@ extension Lambda {
     }
 
     /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Void, Error>` via a completion handler.
-    public typealias CodableVoidClosure<In: Decodable> = (Lambda.Context, In, @escaping (Result<Void, Error>) -> Void) -> Void
+    public typealias CodableVoidClosure<In: Decodable> = (In, Lambda.Context, @escaping (Result<Void, Error>) -> Void) -> Void
 
     /// Run a Lambda defined by implementing the `CodableVoidClosure` function.
     ///
@@ -57,8 +57,8 @@ internal struct CodableClosureWrapper<In: Decodable, Out: Encodable>: LambdaHand
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, event, callback)
+    func handle(event: In, context: Lambda.Context, callback: @escaping (Result<Out, Error>) -> Void) {
+                self.closure(event, context, callback)
     }
 }
 
@@ -72,8 +72,8 @@ internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, event, callback)
+    func handle(event: In, context: Lambda.Context, callback: @escaping (Result<Out, Error>) -> Void) {
+                self.closure(event, context, callback)
     }
 }
 

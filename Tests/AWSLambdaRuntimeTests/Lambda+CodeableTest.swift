@@ -36,13 +36,13 @@ class CodableLambdaTest: XCTestCase {
         var inputBuffer: ByteBuffer?
         var outputBuffer: ByteBuffer?
 
-        let closureWrapper = CodableVoidClosureWrapper { (_, _: Request, completion) in
+        let closureWrapper = CodableVoidClosureWrapper { (_: Request, _, completion) in
             XCTAssertEqual(request, request)
             completion(.success(()))
         }
 
         XCTAssertNoThrow(inputBuffer = try JSONEncoder().encode(request, using: self.allocator))
-        XCTAssertNoThrow(outputBuffer = try closureWrapper.handle(context: self.newContext(), event: XCTUnwrap(inputBuffer)).wait())
+        XCTAssertNoThrow(outputBuffer = try closureWrapper.handle(event: XCTUnwrap(inputBuffer), context: self.newContext()).wait())
         XCTAssertNil(outputBuffer)
     }
 
@@ -52,13 +52,13 @@ class CodableLambdaTest: XCTestCase {
         var outputBuffer: ByteBuffer?
         var response: Response?
 
-        let closureWrapper = CodableClosureWrapper { (_, req: Request, completion: (Result<Response, Error>) -> Void) in
+        let closureWrapper = CodableClosureWrapper { (req: Request, _, completion: (Result<Response, Error>) -> Void) in
             XCTAssertEqual(request, request)
             completion(.success(Response(requestId: req.requestId)))
         }
 
         XCTAssertNoThrow(inputBuffer = try JSONEncoder().encode(request, using: self.allocator))
-        XCTAssertNoThrow(outputBuffer = try closureWrapper.handle(context: self.newContext(), event: XCTUnwrap(inputBuffer)).wait())
+        XCTAssertNoThrow(outputBuffer = try closureWrapper.handle(event: XCTUnwrap(inputBuffer), context: self.newContext()).wait())
         XCTAssertNoThrow(response = try JSONDecoder().decode(Response.self, from: XCTUnwrap(outputBuffer)))
         XCTAssertEqual(response?.requestId, request.requestId)
     }

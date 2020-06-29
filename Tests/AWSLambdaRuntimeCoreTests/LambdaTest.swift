@@ -26,7 +26,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        assertLambdaLifecycleResult(result, shouldHaveRun: maxTimes)
     }
 
     func testFailure() {
@@ -37,7 +37,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handler: FailedHandler("boom"))
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        assertLambdaLifecycleResult(result, shouldHaveRun: maxTimes)
     }
 
     func testBootstrapOnce() {
@@ -56,7 +56,7 @@ class LambdaTest: XCTestCase {
                 self.initialized = true
             }
 
-            func handle(context: Lambda.Context, event: String, callback: (Result<String, Error>) -> Void) {
+            func handle(event: String, context: Lambda.Context, callback: (Result<String, Error>) -> Void) {
                 callback(.success(event))
             }
         }
@@ -64,7 +64,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, factory: Handler.init)
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        assertLambdaLifecycleResult(result, shouldHaveRun: maxTimes)
     }
 
     func testBootstrapFailure() {
@@ -89,7 +89,7 @@ class LambdaTest: XCTestCase {
                 throw TestError("kaboom")
             }
 
-            func handle(context: Lambda.Context, event: String, callback: (Result<Void, Error>) -> Void) {
+            func handle(event: String, context: Lambda.Context, callback: (Result<Void, Error>) -> Void) {
                 callback(.failure(TestError("should not be called")))
             }
         }
@@ -184,7 +184,7 @@ class LambdaTest: XCTestCase {
 
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
         let result = Lambda.run(configuration: configuration, handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: 1)
+        assertLambdaLifecycleResult(result, shouldHaveRun: 1)
     }
 
     func testKeepAliveServer() {
@@ -195,7 +195,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = 10
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        assertLambdaLifecycleResult(result, shouldHaveRun: maxTimes)
     }
 
     func testNoKeepAliveServer() {
@@ -206,7 +206,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = 10
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        assertLambdaLifecycleResult(result, shouldHaveRun: maxTimes)
     }
 
     func testServerFailure() {

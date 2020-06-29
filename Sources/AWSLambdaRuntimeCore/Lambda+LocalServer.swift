@@ -23,7 +23,7 @@ import NIOHTTP1
 // For example:
 //
 // try Lambda.withLocalServer {
-//     Lambda.run { (context: Lambda.Context, event: String, callback: @escaping (Result<String, Error>) -> Void) in
+//     Lambda.run { (event: String, context: Lambda.Context, callback: @escaping (Result<String, Error>) -> Void) in
 //         callback(.success("Hello, \(event)!"))
 //     }
 // }

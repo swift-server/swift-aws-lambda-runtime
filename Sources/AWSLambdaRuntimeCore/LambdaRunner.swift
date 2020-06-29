@@ -70,7 +70,7 @@ extension Lambda {
                                       allocator: self.allocator,
                                       invocation: invocation)
                 logger.debug("sending invocation to lambda handler \(handler)")
-                return handler.handle(context: context, event: event)
+                return handler.handle(event: event, context: context)
                     // Hopping back to "our" EventLoop is importnant in case the handler returns a future that
                     // originiated from a foreign EventLoop/EventLoopGroup.
                     // This can happen if the handler uses a library (lets say a DB client) that manages its own threads/loops

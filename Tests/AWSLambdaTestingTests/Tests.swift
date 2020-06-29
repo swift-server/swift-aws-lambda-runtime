@@ -27,7 +27,7 @@ class LambdaTestingTests: XCTestCase {
             let message: String
         }
 
-        let myLambda = { (_: Lambda.Context, request: Request, callback: (Result<Response, Error>) -> Void) in
+        let myLambda = { (request: Request, _: Lambda.Context, callback: (Result<Response, Error>) -> Void) in
             callback(.success(Response(message: "echo" + request.name)))
         }
 
@@ -42,7 +42,7 @@ class LambdaTestingTests: XCTestCase {
             let name: String
         }
 
-        let myLambda = { (_: Lambda.Context, _: Request, callback: (Result<Void, Error>) -> Void) in
+        let myLambda = { (_: Request, _: Lambda.Context, callback: (Result<Void, Error>) -> Void) in
             callback(.success(()))
         }
 
@@ -63,7 +63,7 @@ class LambdaTestingTests: XCTestCase {
             typealias In = Request
             typealias Out = Response
 
-            func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+            func handle(event: In, context: Lambda.Context, callback: @escaping (Result<Out, Error>) -> Void) {
                 XCTAssertFalse(context.eventLoop.inEventLoop)
                 callback(.success(Response(message: "echo" + event.name)))
             }
@@ -80,7 +80,7 @@ class LambdaTestingTests: XCTestCase {
             typealias In = String
             typealias Out = String
 
-            func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
+            func handle(event: String, context: Lambda.Context) -> EventLoopFuture<String> {
                 XCTAssertTrue(context.eventLoop.inEventLoop)
                 return context.eventLoop.makeSucceededFuture("echo" + event)
             }
@@ -99,7 +99,7 @@ class LambdaTestingTests: XCTestCase {
             typealias In = String
             typealias Out = Void
 
-            func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+            func handle(event: In, context: Lambda.Context, callback: @escaping (Result<Out, Error>) -> Void) {
                 callback(.failure(MyError()))
             }
         }
@@ -111,7 +111,7 @@ class LambdaTestingTests: XCTestCase {
 
     func testAsyncLongRunning() {
         var executed: Bool = false
-        let myLambda = { (_: Lambda.Context, _: String, callback: @escaping (Result<Void, Error>) -> Void) in
+        let myLambda = { (_: String, _: Lambda.Context, callback: @escaping (Result<Void, Error>) -> Void) in
             DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 0.5) {
                 executed = true
                 callback(.success(()))
@@ -131,7 +131,7 @@ class LambdaTestingTests: XCTestCase {
             timeout: .seconds(4)
         )
 
-        let myLambda = { (ctx: Lambda.Context, _: String, callback: @escaping (Result<Void, Error>) -> Void) in
+        let myLambda = { (_: String, ctx: Lambda.Context, callback: @escaping (Result<Void, Error>) -> Void) in
             XCTAssertEqual(ctx.requestID, config.requestID)
             XCTAssertEqual(ctx.traceID, config.traceID)
             XCTAssertEqual(ctx.invokedFunctionARN, config.invokedFunctionARN)

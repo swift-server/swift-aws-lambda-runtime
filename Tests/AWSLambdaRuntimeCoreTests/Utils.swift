@@ -38,7 +38,7 @@ struct EchoHandler: LambdaHandler {
     typealias In = String
     typealias Out = String
 
-    func handle(context: Lambda.Context, event: String, callback: (Result<String, Error>) -> Void) {
+    func handle(event: String, context: Lambda.Context, callback: (Result<String, Error>) -> Void) {
         callback(.success(event))
     }
 }
@@ -53,17 +53,17 @@ struct FailedHandler: LambdaHandler {
         self.reason = reason
     }
 
-    func handle(context: Lambda.Context, event: String, callback: (Result<Void, Error>) -> Void) {
+    func handle(event: String, context: Lambda.Context, callback: (Result<Void, Error>) -> Void) {
         callback(.failure(TestError(self.reason)))
     }
 }
 
-func assertLambdaLifecycleResult(_ result: Result<Int, Error>, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil, file: StaticString = #file, line: UInt = #line) {
+func assertLambdaLifecycleResult(_ result: Result<Int, Error>, shouldHaveRun: Int = 0, shouldFailWithError: Error? = nil, file: StaticString = #file, line: UInt = #line) {
     switch result {
     case .success where shouldFailWithError != nil:
         XCTFail("should fail with \(shouldFailWithError!)", file: file, line: line)
     case .success(let count) where shouldFailWithError == nil:
-        XCTAssertEqual(shoudHaveRun, count, "should have run \(shoudHaveRun) times", file: file, line: line)
+        XCTAssertEqual(shouldHaveRun, count, "should have run \(shouldHaveRun) times", file: file, line: line)
     case .failure(let error) where shouldFailWithError == nil:
         XCTFail("should succeed, but failed with \(error)", file: file, line: line)
     case .failure(let error) where shouldFailWithError != nil:

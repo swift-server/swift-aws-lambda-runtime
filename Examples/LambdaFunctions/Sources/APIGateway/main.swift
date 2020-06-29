@@ -27,7 +27,7 @@ struct APIGatewayProxyLambda: EventLoopLambdaHandler {
     public typealias In = APIGateway.V2.Request
     public typealias Out = APIGateway.V2.Response
 
-    public func handle(context: Lambda.Context, event: APIGateway.V2.Request) -> EventLoopFuture<APIGateway.V2.Response> {
+    public func handle(event: APIGateway.V2.Request, context: Lambda.Context) -> EventLoopFuture<APIGateway.V2.Response> {
         context.logger.debug("hello, api gateway!")
         return context.eventLoop.makeSucceededFuture(APIGateway.V2.Response(statusCode: .ok, body: "hello, world!"))
     }
