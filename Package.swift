@@ -29,6 +29,7 @@ let package = Package(
             .product(name: "NIOFoundationCompat", package: "swift-nio"),
         ]),
         .target(name: "AWSLambdaRuntimeCore", dependencies: [
+            .byName(name: "AWSLambdaEvents"), // TODO: remove
             .product(name: "Logging", package: "swift-log"),
             .product(name: "Backtrace", package: "swift-backtrace"),
             .product(name: "NIOHTTP1", package: "swift-nio"),

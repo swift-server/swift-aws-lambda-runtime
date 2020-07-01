@@ -37,7 +37,10 @@ extension Lambda {
     /// - note: This API is designed stricly for local testing and is behind a DEBUG flag
     @discardableResult
     static func withLocalServer<Value>(invocationEndpoint: String? = nil, _ body: @escaping () -> Value) throws -> Value {
-        let server = LocalLambda.Server(invocationEndpoint: invocationEndpoint)
+        let server = LocalLambda.Server(invocationEndpoint: invocationEndpoint, dataMappings: [
+            "/api": APIGatewayMapping(),
+            "/api2": APIGatewayV2Mapping(),
+        ])
         try server.start().wait()
         defer { try! server.stop() } // FIXME:
         return body()
@@ -46,6 +49,13 @@ extension Lambda {
 
 // MARK: - Local Mock Server
 
+protocol DataMapping {
+    typealias Response = (status: UInt, headers: [(String, String)]?, body: ByteBuffer?)
+
+    func mapRequest(requestId: String, head: HTTPRequestHead, body: ByteBuffer?) throws -> ByteBuffer
+    func mapResponse(buffer: ByteBuffer?) throws -> Response
+}
+
 private enum LocalLambda {
     struct Server {
         private let logger: Logger
@@ -53,8 +63,9 @@ private enum LocalLambda {
         private let host: String
         private let port: Int
         private let invocationEndpoint: String
+        private let dataMappings: [(String, DataMapping)]?
 
-        public init(invocationEndpoint: String?) {
+        public init(invocationEndpoint: String?, dataMappings: [String: DataMapping]? = nil) {
             let configuration = Lambda.Configuration()
             var logger = Logger(label: "LocalLambdaServer")
             logger.logLevel = configuration.general.logLevel
@@ -63,6 +74,10 @@ private enum LocalLambda {
             self.host = configuration.runtimeEngine.ip
             self.port = configuration.runtimeEngine.port
             self.invocationEndpoint = invocationEndpoint ?? "/invoke"
+            // sort to have the longest prefix at the beginning
+            self.dataMappings = dataMappings?.map { ($0.key, $0.value) }.sorted(by: { (lhs, rhs) -> Bool in
+                lhs.0.count > rhs.0.count
+            })
         }
 
         func start() -> EventLoopFuture<Void> {
@@ -70,7 +85,8 @@ private enum LocalLambda {
                 .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
                 .childChannelInitializer { channel in
                     channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap { _ in
-                        channel.pipeline.addHandler(HTTPHandler(logger: self.logger, invocationEndpoint: self.invocationEndpoint))
+                        channel.pipeline.addHandler(HTTPHandler(logger: self.logger, invocationEndpoint: self.invocationEndpoint,
+                                                                dataMappings: self.dataMappings))
                     }
                 }
             return bootstrap.bind(host: self.host, port: self.port).flatMap { channel -> EventLoopFuture<Void> in
@@ -98,10 +114,12 @@ private enum LocalLambda {
 
         private let logger: Logger
         private let invocationEndpoint: String
+        private let dataMappings: [(String, DataMapping)]?
 
-        init(logger: Logger, invocationEndpoint: String) {
+        init(logger: Logger, invocationEndpoint: String, dataMappings: [(String, DataMapping)]? = nil) {
             self.logger = logger
             self.invocationEndpoint = invocationEndpoint
+            self.dataMappings = dataMappings
         }
 
         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -226,9 +244,42 @@ private enum LocalLambda {
                 self.writeResponse(context: context, status: .accepted)
                 Self.invocationState = .waitingForLambdaRequest
 
-            // unknown call
             default:
-                self.writeResponse(context: context, status: .notFound)
+                // try to resolve a mapping and create Lambda invocation
+                if let (prefix, mapping) = self.dataMappings?.first(where: { request.head.uri.starts(with: $0.0) }) {
+                    let requestID = "\(DispatchTime.now().uptimeNanoseconds)" // FIXME:
+                    var head = request.head
+                    head.uri.removeFirst(prefix.count)
+                    guard let work = try? mapping.mapRequest(requestId: requestID, head: head, body: request.body) else {
+                        return self.writeResponse(context: context, response: .init(status: .badRequest))
+                    }
+                    let promise = context.eventLoop.makePromise(of: Response.self)
+                    promise.futureResult
+                        .flatMapThrowing { response -> Response in
+                            let result = try mapping.mapResponse(buffer: response.body)
+                            return Response(status: .init(statusCode: Int(result.status)),
+                                            headers: result.headers, body: result.body)
+                        }
+                        .whenComplete { result in
+                            switch result {
+                            case .failure(let error):
+                                self.logger.error("invocation error: \(error)")
+                                self.writeResponse(context: context, response: .init(status: .internalServerError))
+                            case .success(let response):
+                                self.writeResponse(context: context, response: response)
+                            }
+                        }
+                    let invocation = Invocation(requestID: requestID, request: work, responsePromise: promise)
+                    switch Self.invocationState {
+                    case .waitingForInvocation(let promise):
+                        promise.succeed(invocation)
+                    case .waitingForLambdaRequest, .waitingForLambdaResponse:
+                        Self.invocations.append(invocation)
+                    }
+                } else {
+                    // unknown call
+                    self.writeResponse(context: context, status: .notFound)
+                }
             }
         }
 
