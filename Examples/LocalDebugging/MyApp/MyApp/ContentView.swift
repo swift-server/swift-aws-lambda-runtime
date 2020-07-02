@@ -12,20 +12,51 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Combine
 import Shared
 import SwiftUI
 
 struct ContentView: View {
+    class API: ObservableObject {
+        let url = URL(string: "http://localhost:7000/invoke")!
+
+        @Published var message: String = ""
+
+        private var task: AnyCancellable?
+
+        func register(name: String, password: String) {
+            self.task?.cancel()
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+
+            guard let jsonRequest = try? JSONEncoder().encode(Request(name: name, password: password)) else {
+                fatalError("encoding error")
+            }
+            request.httpBody = jsonRequest
+
+            self.task = URLSession.shared.dataTaskPublisher(for: request)
+                .map(\.data)
+                .decode(type: Response.self, decoder: JSONDecoder())
+                .map(\.message)
+                .catch { Just("Error: \($0.localizedDescription)") }
+                .receive(on: DispatchQueue.main)
+                .assign(to: \.message, on: self)
+        }
+    }
+
     @State var name: String = ""
     @State var password: String = ""
-    @State var response: String = ""
+    @ObservedObject var api = API()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            TextField("Username", text: $name)
-            SecureField("Password", text: $password)
+        VStack(alignment: .center, spacing: 20) {
+            VStack(alignment: .leading, spacing: 20) {
+                TextField("Username", text: $name)
+                SecureField("Password", text: $password)
+            }.padding(.horizontal, 50)
             Button(
-                action: self.register,
+                action: { self.api.register(name: self.name, password: self.password) },
                 label: {
                     Text("Register")
                         .padding()
@@ -34,49 +65,9 @@ struct ContentView: View {
                         .border(Color.black, width: 2)
                 }
             )
-            Text(response)
-        }.padding(100)
-    }
-
-    func register() {
-        guard let url = URL(string: "http://localhost:7000/invoke") else {
-            fatalError("invalid url")
-        }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-
-        guard let jsonRequest = try? JSONEncoder().encode(Request(name: self.name, password: self.password)) else {
-            fatalError("encoding error")
-        }
-        request.httpBody = jsonRequest
-
-        let task = URLSession.shared.dataTask(with: request as URLRequest) { data, response, error in
-            do {
-                if let error = error {
-                    throw CommunicationError(reason: error.localizedDescription)
-                }
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    throw CommunicationError(reason: "invalid response, expected HTTPURLResponse")
-                }
-                guard httpResponse.statusCode == 200 else {
-                    throw CommunicationError(reason: "invalid response code: \(httpResponse.statusCode)")
-                }
-                guard let data = data else {
-                    throw CommunicationError(reason: "invald response, empty body")
-                }
-                let response = try JSONDecoder().decode(Response.self, from: data)
-                self.setResponse(response.message)
-            } catch {
-                self.setResponse("\(error)")
-            }
-        }
-        task.resume()
-    }
-
-    func setResponse(_ text: String) {
-        DispatchQueue.main.async {
-            self.response = text
-        }
+            Text(api.message)
+            Spacer()
+        }.padding(.top, 100).padding(.horizontal, 20)
     }
 }
 
@@ -84,8 +75,4 @@ struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
     }
-}
-
-struct CommunicationError: Error {
-    let reason: String
 }
