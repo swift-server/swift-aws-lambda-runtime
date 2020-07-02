@@ -276,7 +276,7 @@ private enum LocalLambda {
                 response.headers = [
                     (AmazonHeaders.requestID, self.requestID),
                     (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:\(Int16.random(in: Int16.min ... Int16.max)):function:custom-runtime"),
-                    (AmazonHeaders.traceID, "Root=\(Int16.random(in: Int16.min ... Int16.max));Parent=\(Int16.random(in: Int16.min ... Int16.max));Sampled=1"),
+                    (AmazonHeaders.traceID, "Root=\(randomTraceID());Sampled=1"),
                     (AmazonHeaders.deadline, "\(DispatchWallTime.distantFuture.millisSinceEpoch)"),
                 ]
                 return response
@@ -294,5 +294,22 @@ private enum LocalLambda {
         case notReady
         case cantBind
     }
+
+    static func randomTraceID() -> String {
+        // see:
+        // - [Generating trace IDs](https://docs.aws.amazon.com/xray/latest/devguide/xray-api-sendingdata.html#xray-api-traceids)
+        // - [Tracing header](https://docs.aws.amazon.com/xray/latest/devguide/xray-concepts.html#xray-concepts-tracingheader)
+        // The version number, that is, 1.
+        let version: UInt = 1
+        // The time of the original request, in Unix epoch time, in 8 hexadecimal digits.
+        let now = UInt32(DispatchWallTime.now().millisSinceEpoch / 1000)
+        let dateValue = String(now, radix: 16, uppercase: false)
+        let datePadding = String(repeating: "0", count: max(0, 8 - dateValue.count))
+        // A 96-bit identifier for the trace, globally unique, in 24 hexadecimal digits.
+        let identifier = String(UInt64.random(in: UInt64.min ... UInt64.max) | 1 << 63, radix: 16, uppercase: false)
+            + String(UInt32.random(in: UInt32.min ... UInt32.max) | 1 << 31, radix: 16, uppercase: false)
+        return "\(version)-\(datePadding)\(dateValue)-\(identifier)"
+    }
 }
+
 #endif
