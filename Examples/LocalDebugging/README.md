@@ -4,7 +4,7 @@ This sample project demonstrates how to write a simple Lambda function in Swift,
 and how to use local debugging techniques that simulate how the Lambda function
 would be invoked by the AWS Lambda Runtime engine.
 
-The example includes an Xcode workspace with three modules:
+The example includes a Xcode workspace with three modules:
 
 1. [MyApp](MyApp) is a SwiftUI iOS application that calls the Lambda function.
 2. [MyLambda](MyLambda) is a SwiftPM executable package for the Lambda function.
