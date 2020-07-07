@@ -23,7 +23,7 @@ class UtilsTest: XCTestCase {
         var values = Set<String>()
         for _ in 0 ..< numTests {
             // check the format, see https://docs.aws.amazon.com/xray/latest/devguide/xray-api-sendingdata.html#xray-api-traceids)
-            let traceId = generateTraceID()
+            let traceId = AmazonHeaders.generateXRayTraceID()
             let segments = traceId.split(separator: "-")
             XCTAssertEqual(3, segments.count)
             XCTAssertEqual("1", segments[0])
