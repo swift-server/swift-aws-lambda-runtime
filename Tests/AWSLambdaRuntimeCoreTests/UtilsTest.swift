@@ -16,7 +16,7 @@
 import XCTest
 
 class UtilsTest: XCTestCase {
-    func testGenerateTraceId() {
+    func testGenerateXRayTraceID() {
         // the time and identifier should be in hexadecimal digits
         let invalidCharacters = CharacterSet(charactersIn: "abcdef0123456789").inverted
         let numTests = 1000
