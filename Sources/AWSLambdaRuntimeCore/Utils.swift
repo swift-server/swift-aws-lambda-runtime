@@ -117,7 +117,6 @@ extension AmazonHeaders {
     /// # References
     /// - [Generating trace IDs](https://docs.aws.amazon.com/xray/latest/devguide/xray-api-sendingdata.html#xray-api-traceids)
     /// - [Tracing header](https://docs.aws.amazon.com/xray/latest/devguide/xray-concepts.html#xray-concepts-tracingheader)
-    @inlinable
     internal static func generateXRayTraceID() -> String {
         // The version number, that is, 1.
         let version: UInt = 1
