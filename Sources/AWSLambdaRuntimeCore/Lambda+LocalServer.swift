@@ -380,25 +380,6 @@ private enum LocalLambda {
                 }
             }
         }
-
-        struct Invocation {
-            let requestID: String
-            let request: ByteBuffer
-            let responsePromise: EventLoopPromise<HTTPResponse>
-
-            func makeResponse() -> HTTPResponse {
-                var response = HTTPResponse()
-                response.body = self.request
-                // required headers
-                response.headers = [
-                    (AmazonHeaders.requestID, self.requestID),
-                    (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:\(Int16.random(in: Int16.min ... Int16.max)):function:custom-runtime"),
-                    (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
-                    (AmazonHeaders.deadline, "\(DispatchWallTime.distantFuture.millisSinceEpoch)"),
-                ]
-                return response
-            }
-        }
     }
 
     final class InvokeHandler: ChannelInboundHandler {
