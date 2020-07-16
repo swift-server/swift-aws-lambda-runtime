@@ -27,20 +27,16 @@ import NIOHTTP1
 //         callback(.success("Hello, \(event)!"))
 //     }
 // }
-extension Lambda {
+internal extension Lambda {
     /// Execute code in the context of a mock Lambda server.
     ///
     /// - parameters:
-    ///     - invocationEndpoint: The endpoint  to post events to.
     ///     - body: Code to run within the context of the mock server. Typically this would be a Lambda.run function call.
     ///
     /// - note: This API is designed stricly for local testing and is behind a DEBUG flag
     @discardableResult
-    static func withLocalServer<Value>(invocationEndpoint: String? = nil, _ body: @escaping () -> Value) throws -> Value {
-        let server = LocalLambda.Server(invocationEndpoint: invocationEndpoint, dataMappings: [
-            "/api": APIGatewayMapping(),
-            "/api2": APIGatewayV2Mapping(),
-        ])
+    static func withLocalServer<Value>(_ body: @escaping () -> Value) throws -> Value {
+        let server = LocalLambda.Server()
         try server.start().wait()
         defer { try! server.stop() } // FIXME:
         return body()
@@ -49,77 +45,276 @@ extension Lambda {
 
 // MARK: - Local Mock Server
 
-protocol DataMapping {
-    typealias Response = (status: UInt, headers: [(String, String)]?, body: ByteBuffer?)
+public protocol LocalLambdaInvocationProxy {
+    init(eventLoop: EventLoop)
 
-    func mapRequest(requestId: String, head: HTTPRequestHead, body: ByteBuffer?) throws -> ByteBuffer
-    func mapResponse(buffer: ByteBuffer?) throws -> Response
+    // TODO: in most (all?) cases we do not need async interface
+
+    /// throws `LocalLambda.InvocationError` if request is invalid
+    func invocation(from request: LocalLambda.HTTPRequest) -> EventLoopFuture<ByteBuffer>
+    func processResult(_ result: ByteBuffer?) -> EventLoopFuture<LocalLambda.HTTPResponse>
+    func processError(_ error: ByteBuffer?) -> EventLoopFuture<LocalLambda.HTTPResponse>
 }
 
-private enum LocalLambda {
-    struct Server {
-        private let logger: Logger
-        private let group: EventLoopGroup
-        private let host: String
-        private let port: Int
-        private let invocationEndpoint: String
-        private let dataMappings: [(String, DataMapping)]?
+public enum LocalLambda {
+    public struct HTTPRequest {
+        public let method: HTTPMethod
+        public let uri: String
+        public let headers: [(String, String)]
+        public let body: ByteBuffer?
 
-        public init(invocationEndpoint: String?, dataMappings: [String: DataMapping]? = nil) {
-            let configuration = Lambda.Configuration()
-            var logger = Logger(label: "LocalLambdaServer")
-            logger.logLevel = configuration.general.logLevel
-            self.logger = logger
-            self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-            self.host = configuration.runtimeEngine.ip
-            self.port = configuration.runtimeEngine.port
-            self.invocationEndpoint = invocationEndpoint ?? "/invoke"
-            // sort to have the longest prefix at the beginning
-            self.dataMappings = dataMappings?.map { ($0.key, $0.value) }.sorted(by: { (lhs, rhs) -> Bool in
-                lhs.0.count > rhs.0.count
-            })
-        }
-
-        func start() -> EventLoopFuture<Void> {
-            let bootstrap = ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-                .childChannelInitializer { channel in
-                    channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap { _ in
-                        channel.pipeline.addHandler(HTTPHandler(logger: self.logger, invocationEndpoint: self.invocationEndpoint,
-                                                                dataMappings: self.dataMappings))
-                    }
-                }
-            return bootstrap.bind(host: self.host, port: self.port).flatMap { channel -> EventLoopFuture<Void> in
-                guard channel.localAddress != nil else {
-                    return channel.eventLoop.makeFailedFuture(ServerError.cantBind)
-                }
-                self.logger.info("LocalLambdaServer started and listening on \(self.host):\(self.port), receiving events on \(self.invocationEndpoint)")
-                return channel.eventLoop.makeSucceededFuture(())
-            }
-        }
-
-        func stop() throws {
-            try self.group.syncShutdownGracefully()
+        internal init(head: HTTPRequestHead, body: ByteBuffer?) {
+            self.method = head.method
+            self.headers = head.headers.map { $0 }
+            self.uri = head.uri
+            self.body = body
         }
     }
 
-    final class HTTPHandler: ChannelInboundHandler {
-        public typealias InboundIn = HTTPServerRequestPart
-        public typealias OutboundOut = HTTPServerResponsePart
+    public struct HTTPResponse {
+        public var status: HTTPResponseStatus
+        public var headers: [(String, String)]?
+        public var body: ByteBuffer?
+    }
 
-        private var pending = CircularBuffer<(head: HTTPRequestHead, body: ByteBuffer?)>()
+    public enum InvocationError: Error {
+        case badRequest
+        case notFound
+    }
 
-        private static var invocations = CircularBuffer<Invocation>()
-        private static var invocationState = InvocationState.waitingForLambdaRequest
+    private static let lock = Lock()
+    private static var proxyType: LocalLambdaInvocationProxy.Type = InvokeProxy.self
+
+    public static func bootstrap(_ proxyType: LocalLambdaInvocationProxy.Type) {
+        self.lock.withLockVoid {
+            self.proxyType = proxyType
+        }
+    }
+
+    fileprivate struct Server {
+        enum ServerError: Error {
+            case cantBind
+        }
 
         private let logger: Logger
-        private let invocationEndpoint: String
-        private let dataMappings: [(String, DataMapping)]?
+        private let eventLoopGroup: EventLoopGroup
+        private let eventLoop: EventLoop
+        private let controlPlaneHost: String
+        private let controlPlanePort: Int
+        private let invokeAPIHost: String
+        private let invokeAPIPort: Int
+        private let proxy: LocalLambdaInvocationProxy
 
-        init(logger: Logger, invocationEndpoint: String, dataMappings: [(String, DataMapping)]? = nil) {
+        public init(configuration: Lambda.Configuration = Lambda.Configuration()) {
+            var logger = Logger(label: "LocalLambdaServer")
+            logger.logLevel = configuration.general.logLevel
             self.logger = logger
-            self.invocationEndpoint = invocationEndpoint
-            self.dataMappings = dataMappings
+            self.eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            self.eventLoop = self.eventLoopGroup.next()
+            self.controlPlaneHost = configuration.runtimeEngine.ip
+            self.controlPlanePort = configuration.runtimeEngine.port
+            self.invokeAPIHost = configuration.runtimeEngine.ip
+            self.invokeAPIPort = configuration.runtimeEngine.port + 1
+            let proxyType = LocalLambda.lock.withLock { LocalLambda.proxyType }
+            self.proxy = proxyType.init(eventLoop: self.eventLoop)
+        }
+
+        func start() -> EventLoopFuture<Void> {
+            let state = ServerState(eventLoop: self.eventLoop, logger: self.logger)
+
+            let controlPlaneBootstrap = ServerBootstrap(group: eventLoopGroup)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelInitializer { channel in
+                    channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap { _ in
+                        channel.pipeline.addHandler(ControlPlaneHandler(logger: self.logger, serverState: state))
+                    }
+                }
+
+            let invokeBootstrap = ServerBootstrap(group: eventLoopGroup)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelInitializer { channel in
+                    channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap { _ in
+                        channel.pipeline.addHandler(ProxyHandler(logger: self.logger, proxy: self.proxy) {
+                            state.queueInvocation($0)
+                        })
+                    }
+                }
+
+            let controlPlaneFuture = controlPlaneBootstrap.bind(host: self.controlPlaneHost, port: self.controlPlanePort).flatMap { channel -> EventLoopFuture<Void> in
+                guard channel.localAddress != nil else {
+                    return channel.eventLoop.makeFailedFuture(ServerError.cantBind)
+                }
+                self.logger.info("Control plane api started and listening on \(self.controlPlaneHost):\(self.controlPlanePort)")
+                return channel.eventLoop.makeSucceededFuture(())
+            }
+
+            let invokeAPIFuture = invokeBootstrap.bind(host: self.invokeAPIHost, port: self.invokeAPIPort).flatMap { channel -> EventLoopFuture<Void> in
+                guard channel.localAddress != nil else {
+                    return channel.eventLoop.makeFailedFuture(ServerError.cantBind)
+                }
+                self.logger.info("Invocation proxy api started and listening on \(self.controlPlaneHost):\(self.controlPlanePort + 1)")
+                return channel.eventLoop.makeSucceededFuture(())
+            }
+
+            return controlPlaneFuture.and(invokeAPIFuture).map { _ in Void() }
+        }
+
+        func stop() throws {
+            try self.eventLoopGroup.syncShutdownGracefully()
+        }
+    }
+
+    // TODO: rename
+    private final class ServerState {
+        struct Invocation {
+            let requestID: String
+            let request: ByteBuffer
+            let responsePromise: EventLoopPromise<InvocationResult>
+        }
+
+        enum InvocationResult {
+            case success(ByteBuffer?)
+            case failure(ByteBuffer?)
+        }
+
+        private enum State {
+            case waitingForInvocation(EventLoopPromise<Invocation>)
+            case waitingForLambdaRequest
+            case waitingForLambdaResponse(Invocation)
+        }
+
+        enum StateError: Error {
+            case invalidState
+            case invalidRequestId
+        }
+
+        private var invocations = CircularBuffer<Invocation>()
+        private var state = State.waitingForLambdaRequest
+        private var logger: Logger
+
+        private let eventLoop: EventLoop
+
+        init(eventLoop: EventLoop, logger: Logger) {
+            self.eventLoop = eventLoop
+            self.logger = logger
+        }
+
+        // MARK: Invocation API
+
+        /// Queues an invocation and promises to provide a result.
+        func queueInvocation(_ byteBuffer: ByteBuffer) -> EventLoopFuture<InvocationResult> {
+            let promise = self.eventLoop.makePromise(of: InvocationResult.self)
+
+            let uuid = "\(DispatchTime.now().uptimeNanoseconds)" // FIXME:
+            let invocation = Invocation(requestID: uuid, request: byteBuffer, responsePromise: promise)
+
+            switch self.state {
+            case .waitingForInvocation(let promise):
+                self.state = .waitingForLambdaResponse(invocation)
+                promise.succeed(invocation)
+            default:
+                self.invocations.append(invocation)
+            }
+
+            return promise.futureResult
+        }
+
+        // MARK: Lambda Control Plane API
+
+        /// Returns `HTTPResponse` with the body containing the payload from the invocation.
+        func getNextInvocation() -> EventLoopFuture<HTTPResponse> {
+            guard case .waitingForLambdaRequest = self.state else {
+                self.logger.error("invalid invocation state \(self.state)")
+                return self.eventLoop.makeFailedFuture(StateError.invalidState)
+            }
+
+            func makeResponse(_ invocation: Invocation) -> HTTPResponse {
+                var response = HTTPResponse(status: .ok)
+                response.body = invocation.request
+                // required headers
+                response.headers = [
+                    (AmazonHeaders.requestID, invocation.requestID),
+                    (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:\(Int16.random(in: Int16.min ... Int16.max)):function:custom-runtime"),
+                    (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
+                    (AmazonHeaders.deadline, "\(DispatchWallTime.distantFuture.millisSinceEpoch)"),
+                ]
+                return response
+            }
+
+            switch self.invocations.popFirst() {
+            case .some(let invocation):
+                // if there is a task pending, we can immediatly respond with it.
+                self.state = .waitingForLambdaResponse(invocation)
+                return self.eventLoop.makeSucceededFuture(invocation).map { makeResponse($0) }
+            case .none:
+                // if there is nothing in the queue,
+                // create a promise that we can fullfill when we get a new task
+                let promise = self.eventLoop.makePromise(of: Invocation.self)
+                self.state = .waitingForInvocation(promise)
+                return promise.futureResult.map { makeResponse($0) }
+            }
+        }
+
+        private func pendingInvocation(for requestID: String) -> EventLoopFuture<Invocation> {
+            guard case .waitingForLambdaResponse(let invocation) = self.state else {
+                // a response was send, but we did not expect to receive one
+                self.logger.error("invalid invocation state \(self.state)")
+                return self.eventLoop.makeFailedFuture(StateError.invalidState)
+            }
+            guard requestID == invocation.requestID else {
+                // the request's requestId is not matching the one we are expecting
+                self.logger.error("invalid invocation state request ID \(requestID) does not match expected \(invocation.requestID)")
+                return self.eventLoop.makeFailedFuture(StateError.invalidRequestId)
+            }
+
+            return self.eventLoop.makeSucceededFuture(invocation)
+        }
+
+        func processInvocationResult(for invocationId: String, body: ByteBuffer?) -> EventLoopFuture<Void> {
+            self.pendingInvocation(for: invocationId)
+                .always { result in
+                    switch result {
+                    case .success(let invocation):
+                        invocation.responsePromise.succeed(.success(body))
+                    case .failure(let error):
+                        self.logger.error("Unknown invocationId \(invocationId): \(error)")
+                    }
+                    self.state = .waitingForLambdaRequest
+                }
+                .map { _ in }
+        }
+
+        func processInvocationError(for invocationId: String, body: ByteBuffer?) -> EventLoopFuture<Void> {
+            self.pendingInvocation(for: invocationId)
+                .always { result in
+                    switch result {
+                    case .success(let invocation):
+                        invocation.responsePromise.succeed(.failure(body))
+                    case .failure(let error):
+                        self.logger.error("Unknown invocationId \(invocationId): \(error)")
+                    }
+                    self.state = .waitingForLambdaRequest
+                }
+                .map { _ in }
+        }
+    }
+
+    /// Mocks an HTTP API for custom runtimes to receive invocation events from Lambda and send response data back, see
+    /// [AWS Lambda runtime interface](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html).
+    private final class ControlPlaneHandler: ChannelInboundHandler {
+        typealias InboundIn = HTTPServerRequestPart
+        typealias OutboundOut = HTTPServerResponsePart
+
+        // TODO: do we need a circular buffer? there is only (up to) one request at a time
+        private var pending = CircularBuffer<(head: HTTPRequestHead, body: ByteBuffer?)>()
+
+        // TODO: should we not just create a logger instance(s) within the class?
+        private let logger: Logger
+        private let serverState: ServerState
+
+        init(logger: Logger, serverState: ServerState) {
+            self.logger = logger
+            self.serverState = serverState
         }
 
         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -144,60 +339,17 @@ private enum LocalLambda {
 
         func processRequest(context: ChannelHandlerContext, request: (head: HTTPRequestHead, body: ByteBuffer?)) {
             switch (request.head.method, request.head.uri) {
-            // this endpoint is called by the client invoking the lambda
-            case (.POST, let url) where url.hasSuffix(self.invocationEndpoint):
-                guard let work = request.body else {
-                    return self.writeResponse(context: context, response: .init(status: .badRequest))
-                }
-                let requestID = "\(DispatchTime.now().uptimeNanoseconds)" // FIXME:
-                let promise = context.eventLoop.makePromise(of: Response.self)
-                promise.futureResult.whenComplete { result in
-                    switch result {
-                    case .failure(let error):
-                        self.logger.error("invocation error: \(error)")
-                        self.writeResponse(context: context, response: .init(status: .internalServerError))
-                    case .success(let response):
-                        self.writeResponse(context: context, response: response)
-                    }
-                }
-                let invocation = Invocation(requestID: requestID, request: work, responsePromise: promise)
-                switch Self.invocationState {
-                case .waitingForInvocation(let promise):
-                    promise.succeed(invocation)
-                case .waitingForLambdaRequest, .waitingForLambdaResponse:
-                    Self.invocations.append(invocation)
-                }
-
             // /next endpoint is called by the lambda polling for work
             case (.GET, let url) where url.hasSuffix(Consts.getNextInvocationURLSuffix):
                 // check if our server is in the correct state
-                guard case .waitingForLambdaRequest = Self.invocationState else {
-                    self.logger.error("invalid invocation state \(Self.invocationState)")
-                    self.writeResponse(context: context, response: .init(status: .unprocessableEntity))
-                    return
-                }
-
-                // pop the first task from the queue
-                switch Self.invocations.popFirst() {
-                case .none:
-                    // if there is nothing in the queue,
-                    // create a promise that we can fullfill when we get a new task
-                    let promise = context.eventLoop.makePromise(of: Invocation.self)
-                    promise.futureResult.whenComplete { result in
-                        switch result {
-                        case .failure(let error):
-                            self.logger.error("invocation error: \(error)")
-                            self.writeResponse(context: context, status: .internalServerError)
-                        case .success(let invocation):
-                            Self.invocationState = .waitingForLambdaResponse(invocation)
-                            self.writeResponse(context: context, response: invocation.makeResponse())
-                        }
+                self.serverState.getNextInvocation().whenComplete { result in
+                    switch result {
+                    case .success(let response):
+                        self.writeResponse(context: context, response: response)
+                    case .failure(let error):
+                        self.logger.error("invocation error: \(error)")
+                        self.writeResponse(context: context, response: .init(status: .internalServerError))
                     }
-                    Self.invocationState = .waitingForInvocation(promise)
-                case .some(let invocation):
-                    // if there is a task pending, we can immediatly respond with it.
-                    Self.invocationState = .waitingForLambdaResponse(invocation)
-                    self.writeResponse(context: context, response: invocation.makeResponse())
                 }
 
             // :requestID/response endpoint is called by the lambda posting the response
@@ -205,145 +357,189 @@ private enum LocalLambda {
                 let parts = request.head.uri.split(separator: "/")
                 guard let requestID = parts.count > 2 ? String(parts[parts.count - 2]) : nil else {
                     // the request is malformed, since we were expecting a requestId in the path
-                    return self.writeResponse(context: context, status: .badRequest)
-                }
-                guard case .waitingForLambdaResponse(let invocation) = Self.invocationState else {
-                    // a response was send, but we did not expect to receive one
-                    self.logger.error("invalid invocation state \(Self.invocationState)")
-                    return self.writeResponse(context: context, status: .unprocessableEntity)
-                }
-                guard requestID == invocation.requestID else {
-                    // the request's requestId is not matching the one we are expecting
-                    self.logger.error("invalid invocation state request ID \(requestID) does not match expected \(invocation.requestID)")
-                    return self.writeResponse(context: context, status: .badRequest)
+                    return self.writeResponse(context: context, response: .init(status: .badRequest))
                 }
 
-                invocation.responsePromise.succeed(.init(status: .ok, body: request.body))
-                self.writeResponse(context: context, status: .accepted)
-                Self.invocationState = .waitingForLambdaRequest
+                self.serverState.processInvocationResult(for: requestID, body: request.body)
+                    .whenComplete { result in
+                        switch result {
+                        case .success:
+                            self.writeResponse(context: context, response: .init(status: .accepted))
+                        case .failure:
+                            self.writeResponse(context: context, response: .init(status: .badRequest))
+                        }
+                    }
 
-            // :requestID/error endpoint is called by the lambda posting an error response
+            // :requestID/error endpoint is called by the lambda posting an error
             case (.POST, let url) where url.hasSuffix(Consts.postErrorURLSuffix):
                 let parts = request.head.uri.split(separator: "/")
                 guard let requestID = parts.count > 2 ? String(parts[parts.count - 2]) : nil else {
                     // the request is malformed, since we were expecting a requestId in the path
-                    return self.writeResponse(context: context, status: .badRequest)
-                }
-                guard case .waitingForLambdaResponse(let invocation) = Self.invocationState else {
-                    // a response was send, but we did not expect to receive one
-                    self.logger.error("invalid invocation state \(Self.invocationState)")
-                    return self.writeResponse(context: context, status: .unprocessableEntity)
-                }
-                guard requestID == invocation.requestID else {
-                    // the request's requestId is not matching the one we are expecting
-                    self.logger.error("invalid invocation state request ID \(requestID) does not match expected \(invocation.requestID)")
-                    return self.writeResponse(context: context, status: .badRequest)
+                    return self.writeResponse(context: context, response: .init(status: .badRequest))
                 }
 
-                invocation.responsePromise.succeed(.init(status: .internalServerError, body: request.body))
-                self.writeResponse(context: context, status: .accepted)
-                Self.invocationState = .waitingForLambdaRequest
+                self.serverState.processInvocationError(for: requestID, body: request.body)
+                    .whenComplete { result in
+                        switch result {
+                        case .success:
+                            self.writeResponse(context: context, response: .init(status: .accepted))
+                        case .failure:
+                            self.writeResponse(context: context, response: .init(status: .badRequest))
+                        }
+                    }
 
+            // unknown call
             default:
-                // try to resolve a mapping and create Lambda invocation
-                if let (prefix, mapping) = self.dataMappings?.first(where: { request.head.uri.starts(with: $0.0) }) {
-                    let requestID = "\(DispatchTime.now().uptimeNanoseconds)" // FIXME:
-                    var head = request.head
-                    head.uri.removeFirst(prefix.count)
-                    guard let work = try? mapping.mapRequest(requestId: requestID, head: head, body: request.body) else {
-                        return self.writeResponse(context: context, response: .init(status: .badRequest))
-                    }
-                    let promise = context.eventLoop.makePromise(of: Response.self)
-                    promise.futureResult
-                        .flatMapThrowing { response -> Response in
-                            let result = try mapping.mapResponse(buffer: response.body)
-                            return Response(status: .init(statusCode: Int(result.status)),
-                                            headers: result.headers, body: result.body)
-                        }
-                        .whenComplete { result in
-                            switch result {
-                            case .failure(let error):
-                                self.logger.error("invocation error: \(error)")
-                                self.writeResponse(context: context, response: .init(status: .internalServerError))
-                            case .success(let response):
-                                self.writeResponse(context: context, response: response)
-                            }
-                        }
-                    let invocation = Invocation(requestID: requestID, request: work, responsePromise: promise)
-                    switch Self.invocationState {
-                    case .waitingForInvocation(let promise):
-                        promise.succeed(invocation)
-                    case .waitingForLambdaRequest, .waitingForLambdaResponse:
-                        Self.invocations.append(invocation)
-                    }
-                } else {
-                    // unknown call
-                    self.writeResponse(context: context, status: .notFound)
-                }
+                self.writeResponse(context: context, response: .init(status: .notFound))
             }
         }
 
-        func writeResponse(context: ChannelHandlerContext, status: HTTPResponseStatus) {
-            self.writeResponse(context: context, response: .init(status: status))
-        }
-
-        func writeResponse(context: ChannelHandlerContext, response: Response) {
-            var headers = HTTPHeaders(response.headers ?? [])
-            headers.add(name: "content-length", value: "\(response.body?.readableBytes ?? 0)")
-            let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: response.status, headers: headers)
-
-            context.write(wrapOutboundOut(.head(head))).whenFailure { error in
-                self.logger.error("\(self) write error \(error)")
+        func writeResponse(context: ChannelHandlerContext, response: HTTPResponse) {
+            self.writeResponse(context: context, response: response) { error in
+                self.logger.error("Failed to write response: \(error)")
             }
-
-            if let buffer = response.body {
-                context.write(wrapOutboundOut(.body(.byteBuffer(buffer)))).whenFailure { error in
-                    self.logger.error("\(self) write error \(error)")
-                }
-            }
-
-            context.writeAndFlush(wrapOutboundOut(.end(nil))).whenComplete { result in
-                if case .failure(let error) = result {
-                    self.logger.error("\(self) write error \(error)")
-                }
-            }
-        }
-
-        struct Response {
-            var status: HTTPResponseStatus = .ok
-            var headers: [(String, String)]?
-            var body: ByteBuffer?
-        }
-
-        struct Invocation {
-            let requestID: String
-            let request: ByteBuffer
-            let responsePromise: EventLoopPromise<Response>
-
-            func makeResponse() -> Response {
-                var response = Response()
-                response.body = self.request
-                // required headers
-                response.headers = [
-                    (AmazonHeaders.requestID, self.requestID),
-                    (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:\(Int16.random(in: Int16.min ... Int16.max)):function:custom-runtime"),
-                    (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
-                    (AmazonHeaders.deadline, "\(DispatchWallTime.distantFuture.millisSinceEpoch)"),
-                ]
-                return response
-            }
-        }
-
-        enum InvocationState {
-            case waitingForInvocation(EventLoopPromise<Invocation>)
-            case waitingForLambdaRequest
-            case waitingForLambdaResponse(Invocation)
         }
     }
 
-    enum ServerError: Error {
-        case notReady
-        case cantBind
+    /// Creates and queues lambda invocations.
+    /// Maps incoming HTTP requests to events expected by `LambdaHandler` and its response back to a HTTP response for HTTP client.
+    private final class ProxyHandler: ChannelInboundHandler {
+        public typealias InboundIn = HTTPServerRequestPart
+        public typealias OutboundOut = HTTPServerResponsePart
+
+        // TODO: do we need a circular buffer? there is only one request at a time, no?
+        private var pending = CircularBuffer<(head: HTTPRequestHead, body: ByteBuffer?)>()
+
+        private let logger: Logger
+        private let proxy: LocalLambdaInvocationProxy
+        private let callback: (_ byteBuffer: ByteBuffer) -> EventLoopFuture<ServerState.InvocationResult>
+
+        init(logger: Logger, proxy: LocalLambdaInvocationProxy,
+             callback: @escaping (_ byteBuffer: ByteBuffer) -> EventLoopFuture<ServerState.InvocationResult>) {
+            self.logger = logger
+            self.proxy = proxy
+            self.callback = callback
+        }
+
+        func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+            let requestPart = unwrapInboundIn(data)
+
+            switch requestPart {
+            case .head(let head):
+                self.pending.append((head: head, body: nil))
+            case .body(var buffer):
+                var request = self.pending.removeFirst()
+                if request.body == nil {
+                    request.body = buffer
+                } else {
+                    request.body!.writeBuffer(&buffer)
+                }
+                self.pending.prepend(request)
+            case .end:
+                let request = self.pending.removeFirst()
+                self.processRequest(context: context, request: request)
+            }
+        }
+
+        func processRequest(context: ChannelHandlerContext, request: (head: HTTPRequestHead, body: ByteBuffer?)) {
+            let httpRequest = HTTPRequest(head: request.head, body: request.body)
+            // map the request using the proxy
+            let httpResponse: EventLoopFuture<LocalLambda.HTTPResponse> = self.proxy.invocation(from: httpRequest)
+                // wait for response from the lambda handler
+                .flatMap { self.callback($0) }
+                // map the response using the proxy
+                .flatMap { result in
+                    switch result {
+                    case .success(let body):
+                        return self.proxy.processResult(body)
+                    case .failure(let body):
+                        return self.proxy.processError(body)
+                    }
+                }
+            // write HTTP response to HTTP client
+            httpResponse.whenComplete { result in
+                let output: LocalLambda.HTTPResponse
+                switch result {
+                case .success(let response):
+                    output = response
+                case .failure(let error as LocalLambda.InvocationError):
+                    output = .init(error: error)
+                case .failure:
+                    output = .init(status: .internalServerError)
+                }
+                self.writeResponse(context: context, response: output) { error in
+                    self.logger.error("Failed to write response: \(error)")
+                }
+            }
+        }
+    }
+}
+
+// MARK: - LocalLambda.HTTPResponse helpers
+
+private extension LocalLambda.HTTPResponse {
+    init(error: LocalLambda.InvocationError) {
+        switch error {
+        case .badRequest:
+            self.init(status: .badRequest)
+        case .notFound:
+            self.init(status: .notFound)
+        }
+    }
+}
+
+private extension ChannelInboundHandler where InboundIn == HTTPServerRequestPart, OutboundOut == HTTPServerResponsePart {
+    func writeResponse(context: ChannelHandlerContext, response: LocalLambda.HTTPResponse, errorHandler: @escaping (Error) -> Void) {
+        var headers = HTTPHeaders(response.headers ?? [])
+        if headers.contains(name: "Content-Length") == false {
+            headers.add(name: "Content-Length", value: "\(response.body?.readableBytes ?? 0)")
+        }
+        let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: response.status, headers: headers)
+
+        context.write(wrapOutboundOut(.head(head))).whenFailure(errorHandler)
+
+        // TODO: does it make sense to keep writing if failed?
+
+        if let buffer = response.body {
+            context.write(wrapOutboundOut(.body(.byteBuffer(buffer)))).whenFailure(errorHandler)
+        }
+
+        context.writeAndFlush(wrapOutboundOut(.end(nil))).whenComplete { result in
+            if case .failure(let error) = result {
+                errorHandler(error)
+            }
+        }
+    }
+}
+
+// MARK: - InvokeProxy
+
+// TODO: not sure if it needs to be public, if so perhaps it should be within LocalLambda namespace
+public struct InvokeProxy: LocalLambdaInvocationProxy {
+    let eventLoop: EventLoop
+
+    public init(eventLoop: EventLoop) {
+        self.eventLoop = eventLoop
+    }
+
+    public func invocation(from request: LocalLambda.HTTPRequest) -> EventLoopFuture<ByteBuffer> {
+        switch (request.method, request.uri) {
+        case (.POST, "/invoke"):
+            guard let body = request.body else {
+                return self.eventLoop.makeFailedFuture(LocalLambda.InvocationError.badRequest)
+            }
+            return self.eventLoop.makeSucceededFuture(body)
+        default:
+            return self.eventLoop.makeFailedFuture(LocalLambda.InvocationError.notFound)
+        }
+    }
+
+    public func processResult(_ result: ByteBuffer?) -> EventLoopFuture<LocalLambda.HTTPResponse> {
+        self.eventLoop.makeSucceededFuture(.init(status: .ok, body: result))
+    }
+
+    public func processError(_ error: ByteBuffer?) -> EventLoopFuture<LocalLambda.HTTPResponse> {
+        self.eventLoop.makeSucceededFuture(.init(status: .internalServerError, body: error))
     }
 }
 

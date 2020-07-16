@@ -34,30 +34,6 @@ public enum APIGateway {
                 public let cognitoAuthenticationProvider: String?
                 public let sourceIp: String?
                 public let accountId: String?
-                                
-                public init(
-                    cognitoIdentityPoolId: String? = nil,
-                    apiKey: String? = nil,
-                    userArn: String? = nil,
-                    cognitoAuthenticationType: String? = nil,
-                    caller: String? = nil,
-                    userAgent: String? = nil,
-                    user: String? = nil,
-                    cognitoAuthenticationProvider: String? = nil,
-                    sourceIp: String? = nil,
-                    accountId: String? = nil
-                ) {
-                    self.cognitoIdentityPoolId = cognitoIdentityPoolId
-                    self.apiKey = apiKey
-                    self.userArn = userArn
-                    self.cognitoAuthenticationType = cognitoAuthenticationType
-                    self.caller = caller
-                    self.userAgent = userAgent
-                    self.user = user
-                    self.cognitoAuthenticationProvider = cognitoAuthenticationProvider
-                    self.sourceIp = sourceIp
-                    self.accountId = accountId
-                }
             }
 
             public let resourceId: String
@@ -71,30 +47,6 @@ public enum APIGateway {
             public let identity: Identity
             public let extendedRequestId: String?
             public let path: String
-            
-            public init(
-                resourceId: String,
-                apiId: String,
-                resourcePath: String,
-                httpMethod: String,
-                requestId: String,
-                accountId: String,
-                stage: String,
-                identity: Identity = Identity(),
-                extendedRequestId: String? = nil,
-                path: String
-            ) {
-                self.resourceId = resourceId
-                self.apiId = apiId
-                self.resourcePath = resourcePath
-                self.httpMethod = httpMethod
-                self.requestId = requestId
-                self.accountId = accountId
-                self.stage = stage
-                self.identity = identity
-                self.extendedRequestId = extendedRequestId
-                self.path = path
-            }
         }
 
         public let resource: String
@@ -111,34 +63,6 @@ public enum APIGateway {
         public let requestContext: Context
         public let body: String?
         public let isBase64Encoded: Bool
-        
-        public init(
-            resource: String,
-            path: String,
-            httpMethod: HTTPMethod,
-            queryStringParameters: [String: String]? = nil,
-            multiValueQueryStringParameters: [String: [String]]? = nil,
-            headers: HTTPHeaders = HTTPHeaders(),
-            multiValueHeaders: HTTPMultiValueHeaders = HTTPMultiValueHeaders(),
-            pathParameters: [String: String]? = nil,
-            stageVariables: [String: String]? = nil,
-            requestContext: Context,
-            body: String? = nil,
-            isBase64Encoded: Bool = false
-        ) {
-            self.resource = resource
-            self.path = path
-            self.httpMethod = httpMethod
-            self.queryStringParameters = queryStringParameters
-            self.multiValueQueryStringParameters = multiValueQueryStringParameters
-            self.headers = headers
-            self.multiValueHeaders = multiValueHeaders
-            self.pathParameters = pathParameters
-            self.stageVariables = stageVariables
-            self.requestContext = requestContext
-            self.body = body
-            self.isBase64Encoded = isBase64Encoded
-        }
     }
 }
 
