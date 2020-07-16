@@ -62,13 +62,6 @@ public enum LocalLambda {
         public let uri: String
         public let headers: [(String, String)]
         public let body: ByteBuffer?
-
-        internal init(head: HTTPRequestHead, body: ByteBuffer?) {
-            self.method = head.method
-            self.headers = head.headers.map { $0 }
-            self.uri = head.uri
-            self.body = body
-        }
     }
 
     public struct HTTPResponse {
@@ -134,7 +127,7 @@ public enum LocalLambda {
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { channel in
                     channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap { _ in
-                        channel.pipeline.addHandler(ProxyHandler(logger: self.logger, proxy: self.proxy) {
+                        channel.pipeline.addHandler(InvokeHandler(logger: self.logger, proxy: self.proxy) {
                             state.queueInvocation($0)
                         })
                     }
@@ -403,7 +396,7 @@ public enum LocalLambda {
 
     /// Creates and queues lambda invocations.
     /// Maps incoming HTTP requests to events expected by `LambdaHandler` and its response back to a HTTP response for HTTP client.
-    private final class ProxyHandler: ChannelInboundHandler {
+    private final class InvokeHandler: ChannelInboundHandler {
         public typealias InboundIn = HTTPServerRequestPart
         public typealias OutboundOut = HTTPServerResponsePart
 
@@ -476,6 +469,15 @@ public enum LocalLambda {
 }
 
 // MARK: - LocalLambda.HTTPResponse helpers
+
+private extension LocalLambda.HTTPRequest {
+    init(head: HTTPRequestHead, body: ByteBuffer?) {
+        self.method = head.method
+        self.headers = head.headers.map { $0 }
+        self.uri = head.uri
+        self.body = body
+    }
+}
 
 private extension LocalLambda.HTTPResponse {
     init(error: LocalLambda.InvocationError) {
