@@ -14,6 +14,7 @@
 
 @testable import AWSLambdaRuntimeCore
 import Logging
+import Lifecycle
 import NIO
 import NIOHTTP1
 import XCTest
@@ -25,11 +26,16 @@ class LambdaLifecycleTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-
+        
+        let serviceLifecycle = ServiceLifecycle(configuration: .init(shutdownSignal: [], installBacktrace: false))
+        defer {
+            serviceLifecycle.shutdown()
+            serviceLifecycle.wait()
+        }
         let eventLoop = eventLoopGroup.next()
         let logger = Logger(label: "TestLogger")
         let testError = TestError("kaboom")
-        let lifecycle = Lambda.Lifecycle(eventLoop: eventLoop, logger: logger, factory: {
+        let lifecycle = Lambda.Lifecycle(eventLoop: eventLoop, serviceLifecycle: serviceLifecycle, logger: logger, factory: {
             $0.eventLoop.makeFailedFuture(testError)
         })
 
@@ -68,6 +74,12 @@ class LambdaLifecycleTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
+        
+        let serviceLifecycle = ServiceLifecycle(configuration: .init(shutdownSignal: [], installBacktrace: false))
+        defer {
+            serviceLifecycle.shutdown()
+            serviceLifecycle.wait()
+        }
 
         var count = 0
         let handler = CallbackLambdaHandler({ XCTFail("Should not be reached"); return $0.eventLoop.makeSucceededFuture($1) }) { context in
@@ -77,7 +89,7 @@ class LambdaLifecycleTest: XCTestCase {
 
         let eventLoop = eventLoopGroup.next()
         let logger = Logger(label: "TestLogger")
-        let lifecycle = Lambda.Lifecycle(eventLoop: eventLoop, logger: logger, factory: {
+        let lifecycle = Lambda.Lifecycle(eventLoop: eventLoop, serviceLifecycle: serviceLifecycle, logger: logger, factory: {
             $0.eventLoop.makeSucceededFuture(handler)
         })
 
@@ -94,6 +106,12 @@ class LambdaLifecycleTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
+        
+        let serviceLifecycle = ServiceLifecycle(configuration: .init(shutdownSignal: [], installBacktrace: false))
+        defer {
+            serviceLifecycle.shutdown()
+            serviceLifecycle.wait()
+        }
 
         var count = 0
         let handler = CallbackLambdaHandler({ XCTFail("Should not be reached"); return $0.eventLoop.makeSucceededFuture($1) }) { context in
@@ -103,7 +121,7 @@ class LambdaLifecycleTest: XCTestCase {
 
         let eventLoop = eventLoopGroup.next()
         let logger = Logger(label: "TestLogger")
-        let lifecycle = Lambda.Lifecycle(eventLoop: eventLoop, logger: logger, factory: {
+        let lifecycle = Lambda.Lifecycle(eventLoop: eventLoop, serviceLifecycle: serviceLifecycle, logger: logger, factory: {
             $0.eventLoop.makeSucceededFuture(handler)
         })
 

@@ -20,6 +20,7 @@ import Darwin.C
 
 import Backtrace
 import Logging
+import Lifecycle
 import NIO
 
 public enum Lambda {
@@ -101,13 +102,15 @@ public enum Lambda {
     // for testing and internal use
     internal static func run(configuration: Configuration = .init(), factory: @escaping HandlerFactory) -> Result<Int, Error> {
         let _run = { (configuration: Configuration, factory: @escaping HandlerFactory) -> Result<Int, Error> in
-            Backtrace.install()
             var logger = Logger(label: "Lambda")
             logger.logLevel = configuration.general.logLevel
+            
+            // we don't intercept the shutdown signal here yet.
+            let serviceLifecycle = ServiceLifecycle(configuration: .init(logger: logger, shutdownSignal: [], installBacktrace: true))
 
             var result: Result<Int, Error>!
             MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
-                let lifecycle = Lifecycle(eventLoop: eventLoop, logger: logger, configuration: configuration, factory: factory)
+                let lifecycle = Lifecycle(eventLoop: eventLoop, serviceLifecycle: serviceLifecycle, logger: logger, configuration: configuration, factory: factory)
                 #if DEBUG
                 let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
                     logger.info("intercepted signal: \(signal)")
@@ -121,11 +124,19 @@ public enum Lambda {
                     #if DEBUG
                     signalSource.cancel()
                     #endif
-                    eventLoop.shutdownGracefully { error in
+                    
+                    serviceLifecycle.shutdown { (error) in
                         if let error = error {
-                            preconditionFailure("Failed to shutdown eventloop: \(error)")
+                            preconditionFailure("Failed to shutdown service: \(error)")
+                        }
+                        
+                        eventLoop.shutdownGracefully { error in
+                            if let error = error {
+                                preconditionFailure("Failed to shutdown eventloop: \(error)")
+                            }
                         }
                     }
+                    
                     result = lifecycleResult
                 }
             }

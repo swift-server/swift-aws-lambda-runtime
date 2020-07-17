@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import Lifecycle
 import Logging
 import NIO
 
@@ -32,13 +33,17 @@ extension Lambda {
         /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
         ///         Most importantly the `EventLoop` must never be blocked.
         public let eventLoop: EventLoop
+        
+        /// `ServiceLifecycle` to register services with
+        public let serviceLifecycle: ServiceLifecycle
 
         /// `ByteBufferAllocator` to allocate `ByteBuffer`
         public let allocator: ByteBufferAllocator
 
-        internal init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator) {
+        internal init(logger: Logger, eventLoop: EventLoop, serviceLifecycle: ServiceLifecycle, allocator: ByteBufferAllocator) {
             self.eventLoop = eventLoop
             self.logger = logger
+            self.serviceLifecycle = serviceLifecycle
             self.allocator = allocator
         }
     }

@@ -14,6 +14,7 @@
 
 import Dispatch
 import Logging
+import Lifecycle
 import NIO
 
 extension Lambda {
@@ -34,12 +35,13 @@ extension Lambda {
         /// Run the user provided initializer. This *must* only be called once.
         ///
         /// - Returns: An `EventLoopFuture<LambdaHandler>` fulfilled with the outcome of the initialization.
-        func initialize(logger: Logger, factory: @escaping HandlerFactory) -> EventLoopFuture<Handler> {
+        func initialize(serviceLifecycle: ServiceLifecycle, logger: Logger, factory: @escaping HandlerFactory) -> EventLoopFuture<Handler> {
             logger.debug("initializing lambda")
             // 1. create the handler from the factory
             // 2. report initialization error if one occured
             let context = InitializationContext(logger: logger,
                                                 eventLoop: self.eventLoop,
+                                                serviceLifecycle: serviceLifecycle,
                                                 allocator: self.allocator)
             return factory(context)
                 // Hopping back to "our" EventLoop is important in case the factory returns a future
@@ -47,6 +49,20 @@ extension Lambda {
                 // This can happen if the factory uses a library (let's say a database client) that manages its own threads/loops
                 // for whatever reason and returns a future that originated from that foreign EventLoop.
                 .hop(to: self.eventLoop)
+                .flatMap { (handler) in
+                    let promise = self.eventLoop.makePromise(of: ByteBufferLambdaHandler.self)
+                    // after we have created the LambdaHandler we must now start the services.
+                    // in order to not have to map once our success case returns the handler.
+                    serviceLifecycle.start { (error) in
+                        if let error = error {
+                            promise.fail(error)
+                        }
+                        else {
+                            promise.succeed(handler)
+                        }
+                    }
+                    return promise.futureResult
+                }
                 .peekError { error in
                     self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
                         // We're going to bail out because the init failed, so there's not a lot we can do other than log

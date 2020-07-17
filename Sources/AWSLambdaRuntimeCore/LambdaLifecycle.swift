@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
+import Lifecycle
 import NIO
 import NIOConcurrencyHelpers
 
@@ -22,6 +23,7 @@ extension Lambda {
     /// - note: It is intended to be used within a single `EventLoop`. For this reason this class is not thread safe.
     public final class Lifecycle {
         private let eventLoop: EventLoop
+        private let serviceLifecycle: ServiceLifecycle
         private let shutdownPromise: EventLoopPromise<Int>
         private let logger: Logger
         private let configuration: Configuration
@@ -40,12 +42,13 @@ extension Lambda {
         ///     - eventLoop: An `EventLoop` to run the Lambda on.
         ///     - logger: A `Logger` to log the Lambda events.
         ///     - factory: A `LambdaHandlerFactory` to create the concrete  Lambda handler.
-        public convenience init(eventLoop: EventLoop, logger: Logger, factory: @escaping HandlerFactory) {
-            self.init(eventLoop: eventLoop, logger: logger, configuration: .init(), factory: factory)
+        public convenience init(eventLoop: EventLoop, serviceLifecycle: ServiceLifecycle, logger: Logger, factory: @escaping HandlerFactory) {
+            self.init(eventLoop: eventLoop, serviceLifecycle: serviceLifecycle, logger: logger, configuration: .init(), factory: factory)
         }
 
-        init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, factory: @escaping HandlerFactory) {
+        init(eventLoop: EventLoop, serviceLifecycle: ServiceLifecycle, logger: Logger, configuration: Configuration, factory: @escaping HandlerFactory) {
             self.eventLoop = eventLoop
+            self.serviceLifecycle = serviceLifecycle
             self.shutdownPromise = eventLoop.makePromise(of: Int.self)
             self.logger = logger
             self.configuration = configuration
@@ -80,7 +83,7 @@ extension Lambda {
             logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
             let runner = Runner(eventLoop: self.eventLoop, configuration: self.configuration)
 
-            let startupFuture = runner.initialize(logger: logger, factory: self.factory)
+            let startupFuture = runner.initialize(serviceLifecycle: self.serviceLifecycle, logger: logger, factory: self.factory)
             startupFuture.flatMap { handler -> EventLoopFuture<(ByteBufferLambdaHandler, Result<Int, Error>)> in
                 // after the startup future has succeeded, we have a handler that we can use
                 // to `run` the lambda.
