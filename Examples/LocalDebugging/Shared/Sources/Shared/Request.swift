@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Request: Codable, CustomStringConvertible {
+public struct Request {
     public let name: String
     public let password: String
 
@@ -15,7 +15,11 @@ public struct Request: Codable, CustomStringConvertible {
         self.name = name
         self.password = password
     }
+}
 
+extension Request: Codable {}
+
+extension Request: CustomStringConvertible {
     public var description: String {
         "name: \(self.name), password: ***"
     }
