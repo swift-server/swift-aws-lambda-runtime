@@ -12,10 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-public struct Response: Codable {
+public struct Response {
     public let message: String
 
     public init(message: String) {
         self.message = message
     }
 }
+
+extension Response: Codable {}
