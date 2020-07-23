@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 @_exported import AWSLambdaRuntimeCore
+import struct Foundation.Data
 import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
 import NIO
@@ -128,5 +129,19 @@ extension JSONEncoder: LambdaCodableEncoder {
         var buffer = allocator.buffer(capacity: 1024)
         try self.encode(value, into: &buffer)
         return buffer
+    }
+}
+
+extension JSONEncoder {
+    /// Convenience method to allow encoding json directly into a String. It can be used to encode a payload into an APIGateway.V2.Response's body.
+    public func encodeAsString<T: Encodable>(_ value: T) throws -> String {
+        try String(decoding: self.encode(value), as: Unicode.UTF8.self)
+    }
+}
+
+extension JSONDecoder {
+    /// Convenience method to allow decoding json directly from a String. It can be used to decode a payload from an APIGateway.V2.Request's body.
+    public func decode<T: Decodable>(_ type: T.Type, from string: String) throws -> T {
+        try self.decode(type, from: Data(string.utf8))
     }
 }
