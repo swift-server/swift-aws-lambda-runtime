@@ -29,7 +29,7 @@ extension Lambda {
     ///     - closure: `CodableClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableClosure<In, Out>) {
+    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableClosure<In, Out>) -> Never {
         self.run(CodableClosureWrapper(closure))
     }
 
@@ -42,7 +42,7 @@ extension Lambda {
     ///     - closure: `CodableVoidClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<In: Decodable>(_ closure: @escaping CodableVoidClosure<In>) {
+    public static func run<In: Decodable>(_ closure: @escaping CodableVoidClosure<In>) -> Never {
         self.run(CodableVoidClosureWrapper(closure))
     }
 }
