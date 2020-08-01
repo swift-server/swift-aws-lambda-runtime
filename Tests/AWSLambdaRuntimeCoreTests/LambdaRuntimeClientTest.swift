@@ -257,7 +257,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             (AmazonHeaders.requestID, "test"),
             (AmazonHeaders.deadline, String(Date(timeIntervalSinceNow: 60).millisSinceEpoch)),
             (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),
-            (AmazonHeaders.traceID, "Root=1-5bef4de7-ad49b0e87f6ef6c87fc2e700;Parent=9a9197af755a6419;Sampled=1"),
+            (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
         ])
         var inv: Lambda.Invocation?
         XCTAssertNoThrow(inv = try Lambda.Invocation(headers: header))
@@ -297,7 +297,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             (AmazonHeaders.requestID, "test"),
             (AmazonHeaders.deadline, String(Date(timeIntervalSinceNow: 60).millisSinceEpoch)),
             (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),
-            (AmazonHeaders.traceID, "Root=1-5bef4de7-ad49b0e87f6ef6c87fc2e700;Parent=9a9197af755a6419;Sampled=1"),
+            (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
         ])
         var inv: Lambda.Invocation?
         XCTAssertNoThrow(inv = try Lambda.Invocation(headers: header))
