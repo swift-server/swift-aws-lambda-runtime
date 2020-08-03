@@ -65,4 +65,4 @@ We require that your commit messages match our template. The easiest way to do t
 
 ## How to contribute your work
 
-Please open a pull request at https://github.com/apple/swift-nio. Make sure the CI passes, and then wait for code review.
+Please open a pull request at https://github.com/swift-server/swift-aws-lambda-runtime. Make sure the CI passes, and then wait for code review.
