@@ -37,7 +37,9 @@ public enum Lambda {
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ handler: Handler) {
-        self.run(handler: handler)
+        if case .failure(let error) = self.run(handler: handler) {
+            fatalError("\(error)")
+        }
     }
 
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol provided via a `LambdaHandlerFactory`.
@@ -49,7 +51,9 @@ public enum Lambda {
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ factory: @escaping HandlerFactory) {
-        self.run(factory: factory)
+        if case .failure(let error) = self.run(factory: factory) {
+            fatalError("\(error)")
+        }
     }
 
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol provided via a factory, typically a constructor.
@@ -59,7 +63,9 @@ public enum Lambda {
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ factory: @escaping (InitializationContext) throws -> Handler) {
-        self.run(factory: factory)
+        if case .failure(let error) = self.run(factory: factory) {
+            fatalError("\(error)")
+        }
     }
 
     /// Utility to access/read environment variables
@@ -71,13 +77,11 @@ public enum Lambda {
     }
 
     // for testing and internal use
-    @discardableResult
     internal static func run(configuration: Configuration = .init(), handler: Handler) -> Result<Int, Error> {
         self.run(configuration: configuration, factory: { $0.eventLoop.makeSucceededFuture(handler) })
     }
 
     // for testing and internal use
-    @discardableResult
     internal static func run(configuration: Configuration = .init(), factory: @escaping (InitializationContext) throws -> Handler) -> Result<Int, Error> {
         self.run(configuration: configuration, factory: { context -> EventLoopFuture<Handler> in
             let promise = context.eventLoop.makePromise(of: Handler.self)
@@ -95,7 +99,6 @@ public enum Lambda {
     }
 
     // for testing and internal use
-    @discardableResult
     internal static func run(configuration: Configuration = .init(), factory: @escaping HandlerFactory) -> Result<Int, Error> {
         let _run = { (configuration: Configuration, factory: @escaping HandlerFactory) -> Result<Int, Error> in
             Backtrace.install()

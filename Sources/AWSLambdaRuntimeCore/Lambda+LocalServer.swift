@@ -35,11 +35,10 @@ extension Lambda {
     ///     - body: Code to run within the context of the mock server. Typically this would be a Lambda.run function call.
     ///
     /// - note: This API is designed stricly for local testing and is behind a DEBUG flag
-    @discardableResult
-    static func withLocalServer<Value>(invocationEndpoint: String? = nil, _ body: @escaping () -> Value) throws -> Value {
+    internal static func withLocalServer<Value>(invocationEndpoint: String? = nil, _ body: @escaping () -> Value) throws -> Value {
         let server = LocalLambda.Server(invocationEndpoint: invocationEndpoint)
         try server.start().wait()
-        defer { try! server.stop() } // FIXME:
+        defer { try! server.stop() }
         return body()
     }
 }
