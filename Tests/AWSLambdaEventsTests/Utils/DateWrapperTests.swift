@@ -43,10 +43,21 @@ class DateWrapperTests: XCTestCase {
             }
 
             XCTAssertEqual(context.codingPath.compactMap { $0.stringValue }, ["date"])
-            XCTAssertEqual(context.debugDescription, "Expected date to be in iso8601 date format, but `\(date)` does not forfill format")
+            XCTAssertEqual(context.debugDescription, "Expected date to be in ISO8601 date format, but `\(date)` is not in the correct format")
             XCTAssertNil(context.underlyingError)
         }
     }
+
+    #if os(macOS)
+    @available(macOS 10.12, *)
+    func testISO8601CustomDecoder() {
+        let formatter = ISO8601DateFormatter()
+        let string = formatter.string(from: Date())
+        let date = formatter.date(from: string)
+        let date2 = ISO8601Coding.decodeISO8601Date(from: string)
+        XCTAssertEqual(date?.timeIntervalSince1970, date2)
+    }
+    #endif
 
     func testISO8601WithFractionalSecondsCodingWrapperSuccess() {
         struct TestEvent: Decodable {
@@ -75,10 +86,28 @@ class DateWrapperTests: XCTestCase {
             }
 
             XCTAssertEqual(context.codingPath.compactMap { $0.stringValue }, ["date"])
-            XCTAssertEqual(context.debugDescription, "Expected date to be in iso8601 date format with fractional seconds, but `\(date)` does not forfill format")
+            XCTAssertEqual(context.debugDescription, "Expected date to be in ISO8601 date format with fractional seconds, but `\(date)` is not in the correct format")
             XCTAssertNil(context.underlyingError)
         }
     }
+
+    #if os(macOS)
+    @available(macOS 10.13, *)
+    func testISO8601WithFractionalSecondsCustomDecoder() {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [
+            .withInternetDateTime,
+            .withDashSeparatorInDate,
+            .withColonSeparatorInTime,
+            .withColonSeparatorInTimeZone,
+            .withFractionalSeconds,
+        ]
+        let string = formatter.string(from: Date())
+        let date = formatter.date(from: string)
+        let date2 = ISO8601WithFractionalSecondsCoding.decodeISO8601Date(from: string)
+        XCTAssertEqual(date?.timeIntervalSince1970, date2)
+    }
+    #endif
 
     func testRFC5322DateTimeCodingWrapperSuccess() {
         struct TestEvent: Decodable {
@@ -133,7 +162,7 @@ class DateWrapperTests: XCTestCase {
             }
 
             XCTAssertEqual(context.codingPath.compactMap { $0.stringValue }, ["date"])
-            XCTAssertEqual(context.debugDescription, "Expected date to be in RFC5322 date-time format with fractional seconds, but `\(date)` does not forfill format")
+            XCTAssertEqual(context.debugDescription, "Expected date to be in RFC5322 date-time format with fractional seconds, but `\(date)` is not in the correct format")
             XCTAssertNil(context.underlyingError)
         }
     }
