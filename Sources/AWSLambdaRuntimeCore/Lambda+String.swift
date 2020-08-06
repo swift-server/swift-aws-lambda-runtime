@@ -25,7 +25,9 @@ extension Lambda {
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ closure: @escaping StringClosure) {
-        self.run(closure: closure)
+        if case .failure(let error) = self.run(closure: closure) {
+            fatalError("\(error)")
+        }
     }
 
     /// An asynchronous Lambda Closure that takes a `String` and returns a `Result<Void, Error>` via a completion handler.
@@ -38,17 +40,17 @@ extension Lambda {
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ closure: @escaping StringVoidClosure) {
-        self.run(closure: closure)
+        if case .failure(let error) = self.run(closure: closure) {
+            fatalError("\(error)")
+        }
     }
 
     // for testing
-    @discardableResult
     internal static func run(configuration: Configuration = .init(), closure: @escaping StringClosure) -> Result<Int, Error> {
         self.run(configuration: configuration, handler: StringClosureWrapper(closure))
     }
 
     // for testing
-    @discardableResult
     internal static func run(configuration: Configuration = .init(), closure: @escaping StringVoidClosure) -> Result<Int, Error> {
         self.run(configuration: configuration, handler: StringVoidClosureWrapper(closure))
     }
