@@ -129,17 +129,17 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
 public extension EventLoopLambdaHandler {
     /// Driver for `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding
     func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
-        // TODO: creating subsegments with NIO which will be easier if the baggage is passes in channel
-        // see https://github.com/slashmo/gsoc-swift-tracing/issues/48
         context.tracer.segment(name: "HandleEvent", context: context.baggage) {
-            // TODO: create helper to record errors in result types
-            let decodedEvent = context.tracer.segment(name: "DecodeIn", context: context.baggage) { _ in self.decodeIn(buffer: event) }
+            // TODO: create helper to record errors in passed in result types
+            let decodedEvent = context.tracer.segment(name: "DecodeIn", context: context.baggage) { _ in
+                self.decodeIn(buffer: event)
+            }
             switch decodedEvent {
             case .failure(let error):
                 return context.eventLoop.makeFailedFuture(CodecError.requestDecoding(error))
             case .success(let `in`):
                 return self.handle(context: context, event: `in`).flatMapThrowing { out in
-                    try context.tracer.segment(name: "encodeOut", context: context.baggage) { _ in
+                    try context.tracer.segment(name: "EncodeOut", context: context.baggage) { _ in
                         switch self.encodeOut(allocator: context.allocator, value: out) {
                         case .failure(let error):
                             throw CodecError.responseEncoding(error)
@@ -149,6 +149,9 @@ public extension EventLoopLambdaHandler {
                     }
                 }
             }
+        }.flatMap { result in
+            // flush the tracer after each invocation and return the invocation result
+            context.tracer.flush(on: context.eventLoop).map { result }
         }
     }
 
