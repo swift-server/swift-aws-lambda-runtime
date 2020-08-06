@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import AWSXRayRecorder
 import Dispatch
 import Logging
 import NIO
@@ -68,10 +69,15 @@ extension Lambda {
         /// For invocations from the AWS Mobile SDK, data about the client application and device.
         public let clientContext: String?
 
+        public let baggage: XRayContext // TODO: use BaggageContext when swift-tracign is ready
+
         /// `Logger` to log with
         ///
         /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
         public let logger: Logger
+
+        /// Tracing instrument.
+        public let tracer: TracingInstrument
 
         /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
         /// This is useful when implementing the `EventLoopLambdaHandler` protocol.
@@ -91,8 +97,10 @@ extension Lambda {
                       cognitoIdentity: String? = nil,
                       clientContext: String? = nil,
                       logger: Logger,
+                      tracer: TracingInstrument,
                       eventLoop: EventLoop,
-                      allocator: ByteBufferAllocator) {
+                      allocator: ByteBufferAllocator)
+        {
             self.requestID = requestID
             self.traceID = traceID
             self.invokedFunctionARN = invokedFunctionARN
@@ -106,7 +114,10 @@ extension Lambda {
             var logger = logger
             logger[metadataKey: "awsRequestID"] = .string(requestID)
             logger[metadataKey: "awsTraceID"] = .string(traceID)
+            // TODO: handle error in better way
+            self.baggage = try! XRayContext(tracingHeader: traceID)
             self.logger = logger
+            self.tracer = tracer
         }
 
         public func getRemainingTime() -> TimeAmount {

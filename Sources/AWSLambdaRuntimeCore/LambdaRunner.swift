@@ -12,14 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+import AWSXRaySDK // TODO: use swift-tracing when available
 import Dispatch
 import Logging
 import NIO
+
+public typealias TracingInstrument = XRayRecorder
 
 extension Lambda {
     /// LambdaRunner manages the Lambda runtime workflow, or business logic.
     internal final class Runner {
         private let runtimeClient: RuntimeClient
+        internal let tracer: TracingInstrument
         private let eventLoop: EventLoop
         private let allocator: ByteBufferAllocator
 
@@ -28,6 +32,7 @@ extension Lambda {
         init(eventLoop: EventLoop, configuration: Configuration) {
             self.eventLoop = eventLoop
             self.runtimeClient = RuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine)
+            self.tracer = XRayRecorder(eventLoopGroupProvider: .shared(eventLoop))
             self.allocator = ByteBufferAllocator()
         }
 
@@ -66,6 +71,7 @@ extension Lambda {
                 // 2. send invocation to handler
                 self.isGettingNextInvocation = false
                 let context = Context(logger: logger,
+                                      tracer: self.tracer,
                                       eventLoop: self.eventLoop,
                                       allocator: self.allocator,
                                       invocation: invocation)
@@ -101,7 +107,7 @@ extension Lambda {
 }
 
 private extension Lambda.Context {
-    convenience init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Lambda.Invocation) {
+    convenience init(logger: Logger, tracer: TracingInstrument, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Lambda.Invocation) {
         self.init(requestID: invocation.requestID,
                   traceID: invocation.traceID,
                   invokedFunctionARN: invocation.invokedFunctionARN,
@@ -109,6 +115,7 @@ private extension Lambda.Context {
                   cognitoIdentity: invocation.cognitoIdentity,
                   clientContext: invocation.clientContext,
                   logger: logger,
+                  tracer: tracer,
                   eventLoop: eventLoop,
                   allocator: allocator)
     }
