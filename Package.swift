@@ -44,6 +44,7 @@ let package = Package(
         .testTarget(name: "AWSLambdaRuntimeTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
             .byName(name: "AWSLambdaRuntime"),
+            .product(name: "AWSXRayRecorder", package: "aws-xray-sdk-swift"),
         ]),
         .target(name: "AWSLambdaEvents", dependencies: []),
         .testTarget(name: "AWSLambdaEventsTests", dependencies: ["AWSLambdaEvents"]),
@@ -51,6 +52,7 @@ let package = Package(
         .target(name: "AWSLambdaTesting", dependencies: [
             .byName(name: "AWSLambdaRuntime"),
             .product(name: "NIO", package: "swift-nio"),
+            .product(name: "AWSXRayRecorder", package: "aws-xray-sdk-swift"),
         ]),
         .testTarget(name: "AWSLambdaTestingTests", dependencies: ["AWSLambdaTesting"]),
         // for perf testing

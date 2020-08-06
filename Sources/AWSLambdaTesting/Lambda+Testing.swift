@@ -36,9 +36,12 @@
 #if DEBUG
 @testable import AWSLambdaRuntime
 @testable import AWSLambdaRuntimeCore
+import AWSXRayRecorder
 import Dispatch
 import Logging
 import NIO
+
+private let noOpTracer = XRayRecorder(emitter: XRayNoOpEmitter())
 
 extension Lambda {
     public struct TestConfig {
@@ -102,6 +105,7 @@ extension Lambda {
                               invokedFunctionARN: config.invokedFunctionARN,
                               deadline: .now() + config.timeout,
                               logger: logger,
+                              tracer: noOpTracer,
                               eventLoop: eventLoop,
                               allocator: ByteBufferAllocator())
 
