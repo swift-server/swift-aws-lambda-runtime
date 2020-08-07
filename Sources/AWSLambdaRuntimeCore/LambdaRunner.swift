@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import AWSXRaySDK // TODO: use swift-tracing when available
+import Baggage
 import Dispatch
 import Logging
 import NIO
@@ -61,11 +62,11 @@ extension Lambda {
                 }
         }
 
-        // TODO: instrument custom runtime API
         func run(logger: Logger, handler: Handler) -> EventLoopFuture<Void> {
             logger.debug("lambda invocation sequence starting")
             // 1. request invocation from lambda runtime engine
             self.isGettingNextInvocation = true
+            // TODO: add API to explicitly set startTime, after all
             return self.runtimeClient.getNextInvocation(logger: logger).peekError { error in
                 logger.error("could not fetch work from lambda runtime engine: \(error)")
             }.flatMap { invocation, event in
@@ -76,6 +77,7 @@ extension Lambda {
                                       eventLoop: self.eventLoop,
                                       allocator: self.allocator,
                                       invocation: invocation)
+                let baggage = context.baggage
                 logger.debug("sending invocation to lambda handler \(handler)")
                 return handler.handle(context: context, event: event)
                     // Hopping back to "our" EventLoop is importnant in case the handler returns a future that
@@ -87,12 +89,14 @@ extension Lambda {
                         if case .failure(let error) = result {
                             logger.warning("lambda handler returned an error: \(error)")
                         }
-                        return (invocation, result)
+                        return (invocation, result, baggage)
                     }
-            }.flatMap { invocation, result in
+            }.flatMap { (invocation, result, baggage: BaggageContext) in
                 // 3. report results to runtime engine
-                self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError { error in
-                    logger.error("could not report results to lambda runtime engine: \(error)")
+                self.tracer.segment(name: "ReportResults", baggage: baggage) { _ in
+                    self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError { error in
+                        logger.error("could not report results to lambda runtime engine: \(error)")
+                    }
                 }
             }.flatMap {
                 // flush the tracer after each invocation
