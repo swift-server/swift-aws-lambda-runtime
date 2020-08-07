@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "swift-aws-lambda-runtime",
     platforms: [
-        .macOS(.v10_14), // TODO: fix in aws-xray-sdk-swift
+        .macOS(.v10_14), // TODO: should not be needed soon
     ],
     products: [
         // this library exports `AWSLambdaRuntimeCore` and adds Foundation convenience methods
@@ -19,10 +19,11 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.17.0")),
+//        .package(url: "https://github.com/pokryfka/swift-nio.git", .branch("feature/tracing")),
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.0.0")),
         .package(url: "https://github.com/swift-server/swift-backtrace.git", .upToNextMajor(from: "1.1.0")),
         // TODO: use swift-tracing when available
-        .package(url: "https://github.com/pokryfka/aws-xray-sdk-swift.git", .upToNextMinor(from: "0.6.0")),
+        .package(url: "https://github.com/pokryfka/aws-xray-sdk-swift.git", .upToNextMinor(from: "0.6.1")),
     ],
     targets: [
         .target(name: "AWSLambdaRuntime", dependencies: [

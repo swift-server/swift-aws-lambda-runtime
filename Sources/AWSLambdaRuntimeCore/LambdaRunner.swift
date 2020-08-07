@@ -61,6 +61,7 @@ extension Lambda {
                 }
         }
 
+        // TODO: instrument custom runtime API
         func run(logger: Logger, handler: Handler) -> EventLoopFuture<Void> {
             logger.debug("lambda invocation sequence starting")
             // 1. request invocation from lambda runtime engine
@@ -93,6 +94,9 @@ extension Lambda {
                 self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError { error in
                     logger.error("could not report results to lambda runtime engine: \(error)")
                 }
+            }.flatMap {
+                // flush the tracer after each invocation
+                self.tracer.flush(on: self.eventLoop)
             }
         }
 

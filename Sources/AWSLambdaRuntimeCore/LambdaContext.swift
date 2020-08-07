@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import AWSXRayRecorder
+import Baggage
 import Dispatch
 import Logging
 import NIO
@@ -69,7 +70,8 @@ extension Lambda {
         /// For invocations from the AWS Mobile SDK, data about the client application and device.
         public let clientContext: String?
 
-        public let baggage: XRayContext // TODO: use BaggageContext when swift-tracign is ready
+        /// Context baggage.
+        public var baggage: BaggageContext
 
         /// `Logger` to log with
         ///
@@ -114,8 +116,10 @@ extension Lambda {
             var logger = logger
             logger[metadataKey: "awsRequestID"] = .string(requestID)
             logger[metadataKey: "awsTraceID"] = .string(traceID)
-            // TODO: handle error in better way
-            self.baggage = try! XRayContext(tracingHeader: traceID)
+            var baggage = BaggageContext()
+            // TODO: handle error
+            baggage.xRayContext = try? XRayContext(tracingHeader: traceID)
+            self.baggage = baggage
             self.logger = logger
             self.tracer = tracer
         }
