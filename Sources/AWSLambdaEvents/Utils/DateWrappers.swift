@@ -48,32 +48,14 @@ public struct ISO8601Coding: Decodable {
         if #available(macOS 10.12, *) {
             return Self.dateFormatter.date(from: string)
         } else {
-            return self.decodeISO8601Date(from: string).flatMap(Date.init(timeIntervalSince1970:))
+            // unlikely *debugging* use case of swift 5.2+ on older macOS
+            preconditionFailure("Unsporrted macOS version")
         }
         #endif
     }
 
     @available(macOS 10.12, *)
     private static let dateFormatter = ISO8601DateFormatter()
-
-    // strptime not avail on through Glibc
-    #if os(macOS)
-    // 1970-01-01T00:00:00Z
-    internal static func decodeISO8601Date(from string: String) -> Double? {
-        if string.last != "Z" {
-            return nil
-        }
-        var parsedTime = tm()
-        _ = string.withCString { cstr in
-            strptime(cstr, "%Y-%m-%dT%H:%M:%S", &parsedTime)
-        }
-        let time = timegm(&parsedTime)
-        if time == -1 {
-            return nil
-        }
-        return Double(time)
-    }
-    #endif
 }
 
 @propertyWrapper
@@ -101,7 +83,8 @@ public struct ISO8601WithFractionalSecondsCoding: Decodable {
         if #available(macOS 10.13, *) {
             return self.dateFormatter.date(from: string)
         } else {
-            return self.decodeISO8601Date(from: string).flatMap(Date.init(timeIntervalSince1970:))
+            // unlikely *debugging* use case of swift 5.2+ on older macOS
+            preconditionFailure("Unsporrted macOS version")
         }
         #endif
     }
@@ -121,28 +104,6 @@ public struct ISO8601WithFractionalSecondsCoding: Decodable {
         ]
         return formatter
     }
-
-    // strptime not avail on through Glibc
-    #if os(macOS)
-    // 1970-01-01T00:00:00.00Z
-    internal static func decodeISO8601Date(from string: String) -> Double? {
-        guard let msIndex = string.lastIndex(of: ".") else {
-            return nil
-        }
-        guard let endIndex = string.lastIndex(of: "Z") else {
-            return nil
-        }
-        if endIndex <= msIndex {
-            return nil
-        }
-        let msString = string[msIndex ..< endIndex]
-        guard let ms = Double(msString) else {
-            return nil
-        }
-
-        return ISO8601Coding.decodeISO8601Date(from: string)?.advanced(by: ms)
-    }
-    #endif
 }
 
 @propertyWrapper

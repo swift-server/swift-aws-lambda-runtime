@@ -48,17 +48,6 @@ class DateWrapperTests: XCTestCase {
         }
     }
 
-    #if os(macOS)
-    @available(macOS 10.12, *)
-    func testISO8601CustomDecoder() {
-        let formatter = ISO8601DateFormatter()
-        let string = formatter.string(from: Date())
-        let date = formatter.date(from: string)
-        let date2 = ISO8601Coding.decodeISO8601Date(from: string)
-        XCTAssertEqual(date?.timeIntervalSince1970, date2)
-    }
-    #endif
-
     func testISO8601WithFractionalSecondsCodingWrapperSuccess() {
         struct TestEvent: Decodable {
             @ISO8601WithFractionalSecondsCoding
@@ -90,24 +79,6 @@ class DateWrapperTests: XCTestCase {
             XCTAssertNil(context.underlyingError)
         }
     }
-
-    #if os(macOS)
-    @available(macOS 10.13, *)
-    func testISO8601WithFractionalSecondsCustomDecoder() {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [
-            .withInternetDateTime,
-            .withDashSeparatorInDate,
-            .withColonSeparatorInTime,
-            .withColonSeparatorInTimeZone,
-            .withFractionalSeconds,
-        ]
-        let string = formatter.string(from: Date())
-        let date = formatter.date(from: string)
-        let date2 = ISO8601WithFractionalSecondsCoding.decodeISO8601Date(from: string)
-        XCTAssertEqual(date?.timeIntervalSince1970, date2)
-    }
-    #endif
 
     func testRFC5322DateTimeCodingWrapperSuccess() {
         struct TestEvent: Decodable {
