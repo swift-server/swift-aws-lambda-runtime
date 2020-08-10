@@ -12,12 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(Linux)
-import Glibc
-#else
-import Darwin.C
-#endif
-
 import struct Foundation.Date
 import class Foundation.DateFormatter
 import class Foundation.ISO8601DateFormatter
