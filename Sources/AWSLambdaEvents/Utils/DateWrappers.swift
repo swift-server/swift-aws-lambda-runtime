@@ -14,8 +14,8 @@
 
 import struct Foundation.Date
 import class Foundation.DateFormatter
-import class Foundation.ISO8601DateFormatter
 import struct Foundation.Locale
+import struct Foundation.TimeZone
 
 @propertyWrapper
 public struct ISO8601Coding: Decodable {
@@ -28,28 +28,22 @@ public struct ISO8601Coding: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let dateString = try container.decode(String.self)
-        guard let date = Self.decodeDate(from: dateString) else {
+        guard let date = Self.dateFormatter.date(from: dateString) else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription:
                 "Expected date to be in ISO8601 date format, but `\(dateString)` is not in the correct format")
         }
         self.wrappedValue = date
     }
 
-    private static func decodeDate(from string: String) -> Date? {
-        #if os(Linux)
-        return Self.dateFormatter.date(from: string)
-        #elseif os(macOS)
-        if #available(macOS 10.12, *) {
-            return Self.dateFormatter.date(from: string)
-        } else {
-            // unlikely *debugging* use case of swift 5.2+ on older macOS
-            preconditionFailure("Unsporrted macOS version")
-        }
-        #endif
-    }
+    private static let dateFormatter: DateFormatter = Self.createDateFormatter()
 
-    @available(macOS 10.12, *)
-    private static let dateFormatter = ISO8601DateFormatter()
+    private static func createDateFormatter() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+        return formatter
+    }
 }
 
 @propertyWrapper
@@ -63,39 +57,20 @@ public struct ISO8601WithFractionalSecondsCoding: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let dateString = try container.decode(String.self)
-        guard let date = Self.decodeDate(from: dateString) else {
+        guard let date = Self.dateFormatter.date(from: dateString) else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription:
                 "Expected date to be in ISO8601 date format with fractional seconds, but `\(dateString)` is not in the correct format")
         }
         self.wrappedValue = date
     }
 
-    private static func decodeDate(from string: String) -> Date? {
-        #if os(Linux)
-        return Self.dateFormatter.date(from: string)
-        #elseif os(macOS)
-        if #available(macOS 10.13, *) {
-            return self.dateFormatter.date(from: string)
-        } else {
-            // unlikely *debugging* use case of swift 5.2+ on older macOS
-            preconditionFailure("Unsporrted macOS version")
-        }
-        #endif
-    }
+    private static let dateFormatter: DateFormatter = Self.createDateFormatter()
 
-    @available(macOS 10.13, *)
-    private static let dateFormatter: ISO8601DateFormatter = Self.createDateFormatter()
-
-    @available(macOS 10.13, *)
-    private static func createDateFormatter() -> ISO8601DateFormatter {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [
-            .withInternetDateTime,
-            .withDashSeparatorInDate,
-            .withColonSeparatorInTime,
-            .withColonSeparatorInTimeZone,
-            .withFractionalSeconds,
-        ]
+    private static func createDateFormatter() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ"
         return formatter
     }
 }
