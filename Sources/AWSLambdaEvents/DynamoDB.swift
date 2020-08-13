@@ -274,7 +274,7 @@ extension DynamoDB.AttributeValue: Decodable {
 }
 
 extension DynamoDB.AttributeValue: Equatable {
-    public static func == (lhs: Self, rhs: Self) -> Bool {
+    public static func == (lhs: DynamoDB.AttributeValue, rhs: DynamoDB.AttributeValue) -> Bool {
         switch (lhs, rhs) {
         case (.boolean(let lhs), .boolean(let rhs)):
             return lhs == rhs
@@ -313,7 +313,7 @@ extension DynamoDB {
         @inlinable public func decode<T: Decodable>(_ type: T.Type, from image: [String: AttributeValue])
             throws -> T
         {
-            try self.decode(type, from: .map(image))
+            return try self.decode(type, from: .map(image))
         }
 
         @inlinable public func decode<T: Decodable>(_ type: T.Type, from value: AttributeValue)
@@ -337,7 +337,7 @@ extension DynamoDB {
         }
 
         @inlinable public func decode<T: Decodable>(_: T.Type) throws -> T {
-            try T(from: self)
+            return try T(from: self)
         }
 
         @usableFromInline func container<Key>(keyedBy type: Key.Type) throws ->
@@ -373,7 +373,7 @@ extension DynamoDB {
         }
 
         @usableFromInline func singleValueContainer() throws -> SingleValueDecodingContainer {
-            _SingleValueDecodingContainter(
+            return _SingleValueDecodingContainter(
                 impl: self,
                 codingPath: self.codingPath,
                 value: self.value
@@ -397,7 +397,7 @@ extension DynamoDB {
         var intValue: Int?
 
         var stringValue: String {
-            "Index \(self.intValue!)"
+            return "Index \(self.intValue!)"
         }
 
         static func == (lhs: ArrayKey, rhs: ArrayKey) -> Bool {
@@ -421,7 +421,7 @@ extension DynamoDB {
         }
 
         var allKeys: [K] {
-            self.dictionary.keys.compactMap { K(stringValue: $0) }
+            return self.dictionary.keys.compactMap { K(stringValue: $0) }
         }
 
         func contains(_ key: K) -> Bool {
@@ -457,51 +457,51 @@ extension DynamoDB {
         }
 
         func decode(_ type: Double.Type, forKey key: K) throws -> Double {
-            try self.decodeLosslessStringConvertible(key: key)
+            return try self.decodeLosslessStringConvertible(key: key)
         }
 
         func decode(_ type: Float.Type, forKey key: K) throws -> Float {
-            try self.decodeLosslessStringConvertible(key: key)
+            return try self.decodeLosslessStringConvertible(key: key)
         }
 
         func decode(_ type: Int.Type, forKey key: K) throws -> Int {
-            try self.decodeFixedWidthInteger(key: key)
+            return try self.decodeFixedWidthInteger(key: key)
         }
 
         func decode(_ type: Int8.Type, forKey key: K) throws -> Int8 {
-            try self.decodeFixedWidthInteger(key: key)
+            return try self.decodeFixedWidthInteger(key: key)
         }
 
         func decode(_ type: Int16.Type, forKey key: K) throws -> Int16 {
-            try self.decodeFixedWidthInteger(key: key)
+            return try self.decodeFixedWidthInteger(key: key)
         }
 
         func decode(_ type: Int32.Type, forKey key: K) throws -> Int32 {
-            try self.decodeFixedWidthInteger(key: key)
+            return try self.decodeFixedWidthInteger(key: key)
         }
 
         func decode(_ type: Int64.Type, forKey key: K) throws -> Int64 {
-            try self.decodeFixedWidthInteger(key: key)
+            return try self.decodeFixedWidthInteger(key: key)
         }
 
         func decode(_ type: UInt.Type, forKey key: K) throws -> UInt {
-            try self.decodeFixedWidthInteger(key: key)
+            return try self.decodeFixedWidthInteger(key: key)
         }
 
         func decode(_ type: UInt8.Type, forKey key: K) throws -> UInt8 {
-            try self.decodeFixedWidthInteger(key: key)
+            return try self.decodeFixedWidthInteger(key: key)
         }
 
         func decode(_ type: UInt16.Type, forKey key: K) throws -> UInt16 {
-            try self.decodeFixedWidthInteger(key: key)
+            return try self.decodeFixedWidthInteger(key: key)
         }
 
         func decode(_ type: UInt32.Type, forKey key: K) throws -> UInt32 {
-            try self.decodeFixedWidthInteger(key: key)
+            return try self.decodeFixedWidthInteger(key: key)
         }
 
         func decode(_ type: UInt64.Type, forKey key: K) throws -> UInt64 {
-            try self.decodeFixedWidthInteger(key: key)
+            return try self.decodeFixedWidthInteger(key: key)
         }
 
         func decode<T>(_ type: T.Type, forKey key: K) throws -> T where T: Decodable {
@@ -515,15 +515,15 @@ extension DynamoDB {
         }
 
         func nestedUnkeyedContainer(forKey key: K) throws -> UnkeyedDecodingContainer {
-            try self.decoderForKey(key).unkeyedContainer()
+            return try self.decoderForKey(key).unkeyedContainer()
         }
 
         func superDecoder() throws -> Swift.Decoder {
-            self.impl
+            return self.impl
         }
 
         func superDecoder(forKey key: K) throws -> Swift.Decoder {
-            self.impl
+            return self.impl
         }
 
         private func decoderForKey(_ key: K) throws -> _DecoderImpl {
@@ -556,7 +556,7 @@ extension DynamoDB {
             ))
         }
 
-        @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger>(key: Self.Key)
+        @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger>(key: _KeyedDecodingContainer.Key)
             throws -> T
         {
             let value = try getValue(forKey: key)
@@ -577,7 +577,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private func decodeLosslessStringConvertible<T: LosslessStringConvertible>(
-            key: Self.Key) throws -> T
+            key: _KeyedDecodingContainer.Key) throws -> T
         {
             let value = try getValue(forKey: key)
 
@@ -609,7 +609,7 @@ extension DynamoDB {
         }
 
         func decodeNil() -> Bool {
-            self.value == .null
+            return self.value == .null
         }
 
         func decode(_: Bool.Type) throws -> Bool {
@@ -629,51 +629,51 @@ extension DynamoDB {
         }
 
         func decode(_: Double.Type) throws -> Double {
-            try self.decodeLosslessStringConvertible()
+            return try self.decodeLosslessStringConvertible()
         }
 
         func decode(_: Float.Type) throws -> Float {
-            try self.decodeLosslessStringConvertible()
+            return try self.decodeLosslessStringConvertible()
         }
 
         func decode(_: Int.Type) throws -> Int {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         func decode(_: Int8.Type) throws -> Int8 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         func decode(_: Int16.Type) throws -> Int16 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         func decode(_: Int32.Type) throws -> Int32 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         func decode(_: Int64.Type) throws -> Int64 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         func decode(_: UInt.Type) throws -> UInt {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         func decode(_: UInt8.Type) throws -> UInt8 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         func decode(_: UInt16.Type) throws -> UInt16 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         func decode(_: UInt32.Type) throws -> UInt32 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         func decode(_: UInt64.Type) throws -> UInt64 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         func decode<T>(_: T.Type) throws -> T where T: Decodable {
@@ -681,7 +681,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private func createTypeMismatchError(type: Any.Type, value: AttributeValue) -> DecodingError {
-            DecodingError.typeMismatch(type, .init(
+            return DecodingError.typeMismatch(type, .init(
                 codingPath: self.codingPath,
                 debugDescription: "Expected to decode \(type) but found \(value.debugDataTypeDescription) instead."
             ))
@@ -785,51 +785,51 @@ extension DynamoDB {
         }
 
         mutating func decode(_: Double.Type) throws -> Double {
-            try self.decodeLosslessStringConvertible()
+            return try self.decodeLosslessStringConvertible()
         }
 
         mutating func decode(_: Float.Type) throws -> Float {
-            try self.decodeLosslessStringConvertible()
+            return try self.decodeLosslessStringConvertible()
         }
 
         mutating func decode(_: Int.Type) throws -> Int {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         mutating func decode(_: Int8.Type) throws -> Int8 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         mutating func decode(_: Int16.Type) throws -> Int16 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         mutating func decode(_: Int32.Type) throws -> Int32 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         mutating func decode(_: Int64.Type) throws -> Int64 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         mutating func decode(_: UInt.Type) throws -> UInt {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         mutating func decode(_: UInt8.Type) throws -> UInt8 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         mutating func decode(_: UInt16.Type) throws -> UInt16 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         mutating func decode(_: UInt32.Type) throws -> UInt32 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         mutating func decode(_: UInt64.Type) throws -> UInt64 {
-            try self.decodeFixedWidthInteger()
+            return try self.decodeFixedWidthInteger()
         }
 
         mutating func decode<T>(_: T.Type) throws -> T where T: Decodable {
@@ -854,11 +854,11 @@ extension DynamoDB {
         }
 
         mutating func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer {
-            try self.impl.unkeyedContainer()
+            return try self.impl.unkeyedContainer()
         }
 
         mutating func superDecoder() throws -> Swift.Decoder {
-            self.impl
+            return self.impl
         }
 
         @inline(__always) private func createTypeMismatchError(type: Any.Type, value: AttributeValue) -> DecodingError {

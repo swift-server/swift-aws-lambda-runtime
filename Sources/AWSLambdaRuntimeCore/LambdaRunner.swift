@@ -118,7 +118,7 @@ private extension Lambda.Context {
 extension EventLoopFuture {
     // callback does not have side effects, failing with original result
     func peekError(_ callback: @escaping (Error) -> Void) -> EventLoopFuture<Value> {
-        self.flatMapError { error in
+        return self.flatMapError { error in
             callback(error)
             return self
         }
@@ -126,7 +126,7 @@ extension EventLoopFuture {
 
     // callback does not have side effects, failing with original result
     func peekError(_ callback: @escaping (Error) -> EventLoopFuture<Void>) -> EventLoopFuture<Value> {
-        self.flatMapError { error in
+        return self.flatMapError { error in
             let promise = self.eventLoop.makePromise(of: Value.self)
             callback(error).whenComplete { _ in
                 promise.completeWith(self)
@@ -136,7 +136,7 @@ extension EventLoopFuture {
     }
 
     func mapResult<NewValue>(_ callback: @escaping (Result<Value, Error>) -> NewValue) -> EventLoopFuture<NewValue> {
-        self.map { value in
+        return self.map { value in
             callback(.success(value))
         }.flatMapErrorThrowing { error in
             callback(.failure(error))

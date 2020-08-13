@@ -44,7 +44,7 @@ class LambdaRuntimeClientTest: XCTestCase {
     func testGetInvocationServerInternalError() {
         struct Behavior: LambdaServerBehavior {
             func getInvocation() -> GetInvocationResult {
-                .failure(.internalServerError)
+                return .failure(.internalServerError)
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
@@ -70,7 +70,7 @@ class LambdaRuntimeClientTest: XCTestCase {
     func testGetInvocationServerNoBodyError() {
         struct Behavior: LambdaServerBehavior {
             func getInvocation() -> GetInvocationResult {
-                .success(("1", ""))
+                return .success(("1", ""))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
@@ -97,7 +97,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         struct Behavior: LambdaServerBehavior {
             func getInvocation() -> GetInvocationResult {
                 // no request id -> no context
-                .success(("", "hello"))
+                return .success(("", "hello"))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
@@ -123,11 +123,11 @@ class LambdaRuntimeClientTest: XCTestCase {
     func testProcessResponseInternalServerError() {
         struct Behavior: LambdaServerBehavior {
             func getInvocation() -> GetInvocationResult {
-                .success((requestId: "1", event: "event"))
+                return .success((requestId: "1", event: "event"))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
-                .failure(.internalServerError)
+                return .failure(.internalServerError)
             }
 
             func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
@@ -148,7 +148,7 @@ class LambdaRuntimeClientTest: XCTestCase {
     func testProcessErrorInternalServerError() {
         struct Behavior: LambdaServerBehavior {
             func getInvocation() -> GetInvocationResult {
-                .success((requestId: "1", event: "event"))
+                return .success((requestId: "1", event: "event"))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
@@ -157,7 +157,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
 
             func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
-                .failure(.internalServerError)
+                return .failure(.internalServerError)
             }
 
             func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
@@ -188,7 +188,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
 
             func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
-                .failure(.internalServerError)
+                return .failure(.internalServerError)
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), factory: { $0.eventLoop.makeFailedFuture(TestError("boom")) })) { error in
@@ -227,13 +227,13 @@ class LambdaRuntimeClientTest: XCTestCase {
 
         var inboundHeader: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundHeader = try server.readInbound())
-        guard case .head(let head) = try? XCTUnwrap(inboundHeader) else { XCTFail("Expected to get a head first"); return }
+        guard case .head(let head) = inboundHeader! else { XCTFail("Expected to get a head first"); return }
         XCTAssertEqual(head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
         XCTAssertEqual(head.headers["user-agent"], ["Swift-Lambda/Unknown"])
 
         var inboundBody: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundBody = try server.readInbound())
-        guard case .body(let body) = try? XCTUnwrap(inboundBody) else { XCTFail("Expected body after head"); return }
+        guard case .body(let body) = inboundBody! else { XCTFail("Expected body after head"); return }
         XCTAssertEqual(try JSONDecoder().decode(ErrorResponse.self, from: body).errorMessage, "boom")
 
         XCTAssertEqual(try server.readInbound(), .end(nil))
@@ -263,17 +263,17 @@ class LambdaRuntimeClientTest: XCTestCase {
         XCTAssertNoThrow(inv = try Lambda.Invocation(headers: header))
         guard let invocation = inv else { return }
 
-        let result = client.reportResults(logger: logger, invocation: invocation, result: Result.failure(TestError("boom")))
+        let result = client.reportResults(logger: logger, invocation: invocation, result: .failure(TestError("boom")))
 
         var inboundHeader: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundHeader = try server.readInbound())
-        guard case .head(let head) = try? XCTUnwrap(inboundHeader) else { XCTFail("Expected to get a head first"); return }
+        guard case .head(let head) = inboundHeader! else { XCTFail("Expected to get a head first"); return }
         XCTAssertEqual(head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
         XCTAssertEqual(head.headers["user-agent"], ["Swift-Lambda/Unknown"])
 
         var inboundBody: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundBody = try server.readInbound())
-        guard case .body(let body) = try? XCTUnwrap(inboundBody) else { XCTFail("Expected body after head"); return }
+        guard case .body(let body) = inboundBody! else { XCTFail("Expected body after head"); return }
         XCTAssertEqual(try JSONDecoder().decode(ErrorResponse.self, from: body).errorMessage, "boom")
 
         XCTAssertEqual(try server.readInbound(), .end(nil))
@@ -303,11 +303,11 @@ class LambdaRuntimeClientTest: XCTestCase {
         XCTAssertNoThrow(inv = try Lambda.Invocation(headers: header))
         guard let invocation = inv else { return }
 
-        let result = client.reportResults(logger: logger, invocation: invocation, result: Result.success(nil))
+        let result = client.reportResults(logger: logger, invocation: invocation, result: .success(nil))
 
         var inboundHeader: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundHeader = try server.readInbound())
-        guard case .head(let head) = try? XCTUnwrap(inboundHeader) else { XCTFail("Expected to get a head first"); return }
+        guard case .head(let head) = inboundHeader! else { XCTFail("Expected to get a head first"); return }
         XCTAssertFalse(head.headers.contains(name: "lambda-runtime-function-error-type"))
         XCTAssertEqual(head.headers["user-agent"], ["Swift-Lambda/Unknown"])
 

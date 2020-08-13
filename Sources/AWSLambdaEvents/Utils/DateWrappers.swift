@@ -17,7 +17,7 @@ import class Foundation.DateFormatter
 import struct Foundation.Locale
 import struct Foundation.TimeZone
 
-@propertyWrapper
+// @propertyWrapper
 public struct ISO8601Coding: Decodable {
     public let wrappedValue: Date
 
@@ -28,14 +28,14 @@ public struct ISO8601Coding: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let dateString = try container.decode(String.self)
-        guard let date = Self.dateFormatter.date(from: dateString) else {
+        guard let date = ISO8601Coding.dateFormatter.date(from: dateString) else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription:
                 "Expected date to be in ISO8601 date format, but `\(dateString)` is not in the correct format")
         }
         self.wrappedValue = date
     }
 
-    private static let dateFormatter: DateFormatter = Self.createDateFormatter()
+    private static let dateFormatter: DateFormatter = ISO8601Coding.createDateFormatter()
 
     private static func createDateFormatter() -> DateFormatter {
         let formatter = DateFormatter()
@@ -46,7 +46,7 @@ public struct ISO8601Coding: Decodable {
     }
 }
 
-@propertyWrapper
+// @propertyWrapper
 public struct ISO8601WithFractionalSecondsCoding: Decodable {
     public let wrappedValue: Date
 
@@ -57,14 +57,14 @@ public struct ISO8601WithFractionalSecondsCoding: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let dateString = try container.decode(String.self)
-        guard let date = Self.dateFormatter.date(from: dateString) else {
+        guard let date = ISO8601WithFractionalSecondsCoding.dateFormatter.date(from: dateString) else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription:
                 "Expected date to be in ISO8601 date format with fractional seconds, but `\(dateString)` is not in the correct format")
         }
         self.wrappedValue = date
     }
 
-    private static let dateFormatter: DateFormatter = Self.createDateFormatter()
+    private static let dateFormatter: DateFormatter = ISO8601WithFractionalSecondsCoding.createDateFormatter()
 
     private static func createDateFormatter() -> DateFormatter {
         let formatter = DateFormatter()
@@ -75,7 +75,7 @@ public struct ISO8601WithFractionalSecondsCoding: Decodable {
     }
 }
 
-@propertyWrapper
+// @propertyWrapper
 public struct RFC5322DateTimeCoding: Decodable {
     public let wrappedValue: Date
 
@@ -91,14 +91,14 @@ public struct RFC5322DateTimeCoding: Decodable {
         if let bracket = string.firstIndex(of: "(") {
             string = String(string[string.startIndex ..< bracket].trimmingCharacters(in: .whitespaces))
         }
-        guard let date = Self.dateFormatter.date(from: string) else {
+        guard let date = RFC5322DateTimeCoding.dateFormatter.date(from: string) else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription:
                 "Expected date to be in RFC5322 date-time format with fractional seconds, but `\(string)` is not in the correct format")
         }
         self.wrappedValue = date
     }
 
-    private static let dateFormatter: DateFormatter = Self.createDateFormatter()
+    private static let dateFormatter: DateFormatter = RFC5322DateTimeCoding.createDateFormatter()
     private static func createDateFormatter() -> DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEE, d MMM yyy HH:mm:ss z"

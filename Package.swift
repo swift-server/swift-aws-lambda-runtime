@@ -1,4 +1,4 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.0
 
 import PackageDescription
 
@@ -36,7 +36,6 @@ let package = Package(
             .product(name: "NIOFoundationCompat", package: "swift-nio"),
         ]),
         .testTarget(name: "AWSLambdaRuntimeTests", dependencies: [
-            .byName(name: "AWSLambdaRuntimeCore"),
             .byName(name: "AWSLambdaRuntime"),
         ]),
         .target(name: "AWSLambdaEvents", dependencies: []),

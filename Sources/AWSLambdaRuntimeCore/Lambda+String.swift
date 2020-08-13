@@ -47,12 +47,12 @@ extension Lambda {
 
     // for testing
     internal static func run(configuration: Configuration = .init(), closure: @escaping StringClosure) -> Result<Int, Error> {
-        self.run(configuration: configuration, handler: StringClosureWrapper(closure))
+        return self.run(configuration: configuration, handler: StringClosureWrapper(closure))
     }
 
     // for testing
     internal static func run(configuration: Configuration = .init(), closure: @escaping StringVoidClosure) -> Result<Int, Error> {
-        self.run(configuration: configuration, handler: StringVoidClosureWrapper(closure))
+        return self.run(configuration: configuration, handler: StringVoidClosureWrapper(closure))
     }
 }
 

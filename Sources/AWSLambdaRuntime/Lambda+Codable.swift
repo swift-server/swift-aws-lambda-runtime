@@ -81,14 +81,14 @@ internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
 /// Implementation of  a`ByteBuffer` to `In` decoding
 public extension EventLoopLambdaHandler where In: Decodable {
     func decode(buffer: ByteBuffer) throws -> In {
-        try self.decoder.decode(In.self, from: buffer)
+        return try self.decoder.decode(In.self, from: buffer)
     }
 }
 
 /// Implementation of  `Out` to `ByteBuffer` encoding
 public extension EventLoopLambdaHandler where Out: Encodable {
     func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer? {
-        try self.encoder.encode(value, using: allocator)
+        return try self.encoder.encode(value, using: allocator)
     }
 }
 
@@ -96,7 +96,7 @@ public extension EventLoopLambdaHandler where Out: Encodable {
 /// Advanced users that want to inject their own codec can do it by overriding these functions.
 public extension EventLoopLambdaHandler where In: Decodable {
     var decoder: LambdaCodableDecoder {
-        Lambda.defaultJSONDecoder
+        return Lambda.defaultJSONDecoder
     }
 }
 
@@ -104,7 +104,7 @@ public extension EventLoopLambdaHandler where In: Decodable {
 /// Advanced users that want to inject their own codec can do it by overriding these functions.
 public extension EventLoopLambdaHandler where Out: Encodable {
     var encoder: LambdaCodableEncoder {
-        Lambda.defaultJSONEncoder
+        return Lambda.defaultJSONEncoder
     }
 }
 
@@ -135,13 +135,13 @@ extension JSONEncoder: LambdaCodableEncoder {
 extension JSONEncoder {
     /// Convenience method to allow encoding json directly into a `String`. It can be used to encode a payload into an `APIGateway.V2.Response`'s body.
     public func encodeAsString<T: Encodable>(_ value: T) throws -> String {
-        try String(decoding: self.encode(value), as: Unicode.UTF8.self)
+        return try String(decoding: self.encode(value), as: Unicode.UTF8.self)
     }
 }
 
 extension JSONDecoder {
     /// Convenience method to allow decoding json directly from a `String`. It can be used to decode a payload from an `APIGateway.V2.Request`'s body.
     public func decode<T: Decodable>(_ type: T.Type, from string: String) throws -> T {
-        try self.decode(type, from: Data(string.utf8))
+        return try self.decode(type, from: Data(string.utf8))
     }
 }

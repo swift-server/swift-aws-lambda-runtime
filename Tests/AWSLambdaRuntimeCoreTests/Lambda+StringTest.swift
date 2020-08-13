@@ -87,7 +87,7 @@ class StringLambdaTest: XCTestCase {
             typealias Out = String
 
             func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
-                context.eventLoop.makeSucceededFuture(event)
+                return context.eventLoop.makeSucceededFuture(event)
             }
         }
 
@@ -107,7 +107,7 @@ class StringLambdaTest: XCTestCase {
             typealias Out = Void
 
             func handle(context: Lambda.Context, event: String) -> EventLoopFuture<Void> {
-                context.eventLoop.makeSucceededFuture(())
+                return context.eventLoop.makeSucceededFuture(())
             }
         }
 
@@ -127,7 +127,7 @@ class StringLambdaTest: XCTestCase {
             typealias Out = String
 
             func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
-                context.eventLoop.makeFailedFuture(TestError("boom"))
+                return context.eventLoop.makeFailedFuture(TestError("boom"))
             }
         }
 
@@ -211,7 +211,7 @@ private struct Behavior: LambdaServerBehavior {
     }
 
     func getInvocation() -> GetInvocationResult {
-        .success((requestId: self.requestId, event: self.event))
+        return .success((requestId: self.requestId, event: self.event))
     }
 
     func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {

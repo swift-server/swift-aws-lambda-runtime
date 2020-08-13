@@ -214,6 +214,6 @@ extension String {
     func base64decoded(options: Base64.DecodingOptions = []) throws -> [UInt8] {
         // In Base64, 3 bytes become 4 output characters, and we pad to the nearest multiple
         // of four.
-        try Base64.decode(encoded: self, options: options)
+        return try Base64.decode(encoded: self, options: options)
     }
 }

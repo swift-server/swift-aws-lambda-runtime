@@ -54,11 +54,11 @@ class LambdaLifecycleTest: XCTestCase {
         }
 
         func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
-            self.handler(context, event)
+            return self.handler(context, event)
         }
 
         func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
-            self.shutdown(context)
+            return self.shutdown(context)
         }
     }
 
@@ -122,7 +122,7 @@ class LambdaLifecycleTest: XCTestCase {
 
 struct BadBehavior: LambdaServerBehavior {
     func getInvocation() -> GetInvocationResult {
-        .failure(.internalServerError)
+        return .failure(.internalServerError)
     }
 
     func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {

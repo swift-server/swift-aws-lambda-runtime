@@ -43,18 +43,50 @@ public enum SES {
         public let headersTruncated: Bool
         public let messageId: String
         public let source: String
-        @ISO8601WithFractionalSecondsCoding public var timestamp: Date
+        // @ISO8601WithFractionalSecondsCoding
+        private var _timestamp: ISO8601WithFractionalSecondsCoding
+        public var timestamp: Date {
+            get { return self._timestamp.wrappedValue }
+            set { self._timestamp = ISO8601WithFractionalSecondsCoding(wrappedValue: newValue) }
+        }
+
+        public enum CodingKeys: String, CodingKey {
+            case commonHeaders
+            case destination
+            case headers
+            case headersTruncated
+            case messageId
+            case source
+            case _timestamp = "timestamp"
+        }
     }
 
     public struct CommonHeaders: Decodable {
         public let bcc: [String]?
         public let cc: [String]?
-        @RFC5322DateTimeCoding public var date: Date
+        // @RFC5322DateTimeCoding
+        private var _date: RFC5322DateTimeCoding
+        public var date: Date {
+            get { return self._date.wrappedValue }
+            set { self._date = RFC5322DateTimeCoding(wrappedValue: newValue) }
+        }
+
         public let from: [String]
         public let messageId: String
         public let returnPath: String?
         public let subject: String?
         public let to: [String]?
+
+        public enum CodingKeys: String, CodingKey {
+            case bcc
+            case cc
+            case _date = "date"
+            case from
+            case messageId
+            case returnPath
+            case subject
+            case to
+        }
     }
 
     public struct Header: Decodable {
@@ -71,8 +103,27 @@ public enum SES {
         public let recipients: [String]
         public let spamVerdict: Verdict
         public let spfVerdict: Verdict
-        @ISO8601WithFractionalSecondsCoding public var timestamp: Date
+        // @ISO8601WithFractionalSecondsCoding
+        private var _timestamp: ISO8601WithFractionalSecondsCoding
+        public var timestamp: Date {
+            get { return self._timestamp.wrappedValue }
+            set { self._timestamp = ISO8601WithFractionalSecondsCoding(wrappedValue: newValue) }
+        }
+
         public let virusVerdict: Verdict
+
+        public enum CodingKeys: String, CodingKey {
+            case action
+            case dmarcPolicy
+            case dmarcVerdict
+            case dkimVerdict
+            case processingTimeMillis
+            case recipients
+            case spamVerdict
+            case spfVerdict
+            case _timestamp = "timestamp"
+            case virusVerdict
+        }
     }
 
     public struct Action: Decodable {

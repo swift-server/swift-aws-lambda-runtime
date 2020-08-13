@@ -26,56 +26,56 @@ public struct AWSRegion: RawRepresentable, Equatable {
     }
 
     static var all: [AWSRegion] = [
-        Self.ap_northeast_1,
-        Self.ap_northeast_2,
-        Self.ap_east_1,
-        Self.ap_southeast_1,
-        Self.ap_southeast_2,
-        Self.ap_south_1,
-        Self.cn_north_1,
-        Self.cn_northwest_1,
-        Self.eu_north_1,
-        Self.eu_west_1,
-        Self.eu_west_2,
-        Self.eu_west_3,
-        Self.eu_central_1,
-        Self.us_east_1,
-        Self.us_east_2,
-        Self.us_west_1,
-        Self.us_west_2,
-        Self.us_gov_east_1,
-        Self.us_gov_west_1,
-        Self.ca_central_1,
-        Self.sa_east_1,
-        Self.me_south_1,
+        AWSRegion.ap_northeast_1,
+        AWSRegion.ap_northeast_2,
+        AWSRegion.ap_east_1,
+        AWSRegion.ap_southeast_1,
+        AWSRegion.ap_southeast_2,
+        AWSRegion.ap_south_1,
+        AWSRegion.cn_north_1,
+        AWSRegion.cn_northwest_1,
+        AWSRegion.eu_north_1,
+        AWSRegion.eu_west_1,
+        AWSRegion.eu_west_2,
+        AWSRegion.eu_west_3,
+        AWSRegion.eu_central_1,
+        AWSRegion.us_east_1,
+        AWSRegion.us_east_2,
+        AWSRegion.us_west_1,
+        AWSRegion.us_west_2,
+        AWSRegion.us_gov_east_1,
+        AWSRegion.us_gov_west_1,
+        AWSRegion.ca_central_1,
+        AWSRegion.sa_east_1,
+        AWSRegion.me_south_1,
     ]
 
-    public static var ap_northeast_1: Self { AWSRegion(rawValue: "ap-northeast-1")! }
-    public static var ap_northeast_2: Self { AWSRegion(rawValue: "ap-northeast-2")! }
-    public static var ap_east_1: Self { AWSRegion(rawValue: "ap-east-1")! }
-    public static var ap_southeast_1: Self { AWSRegion(rawValue: "ap-southeast-1")! }
-    public static var ap_southeast_2: Self { AWSRegion(rawValue: "ap-southeast-2")! }
-    public static var ap_south_1: Self { AWSRegion(rawValue: "ap-south-1")! }
+    public static var ap_northeast_1: AWSRegion { return AWSRegion(rawValue: "ap-northeast-1")! }
+    public static var ap_northeast_2: AWSRegion { return AWSRegion(rawValue: "ap-northeast-2")! }
+    public static var ap_east_1: AWSRegion { return AWSRegion(rawValue: "ap-east-1")! }
+    public static var ap_southeast_1: AWSRegion { return AWSRegion(rawValue: "ap-southeast-1")! }
+    public static var ap_southeast_2: AWSRegion { return AWSRegion(rawValue: "ap-southeast-2")! }
+    public static var ap_south_1: AWSRegion { return AWSRegion(rawValue: "ap-south-1")! }
 
-    public static var cn_north_1: Self { AWSRegion(rawValue: "cn-north-1")! }
-    public static var cn_northwest_1: Self { AWSRegion(rawValue: "cn-northwest-1")! }
+    public static var cn_north_1: AWSRegion { return AWSRegion(rawValue: "cn-north-1")! }
+    public static var cn_northwest_1: AWSRegion { return AWSRegion(rawValue: "cn-northwest-1")! }
 
-    public static var eu_north_1: Self { AWSRegion(rawValue: "eu-north-1")! }
-    public static var eu_west_1: Self { AWSRegion(rawValue: "eu-west-1")! }
-    public static var eu_west_2: Self { AWSRegion(rawValue: "eu-west-2")! }
-    public static var eu_west_3: Self { AWSRegion(rawValue: "eu-west-3")! }
-    public static var eu_central_1: Self { AWSRegion(rawValue: "eu-central-1")! }
+    public static var eu_north_1: AWSRegion { return AWSRegion(rawValue: "eu-north-1")! }
+    public static var eu_west_1: AWSRegion { return AWSRegion(rawValue: "eu-west-1")! }
+    public static var eu_west_2: AWSRegion { return AWSRegion(rawValue: "eu-west-2")! }
+    public static var eu_west_3: AWSRegion { return AWSRegion(rawValue: "eu-west-3")! }
+    public static var eu_central_1: AWSRegion { return AWSRegion(rawValue: "eu-central-1")! }
 
-    public static var us_east_1: Self { AWSRegion(rawValue: "us-east-1")! }
-    public static var us_east_2: Self { AWSRegion(rawValue: "us-east-2")! }
-    public static var us_west_1: Self { AWSRegion(rawValue: "us-west-1")! }
-    public static var us_west_2: Self { AWSRegion(rawValue: "us-west-2")! }
-    public static var us_gov_east_1: Self { AWSRegion(rawValue: "us-gov-east-1")! }
-    public static var us_gov_west_1: Self { AWSRegion(rawValue: "us-gov-west-1")! }
+    public static var us_east_1: AWSRegion { return AWSRegion(rawValue: "us-east-1")! }
+    public static var us_east_2: AWSRegion { return AWSRegion(rawValue: "us-east-2")! }
+    public static var us_west_1: AWSRegion { return AWSRegion(rawValue: "us-west-1")! }
+    public static var us_west_2: AWSRegion { return AWSRegion(rawValue: "us-west-2")! }
+    public static var us_gov_east_1: AWSRegion { return AWSRegion(rawValue: "us-gov-east-1")! }
+    public static var us_gov_west_1: AWSRegion { return AWSRegion(rawValue: "us-gov-west-1")! }
 
-    public static var ca_central_1: Self { AWSRegion(rawValue: "ca-central-1")! }
-    public static var sa_east_1: Self { AWSRegion(rawValue: "sa-east-1")! }
-    public static var me_south_1: Self { AWSRegion(rawValue: "me-south-1")! }
+    public static var ca_central_1: AWSRegion { return AWSRegion(rawValue: "ca-central-1")! }
+    public static var sa_east_1: AWSRegion { return AWSRegion(rawValue: "sa-east-1")! }
+    public static var me_south_1: AWSRegion { return AWSRegion(rawValue: "me-south-1")! }
 }
 
 extension AWSRegion: Codable {

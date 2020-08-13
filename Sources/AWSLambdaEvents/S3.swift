@@ -22,14 +22,30 @@ public enum S3 {
             public let eventVersion: String
             public let eventSource: String
             public let awsRegion: AWSRegion
+            // @ISO8601WithFractionalSecondsCoding
+            private var _eventTime: ISO8601WithFractionalSecondsCoding
+            public var eventTime: Date {
+                get { return self._eventTime.wrappedValue }
+                set { self._eventTime = ISO8601WithFractionalSecondsCoding(wrappedValue: newValue) }
+            }
 
-            @ISO8601WithFractionalSecondsCoding
-            public var eventTime: Date
             public let eventName: String
             public let userIdentity: UserIdentity
             public let requestParameters: RequestParameters
             public let responseElements: [String: String]
             public let s3: Entity
+
+            public enum CodingKeys: String, CodingKey {
+                case eventVersion
+                case eventSource
+                case awsRegion
+                case _eventTime = "eventTime"
+                case eventName
+                case userIdentity
+                case requestParameters
+                case responseElements
+                case s3
+            }
         }
 
         public let records: [Record]

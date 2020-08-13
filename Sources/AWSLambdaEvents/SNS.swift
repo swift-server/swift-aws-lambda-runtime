@@ -51,10 +51,14 @@ public enum SNS {
         public let topicArn: String
         public let messageAttributes: [String: Attribute]
         public let signatureVersion: String
-
-        @ISO8601WithFractionalSecondsCoding
-        public var timestamp: Date
         public let signingCertURL: String
+        // @ISO8601WithFractionalSecondsCoding
+        private var _timestamp: ISO8601WithFractionalSecondsCoding
+        public var timestamp: Date {
+            get { return self._timestamp.wrappedValue }
+            set { self._timestamp = ISO8601WithFractionalSecondsCoding(wrappedValue: newValue) }
+        }
+
         public let message: String
         public let unsubscribeUrl: String
         public let subject: String?
@@ -69,7 +73,7 @@ extension SNS.Message: Decodable {
         case topicArn = "TopicArn"
         case messageAttributes = "MessageAttributes"
         case signatureVersion = "SignatureVersion"
-        case timestamp = "Timestamp"
+        case _timestamp = "Timestamp"
         case signingCertURL = "SigningCertUrl"
         case message = "Message"
         case unsubscribeUrl = "UnsubscribeUrl"

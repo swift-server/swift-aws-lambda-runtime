@@ -78,12 +78,12 @@ public enum Lambda {
 
     // for testing and internal use
     internal static func run(configuration: Configuration = .init(), handler: Handler) -> Result<Int, Error> {
-        self.run(configuration: configuration, factory: { $0.eventLoop.makeSucceededFuture(handler) })
+        return self.run(configuration: configuration, factory: { $0.eventLoop.makeSucceededFuture(handler) })
     }
 
     // for testing and internal use
     internal static func run(configuration: Configuration = .init(), factory: @escaping (InitializationContext) throws -> Handler) -> Result<Int, Error> {
-        self.run(configuration: configuration, factory: { context -> EventLoopFuture<Handler> in
+        return self.run(configuration: configuration, factory: { context -> EventLoopFuture<Handler> in
             let promise = context.eventLoop.makePromise(of: Handler.self)
             // if we have a callback based handler factory, we offload the creation of the handler
             // onto the default offload queue, to ensure that the eventloop is never blocked.

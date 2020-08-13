@@ -46,7 +46,7 @@ internal extension Lambda {
 public extension LambdaHandler {
     /// The queue on which `handle` is invoked on.
     var offloadQueue: DispatchQueue {
-        Lambda.defaultOffloadQueue
+        return Lambda.defaultOffloadQueue
     }
 
     /// `LambdaHandler` is offloading the processing to a `DispatchQueue`
@@ -164,7 +164,7 @@ public extension EventLoopLambdaHandler {
 /// Implementation of  `ByteBuffer` to `Void` decoding
 public extension EventLoopLambdaHandler where Out == Void {
     func encode(allocator: ByteBufferAllocator, value: Void) throws -> ByteBuffer? {
-        nil
+        return nil
     }
 }
 
@@ -196,7 +196,7 @@ public protocol ByteBufferLambdaHandler {
 
 public extension ByteBufferLambdaHandler {
     func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
-        context.eventLoop.makeSucceededFuture(())
+        return context.eventLoop.makeSucceededFuture(())
     }
 }
 

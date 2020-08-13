@@ -18,12 +18,12 @@ import struct Foundation.Date
 typealias EventBridge = Cloudwatch
 
 public protocol CloudwatchDetail: Decodable {
-    static var name: String { get }
+    static var typeName: String { get }
 }
 
 public extension CloudwatchDetail {
     var detailType: String {
-        Self.name
+        return Self.typeName
     }
 }
 
@@ -65,7 +65,7 @@ public enum Cloudwatch {
             self.resources = try container.decode([String].self, forKey: .resources)
 
             let detailType = try container.decode(String.self, forKey: .detailType)
-            guard detailType.lowercased() == Detail.name.lowercased() else {
+            guard detailType.lowercased() == Detail.typeName.lowercased() else {
                 throw DetailTypeMismatch(name: detailType, type: Detail.self)
             }
 
@@ -77,13 +77,13 @@ public enum Cloudwatch {
 
     public typealias ScheduledEvent = Event<Scheduled>
     public struct Scheduled: CloudwatchDetail {
-        public static let name = "Scheduled Event"
+        public static let typeName = "Scheduled Event"
     }
 
     public enum EC2 {
         public typealias InstanceStateChangeNotificationEvent = Event<InstanceStateChangeNotification>
         public struct InstanceStateChangeNotification: CloudwatchDetail {
-            public static let name = "EC2 Instance State-change Notification"
+            public static let typeName = "EC2 Instance State-change Notification"
 
             public enum State: String, Codable {
                 case running
@@ -104,7 +104,7 @@ public enum Cloudwatch {
 
         public typealias SpotInstanceInterruptionNoticeEvent = Event<SpotInstanceInterruptionNotice>
         public struct SpotInstanceInterruptionNotice: CloudwatchDetail {
-            public static let name = "EC2 Spot Instance Interruption Warning"
+            public static let typeName = "EC2 Spot Instance Interruption Warning"
 
             public enum Action: String, Codable {
                 case hibernate

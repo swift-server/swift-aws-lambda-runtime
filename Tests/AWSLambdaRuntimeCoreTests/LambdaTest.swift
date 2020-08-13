@@ -116,7 +116,7 @@ class LambdaTest: XCTestCase {
             }
 
             func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
-                .failure(.internalServerError)
+                return .failure(.internalServerError)
             }
         }
 
@@ -216,15 +216,15 @@ class LambdaTest: XCTestCase {
 
         struct Behavior: LambdaServerBehavior {
             func getInvocation() -> GetInvocationResult {
-                .failure(.internalServerError)
+                return .failure(.internalServerError)
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
-                .failure(.internalServerError)
+                return .failure(.internalServerError)
             }
 
             func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
-                .failure(.internalServerError)
+                return .failure(.internalServerError)
             }
 
             func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
@@ -306,7 +306,7 @@ private struct Behavior: LambdaServerBehavior {
     }
 
     func getInvocation() -> GetInvocationResult {
-        .success((requestId: self.requestId, event: self.event))
+        return .success((requestId: self.requestId, event: self.event))
     }
 
     func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
@@ -356,6 +356,6 @@ struct FailedBootstrapBehavior: LambdaServerBehavior {
     }
 
     func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
-        .success(())
+        return .success(())
     }
 }
