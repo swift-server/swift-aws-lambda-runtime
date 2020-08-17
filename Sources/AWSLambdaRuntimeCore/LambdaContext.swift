@@ -71,7 +71,7 @@ extension Lambda {
         public let clientContext: String?
 
         /// Context baggage.
-        public var baggage: BaggageContext
+        public let baggage: BaggageContext
 
         /// `Logger` to log with
         ///

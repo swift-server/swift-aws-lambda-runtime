@@ -93,7 +93,7 @@ extension Lambda {
                         }
                         return (invocation, result, baggage)
                     }
-            }.flatMap { (invocation, result, baggage: BaggageContext) in
+            }.flatMap { invocation, result, baggage in
                 // 3. report results to runtime engine
                 self.tracer.segment(name: "ReportResults", baggage: baggage) { _ in
                     self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError { error in
