@@ -14,13 +14,10 @@
 
 @testable import AWSLambdaRuntime
 @testable import AWSLambdaRuntimeCore
-import AWSXRayRecorder
 import Logging
 import NIO
 import NIOFoundationCompat
 import XCTest
-
-private let noOpTracer = XRayRecorder(emitter: XRayNoOpEmitter())
 
 class CodableLambdaTest: XCTestCase {
     var eventLoopGroup: EventLoopGroup!
@@ -75,7 +72,7 @@ class CodableLambdaTest: XCTestCase {
                        cognitoIdentity: nil,
                        clientContext: nil,
                        logger: Logger(label: "test"),
-                       tracer: noOpTracer,
+                       tracer: NoOpTracingInstrument(),
                        eventLoop: self.eventLoopGroup.next(),
                        allocator: ByteBufferAllocator())
     }

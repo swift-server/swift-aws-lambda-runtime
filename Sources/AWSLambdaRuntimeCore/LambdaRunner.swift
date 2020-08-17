@@ -18,13 +18,15 @@ import Dispatch
 import Logging
 import NIO
 
+// type names defined in `TracingInstrument`, aliases will be removed
 public typealias TracingInstrument = XRayRecorder
+public typealias NoOpTracingInstrument = XRayNoOpRecorder
 
 extension Lambda {
     /// LambdaRunner manages the Lambda runtime workflow, or business logic.
     internal final class Runner {
         private let runtimeClient: RuntimeClient
-        internal let tracer: TracingInstrument
+        private let tracer: TracingInstrument
         private let eventLoop: EventLoop
         private let allocator: ByteBufferAllocator
 
@@ -33,7 +35,7 @@ extension Lambda {
         init(eventLoop: EventLoop, configuration: Configuration) {
             self.eventLoop = eventLoop
             self.runtimeClient = RuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine)
-            self.tracer = XRayRecorder(eventLoopGroupProvider: .shared(eventLoop))
+            self.tracer = configuration.tracerFactory(eventLoop)
             self.allocator = ByteBufferAllocator()
         }
 

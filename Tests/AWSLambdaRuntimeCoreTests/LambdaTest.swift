@@ -13,12 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 @testable import AWSLambdaRuntimeCore
-import AWSXRayRecorder
 import Logging
 import NIO
 import XCTest
-
-private let noOpTracer = XRayRecorder(emitter: XRayNoOpEmitter())
 
 class LambdaTest: XCTestCase {
     func testSuccess() {
@@ -266,7 +263,7 @@ class LambdaTest: XCTestCase {
                                      cognitoIdentity: nil,
                                      clientContext: nil,
                                      logger: Logger(label: "test"),
-                                     tracer: noOpTracer,
+                                     tracer: NoOpTracingInstrument(),
                                      eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next(),
                                      allocator: ByteBufferAllocator())
         XCTAssertGreaterThan(context.deadline, .now())
@@ -278,7 +275,7 @@ class LambdaTest: XCTestCase {
                                             cognitoIdentity: context.cognitoIdentity,
                                             clientContext: context.clientContext,
                                             logger: context.logger,
-                                            tracer: noOpTracer,
+                                            tracer: NoOpTracingInstrument(),
                                             eventLoop: context.eventLoop,
                                             allocator: context.allocator)
         XCTAssertLessThan(expiredContext.deadline, .now())
@@ -292,7 +289,7 @@ class LambdaTest: XCTestCase {
                                      cognitoIdentity: nil,
                                      clientContext: nil,
                                      logger: Logger(label: "test"),
-                                     tracer: noOpTracer,
+                                     tracer: NoOpTracingInstrument(),
                                      eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next(),
                                      allocator: ByteBufferAllocator())
         XCTAssertLessThanOrEqual(context.getRemainingTime(), .seconds(1))
