@@ -17,6 +17,7 @@ import Baggage
 import Dispatch
 import Logging
 import NIO
+import NIOConcurrencyHelpers
 
 // MARK: - InitializationContext
 
@@ -52,6 +53,9 @@ extension Lambda {
     /// Lambda runtime context.
     /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
     public final class Context: CustomDebugStringConvertible {
+        // TODO: use RWLock (separate PR)
+        private let lock = Lock()
+
         /// The request ID, which identifies the request that triggered the function invocation.
         public let requestID: String
 
@@ -70,8 +74,14 @@ extension Lambda {
         /// For invocations from the AWS Mobile SDK, data about the client application and device.
         public let clientContext: String?
 
-        /// Context baggage.
-        public let baggage: BaggageContext
+        // TODO: or should the Lambda "runtime" context and the Baggage context be separate?
+        private var _baggage: BaggageContext
+
+        /// Baggage context.
+        public var baggage: BaggageContext {
+            get { self.lock.withLock { _baggage } }
+            set { self.lock.withLockVoid { _baggage = newValue } }
+        }
 
         /// `Logger` to log with
         ///
@@ -117,9 +127,9 @@ extension Lambda {
             logger[metadataKey: "awsRequestID"] = .string(requestID)
             logger[metadataKey: "awsTraceID"] = .string(traceID)
             var baggage = BaggageContext()
-            // TODO: use `swift-tracing` API, note that we can ONLY extract X-Ray Context from the invocation data
+            // TODO: use `swift-tracing` API, note that, regardless, we can ONLY extract X-Ray Context
             baggage.xRayContext = try? XRayContext(tracingHeader: traceID)
-            self.baggage = baggage
+            self._baggage = baggage
             self.logger = logger
             self.tracer = tracer
         }

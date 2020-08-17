@@ -140,8 +140,7 @@ public extension EventLoopLambdaHandler {
             return context.eventLoop.makeFailedFuture(CodecError.requestDecoding(error))
         case .success(let `in`):
             let subsegment = segment.beginSubsegment(name: "HandleIn")
-            // TODO: context is not thread safe, do not change it
-            // context.baggage = subsegment.baggage
+            context.baggage = subsegment.baggage
             return self.handle(context: context, event: `in`)
                 .endSegment(subsegment)
                 .flatMapThrowing { out in

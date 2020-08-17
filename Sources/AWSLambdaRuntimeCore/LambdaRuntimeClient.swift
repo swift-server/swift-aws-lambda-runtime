@@ -38,7 +38,7 @@ extension Lambda {
         func getNextInvocation(logger: Logger) -> EventLoopFuture<(Invocation, ByteBuffer)> {
             let url = Consts.invocationURLPrefix + Consts.getNextInvocationURLSuffix
             logger.debug("requesting work from lambda runtime engine using \(url)")
-            // we will get the trace context in the invocation
+            // we will get the trace context in the invocation response
             return self.httpClient.get(url: url, headers: RuntimeClient.defaultHeaders, context: .init()).flatMapThrowing { response in
                 guard response.status == .ok else {
                     throw RuntimeError.badStatusCode(response.status)
