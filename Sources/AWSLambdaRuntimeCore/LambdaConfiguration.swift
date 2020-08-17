@@ -21,19 +21,16 @@ extension Lambda {
         let general: General
         let lifecycle: Lifecycle
         let runtimeEngine: RuntimeEngine
-        let tracerFactory: TracerFactory
 
         init() {
             self.init(general: .init(), lifecycle: .init(), runtimeEngine: .init())
         }
 
-        init(general: General? = nil, lifecycle: Lifecycle? = nil, runtimeEngine: RuntimeEngine? = nil,
-             tracerFactory: TracerFactory? = nil)
+        init(general: General? = nil, lifecycle: Lifecycle? = nil, runtimeEngine: RuntimeEngine? = nil)
         {
             self.general = general ?? General()
             self.lifecycle = lifecycle ?? Lifecycle()
             self.runtimeEngine = runtimeEngine ?? RuntimeEngine()
-            self.tracerFactory = tracerFactory ?? { _ in NoOpTracingInstrument() }
         }
 
         struct General: CustomStringConvertible {

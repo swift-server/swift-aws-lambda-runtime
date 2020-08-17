@@ -21,7 +21,6 @@ import Darwin.C
 import Backtrace
 import Logging
 import NIO
-import NIOConcurrencyHelpers
 
 public enum Lambda {
     public typealias Handler = ByteBufferLambdaHandler
@@ -30,23 +29,6 @@ public enum Lambda {
     ///
     /// A function that takes a `InitializationContext` and returns an `EventLoopFuture` of a `ByteBufferLambdaHandler`
     public typealias HandlerFactory = (InitializationContext) -> EventLoopFuture<Handler>
-
-    internal typealias TracerFactory = (EventLoop) -> TracingInstrument
-
-    private static let lock = Lock()
-    private static var tracerFactory: TracerFactory = { _ in NoOpTracingInstrument() }
-
-    /// Select the desired `TracingInstrument` implementation.
-    ///
-    /// The caller is responsible for the tracer lifecycle.
-    ///
-    /// - parameters:
-    ///     -  tracerFactory: creates `TracingInstrument` implementation
-    public static func bootstrap(_ tracerFactory: @escaping (EventLoop) -> TracingInstrument) {
-        self.lock.withLockVoid {
-            self.tracerFactory = tracerFactory
-        }
-    }
 
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
     ///
