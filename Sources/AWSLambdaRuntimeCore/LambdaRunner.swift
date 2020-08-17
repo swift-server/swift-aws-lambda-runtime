@@ -81,6 +81,7 @@ extension Lambda {
                                       eventLoop: self.eventLoop,
                                       allocator: self.allocator,
                                       invocation: invocation)
+                let baggage = context.baggage
                 self.tracer.beginSegment(name: "getNextInvocation", baggage: context.baggage, startTime: startTime).end()
                 logger.debug("sending invocation to lambda handler \(handler)")
                 return handler.handle(context: context, event: event)
@@ -93,11 +94,11 @@ extension Lambda {
                         if case .failure(let error) = result {
                             logger.warning("lambda handler returned an error: \(error)")
                         }
-                        return (invocation, result, context)
+                        return (invocation, result, baggage)
                     }
-            }.flatMap { (invocation, result, context: Context) in
+            }.flatMap { invocation, result, baggage in
                 // 3. report results to runtime engine
-                self.tracer.segment(name: "ReportResults", baggage: context.baggage) { segment in
+                self.tracer.segment(name: "ReportResults", baggage: baggage) { segment in
                     self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result,
                                                      context: segment.baggage).peekError { error in
                         logger.error("could not report results to lambda runtime engine: \(error)")
