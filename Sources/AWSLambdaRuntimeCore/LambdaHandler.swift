@@ -130,7 +130,6 @@ public extension EventLoopLambdaHandler {
     /// Driver for `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding
     func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
         let segment = context.tracer.beginSegment(name: "HandleEvent", baggage: context.baggage)
-        // TODO: record errors propagated in result types?
         let decodedEvent = segment.subsegment(name: "DecodeIn") { _ in
             self.decodeIn(buffer: event)
         }
@@ -140,16 +139,10 @@ public extension EventLoopLambdaHandler {
             segment.end()
             return context.eventLoop.makeFailedFuture(CodecError.requestDecoding(error))
         case .success(let `in`):
-            // TODO: use NIO helpers?
             let subsegment = segment.beginSubsegment(name: "HandleIn")
             context.baggage = subsegment.baggage
             return self.handle(context: context, event: `in`)
-                .always { result in
-                    if case .failure(let error) = result {
-                        subsegment.addError(error)
-                    }
-                    subsegment.end()
-                }
+                .endSegment(subsegment)
                 .flatMapThrowing { out in
                     try context.tracer.segment(name: "EncodeOut", baggage: segment.baggage) { _ in
                         switch self.encodeOut(allocator: context.allocator, value: out) {
@@ -159,12 +152,8 @@ public extension EventLoopLambdaHandler {
                             return buffer
                         }
                     }
-                }.always { result in
-                    if case .failure(let error) = result {
-                        segment.addError(error)
-                    }
-                    segment.end()
                 }
+                .endSegment(segment)
         }
     }
 

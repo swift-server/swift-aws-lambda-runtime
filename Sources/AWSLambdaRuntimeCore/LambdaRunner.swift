@@ -98,10 +98,9 @@ extension Lambda {
                         logger.error("could not report results to lambda runtime engine: \(error)")
                     }
                 }
-            }.flatMap {
-                // flush the tracer after each invocation
-                self.tracer.flush(on: self.eventLoop)
             }
+            // flush the tracer after each invocation
+            .flush(self.tracer, recover: false)
         }
 
         /// cancels the current run, if we are waiting for next invocation (long poll from Lambda control plane)
