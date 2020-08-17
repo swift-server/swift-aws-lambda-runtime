@@ -29,7 +29,8 @@ extension Lambda {
         private let allocator = ByteBufferAllocator()
         private let httpClient: HTTPClient
 
-        init(eventLoop: EventLoop, configuration: Configuration.RuntimeEngine, tracer: TracingInstrument) {
+        init(eventLoop: EventLoop, configuration: Configuration.RuntimeEngine,
+             tracer: TracingInstrument = NoOpTracingInstrument()) {
             self.eventLoop = eventLoop
             self.httpClient = HTTPClient(eventLoop: eventLoop, configuration: configuration, tracer: tracer)
         }

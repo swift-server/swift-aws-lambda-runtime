@@ -263,7 +263,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         XCTAssertNoThrow(inv = try Lambda.Invocation(headers: header))
         guard let invocation = inv else { return }
 
-        let result = client.reportResults(logger: logger, invocation: invocation, result: Result.failure(TestError("boom")))
+        let result = client.reportResults(logger: logger, invocation: invocation, result: Result.failure(TestError("boom")), context: .init())
 
         var inboundHeader: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundHeader = try server.readInbound())
@@ -303,7 +303,8 @@ class LambdaRuntimeClientTest: XCTestCase {
         XCTAssertNoThrow(inv = try Lambda.Invocation(headers: header))
         guard let invocation = inv else { return }
 
-        let result = client.reportResults(logger: logger, invocation: invocation, result: Result.success(nil))
+        let result = client.reportResults(logger: logger, invocation: invocation, result: Result.success(nil),
+                                          context: .init())
 
         var inboundHeader: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundHeader = try server.readInbound())

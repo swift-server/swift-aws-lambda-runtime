@@ -18,6 +18,7 @@ import Glibc
 import Darwin.C
 #endif
 
+import AWSXRaySDK
 import Backtrace
 import Logging
 import NIO
@@ -106,8 +107,12 @@ public enum Lambda {
             logger.logLevel = configuration.general.logLevel
 
             var result: Result<Int, Error>!
+            // TODO: bootstrap/configure the trace lifecycle
+            let tracer: XRayRecorder = XRayRecorder(eventLoopGroupProvider: .createNew)
             MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
-                let lifecycle = Lifecycle(eventLoop: eventLoop, logger: logger, configuration: configuration, factory: factory)
+//                let tracer = XRayRecorder(eventLoopGroupProvider: .shared(eventLoop))
+                let lifecycle = Lifecycle(eventLoop: eventLoop, logger: logger, tracer: tracer,
+                                          configuration: configuration, factory: factory)
                 #if DEBUG
                 let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
                     logger.info("intercepted signal: \(signal)")
@@ -127,6 +132,14 @@ public enum Lambda {
                         }
                     }
                     result = lifecycleResult
+                }
+            }
+
+            // TODO: this is broken, the tracer tries to eat cake and have cake: flash on eventLoop then syncShutdown
+            // fix in XRayRecorder
+            tracer.shutdown { error in
+                if let error = error {
+                    preconditionFailure("Failed to shutdown tracer: \(error)")
                 }
             }
 

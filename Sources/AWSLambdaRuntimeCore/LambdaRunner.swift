@@ -32,9 +32,10 @@ extension Lambda {
 
         private var isGettingNextInvocation = false
 
-        init(eventLoop: EventLoop, configuration: Configuration, tracer: TracingInstrument) {
+        init(eventLoop: EventLoop, configuration: Configuration, tracer: TracingInstrument = NoOpTracingInstrument()) {
             self.eventLoop = eventLoop
-            self.runtimeClient = RuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine, tracer: tracer)
+            self.runtimeClient = RuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine,
+                                               tracer: tracer)
             self.tracer = tracer
             self.allocator = ByteBufferAllocator()
         }

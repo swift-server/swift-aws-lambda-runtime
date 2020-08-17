@@ -27,6 +27,7 @@ extension Lambda {
         private let logger: Logger
         private let configuration: Configuration
         private let factory: HandlerFactory
+        private let tracer: TracingInstrument
 
         private var state = State.idle {
             willSet {
@@ -42,13 +43,16 @@ extension Lambda {
         ///     - logger: A `Logger` to log the Lambda events.
         ///     - factory: A `LambdaHandlerFactory` to create the concrete  Lambda handler.
         public convenience init(eventLoop: EventLoop, logger: Logger, factory: @escaping HandlerFactory) {
-            self.init(eventLoop: eventLoop, logger: logger, configuration: .init(), factory: factory)
+            self.init(eventLoop: eventLoop, logger: logger, tracer: NoOpTracingInstrument(), configuration: .init(),
+                      factory: factory)
         }
 
-        init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, factory: @escaping HandlerFactory) {
+        init(eventLoop: EventLoop, logger: Logger, tracer: TracingInstrument, configuration: Configuration,
+             factory: @escaping HandlerFactory) {
             self.eventLoop = eventLoop
             self.shutdownPromise = eventLoop.makePromise(of: Int.self)
             self.logger = logger
+            self.tracer = tracer
             self.configuration = configuration
             self.factory = factory
         }
@@ -79,9 +83,7 @@ extension Lambda {
 
             var logger = self.logger
             logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
-
-            let tracer = XRayRecorder(eventLoopGroupProvider: .shared(eventLoop))
-            let runner = Runner(eventLoop: self.eventLoop, configuration: self.configuration, tracer: tracer)
+            let runner = Runner(eventLoop: self.eventLoop, configuration: self.configuration, tracer: self.tracer)
 
             let startupFuture = runner.initialize(logger: logger, factory: self.factory)
             startupFuture.flatMap { handler -> EventLoopFuture<(ByteBufferLambdaHandler, Result<Int, Error>)> in
@@ -95,11 +97,6 @@ extension Lambda {
             .flatMap { (handler, runnerResult) -> EventLoopFuture<Int> in
                 // after the lambda finishPromise has succeeded or failed we need to
                 // shutdown the handler
-                tracer.shutdown { error in
-                    if let error = error {
-                        logger.error("Failed to shutdown tracer: \(error)")
-                    }
-                }
                 let shutdownContext = ShutdownContext(logger: logger, eventLoop: self.eventLoop)
                 return handler.shutdown(context: shutdownContext).flatMapErrorThrowing { error in
                     // if, we had an error shuting down the lambda, we want to concatenate it with
