@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import AWSXRayRecorder
+import Baggage
 import Logging
 import NIO
 import NIOHTTP1
@@ -27,16 +29,17 @@ extension Lambda {
         private let allocator = ByteBufferAllocator()
         private let httpClient: HTTPClient
 
-        init(eventLoop: EventLoop, configuration: Configuration.RuntimeEngine) {
+        init(eventLoop: EventLoop, configuration: Configuration.RuntimeEngine, tracer: TracingInstrument) {
             self.eventLoop = eventLoop
-            self.httpClient = HTTPClient(eventLoop: eventLoop, configuration: configuration)
+            self.httpClient = HTTPClient(eventLoop: eventLoop, configuration: configuration, tracer: tracer)
         }
 
         /// Requests invocation from the control plane.
         func getNextInvocation(logger: Logger) -> EventLoopFuture<(Invocation, ByteBuffer)> {
             let url = Consts.invocationURLPrefix + Consts.getNextInvocationURLSuffix
             logger.debug("requesting work from lambda runtime engine using \(url)")
-            return self.httpClient.get(url: url, headers: RuntimeClient.defaultHeaders).flatMapThrowing { response in
+            // we will get the trace context in the invocation
+            return self.httpClient.get(url: url, headers: RuntimeClient.defaultHeaders, context: .init()).flatMapThrowing { response in
                 guard response.status == .ok else {
                     throw RuntimeError.badStatusCode(response.status)
                 }
@@ -58,7 +61,7 @@ extension Lambda {
         }
 
         /// Reports a result to the Runtime Engine.
-        func reportResults(logger: Logger, invocation: Invocation, result: Result<ByteBuffer?, Error>) -> EventLoopFuture<Void> {
+        func reportResults(logger: Logger, invocation: Invocation, result: Result<ByteBuffer?, Error>, context: BaggageContext) -> EventLoopFuture<Void> {
             var url = Consts.invocationURLPrefix + "/" + invocation.requestID
             var body: ByteBuffer?
             let headers: HTTPHeaders
@@ -77,7 +80,7 @@ extension Lambda {
                 headers = RuntimeClient.errorHeaders
             }
             logger.debug("reporting results to lambda runtime engine using \(url)")
-            return self.httpClient.post(url: url, headers: headers, body: body).flatMapThrowing { response in
+            return self.httpClient.post(url: url, headers: headers, body: body, context: context).flatMapThrowing { response in
                 guard response.status == .accepted else {
                     throw RuntimeError.badStatusCode(response.status)
                 }
@@ -102,7 +105,7 @@ extension Lambda {
             var body = self.allocator.buffer(capacity: bytes.count)
             body.writeBytes(bytes)
             logger.warning("reporting initialization error to lambda runtime engine using \(url)")
-            return self.httpClient.post(url: url, headers: RuntimeClient.errorHeaders, body: body).flatMapThrowing { response in
+            return self.httpClient.post(url: url, headers: RuntimeClient.errorHeaders, body: body, context: .init()).flatMapThrowing { response in
                 guard response.status == .accepted else {
                     throw RuntimeError.badStatusCode(response.status)
                 }

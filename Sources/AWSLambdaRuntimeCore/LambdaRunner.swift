@@ -34,7 +34,7 @@ extension Lambda {
 
         init(eventLoop: EventLoop, configuration: Configuration, tracer: TracingInstrument) {
             self.eventLoop = eventLoop
-            self.runtimeClient = RuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine)
+            self.runtimeClient = RuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine, tracer: tracer)
             self.tracer = tracer
             self.allocator = ByteBufferAllocator()
         }
@@ -68,7 +68,8 @@ extension Lambda {
             logger.debug("lambda invocation sequence starting")
             // 1. request invocation from lambda runtime engine
             self.isGettingNextInvocation = true
-            // TODO: add API to explicitly set startTime, after all
+            // we will get the trace context in the invocation
+            let startTime = XRayRecorder.Timestamp.now()
             return self.runtimeClient.getNextInvocation(logger: logger).peekError { error in
                 logger.error("could not fetch work from lambda runtime engine: \(error)")
             }.flatMap { invocation, event in
@@ -80,6 +81,7 @@ extension Lambda {
                                       allocator: self.allocator,
                                       invocation: invocation)
                 let baggage = context.baggage
+                self.tracer.beginSegment(name: "getNextInvocation", baggage: baggage, startTime: startTime).end()
                 logger.debug("sending invocation to lambda handler \(handler)")
                 return handler.handle(context: context, event: event)
                     // Hopping back to "our" EventLoop is importnant in case the handler returns a future that
@@ -95,8 +97,9 @@ extension Lambda {
                     }
             }.flatMap { invocation, result, baggage in
                 // 3. report results to runtime engine
-                self.tracer.segment(name: "ReportResults", baggage: baggage) { _ in
-                    self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError { error in
+                self.tracer.segment(name: "ReportResults", baggage: baggage) { segment in
+                    self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result,
+                                                     context: segment.baggage).peekError { error in
                         logger.error("could not report results to lambda runtime engine: \(error)")
                     }
                 }

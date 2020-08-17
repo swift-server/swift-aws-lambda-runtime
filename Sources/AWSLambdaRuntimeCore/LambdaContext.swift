@@ -117,7 +117,7 @@ extension Lambda {
             logger[metadataKey: "awsRequestID"] = .string(requestID)
             logger[metadataKey: "awsTraceID"] = .string(traceID)
             var baggage = BaggageContext()
-            // TODO: handle error
+            // TODO: use `swift-tracing` API, note that we can ONLY extract X-Ray Context from the invocation data
             baggage.xRayContext = try? XRayContext(tracingHeader: traceID)
             self.baggage = baggage
             self.logger = logger

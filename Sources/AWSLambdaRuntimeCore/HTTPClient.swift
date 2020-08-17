@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Baggage
 import NIO
 import NIOConcurrencyHelpers
 import NIOHTTP1
@@ -23,31 +24,35 @@ internal final class HTTPClient {
     private let eventLoop: EventLoop
     private let configuration: Lambda.Configuration.RuntimeEngine
     private let targetHost: String
+    private let tracer: TracingInstrument
 
     private var state = State.disconnected
     private var executing = false
 
-    init(eventLoop: EventLoop, configuration: Lambda.Configuration.RuntimeEngine) {
+    init(eventLoop: EventLoop, configuration: Lambda.Configuration.RuntimeEngine, tracer: TracingInstrument) {
         self.eventLoop = eventLoop
         self.configuration = configuration
         self.targetHost = "\(self.configuration.ip):\(self.configuration.port)"
+        self.tracer = tracer
     }
 
-    func get(url: String, headers: HTTPHeaders, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
+    func get(url: String, headers: HTTPHeaders, timeout: TimeAmount? = nil, context: BaggageContext) -> EventLoopFuture<Response> {
         self.execute(Request(targetHost: self.targetHost,
                              url: url,
                              method: .GET,
                              headers: headers,
-                             timeout: timeout ?? self.configuration.requestTimeout))
+                             timeout: timeout ?? self.configuration.requestTimeout),
+                     context: context)
     }
 
-    func post(url: String, headers: HTTPHeaders, body: ByteBuffer?, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
+    func post(url: String, headers: HTTPHeaders, body: ByteBuffer?, timeout: TimeAmount? = nil, context: BaggageContext) -> EventLoopFuture<Response> {
         self.execute(Request(targetHost: self.targetHost,
                              url: url,
                              method: .POST,
                              headers: headers,
                              body: body,
-                             timeout: timeout ?? self.configuration.requestTimeout))
+                             timeout: timeout ?? self.configuration.requestTimeout),
+                     context: context)
     }
 
     /// cancels the current request if there is one
@@ -65,7 +70,7 @@ internal final class HTTPClient {
     }
 
     // TODO: cap reconnect attempt
-    private func execute(_ request: Request, validate: Bool = true) -> EventLoopFuture<Response> {
+    private func execute(_ request: Request, validate: Bool = true, context: BaggageContext) -> EventLoopFuture<Response> {
         if validate {
             precondition(self.executing == false, "expecting single request at a time")
             self.executing = true
@@ -75,14 +80,16 @@ internal final class HTTPClient {
         case .disconnected:
             return self.connect().flatMap { channel -> EventLoopFuture<Response> in
                 self.state = .connected(channel)
-                return self.execute(request, validate: false)
+                return self.execute(request, validate: false, context: context)
             }
         case .connected(let channel):
             guard channel.isActive else {
                 self.state = .disconnected
-                return self.execute(request, validate: false)
+                return self.execute(request, validate: false, context: context)
             }
 
+            let segment = self.tracer.beginSegment(name: "HTTPClient", baggage: context)
+            segment.setHTTPRequest(method: request.method.rawValue, url: request.url)
             let promise = channel.eventLoop.makePromise(of: Response.self)
             promise.futureResult.whenComplete { _ in
                 precondition(self.executing == true, "invalid execution state")
@@ -90,7 +97,7 @@ internal final class HTTPClient {
             }
             let wrapper = HTTPRequestWrapper(request: request, promise: promise)
             channel.writeAndFlush(wrapper).cascadeFailure(to: promise)
-            return promise.futureResult
+            return promise.futureResult.endSegment(segment)
         }
     }
 
