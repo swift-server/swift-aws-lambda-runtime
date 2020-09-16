@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+import BaggageContext
 import Dispatch
 import Logging
 import NIO
-import BaggageContext
 
 // MARK: - InitializationContext
 
@@ -51,7 +51,6 @@ extension Lambda {
     /// Lambda runtime context.
     /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
     public final class Context: BaggageContext.Context, CustomDebugStringConvertible {
-
         /// Contains contextual metadata such as request and trace identifiers, along with other information which may
         /// be carried throughout asynchronous and cross-node boundaries (e.g. through HTTPClient calls).
         public let baggage: Baggage
@@ -84,6 +83,7 @@ extension Lambda {
         public var logger: Logger {
             self._logger.with(self.baggage)
         }
+
         private var _logger: Logger
 
         /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
@@ -161,7 +161,6 @@ extension Lambda {
 // MARK: - Baggage Items
 
 extension Baggage {
-
     // MARK: - Baggage: RequestID
 
     enum LambdaRequestIDKey: Key {
@@ -172,9 +171,9 @@ extension Baggage {
     /// The request ID, which identifies the request that triggered the function invocation.
     public internal(set) var lambdaRequestID: String {
         get {
-            return self[LambdaRequestIDKey.self]! // !-safe, the runtime guarantees to always set an identifier, even in testing
+            self[LambdaRequestIDKey.self]! // !-safe, the runtime guarantees to always set an identifier, even in testing
         }
-         set {
+        set {
             self[LambdaRequestIDKey.self] = newValue
         }
     }
@@ -189,11 +188,10 @@ extension Baggage {
     /// The AWS X-Ray tracing header.
     public internal(set) var lambdaTraceID: String {
         get {
-            return self[LambdaTraceIDKey.self]! // !-safe, the runtime guarantees to always set an identifier, even in testing
+            self[LambdaTraceIDKey.self]! // !-safe, the runtime guarantees to always set an identifier, even in testing
         }
         set {
             self[LambdaTraceIDKey.self] = newValue
         }
     }
-
 }
