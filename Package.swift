@@ -17,6 +17,8 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.17.0")),
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.0.0")),
+        // .package(url: "https://github.com/slashmo/gsoc-swift-baggage-context.git", .branch("main")),
+        .package(name: "swift-context", path: "/Users/ktoso/code/gsoc-swift-baggage-context"),
         .package(url: "https://github.com/swift-server/swift-backtrace.git", .upToNextMajor(from: "1.1.0")),
     ],
     targets: [
@@ -27,6 +29,7 @@ let package = Package(
         ]),
         .target(name: "AWSLambdaRuntimeCore", dependencies: [
             .product(name: "Logging", package: "swift-log"),
+            .product(name: "BaggageContext", package: "swift-context"),
             .product(name: "Backtrace", package: "swift-backtrace"),
             .product(name: "NIOHTTP1", package: "swift-nio"),
         ]),
