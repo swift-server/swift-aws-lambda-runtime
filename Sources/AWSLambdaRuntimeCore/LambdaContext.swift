@@ -15,6 +15,7 @@
 import Dispatch
 import Logging
 import NIO
+import BaggageContext
 
 // MARK: - InitializationContext
 
@@ -49,12 +50,21 @@ extension Lambda {
 extension Lambda {
     /// Lambda runtime context.
     /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
-    public final class Context: CustomDebugStringConvertible {
+    public final class Context: BaggageContext.Context, CustomDebugStringConvertible {
+
+        /// Contains contextual metadata such as request and trace identifiers, along with other information which may
+        /// be carried throughout asynchronous and cross-node boundaries (e.g. through HTTPClient calls).
+        public let baggage: Baggage
+
         /// The request ID, which identifies the request that triggered the function invocation.
-        public let requestID: String
+        public var requestID: String {
+            self.baggage.lambdaRequestID
+        }
 
         /// The AWS X-Ray tracing header.
-        public let traceID: String
+        public var traceID: String {
+            self.baggage.lambdaTraceID
+        }
 
         /// The ARN of the Lambda function, version, or alias that's specified in the invocation.
         public let invokedFunctionARN: String
@@ -68,10 +78,13 @@ extension Lambda {
         /// For invocations from the AWS Mobile SDK, data about the client application and device.
         public let clientContext: String?
 
-        /// `Logger` to log with
+        /// `Logger` to log with, it is automatically populated with `baggage` information (such as `traceID` and `requestID`).
         ///
         /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
-        public let logger: Logger
+        public var logger: Logger {
+            self._logger.with(self.baggage)
+        }
+        private var _logger: Logger
 
         /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
         /// This is useful when implementing the `EventLoopLambdaHandler` protocol.
@@ -93,8 +106,10 @@ extension Lambda {
                       logger: Logger,
                       eventLoop: EventLoop,
                       allocator: ByteBufferAllocator) {
-            self.requestID = requestID
-            self.traceID = traceID
+            var baggage = Baggage.background
+            baggage.lambdaRequestID = requestID
+            baggage.lambdaTraceID = traceID
+            self.baggage = baggage
             self.invokedFunctionARN = invokedFunctionARN
             self.cognitoIdentity = cognitoIdentity
             self.clientContext = clientContext
@@ -102,11 +117,7 @@ extension Lambda {
             // utility
             self.eventLoop = eventLoop
             self.allocator = allocator
-            // mutate logger with context
-            var logger = logger
-            logger[metadataKey: "awsRequestID"] = .string(requestID)
-            logger[metadataKey: "awsTraceID"] = .string(traceID)
-            self.logger = logger
+            self._logger = logger
         }
 
         public func getRemainingTime() -> TimeAmount {
@@ -145,4 +156,44 @@ extension Lambda {
             self.logger = logger
         }
     }
+}
+
+// MARK: - Baggage Items
+
+extension Baggage {
+
+    // MARK: - Baggage: RequestID
+
+    enum LambdaRequestIDKey: Key {
+        typealias Value = String
+        static var name: String? { AmazonHeaders.requestID }
+    }
+
+    /// The request ID, which identifies the request that triggered the function invocation.
+    public internal(set) var lambdaRequestID: String {
+        get {
+            return self[LambdaRequestIDKey.self]! // !-safe, the runtime guarantees to always set an identifier, even in testing
+        }
+         set {
+            self[LambdaRequestIDKey.self] = newValue
+        }
+    }
+
+    // MARK: - Baggage: TraceID
+
+    enum LambdaTraceIDKey: Key {
+        typealias Value = String
+        static var name: String? { AmazonHeaders.traceID }
+    }
+
+    /// The AWS X-Ray tracing header.
+    public internal(set) var lambdaTraceID: String {
+        get {
+            return self[LambdaTraceIDKey.self]! // !-safe, the runtime guarantees to always set an identifier, even in testing
+        }
+        set {
+            self[LambdaTraceIDKey.self] = newValue
+        }
+    }
+
 }
