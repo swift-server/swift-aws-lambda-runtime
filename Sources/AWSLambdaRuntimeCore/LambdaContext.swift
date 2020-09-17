@@ -51,9 +51,10 @@ extension Lambda {
     /// Lambda runtime context.
     /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
     public struct Context: BaggageContext.Context, CustomDebugStringConvertible {
-        private var storage: _Storage
+        /// Used to store all contents of the context and implement CoW semantics for it.
+        private var storage: Storage
 
-        final class _Storage {
+        final class Storage {
             var baggage: Baggage
 
             let invokedFunctionARN: String
@@ -61,6 +62,10 @@ extension Lambda {
             let cognitoIdentity: String?
             let clientContext: String?
 
+            // Implementation note: This logger is the "user provided logger" that we will log to when `context.logger` is used.
+            // However, we don't use it directly but through the `_logger.with(baggage)` pattern, in order to fulfil the `Context`'s
+            // contract about how the `logger` property must be implemented -- i.e. by always containing the latest baggage.
+            // This makes all log statements automatically include any baggage that is meaningful to include in logging.
             var _logger: Logger
 
             let eventLoop: EventLoop
@@ -97,7 +102,7 @@ extension Lambda {
                 if isKnownUniquelyReferenced(&self.storage) {
                     self.storage.baggage = newValue
                 } else {
-                    self.storage = _Storage(
+                    self.storage = Storage(
                         baggage: newValue,
                         invokedFunctionARN: self.storage.invokedFunctionARN,
                         deadline: self.storage.deadline,
@@ -143,9 +148,14 @@ extension Lambda {
 
         /// `Logger` to log with, it is automatically populated with `baggage` information (such as `traceID` and `requestID`).
         ///
-        /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
+        /// - note: The default `Logger.LogLevel` can be configured using the `LOG_LEVEL` environment variable.
         public var logger: Logger {
-            self.storage._logger.with(self.baggage)
+            get {
+                self.storage._logger.with(self.baggage)
+            }
+            set {
+                self.storage._logger = newValue
+            }
         }
 
         /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
@@ -175,7 +185,7 @@ extension Lambda {
             var baggage = Baggage.background
             baggage.lambdaRequestID = requestID
             baggage.lambdaTraceID = traceID
-            self.storage = _Storage(
+            self.storage = Storage(
                 baggage: baggage,
                 invokedFunctionARN: invokedFunctionARN,
                 deadline: deadline,
