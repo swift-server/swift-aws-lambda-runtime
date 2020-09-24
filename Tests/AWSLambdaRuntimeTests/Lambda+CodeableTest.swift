@@ -18,6 +18,7 @@ import Logging
 import NIO
 import NIOFoundationCompat
 import XCTest
+import Baggage
 
 class CodableLambdaTest: XCTestCase {
     var eventLoopGroup: EventLoopGroup!
@@ -63,7 +64,22 @@ class CodableLambdaTest: XCTestCase {
         XCTAssertEqual(response?.requestId, request.requestId)
     }
 
-    // convencience method
+    func testBaggageContextInteractions() {
+        var context = newContext()
+        context.baggage.testValue = "hello"
+
+        context.logger.info("Test")
+        XCTAssertEqual(context.baggage.testValue, "hello")
+        XCTAssertEqual(context.baggage.lambdaTraceID, "abc123")
+        XCTAssertEqual(context.baggage.lambdaTraceID, context.traceID)
+        XCTAssertEqual(context.baggage.lambdaRequestID, context.requestID)
+
+        XCTAssertEqual("\(context.logger[metadataKey: "LambdaTraceIDKey"]!)", context.traceID)
+        XCTAssertEqual("\(context.logger[metadataKey: "LambdaRequestIDKey"]!)", context.requestID)
+        XCTAssertEqual("\(context.logger[metadataKey: "TestKey"]!)", context.baggage.testValue)
+    }
+
+    // convenience method
     func newContext() -> Lambda.Context {
         Lambda.Context(requestID: UUID().uuidString,
                        traceID: "abc123",
@@ -88,5 +104,20 @@ private struct Response: Codable, Equatable {
     let requestId: String
     init(requestId: String) {
         self.requestId = requestId
+    }
+}
+
+extension Baggage {
+    enum TestKey: Baggage.Key {
+        typealias Value = String
+
+    }
+    var testValue: String? {
+        get {
+            return self[TestKey.self]
+        }
+        set {
+            self[TestKey.self] = newValue
+        }
     }
 }

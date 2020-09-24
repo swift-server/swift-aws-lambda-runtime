@@ -18,7 +18,6 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.17.0")),
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.0.0")),
         .package(name: "swift-context", url: "https://github.com/ktoso/gsoc-swift-baggage-context.git", .branch("simple-is-good-proposal")), // TODO: use main once merged
-        // .package(name: "swift-context", path: "/Users/ktoso/code/gsoc-swift-baggage-context"), // TODO: remove development dep
         .package(url: "https://github.com/swift-server/swift-backtrace.git", .upToNextMajor(from: "1.1.0")),
     ],
     targets: [

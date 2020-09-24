@@ -63,9 +63,7 @@ extension Lambda {
             let clientContext: String?
 
             // Implementation note: This logger is the "user provided logger" that we will log to when `context.logger` is used.
-            // However, we don't use it directly but through the `_logger.with(baggage)` pattern, in order to fulfil the `Context`'s
-            // contract about how the `logger` property must be implemented -- i.e. by always containing the latest baggage.
-            // This makes all log statements automatically include any baggage that is meaningful to include in logging.
+            // It must be updated with the latest metadata whenever the `baggage` changes.
             var _logger: Logger
 
             let eventLoop: EventLoop
@@ -77,7 +75,7 @@ extension Lambda {
                 deadline: DispatchWallTime,
                 cognitoIdentity: String?,
                 clientContext: String?,
-                _logger: Logger,
+                logger: Logger,
                 eventLoop: EventLoop,
                 allocator: ByteBufferAllocator
             ) {
@@ -86,7 +84,7 @@ extension Lambda {
                 self.deadline = deadline
                 self.cognitoIdentity = cognitoIdentity
                 self.clientContext = clientContext
-                self._logger = _logger
+                self._logger = logger
                 self.eventLoop = eventLoop
                 self.allocator = allocator
             }
@@ -100,15 +98,18 @@ extension Lambda {
             }
             set {
                 if isKnownUniquelyReferenced(&self.storage) {
+                    self.storage._logger.updateMetadata(previous: self.storage.baggage, latest: newValue)
                     self.storage.baggage = newValue
                 } else {
+                    var logger = self.storage._logger
+                    logger.updateMetadata(previous: self.storage.baggage, latest: newValue)
                     self.storage = Storage(
                         baggage: newValue,
                         invokedFunctionARN: self.storage.invokedFunctionARN,
                         deadline: self.storage.deadline,
                         cognitoIdentity: self.storage.cognitoIdentity,
                         clientContext: self.storage.clientContext,
-                        _logger: self.storage._logger,
+                        logger: self.storage._logger,
                         eventLoop: self.storage.eventLoop,
                         allocator: self.storage.allocator
                     )
@@ -151,10 +152,13 @@ extension Lambda {
         /// - note: The default `Logger.LogLevel` can be configured using the `LOG_LEVEL` environment variable.
         public var logger: Logger {
             get {
-                self.storage._logger.with(self.baggage)
+                self.storage._logger
             }
             set {
-                self.storage._logger = newValue
+                if isKnownUniquelyReferenced(&self.storage) {
+                    self.storage._logger = newValue
+                    self.storage._logger.updateMetadata(previous: .topLevel, latest: self.storage.baggage)
+                }
             }
         }
 
@@ -182,7 +186,7 @@ extension Lambda {
                       logger: Logger,
                       eventLoop: EventLoop,
                       allocator: ByteBufferAllocator) {
-            var baggage = Baggage.background
+            var baggage = Baggage.topLevel
             baggage.lambdaRequestID = requestID
             baggage.lambdaTraceID = traceID
             self.storage = Storage(
@@ -192,7 +196,7 @@ extension Lambda {
                 cognitoIdentity: cognitoIdentity,
                 clientContext: clientContext,
                 // utility
-                _logger: logger,
+                logger: logger,
                 eventLoop: eventLoop,
                 allocator: allocator
             )
@@ -239,6 +243,7 @@ extension Lambda {
 // MARK: - Baggage Items
 
 extension Baggage {
+
     // MARK: - Baggage: RequestID
 
     enum LambdaRequestIDKey: Key {
