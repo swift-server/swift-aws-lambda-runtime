@@ -42,7 +42,7 @@ extension Lambda {
                                                 eventLoop: self.eventLoop,
                                                 allocator: self.allocator)
             return factory(context)
-                // Hopping back to "our" EventLoop is importnant in case the factory returns a future
+                // Hopping back to "our" EventLoop is important in case the factory returns a future
                 // that originated from a foreign EventLoop/EventLoopGroup.
                 // This can happen if the factory uses a library (let's say a database client) that manages its own threads/loops
                 // for whatever reason and returns a future that originated from that foreign EventLoop.
@@ -71,7 +71,7 @@ extension Lambda {
                                       invocation: invocation)
                 logger.debug("sending invocation to lambda handler \(handler)")
                 return handler.handle(context: context, event: event)
-                    // Hopping back to "our" EventLoop is importnant in case the handler returns a future that
+                    // Hopping back to "our" EventLoop is important in case the handler returns a future that
                     // originiated from a foreign EventLoop/EventLoopGroup.
                     // This can happen if the handler uses a library (lets say a DB client) that manages its own threads/loops
                     // for whatever reason and returns a future that originated from that foreign EventLoop.
