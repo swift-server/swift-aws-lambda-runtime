@@ -61,13 +61,13 @@ extension Lambda {
     public static func test(_ closure: @escaping Lambda.StringClosure,
                             with event: String,
                             using config: TestConfig = .init()) throws -> String {
-        try Self.test(StringClosureWrapper(closure), with: event, using: config)
+        return try Lambda.test(StringClosureWrapper(closure), with: event, using: config)
     }
 
     public static func test(_ closure: @escaping Lambda.StringVoidClosure,
                             with event: String,
                             using config: TestConfig = .init()) throws {
-        _ = try Self.test(StringVoidClosureWrapper(closure), with: event, using: config)
+        _ = try Lambda.test(StringVoidClosureWrapper(closure), with: event, using: config)
     }
 
     public static func test<In: Decodable, Out: Encodable>(
@@ -75,7 +75,7 @@ extension Lambda {
         with event: In,
         using config: TestConfig = .init()
     ) throws -> Out {
-        try Self.test(CodableClosureWrapper(closure), with: event, using: config)
+        return try Lambda.test(CodableClosureWrapper(closure), with: event, using: config)
     }
 
     public static func test<In: Decodable>(
@@ -83,7 +83,7 @@ extension Lambda {
         with event: In,
         using config: TestConfig = .init()
     ) throws {
-        _ = try Self.test(CodableVoidClosureWrapper(closure), with: event, using: config)
+        _ = try Lambda.test(CodableVoidClosureWrapper(closure), with: event, using: config)
     }
 
     public static func test<In, Out, Handler: EventLoopLambdaHandler>(
@@ -108,6 +108,38 @@ extension Lambda {
         return try eventLoop.flatSubmit {
             handler.handle(context: context, event: event)
         }.wait()
+    }
+}
+
+// FIXME: required in swift 5
+private struct StringClosureWrapper: LambdaHandler {
+    typealias In = String
+    typealias Out = String
+
+    private let closure: Lambda.StringClosure
+
+    init(_ closure: @escaping Lambda.StringClosure) {
+        self.closure = closure
+    }
+
+    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, event, callback)
+    }
+}
+
+// FIXME: required in swift 5
+private struct StringVoidClosureWrapper: LambdaHandler {
+    typealias In = String
+    typealias Out = Void
+
+    private let closure: Lambda.StringVoidClosure
+
+    init(_ closure: @escaping Lambda.StringVoidClosure) {
+        self.closure = closure
+    }
+
+    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, event, callback)
     }
 }
 #endif

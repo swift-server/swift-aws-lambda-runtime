@@ -42,7 +42,7 @@ class CodableLambdaTest: XCTestCase {
         }
 
         XCTAssertNoThrow(inputBuffer = try JSONEncoder().encode(request, using: self.allocator))
-        XCTAssertNoThrow(outputBuffer = try closureWrapper.handle(context: self.newContext(), event: XCTUnwrap(inputBuffer)).wait())
+        XCTAssertNoThrow(outputBuffer = try closureWrapper.handle(context: self.newContext(), event: inputBuffer!).wait())
         XCTAssertNil(outputBuffer)
     }
 
@@ -58,22 +58,22 @@ class CodableLambdaTest: XCTestCase {
         }
 
         XCTAssertNoThrow(inputBuffer = try JSONEncoder().encode(request, using: self.allocator))
-        XCTAssertNoThrow(outputBuffer = try closureWrapper.handle(context: self.newContext(), event: XCTUnwrap(inputBuffer)).wait())
-        XCTAssertNoThrow(response = try JSONDecoder().decode(Response.self, from: XCTUnwrap(outputBuffer)))
+        XCTAssertNoThrow(outputBuffer = try closureWrapper.handle(context: self.newContext(), event: inputBuffer!).wait())
+        XCTAssertNoThrow(response = try JSONDecoder().decode(Response.self, from: outputBuffer!))
         XCTAssertEqual(response?.requestId, request.requestId)
     }
 
     // convencience method
     func newContext() -> Lambda.Context {
-        Lambda.Context(requestID: UUID().uuidString,
-                       traceID: "abc123",
-                       invokedFunctionARN: "aws:arn:",
-                       deadline: .now() + .seconds(3),
-                       cognitoIdentity: nil,
-                       clientContext: nil,
-                       logger: Logger(label: "test"),
-                       eventLoop: self.eventLoopGroup.next(),
-                       allocator: ByteBufferAllocator())
+        return Lambda.Context(requestID: UUID().uuidString,
+                              traceID: "abc123",
+                              invokedFunctionARN: "aws:arn:",
+                              deadline: .now() + .seconds(3),
+                              cognitoIdentity: nil,
+                              clientContext: nil,
+                              logger: Logger(label: "test"),
+                              eventLoop: self.eventLoopGroup.next(),
+                              allocator: ByteBufferAllocator())
     }
 }
 

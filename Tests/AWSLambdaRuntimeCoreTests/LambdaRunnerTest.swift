@@ -21,7 +21,7 @@ class LambdaRunnerTest: XCTestCase {
             let requestId = UUID().uuidString
             let event = "hello"
             func getInvocation() -> GetInvocationResult {
-                .success((self.requestId, self.event))
+                return .success((self.requestId, self.event))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
@@ -48,7 +48,7 @@ class LambdaRunnerTest: XCTestCase {
             static let error = "boom"
             let requestId = UUID().uuidString
             func getInvocation() -> GetInvocationResult {
-                .success((requestId: self.requestId, event: "hello"))
+                return .success((requestId: self.requestId, event: "hello"))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {

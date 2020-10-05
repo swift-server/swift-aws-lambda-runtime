@@ -18,21 +18,21 @@ import XCTest
 class DateWrapperTests: XCTestCase {
     func testISO8601CodingWrapperSuccess() {
         struct TestEvent: Decodable {
-            @ISO8601Coding
-            var date: Date
+            // @ISO8601Coding
+            var date: ISO8601Coding
         }
 
         let json = #"{"date":"2020-03-26T16:53:05Z"}"#
         var event: TestEvent?
         XCTAssertNoThrow(event = try JSONDecoder().decode(TestEvent.self, from: json.data(using: .utf8)!))
 
-        XCTAssertEqual(event?.date, Date(timeIntervalSince1970: 1_585_241_585))
+        XCTAssertEqual(event?.date.wrappedValue, Date(timeIntervalSince1970: 1_585_241_585))
     }
 
     func testISO8601CodingWrapperFailure() {
         struct TestEvent: Decodable {
-            @ISO8601Coding
-            var date: Date
+            // @ISO8601Coding
+            var date: ISO8601Coding
         }
 
         let date = "2020-03-26T16:53:05" // missing Z at end
@@ -50,21 +50,21 @@ class DateWrapperTests: XCTestCase {
 
     func testISO8601WithFractionalSecondsCodingWrapperSuccess() {
         struct TestEvent: Decodable {
-            @ISO8601WithFractionalSecondsCoding
-            var date: Date
+            // @ISO8601WithFractionalSecondsCoding
+            var date: ISO8601WithFractionalSecondsCoding
         }
 
         let json = #"{"date":"2020-03-26T16:53:05.123Z"}"#
         var event: TestEvent?
         XCTAssertNoThrow(event = try JSONDecoder().decode(TestEvent.self, from: json.data(using: .utf8)!))
 
-        XCTAssertEqual(event?.date, Date(timeIntervalSince1970: 1_585_241_585.123))
+        XCTAssertEqual(event?.date.wrappedValue, Date(timeIntervalSince1970: 1_585_241_585.123))
     }
 
     func testISO8601WithFractionalSecondsCodingWrapperFailure() {
         struct TestEvent: Decodable {
-            @ISO8601WithFractionalSecondsCoding
-            var date: Date
+            // @ISO8601WithFractionalSecondsCoding
+            var date: ISO8601WithFractionalSecondsCoding
         }
 
         let date = "2020-03-26T16:53:05Z" // missing fractional seconds
@@ -82,47 +82,47 @@ class DateWrapperTests: XCTestCase {
 
     func testRFC5322DateTimeCodingWrapperSuccess() {
         struct TestEvent: Decodable {
-            @RFC5322DateTimeCoding
-            var date: Date
+            // @RFC5322DateTimeCoding
+            var date: RFC5322DateTimeCoding
         }
 
         let json = #"{"date":"Thu, 5 Apr 2012 23:47:37 +0200"}"#
         var event: TestEvent?
         XCTAssertNoThrow(event = try JSONDecoder().decode(TestEvent.self, from: json.data(using: .utf8)!))
 
-        XCTAssertEqual(event?.date.description, "2012-04-05 21:47:37 +0000")
+        XCTAssertEqual(event?.date.wrappedValue.description, "2012-04-05 21:47:37 +0000")
     }
 
     func testRFC5322DateTimeCodingWrapperWithExtraTimeZoneSuccess() {
         struct TestEvent: Decodable {
-            @RFC5322DateTimeCoding
-            var date: Date
+            // @RFC5322DateTimeCoding
+            var date: RFC5322DateTimeCoding
         }
 
         let json = #"{"date":"Fri, 26 Jun 2020 03:04:03 -0500 (CDT)"}"#
         var event: TestEvent?
         XCTAssertNoThrow(event = try JSONDecoder().decode(TestEvent.self, from: json.data(using: .utf8)!))
 
-        XCTAssertEqual(event?.date.description, "2020-06-26 08:04:03 +0000")
+        XCTAssertEqual(event?.date.wrappedValue.description, "2020-06-26 08:04:03 +0000")
     }
 
     func testRFC5322DateTimeCodingWrapperWithAlphabeticTimeZoneSuccess() {
         struct TestEvent: Decodable {
-            @RFC5322DateTimeCoding
-            var date: Date
+            // @RFC5322DateTimeCoding
+            var date: RFC5322DateTimeCoding
         }
 
         let json = #"{"date":"Fri, 26 Jun 2020 03:04:03 CDT"}"#
         var event: TestEvent?
         XCTAssertNoThrow(event = try JSONDecoder().decode(TestEvent.self, from: json.data(using: .utf8)!))
 
-        XCTAssertEqual(event?.date.description, "2020-06-26 08:04:03 +0000")
+        XCTAssertEqual(event?.date.wrappedValue.description, "2020-06-26 08:04:03 +0000")
     }
 
     func testRFC5322DateTimeCodingWrapperFailure() {
         struct TestEvent: Decodable {
-            @RFC5322DateTimeCoding
-            var date: Date
+            // @RFC5322DateTimeCoding
+            var date: RFC5322DateTimeCoding
         }
 
         let date = "Thu, 5 Apr 2012 23:47 +0200" // missing seconds

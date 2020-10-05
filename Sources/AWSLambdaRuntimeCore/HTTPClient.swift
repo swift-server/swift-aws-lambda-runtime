@@ -34,20 +34,20 @@ internal final class HTTPClient {
     }
 
     func get(url: String, headers: HTTPHeaders, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
-        self.execute(Request(targetHost: self.targetHost,
-                             url: url,
-                             method: .GET,
-                             headers: headers,
-                             timeout: timeout ?? self.configuration.requestTimeout))
+        return self.execute(Request(targetHost: self.targetHost,
+                                    url: url,
+                                    method: .GET,
+                                    headers: headers,
+                                    timeout: timeout ?? self.configuration.requestTimeout))
     }
 
     func post(url: String, headers: HTTPHeaders, body: ByteBuffer?, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
-        self.execute(Request(targetHost: self.targetHost,
-                             url: url,
-                             method: .POST,
-                             headers: headers,
-                             body: body,
-                             timeout: timeout ?? self.configuration.requestTimeout))
+        return self.execute(Request(targetHost: self.targetHost,
+                                    url: url,
+                                    method: .POST,
+                                    headers: headers,
+                                    body: body,
+                                    timeout: timeout ?? self.configuration.requestTimeout))
     }
 
     /// cancels the current request if there is one

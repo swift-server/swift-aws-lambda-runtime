@@ -128,7 +128,7 @@ private enum LocalLambda {
             // this endpoint is called by the client invoking the lambda
             case (.POST, let url) where url.hasSuffix(self.invocationEndpoint):
                 guard let work = request.body else {
-                    return self.writeResponse(context: context, response: .init(status: .badRequest))
+                    return self.writeResponse(context: context, status: .badRequest)
                 }
                 let requestID = "\(DispatchTime.now().uptimeNanoseconds)" // FIXME:
                 let promise = context.eventLoop.makePromise(of: Response.self)
@@ -136,17 +136,17 @@ private enum LocalLambda {
                     switch result {
                     case .failure(let error):
                         self.logger.error("invocation error: \(error)")
-                        self.writeResponse(context: context, response: .init(status: .internalServerError))
+                        self.writeResponse(context: context, status: .internalServerError)
                     case .success(let response):
                         self.writeResponse(context: context, response: response)
                     }
                 }
                 let invocation = Invocation(requestID: requestID, request: work, responsePromise: promise)
-                switch Self.invocationState {
+                switch HTTPHandler.invocationState {
                 case .waitingForInvocation(let promise):
                     promise.succeed(invocation)
                 case .waitingForLambdaRequest, .waitingForLambdaResponse:
-                    Self.invocations.append(invocation)
+                    HTTPHandler.invocations.append(invocation)
                 }
 
             // lambda invocation using the wrong http method
@@ -156,14 +156,14 @@ private enum LocalLambda {
             // /next endpoint is called by the lambda polling for work
             case (.GET, let url) where url.hasSuffix(Consts.getNextInvocationURLSuffix):
                 // check if our server is in the correct state
-                guard case .waitingForLambdaRequest = Self.invocationState else {
-                    self.logger.error("invalid invocation state \(Self.invocationState)")
-                    self.writeResponse(context: context, response: .init(status: .unprocessableEntity))
+                guard case .waitingForLambdaRequest = HTTPHandler.invocationState else {
+                    self.logger.error("invalid invocation state \(HTTPHandler.invocationState)")
+                    self.writeResponse(context: context, status: .unprocessableEntity)
                     return
                 }
 
                 // pop the first task from the queue
-                switch Self.invocations.popFirst() {
+                switch HTTPHandler.invocations.popFirst() {
                 case .none:
                     // if there is nothing in the queue,
                     // create a promise that we can fullfill when we get a new task
@@ -174,14 +174,14 @@ private enum LocalLambda {
                             self.logger.error("invocation error: \(error)")
                             self.writeResponse(context: context, status: .internalServerError)
                         case .success(let invocation):
-                            Self.invocationState = .waitingForLambdaResponse(invocation)
+                            HTTPHandler.invocationState = .waitingForLambdaResponse(invocation)
                             self.writeResponse(context: context, response: invocation.makeResponse())
                         }
                     }
-                    Self.invocationState = .waitingForInvocation(promise)
+                    HTTPHandler.invocationState = .waitingForInvocation(promise)
                 case .some(let invocation):
                     // if there is a task pending, we can immediatly respond with it.
-                    Self.invocationState = .waitingForLambdaResponse(invocation)
+                    HTTPHandler.invocationState = .waitingForLambdaResponse(invocation)
                     self.writeResponse(context: context, response: invocation.makeResponse())
                 }
 
@@ -192,9 +192,9 @@ private enum LocalLambda {
                     // the request is malformed, since we were expecting a requestId in the path
                     return self.writeResponse(context: context, status: .badRequest)
                 }
-                guard case .waitingForLambdaResponse(let invocation) = Self.invocationState else {
+                guard case .waitingForLambdaResponse(let invocation) = HTTPHandler.invocationState else {
                     // a response was send, but we did not expect to receive one
-                    self.logger.error("invalid invocation state \(Self.invocationState)")
+                    self.logger.error("invalid invocation state \(HTTPHandler.invocationState)")
                     return self.writeResponse(context: context, status: .unprocessableEntity)
                 }
                 guard requestID == invocation.requestID else {
@@ -203,9 +203,9 @@ private enum LocalLambda {
                     return self.writeResponse(context: context, status: .badRequest)
                 }
 
-                invocation.responsePromise.succeed(.init(status: .ok, body: request.body))
+                invocation.responsePromise.succeed(Response(status: .ok, headers: nil, body: request.body))
                 self.writeResponse(context: context, status: .accepted)
-                Self.invocationState = .waitingForLambdaRequest
+                HTTPHandler.invocationState = .waitingForLambdaRequest
 
             // :requestID/error endpoint is called by the lambda posting an error response
             case (.POST, let url) where url.hasSuffix(Consts.postErrorURLSuffix):
@@ -214,9 +214,9 @@ private enum LocalLambda {
                     // the request is malformed, since we were expecting a requestId in the path
                     return self.writeResponse(context: context, status: .badRequest)
                 }
-                guard case .waitingForLambdaResponse(let invocation) = Self.invocationState else {
+                guard case .waitingForLambdaResponse(let invocation) = HTTPHandler.invocationState else {
                     // a response was send, but we did not expect to receive one
-                    self.logger.error("invalid invocation state \(Self.invocationState)")
+                    self.logger.error("invalid invocation state \(HTTPHandler.invocationState)")
                     return self.writeResponse(context: context, status: .unprocessableEntity)
                 }
                 guard requestID == invocation.requestID else {
@@ -225,9 +225,9 @@ private enum LocalLambda {
                     return self.writeResponse(context: context, status: .badRequest)
                 }
 
-                invocation.responsePromise.succeed(.init(status: .internalServerError, body: request.body))
+                invocation.responsePromise.succeed(Response(status: .internalServerError, headers: nil, body: request.body))
                 self.writeResponse(context: context, status: .accepted)
-                Self.invocationState = .waitingForLambdaRequest
+                HTTPHandler.invocationState = .waitingForLambdaRequest
 
             // unknown call
             default:
@@ -236,7 +236,7 @@ private enum LocalLambda {
         }
 
         func writeResponse(context: ChannelHandlerContext, status: HTTPResponseStatus) {
-            self.writeResponse(context: context, response: .init(status: status))
+            self.writeResponse(context: context, response: Response(status: status, headers: nil, body: nil))
         }
 
         func writeResponse(context: ChannelHandlerContext, response: Response) {

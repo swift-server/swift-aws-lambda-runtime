@@ -40,7 +40,7 @@ extension Lambda {
             }
 
             var description: String {
-                "\(General.self)(logLevel: \(self.logLevel))"
+                return "\(General.self)(logLevel: \(self.logLevel))"
             }
         }
 
@@ -57,7 +57,7 @@ extension Lambda {
             }
 
             var description: String {
-                "\(Lifecycle.self)(id: \(self.id), maxTimes: \(self.maxTimes), stopSignal: \(self.stopSignal))"
+                return "\(Lifecycle.self)(id: \(self.id), maxTimes: \(self.maxTimes), stopSignal: \(self.stopSignal))"
             }
         }
 
@@ -79,12 +79,12 @@ extension Lambda {
             }
 
             var description: String {
-                "\(RuntimeEngine.self)(ip: \(self.ip), port: \(self.port), keepAlive: \(self.keepAlive), requestTimeout: \(String(describing: self.requestTimeout))"
+                return "\(RuntimeEngine.self)(ip: \(self.ip), port: \(self.port), keepAlive: \(self.keepAlive), requestTimeout: \(String(describing: self.requestTimeout))"
             }
         }
 
         var description: String {
-            "\(Configuration.self)\n  \(self.general))\n  \(self.lifecycle)\n  \(self.runtimeEngine)"
+            return "\(Configuration.self)\n  \(self.general))\n  \(self.lifecycle)\n  \(self.runtimeEngine)"
         }
     }
 }

@@ -22,7 +22,7 @@ struct Handler: EventLoopLambdaHandler {
 
     func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
         // as an example, respond with the event's reversed body
-        context.eventLoop.makeSucceededFuture(String(event.reversed()))
+        return context.eventLoop.makeSucceededFuture(String(event.reversed()))
     }
 }
 

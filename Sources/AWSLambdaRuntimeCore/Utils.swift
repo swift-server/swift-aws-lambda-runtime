@@ -67,7 +67,7 @@ internal extension DispatchWallTime {
     }
 
     var millisSinceEpoch: Int64 {
-        Int64(bitPattern: self.rawValue) / -1_000_000
+        return Int64(bitPattern: self.rawValue) / -1_000_000
     }
 }
 

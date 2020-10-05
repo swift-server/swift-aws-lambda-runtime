@@ -67,7 +67,7 @@ class APIGatewayTests: XCTestCase {
         var data: Data?
         XCTAssertNoThrow(data = try JSONEncoder().encode(resp))
         var json: JSONResponse?
-        XCTAssertNoThrow(json = try JSONDecoder().decode(JSONResponse.self, from: XCTUnwrap(data)))
+        XCTAssertNoThrow(json = try JSONDecoder().decode(JSONResponse.self, from: data!))
 
         XCTAssertEqual(json?.statusCode, resp.statusCode.code)
         XCTAssertEqual(json?.body, resp.body)
