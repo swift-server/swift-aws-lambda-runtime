@@ -21,12 +21,14 @@ extension Lambda {
     internal final class Runner {
         private let runtimeClient: RuntimeClient
         private let eventLoop: EventLoop
+        private let allocator: ByteBufferAllocator
 
         private var isGettingNextInvocation = false
 
         init(eventLoop: EventLoop, configuration: Configuration) {
             self.eventLoop = eventLoop
             self.runtimeClient = RuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine)
+            self.allocator = ByteBufferAllocator()
         }
 
         /// Run the user provided initializer. This *must* only be called once.
@@ -36,13 +38,22 @@ extension Lambda {
             logger.debug("initializing lambda")
             // 1. create the handler from the factory
             // 2. report initialization error if one occured
-            return factory(self.eventLoop).hop(to: self.eventLoop).peekError { error in
-                self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
-                    // We're going to bail out because the init failed, so there's not a lot we can do other than log
-                    // that we couldn't report this error back to the runtime.
-                    logger.error("failed reporting initialization error to lambda runtime engine: \(reportingError)")
+            let context = InitializationContext(logger: logger,
+                                                eventLoop: self.eventLoop,
+                                                allocator: self.allocator)
+            return factory(context)
+                // Hopping back to "our" EventLoop is important in case the factory returns a future
+                // that originated from a foreign EventLoop/EventLoopGroup.
+                // This can happen if the factory uses a library (let's say a database client) that manages its own threads/loops
+                // for whatever reason and returns a future that originated from that foreign EventLoop.
+                .hop(to: self.eventLoop)
+                .peekError { error in
+                    self.runtimeClient.reportInitializationError(logger: logger, error: error).peekError { reportingError in
+                        // We're going to bail out because the init failed, so there's not a lot we can do other than log
+                        // that we couldn't report this error back to the runtime.
+                        logger.error("failed reporting initialization error to lambda runtime engine: \(reportingError)")
+                    }
                 }
-            }
         }
 
         func run(logger: Logger, handler: Handler) -> EventLoopFuture<Void> {
@@ -51,12 +62,20 @@ extension Lambda {
             self.isGettingNextInvocation = true
             return self.runtimeClient.getNextInvocation(logger: logger).peekError { error in
                 logger.error("could not fetch work from lambda runtime engine: \(error)")
-            }.flatMap { invocation, payload in
+            }.flatMap { invocation, event in
                 // 2. send invocation to handler
                 self.isGettingNextInvocation = false
-                let context = Context(logger: logger, eventLoop: self.eventLoop, invocation: invocation)
+                let context = Context(logger: logger,
+                                      eventLoop: self.eventLoop,
+                                      allocator: self.allocator,
+                                      invocation: invocation)
                 logger.debug("sending invocation to lambda handler \(handler)")
-                return handler.handle(context: context, payload: payload)
+                return handler.handle(context: context, event: event)
+                    // Hopping back to "our" EventLoop is important in case the handler returns a future that
+                    // originiated from a foreign EventLoop/EventLoopGroup.
+                    // This can happen if the handler uses a library (lets say a DB client) that manages its own threads/loops
+                    // for whatever reason and returns a future that originated from that foreign EventLoop.
+                    .hop(to: self.eventLoop)
                     .mapResult { result in
                         if case .failure(let error) = result {
                             logger.warning("lambda handler returned an error: \(error)")
@@ -68,9 +87,6 @@ extension Lambda {
                 self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError { error in
                     logger.error("could not report results to lambda runtime engine: \(error)")
                 }
-            }.always { result in
-                // we are done!
-                logger.log(level: result.successful ? .debug : .warning, "lambda invocation sequence completed \(result.successful ? "successfully" : "with failure")")
             }
         }
 
@@ -85,20 +101,21 @@ extension Lambda {
 }
 
 private extension Lambda.Context {
-    convenience init(logger: Logger, eventLoop: EventLoop, invocation: Lambda.Invocation) {
-        self.init(requestId: invocation.requestId,
-                  traceId: invocation.traceId,
-                  invokedFunctionArn: invocation.invokedFunctionArn,
+    convenience init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Lambda.Invocation) {
+        self.init(requestID: invocation.requestID,
+                  traceID: invocation.traceID,
+                  invokedFunctionARN: invocation.invokedFunctionARN,
                   deadline: DispatchWallTime(millisSinceEpoch: invocation.deadlineInMillisSinceEpoch),
                   cognitoIdentity: invocation.cognitoIdentity,
                   clientContext: invocation.clientContext,
                   logger: logger,
-                  eventLoop: eventLoop)
+                  eventLoop: eventLoop,
+                  allocator: allocator)
     }
 }
 
 // TODO: move to nio?
-private extension EventLoopFuture {
+extension EventLoopFuture {
     // callback does not have side effects, failing with original result
     func peekError(_ callback: @escaping (Error) -> Void) -> EventLoopFuture<Value> {
         self.flatMapError { error in

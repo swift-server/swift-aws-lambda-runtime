@@ -4,9 +4,6 @@ import PackageDescription
 
 let package = Package(
     name: "swift-aws-lambda-runtime",
-    platforms: [
-        .macOS(.v10_13),
-    ],
     products: [
         // this library exports `AWSLambdaRuntimeCore` and adds Foundation convenience methods
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
@@ -35,6 +32,8 @@ let package = Package(
         ]),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
+            .product(name: "NIOTestUtils", package: "swift-nio"),
+            .product(name: "NIOFoundationCompat", package: "swift-nio"),
         ]),
         .testTarget(name: "AWSLambdaRuntimeTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),

@@ -22,8 +22,8 @@
 //         typealias In = String
 //         typealias Out = String
 //
-//         func handle(context: Lambda.Context, payload: String) -> EventLoopFuture<String> {
-//             return context.eventLoop.makeSucceededFuture("echo" + payload)
+//         func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
+//             return context.eventLoop.makeSucceededFuture("echo" + event)
 //         }
 //     }
 //
@@ -42,53 +42,53 @@ import NIO
 
 extension Lambda {
     public struct TestConfig {
-        public var requestId: String
-        public var traceId: String
-        public var invokedFunctionArn: String
+        public var requestID: String
+        public var traceID: String
+        public var invokedFunctionARN: String
         public var timeout: DispatchTimeInterval
 
-        public init(requestId: String = "\(DispatchTime.now().uptimeNanoseconds)",
-                    traceId: String = "Root=\(DispatchTime.now().uptimeNanoseconds);Parent=\(DispatchTime.now().uptimeNanoseconds);Sampled=1",
-                    invokedFunctionArn: String = "arn:aws:lambda:us-west-1:\(DispatchTime.now().uptimeNanoseconds):function:custom-runtime",
+        public init(requestID: String = "\(DispatchTime.now().uptimeNanoseconds)",
+                    traceID: String = "Root=\(DispatchTime.now().uptimeNanoseconds);Parent=\(DispatchTime.now().uptimeNanoseconds);Sampled=1",
+                    invokedFunctionARN: String = "arn:aws:lambda:us-west-1:\(DispatchTime.now().uptimeNanoseconds):function:custom-runtime",
                     timeout: DispatchTimeInterval = .seconds(5)) {
-            self.requestId = requestId
-            self.traceId = traceId
-            self.invokedFunctionArn = invokedFunctionArn
+            self.requestID = requestID
+            self.traceID = traceID
+            self.invokedFunctionARN = invokedFunctionARN
             self.timeout = timeout
         }
     }
 
     public static func test(_ closure: @escaping Lambda.StringClosure,
-                            with payload: String,
+                            with event: String,
                             using config: TestConfig = .init()) throws -> String {
-        try Self.test(StringClosureWrapper(closure), with: payload, using: config)
+        try Self.test(StringClosureWrapper(closure), with: event, using: config)
     }
 
     public static func test(_ closure: @escaping Lambda.StringVoidClosure,
-                            with payload: String,
+                            with event: String,
                             using config: TestConfig = .init()) throws {
-        _ = try Self.test(StringVoidClosureWrapper(closure), with: payload, using: config)
+        _ = try Self.test(StringVoidClosureWrapper(closure), with: event, using: config)
     }
 
     public static func test<In: Decodable, Out: Encodable>(
         _ closure: @escaping Lambda.CodableClosure<In, Out>,
-        with payload: In,
+        with event: In,
         using config: TestConfig = .init()
     ) throws -> Out {
-        try Self.test(CodableClosureWrapper(closure), with: payload, using: config)
+        try Self.test(CodableClosureWrapper(closure), with: event, using: config)
     }
 
     public static func test<In: Decodable>(
         _ closure: @escaping Lambda.CodableVoidClosure<In>,
-        with payload: In,
+        with event: In,
         using config: TestConfig = .init()
     ) throws {
-        _ = try Self.test(CodableVoidClosureWrapper(closure), with: payload, using: config)
+        _ = try Self.test(CodableVoidClosureWrapper(closure), with: event, using: config)
     }
 
     public static func test<In, Out, Handler: EventLoopLambdaHandler>(
         _ handler: Handler,
-        with payload: In,
+        with event: In,
         using config: TestConfig = .init()
     ) throws -> Out where Handler.In == In, Handler.Out == Out {
         let logger = Logger(label: "test")
@@ -97,15 +97,16 @@ extension Lambda {
             try! eventLoopGroup.syncShutdownGracefully()
         }
         let eventLoop = eventLoopGroup.next()
-        let context = Context(requestId: config.requestId,
-                              traceId: config.traceId,
-                              invokedFunctionArn: config.invokedFunctionArn,
+        let context = Context(requestID: config.requestID,
+                              traceID: config.traceID,
+                              invokedFunctionARN: config.invokedFunctionARN,
                               deadline: .now() + config.timeout,
                               logger: logger,
-                              eventLoop: eventLoop)
+                              eventLoop: eventLoop,
+                              allocator: ByteBufferAllocator())
 
         return try eventLoop.flatSubmit {
-            handler.handle(context: context, payload: payload)
+            handler.handle(context: context, event: event)
         }.wait()
     }
 }

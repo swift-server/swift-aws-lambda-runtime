@@ -16,18 +16,48 @@ import Dispatch
 import Logging
 import NIO
 
+// MARK: - InitializationContext
+
+extension Lambda {
+    /// Lambda runtime initialization context.
+    /// The Lambda runtime generates and passes the `InitializationContext` to the Lambda factory as an argument.
+    public final class InitializationContext {
+        /// `Logger` to log with
+        ///
+        /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
+        public let logger: Logger
+
+        /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
+        ///
+        /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
+        ///         Most importantly the `EventLoop` must never be blocked.
+        public let eventLoop: EventLoop
+
+        /// `ByteBufferAllocator` to allocate `ByteBuffer`
+        public let allocator: ByteBufferAllocator
+
+        internal init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator) {
+            self.eventLoop = eventLoop
+            self.logger = logger
+            self.allocator = allocator
+        }
+    }
+}
+
+// MARK: - Context
+
 extension Lambda {
     /// Lambda runtime context.
     /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
     public final class Context: CustomDebugStringConvertible {
         /// The request ID, which identifies the request that triggered the function invocation.
-        public let requestId: String
+        public let requestID: String
 
         /// The AWS X-Ray tracing header.
-        public let traceId: String
+        public let traceID: String
 
         /// The ARN of the Lambda function, version, or alias that's specified in the invocation.
-        public let invokedFunctionArn: String
+        public let invokedFunctionARN: String
 
         /// The timestamp that the function times out
         public let deadline: DispatchWallTime
@@ -54,27 +84,28 @@ extension Lambda {
         /// This is useful when implementing `EventLoopLambdaHandler`
         public let allocator: ByteBufferAllocator
 
-        internal init(requestId: String,
-                      traceId: String,
-                      invokedFunctionArn: String,
+        internal init(requestID: String,
+                      traceID: String,
+                      invokedFunctionARN: String,
                       deadline: DispatchWallTime,
                       cognitoIdentity: String? = nil,
                       clientContext: String? = nil,
                       logger: Logger,
-                      eventLoop: EventLoop) {
-            self.requestId = requestId
-            self.traceId = traceId
-            self.invokedFunctionArn = invokedFunctionArn
+                      eventLoop: EventLoop,
+                      allocator: ByteBufferAllocator) {
+            self.requestID = requestID
+            self.traceID = traceID
+            self.invokedFunctionARN = invokedFunctionARN
             self.cognitoIdentity = cognitoIdentity
             self.clientContext = clientContext
             self.deadline = deadline
             // utility
             self.eventLoop = eventLoop
-            self.allocator = ByteBufferAllocator()
+            self.allocator = allocator
             // mutate logger with context
             var logger = logger
-            logger[metadataKey: "awsRequestId"] = .string(requestId)
-            logger[metadataKey: "awsTraceId"] = .string(traceId)
+            logger[metadataKey: "awsRequestID"] = .string(requestID)
+            logger[metadataKey: "awsTraceID"] = .string(traceID)
             self.logger = logger
         }
 
@@ -87,7 +118,31 @@ extension Lambda {
         }
 
         public var debugDescription: String {
-            "\(Self.self)(requestId: \(self.requestId), traceId: \(self.traceId), invokedFunctionArn: \(self.invokedFunctionArn), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(self.clientContext ?? "nil"), deadline: \(self.deadline))"
+            "\(Self.self)(requestID: \(self.requestID), traceID: \(self.traceID), invokedFunctionARN: \(self.invokedFunctionARN), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(self.clientContext ?? "nil"), deadline: \(self.deadline))"
+        }
+    }
+}
+
+// MARK: - ShutdownContext
+
+extension Lambda {
+    /// Lambda runtime shutdown context.
+    /// The Lambda runtime generates and passes the `ShutdownContext` to the Lambda handler as an argument.
+    public final class ShutdownContext {
+        /// `Logger` to log with
+        ///
+        /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
+        public let logger: Logger
+
+        /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
+        ///
+        /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
+        ///         Most importantly the `EventLoop` must never be blocked.
+        public let eventLoop: EventLoop
+
+        internal init(logger: Logger, eventLoop: EventLoop) {
+            self.eventLoop = eventLoop
+            self.logger = logger
         }
     }
 }

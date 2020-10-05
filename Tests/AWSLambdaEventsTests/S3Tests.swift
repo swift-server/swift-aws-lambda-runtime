@@ -16,7 +16,7 @@
 import XCTest
 
 class S3Tests: XCTestCase {
-    static let eventPayload = """
+    static let eventBody = """
     {
       "Records": [
         {
@@ -58,7 +58,7 @@ class S3Tests: XCTestCase {
     """
 
     func testSimpleEventFromJSON() {
-        let data = S3Tests.eventPayload.data(using: .utf8)!
+        let data = S3Tests.eventBody.data(using: .utf8)!
         var event: S3.Event?
         XCTAssertNoThrow(event = try JSONDecoder().decode(S3.Event.self, from: data))
 

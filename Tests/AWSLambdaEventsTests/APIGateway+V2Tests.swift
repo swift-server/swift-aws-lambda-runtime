@@ -16,7 +16,7 @@
 import XCTest
 
 class APIGatewayV2Tests: XCTestCase {
-    static let exampleGetPayload = """
+    static let exampleGetEventBody = """
     {
         "routeKey":"GET /hello",
         "version":"2.0",
@@ -77,7 +77,7 @@ class APIGatewayV2Tests: XCTestCase {
     // MARK: Decoding
 
     func testRequestDecodingExampleGetRequest() {
-        let data = APIGatewayV2Tests.exampleGetPayload.data(using: .utf8)!
+        let data = APIGatewayV2Tests.exampleGetEventBody.data(using: .utf8)!
         var req: APIGateway.V2.Request?
         XCTAssertNoThrow(req = try JSONDecoder().decode(APIGateway.V2.Request.self, from: data))
 

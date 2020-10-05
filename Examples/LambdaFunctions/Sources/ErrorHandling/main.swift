@@ -16,15 +16,15 @@ import AWSLambdaRuntime
 
 // MARK: - Run Lambda
 
-// switch over the error type "requested" by thr request, and trigger sucg error accordingly
+// switch over the error type "requested" by the request, and trigger such error accordingly
 Lambda.run { (context: Lambda.Context, request: Request, callback: (Result<Response, Error>) -> Void) in
     switch request.error {
     // no error here!
     case .none:
-        callback(.success(Response(awsRequestId: context.requestId, requestId: request.requestId, status: .ok)))
+        callback(.success(Response(awsRequestID: context.requestID, requestID: request.requestID, status: .ok)))
     // trigger a "managed" error - domain specific business logic failure
     case .managed:
-        callback(.success(Response(awsRequestId: context.requestId, requestId: request.requestId, status: .error)))
+        callback(.success(Response(awsRequestID: context.requestID, requestID: request.requestID, status: .error)))
     // trigger an "unmanaged" error - an unexpected Swift Error triggered while processing the request
     case .unmanaged(let error):
         callback(.failure(UnmanagedError(description: error)))
@@ -37,11 +37,11 @@ Lambda.run { (context: Lambda.Context, request: Request, callback: (Result<Respo
 // MARK: - Request and Response
 
 struct Request: Codable {
-    let requestId: String
+    let requestID: String
     let error: Error
 
-    public init(requestId: String, error: Error? = nil) {
-        self.requestId = requestId
+    public init(requestID: String, error: Error? = nil) {
+        self.requestID = requestID
         self.error = error ?? .none
     }
 
@@ -80,13 +80,13 @@ struct Request: Codable {
 }
 
 struct Response: Codable {
-    let awsRequestId: String
-    let requestId: String
+    let awsRequestID: String
+    let requestID: String
     let status: Status
 
-    public init(awsRequestId: String, requestId: String, status: Status) {
-        self.awsRequestId = awsRequestId
-        self.requestId = requestId
+    public init(awsRequestID: String, requestID: String, status: Status) {
+        self.awsRequestID = awsRequestID
+        self.requestID = requestID
         self.status = status
     }
 

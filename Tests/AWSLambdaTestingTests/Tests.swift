@@ -63,9 +63,9 @@ class LambdaTestingTests: XCTestCase {
             typealias In = Request
             typealias Out = Response
 
-            func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
+            func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
                 XCTAssertFalse(context.eventLoop.inEventLoop)
-                callback(.success(Response(message: "echo" + payload.name)))
+                callback(.success(Response(message: "echo" + event.name)))
             }
         }
 
@@ -80,9 +80,9 @@ class LambdaTestingTests: XCTestCase {
             typealias In = String
             typealias Out = String
 
-            func handle(context: Lambda.Context, payload: String) -> EventLoopFuture<String> {
+            func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
                 XCTAssertTrue(context.eventLoop.inEventLoop)
-                return context.eventLoop.makeSucceededFuture("echo" + payload)
+                return context.eventLoop.makeSucceededFuture("echo" + event)
             }
         }
 
@@ -99,7 +99,7 @@ class LambdaTestingTests: XCTestCase {
             typealias In = String
             typealias Out = Void
 
-            func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
+            func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
                 callback(.failure(MyError()))
             }
         }
@@ -125,16 +125,16 @@ class LambdaTestingTests: XCTestCase {
     func testConfigValues() {
         let timeout: TimeInterval = 4
         let config = Lambda.TestConfig(
-            requestId: UUID().uuidString,
-            traceId: UUID().uuidString,
-            invokedFunctionArn: "arn:\(UUID().uuidString)",
+            requestID: UUID().uuidString,
+            traceID: UUID().uuidString,
+            invokedFunctionARN: "arn:\(UUID().uuidString)",
             timeout: .seconds(4)
         )
 
         let myLambda = { (ctx: Lambda.Context, _: String, callback: @escaping (Result<Void, Error>) -> Void) in
-            XCTAssertEqual(ctx.requestId, config.requestId)
-            XCTAssertEqual(ctx.traceId, config.traceId)
-            XCTAssertEqual(ctx.invokedFunctionArn, config.invokedFunctionArn)
+            XCTAssertEqual(ctx.requestID, config.requestID)
+            XCTAssertEqual(ctx.traceID, config.traceID)
+            XCTAssertEqual(ctx.invokedFunctionARN, config.invokedFunctionARN)
 
             let secondsSinceEpoch = Double(Int64(bitPattern: ctx.deadline.rawValue)) / -1_000_000_000
             XCTAssertEqual(Date(timeIntervalSince1970: secondsSinceEpoch).timeIntervalSinceNow, timeout, accuracy: 0.1)

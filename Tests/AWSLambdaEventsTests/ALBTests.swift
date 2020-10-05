@@ -16,7 +16,7 @@
 import XCTest
 
 class ALBTests: XCTestCase {
-    static let exampleSingleValueHeadersPayload = """
+    static let exampleSingleValueHeadersEventBody = """
     {
       "requestContext":{
         "elb":{
@@ -44,8 +44,8 @@ class ALBTests: XCTestCase {
     }
     """
 
-    func testRequestWithSingleValueHeadersPayload() {
-        let data = ALBTests.exampleSingleValueHeadersPayload.data(using: .utf8)!
+    func testRequestWithSingleValueHeadersEvent() {
+        let data = ALBTests.exampleSingleValueHeadersEventBody.data(using: .utf8)!
         do {
             let decoder = JSONDecoder()
 

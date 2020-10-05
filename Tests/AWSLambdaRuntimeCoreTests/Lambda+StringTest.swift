@@ -26,8 +26,8 @@ class StringLambdaTest: XCTestCase {
             typealias In = String
             typealias Out = String
 
-            func handle(context: Lambda.Context, payload: String, callback: (Result<String, Error>) -> Void) {
-                callback(.success(payload))
+            func handle(context: Lambda.Context, event: String, callback: (Result<String, Error>) -> Void) {
+                callback(.success(event))
             }
         }
 
@@ -46,7 +46,7 @@ class StringLambdaTest: XCTestCase {
             typealias In = String
             typealias Out = Void
 
-            func handle(context: Lambda.Context, payload: String, callback: (Result<Void, Error>) -> Void) {
+            func handle(context: Lambda.Context, event: String, callback: (Result<Void, Error>) -> Void) {
                 callback(.success(()))
             }
         }
@@ -66,7 +66,7 @@ class StringLambdaTest: XCTestCase {
             typealias In = String
             typealias Out = String
 
-            func handle(context: Lambda.Context, payload: String, callback: (Result<String, Error>) -> Void) {
+            func handle(context: Lambda.Context, event: String, callback: (Result<String, Error>) -> Void) {
                 callback(.failure(TestError("boom")))
             }
         }
@@ -86,8 +86,8 @@ class StringLambdaTest: XCTestCase {
             typealias In = String
             typealias Out = String
 
-            func handle(context: Lambda.Context, payload: String) -> EventLoopFuture<String> {
-                context.eventLoop.makeSucceededFuture(payload)
+            func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
+                context.eventLoop.makeSucceededFuture(event)
             }
         }
 
@@ -106,7 +106,7 @@ class StringLambdaTest: XCTestCase {
             typealias In = String
             typealias Out = Void
 
-            func handle(context: Lambda.Context, payload: String) -> EventLoopFuture<Void> {
+            func handle(context: Lambda.Context, event: String) -> EventLoopFuture<Void> {
                 context.eventLoop.makeSucceededFuture(())
             }
         }
@@ -126,7 +126,7 @@ class StringLambdaTest: XCTestCase {
             typealias In = String
             typealias Out = String
 
-            func handle(context: Lambda.Context, payload: String) -> EventLoopFuture<String> {
+            func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
                 context.eventLoop.makeFailedFuture(TestError("boom"))
             }
         }
@@ -144,8 +144,8 @@ class StringLambdaTest: XCTestCase {
 
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration) { (_, payload: String, callback) in
-            callback(.success(payload))
+        let result = Lambda.run(configuration: configuration) { (_, event: String, callback) in
+            callback(.success(event))
         }
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
@@ -185,11 +185,11 @@ class StringLambdaTest: XCTestCase {
             typealias In = String
             typealias Out = String
 
-            init(eventLoop: EventLoop) throws {
+            init(context: Lambda.InitializationContext) throws {
                 throw TestError("kaboom")
             }
 
-            func handle(context: Lambda.Context, payload: String, callback: (Result<String, Error>) -> Void) {
+            func handle(context: Lambda.Context, event: String, callback: (Result<String, Error>) -> Void) {
                 callback(.failure(TestError("should not be called")))
             }
         }
@@ -201,17 +201,17 @@ class StringLambdaTest: XCTestCase {
 
 private struct Behavior: LambdaServerBehavior {
     let requestId: String
-    let payload: String
+    let event: String
     let result: Result<String?, TestError>
 
-    init(requestId: String = UUID().uuidString, payload: String = "hello", result: Result<String?, TestError> = .success("hello")) {
+    init(requestId: String = UUID().uuidString, event: String = "hello", result: Result<String?, TestError> = .success("hello")) {
         self.requestId = requestId
-        self.payload = payload
+        self.event = event
         self.result = result
     }
 
     func getInvocation() -> GetInvocationResult {
-        .success((requestId: self.requestId, payload: self.payload))
+        .success((requestId: self.requestId, event: self.event))
     }
 
     func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {

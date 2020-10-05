@@ -18,7 +18,7 @@ import NIO
 import XCTest
 
 func runLambda(behavior: LambdaServerBehavior, handler: Lambda.Handler) throws {
-    try runLambda(behavior: behavior, factory: { $0.makeSucceededFuture(handler) })
+    try runLambda(behavior: behavior, factory: { $0.eventLoop.makeSucceededFuture(handler) })
 }
 
 func runLambda(behavior: LambdaServerBehavior, factory: @escaping Lambda.HandlerFactory) throws {
@@ -38,8 +38,8 @@ struct EchoHandler: LambdaHandler {
     typealias In = String
     typealias Out = String
 
-    func handle(context: Lambda.Context, payload: String, callback: (Result<String, Error>) -> Void) {
-        callback(.success(payload))
+    func handle(context: Lambda.Context, event: String, callback: (Result<String, Error>) -> Void) {
+        callback(.success(event))
     }
 }
 
@@ -53,7 +53,7 @@ struct FailedHandler: LambdaHandler {
         self.reason = reason
     }
 
-    func handle(context: Lambda.Context, payload: String, callback: (Result<Void, Error>) -> Void) {
+    func handle(context: Lambda.Context, event: String, callback: (Result<Void, Error>) -> Void) {
         callback(.failure(TestError(self.reason)))
     }
 }

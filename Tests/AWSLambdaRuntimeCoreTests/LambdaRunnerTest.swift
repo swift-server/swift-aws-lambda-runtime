@@ -19,14 +19,14 @@ class LambdaRunnerTest: XCTestCase {
     func testSuccess() {
         struct Behavior: LambdaServerBehavior {
             let requestId = UUID().uuidString
-            let payload = "hello"
+            let event = "hello"
             func getInvocation() -> GetInvocationResult {
-                .success((self.requestId, self.payload))
+                .success((self.requestId, self.event))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
                 XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
-                XCTAssertEqual(self.payload, response, "expecting response to match")
+                XCTAssertEqual(self.event, response, "expecting response to match")
                 return .success(())
             }
 
@@ -48,7 +48,7 @@ class LambdaRunnerTest: XCTestCase {
             static let error = "boom"
             let requestId = UUID().uuidString
             func getInvocation() -> GetInvocationResult {
-                .success((requestId: self.requestId, payload: "hello"))
+                .success((requestId: self.requestId, event: "hello"))
             }
 
             func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {

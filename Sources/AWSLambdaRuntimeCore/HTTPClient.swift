@@ -33,17 +33,19 @@ internal final class HTTPClient {
         self.targetHost = "\(self.configuration.ip):\(self.configuration.port)"
     }
 
-    func get(url: String, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
+    func get(url: String, headers: HTTPHeaders, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
         self.execute(Request(targetHost: self.targetHost,
                              url: url,
                              method: .GET,
+                             headers: headers,
                              timeout: timeout ?? self.configuration.requestTimeout))
     }
 
-    func post(url: String, body: ByteBuffer?, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
+    func post(url: String, headers: HTTPHeaders, body: ByteBuffer?, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
         self.execute(Request(targetHost: self.targetHost,
                              url: url,
                              method: .POST,
+                             headers: headers,
                              body: body,
                              timeout: timeout ?? self.configuration.requestTimeout))
     }
@@ -274,10 +276,15 @@ private final class UnaryHandler: ChannelDuplexHandler {
             preconditionFailure("invalid state, no pending request")
         }
 
-        // As defined in RFC 2616 Section 8.1.2:
-        // [...] unless otherwise indicated, the client SHOULD assume
-        // that the server will maintain a persistent connection, even
-        // after error responses from the server.
+        // As defined in RFC 7230 Section 6.3:
+        // HTTP/1.1 defaults to the use of "persistent connections", allowing
+        // multiple requests and responses to be carried over a single
+        // connection.  The "close" connection option is used to signal that a
+        // connection will not persist after the current request/response.  HTTP
+        // implementations SHOULD support persistent connections.
+        //
+        // That's why we only assume the connection shall be closed if we receive
+        // a "connection = close" header.
         let serverCloseConnection = response.headers.first(name: "connection")?.lowercased() == "close"
 
         if !self.keepAlive || serverCloseConnection || response.version != .init(major: 1, minor: 1) {
@@ -308,6 +315,9 @@ private final class UnaryHandler: ChannelDuplexHandler {
         case is RequestCancelEvent:
             if self.pending != nil {
                 self.completeWith(.failure(HTTPClient.Errors.cancelled))
+                // after the cancel error has been send, we want to close the connection so
+                // that no more packets can be read on this connection.
+                _ = context.channel.close()
             }
         default:
             context.triggerUserOutboundEvent(event, promise: promise)

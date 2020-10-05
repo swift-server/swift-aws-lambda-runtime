@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import NIO
 
-/// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `String` payloads.
+/// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `String` events.
 extension Lambda {
     /// An asynchronous Lambda Closure that takes a `String` and returns a `Result<String, Error>` via a completion handler.
     public typealias StringClosure = (Lambda.Context, String, @escaping (Result<String, Error>) -> Void) -> Void
@@ -25,7 +25,9 @@ extension Lambda {
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ closure: @escaping StringClosure) {
-        self.run(closure: closure)
+        if case .failure(let error) = self.run(closure: closure) {
+            fatalError("\(error)")
+        }
     }
 
     /// An asynchronous Lambda Closure that takes a `String` and returns a `Result<Void, Error>` via a completion handler.
@@ -38,17 +40,17 @@ extension Lambda {
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     public static func run(_ closure: @escaping StringVoidClosure) {
-        self.run(closure: closure)
+        if case .failure(let error) = self.run(closure: closure) {
+            fatalError("\(error)")
+        }
     }
 
     // for testing
-    @discardableResult
     internal static func run(configuration: Configuration = .init(), closure: @escaping StringClosure) -> Result<Int, Error> {
         self.run(configuration: configuration, handler: StringClosureWrapper(closure))
     }
 
     // for testing
-    @discardableResult
     internal static func run(configuration: Configuration = .init(), closure: @escaping StringVoidClosure) -> Result<Int, Error> {
         self.run(configuration: configuration, handler: StringVoidClosureWrapper(closure))
     }
@@ -64,8 +66,8 @@ internal struct StringClosureWrapper: LambdaHandler {
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, event, callback)
     }
 }
 
@@ -79,8 +81,8 @@ internal struct StringVoidClosureWrapper: LambdaHandler {
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, event, callback)
     }
 }
 

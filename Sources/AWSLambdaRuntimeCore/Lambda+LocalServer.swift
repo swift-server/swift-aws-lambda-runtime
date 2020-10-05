@@ -23,23 +23,23 @@ import NIOHTTP1
 // For example:
 //
 // try Lambda.withLocalServer {
-//     Lambda.run { (context: Lambda.Context, payload: String, callback: @escaping (Result<String, Error>) -> Void) in
-//         callback(.success("Hello, \(payload)!"))
+//     Lambda.run { (context: Lambda.Context, event: String, callback: @escaping (Result<String, Error>) -> Void) in
+//         callback(.success("Hello, \(event)!"))
 //     }
 // }
 extension Lambda {
     /// Execute code in the context of a mock Lambda server.
     ///
     /// - parameters:
-    ///     - invocationEndpoint: The endpoint  to post payloads to.
+    ///     - invocationEndpoint: The endpoint  to post events to.
     ///     - body: Code to run within the context of the mock server. Typically this would be a Lambda.run function call.
     ///
     /// - note: This API is designed stricly for local testing and is behind a DEBUG flag
-    public static func withLocalServer(invocationEndpoint: String? = nil, _ body: @escaping () -> Void) throws {
+    internal static func withLocalServer<Value>(invocationEndpoint: String? = nil, _ body: @escaping () -> Value) throws -> Value {
         let server = LocalLambda.Server(invocationEndpoint: invocationEndpoint)
         try server.start().wait()
-        defer { try! server.stop() } // FIXME:
-        body()
+        defer { try! server.stop() }
+        return body()
     }
 }
 
@@ -76,7 +76,7 @@ private enum LocalLambda {
                 guard channel.localAddress != nil else {
                     return channel.eventLoop.makeFailedFuture(ServerError.cantBind)
                 }
-                self.logger.info("LocalLambdaServer started and listening on \(self.host):\(self.port), receiving payloads on \(self.invocationEndpoint)")
+                self.logger.info("LocalLambdaServer started and listening on \(self.host):\(self.port), receiving events on \(self.invocationEndpoint)")
                 return channel.eventLoop.makeSucceededFuture(())
             }
         }
@@ -148,6 +148,11 @@ private enum LocalLambda {
                 case .waitingForLambdaRequest, .waitingForLambdaResponse:
                     Self.invocations.append(invocation)
                 }
+
+            // lambda invocation using the wrong http method
+            case (_, let url) where url.hasSuffix(self.invocationEndpoint):
+                self.writeResponse(context: context, status: .methodNotAllowed)
+
             // /next endpoint is called by the lambda polling for work
             case (.GET, let url) where url.hasSuffix(Consts.getNextInvocationURLSuffix):
                 // check if our server is in the correct state
@@ -167,7 +172,7 @@ private enum LocalLambda {
                         switch result {
                         case .failure(let error):
                             self.logger.error("invocation error: \(error)")
-                            self.writeResponse(context: context, response: .init(status: .internalServerError))
+                            self.writeResponse(context: context, status: .internalServerError)
                         case .success(let invocation):
                             Self.invocationState = .waitingForLambdaResponse(invocation)
                             self.writeResponse(context: context, response: invocation.makeResponse())
@@ -179,31 +184,59 @@ private enum LocalLambda {
                     Self.invocationState = .waitingForLambdaResponse(invocation)
                     self.writeResponse(context: context, response: invocation.makeResponse())
                 }
+
             // :requestID/response endpoint is called by the lambda posting the response
             case (.POST, let url) where url.hasSuffix(Consts.postResponseURLSuffix):
                 let parts = request.head.uri.split(separator: "/")
                 guard let requestID = parts.count > 2 ? String(parts[parts.count - 2]) : nil else {
                     // the request is malformed, since we were expecting a requestId in the path
-                    return self.writeResponse(context: context, response: .init(status: .badRequest))
+                    return self.writeResponse(context: context, status: .badRequest)
                 }
                 guard case .waitingForLambdaResponse(let invocation) = Self.invocationState else {
                     // a response was send, but we did not expect to receive one
                     self.logger.error("invalid invocation state \(Self.invocationState)")
-                    return self.writeResponse(context: context, response: .init(status: .unprocessableEntity))
+                    return self.writeResponse(context: context, status: .unprocessableEntity)
                 }
                 guard requestID == invocation.requestID else {
                     // the request's requestId is not matching the one we are expecting
                     self.logger.error("invalid invocation state request ID \(requestID) does not match expected \(invocation.requestID)")
-                    return self.writeResponse(context: context, response: .init(status: .badRequest))
+                    return self.writeResponse(context: context, status: .badRequest)
                 }
 
                 invocation.responsePromise.succeed(.init(status: .ok, body: request.body))
-                self.writeResponse(context: context, response: .init(status: .accepted))
+                self.writeResponse(context: context, status: .accepted)
                 Self.invocationState = .waitingForLambdaRequest
+
+            // :requestID/error endpoint is called by the lambda posting an error response
+            case (.POST, let url) where url.hasSuffix(Consts.postErrorURLSuffix):
+                let parts = request.head.uri.split(separator: "/")
+                guard let requestID = parts.count > 2 ? String(parts[parts.count - 2]) : nil else {
+                    // the request is malformed, since we were expecting a requestId in the path
+                    return self.writeResponse(context: context, status: .badRequest)
+                }
+                guard case .waitingForLambdaResponse(let invocation) = Self.invocationState else {
+                    // a response was send, but we did not expect to receive one
+                    self.logger.error("invalid invocation state \(Self.invocationState)")
+                    return self.writeResponse(context: context, status: .unprocessableEntity)
+                }
+                guard requestID == invocation.requestID else {
+                    // the request's requestId is not matching the one we are expecting
+                    self.logger.error("invalid invocation state request ID \(requestID) does not match expected \(invocation.requestID)")
+                    return self.writeResponse(context: context, status: .badRequest)
+                }
+
+                invocation.responsePromise.succeed(.init(status: .internalServerError, body: request.body))
+                self.writeResponse(context: context, status: .accepted)
+                Self.invocationState = .waitingForLambdaRequest
+
             // unknown call
             default:
-                self.writeResponse(context: context, response: .init(status: .notFound))
+                self.writeResponse(context: context, status: .notFound)
             }
+        }
+
+        func writeResponse(context: ChannelHandlerContext, status: HTTPResponseStatus) {
+            self.writeResponse(context: context, response: .init(status: status))
         }
 
         func writeResponse(context: ChannelHandlerContext, response: Response) {
@@ -246,7 +279,7 @@ private enum LocalLambda {
                 response.headers = [
                     (AmazonHeaders.requestID, self.requestID),
                     (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:\(Int16.random(in: Int16.min ... Int16.max)):function:custom-runtime"),
-                    (AmazonHeaders.traceID, "Root=\(Int16.random(in: Int16.min ... Int16.max));Parent=\(Int16.random(in: Int16.min ... Int16.max));Sampled=1"),
+                    (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
                     (AmazonHeaders.deadline, "\(DispatchWallTime.distantFuture.millisSinceEpoch)"),
                 ]
                 return response
@@ -265,4 +298,5 @@ private enum LocalLambda {
         case cantBind
     }
 }
+
 #endif

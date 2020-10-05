@@ -5,11 +5,15 @@ services:
   runtime-setup:
     image: swift-aws-lambda:18.04-5.2
     build:
+      dockerfile: Dockerfile.ubuntu
       args:
         ubuntu_version: "bionic"
         swift_version: "5.2"
 
   test:
+    image: swift-aws-lambda:18.04-5.2
+
+  test-samples:
     image: swift-aws-lambda:18.04-5.2
 
   shell:

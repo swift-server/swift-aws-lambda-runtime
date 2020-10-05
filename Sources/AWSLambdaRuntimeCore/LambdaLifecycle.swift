@@ -29,7 +29,7 @@ extension Lambda {
 
         private var state = State.idle {
             willSet {
-                assert(self.eventLoop.inEventLoop, "State may only be changed on the `Lifecycle`'s `eventLoop`")
+                self.eventLoop.assertInEventLoop()
                 precondition(newValue.order > self.state.order, "invalid state \(newValue) after \(self.state.order)")
             }
         }
@@ -71,22 +71,43 @@ extension Lambda {
         ///
         /// - note: This method must be called  on the `EventLoop` the `Lifecycle` has been initialized with.
         public func start() -> EventLoopFuture<Void> {
-            assert(self.eventLoop.inEventLoop, "Start must be called on the `EventLoop` the `Lifecycle` has been initialized with.")
+            self.eventLoop.assertInEventLoop()
 
             logger.info("lambda lifecycle starting with \(self.configuration)")
             self.state = .initializing
-            // triggered when the Lambda has finished its last run
-            let finishedPromise = self.eventLoop.makePromise(of: Int.self)
-            finishedPromise.futureResult.always { _ in
-                self.markShutdown()
-            }.cascade(to: self.shutdownPromise)
+
             var logger = self.logger
             logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
             let runner = Runner(eventLoop: self.eventLoop, configuration: self.configuration)
-            return runner.initialize(logger: logger, factory: self.factory).map { handler in
+
+            let startupFuture = runner.initialize(logger: logger, factory: self.factory)
+            startupFuture.flatMap { handler -> EventLoopFuture<(ByteBufferLambdaHandler, Result<Int, Error>)> in
+                // after the startup future has succeeded, we have a handler that we can use
+                // to `run` the lambda.
+                let finishedPromise = self.eventLoop.makePromise(of: Int.self)
                 self.state = .active(runner, handler)
                 self.run(promise: finishedPromise)
+                return finishedPromise.futureResult.mapResult { (handler, $0) }
             }
+            .flatMap { (handler, runnerResult) -> EventLoopFuture<Int> in
+                // after the lambda finishPromise has succeeded or failed we need to
+                // shutdown the handler
+                let shutdownContext = ShutdownContext(logger: logger, eventLoop: self.eventLoop)
+                return handler.shutdown(context: shutdownContext).flatMapErrorThrowing { error in
+                    // if, we had an error shuting down the lambda, we want to concatenate it with
+                    // the runner result
+                    logger.error("Error shutting down handler: \(error)")
+                    throw RuntimeError.shutdownError(shutdownError: error, runnerResult: runnerResult)
+                }.flatMapResult { (_) -> Result<Int, Error> in
+                    // we had no error shutting down the lambda. let's return the runner's result
+                    runnerResult
+                }
+            }.always { _ in
+                // triggered when the Lambda has finished its last run or has a startup failure.
+                self.markShutdown()
+            }.cascade(to: self.shutdownPromise)
+
+            return startupFuture.map { _ in }
         }
 
         // MARK: -  Private
@@ -122,6 +143,7 @@ extension Lambda {
                     runner.run(logger: logger, handler: handler).whenComplete { result in
                         switch result {
                         case .success:
+                            logger.log(level: .debug, "lambda invocation sequence completed successfully")
                             // recursive! per aws lambda runtime spec the polling requests are to be done one at a time
                             _run(count + 1)
                         case .failure(HTTPClient.Errors.cancelled):
@@ -129,10 +151,13 @@ extension Lambda {
                                 // if we ware shutting down, we expect to that the get next
                                 // invocation request might have been cancelled. For this reason we
                                 // succeed the promise here.
+                                logger.log(level: .info, "lambda invocation sequence has been cancelled for shutdown")
                                 return promise.succeed(count)
                             }
+                            logger.log(level: .error, "lambda invocation sequence has been cancelled unexpectedly")
                             promise.fail(HTTPClient.Errors.cancelled)
                         case .failure(let error):
+                            logger.log(level: .error, "lambda invocation sequence completed with error: \(error)")
                             promise.fail(error)
                         }
                     }

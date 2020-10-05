@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:Shared">
+   </FileRef>
+   <FileRef
+      location = "group:MyLambda">
+   </FileRef>
+   <FileRef
+      location = "group:MyApp/MyApp.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:README.md">
+   </FileRef>
+</Workspace>

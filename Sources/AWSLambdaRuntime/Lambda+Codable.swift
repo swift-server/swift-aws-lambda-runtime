@@ -13,12 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 @_exported import AWSLambdaRuntimeCore
+import struct Foundation.Data
 import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
 import NIO
 import NIOFoundationCompat
 
-/// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` payloads.
+/// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` events.
 extension Lambda {
     /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Out: Encodable, Error>` via a completion handler.
     public typealias CodableClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
@@ -57,8 +58,8 @@ internal struct CodableClosureWrapper<In: Decodable, Out: Encodable>: LambdaHand
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, event, callback)
     }
 }
 
@@ -72,8 +73,8 @@ internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, payload: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, payload, callback)
+    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
+        self.closure(context, event, callback)
     }
 }
 
@@ -128,5 +129,19 @@ extension JSONEncoder: LambdaCodableEncoder {
         var buffer = allocator.buffer(capacity: 1024)
         try self.encode(value, into: &buffer)
         return buffer
+    }
+}
+
+extension JSONEncoder {
+    /// Convenience method to allow encoding json directly into a `String`. It can be used to encode a payload into an `APIGateway.V2.Response`'s body.
+    public func encodeAsString<T: Encodable>(_ value: T) throws -> String {
+        try String(decoding: self.encode(value), as: Unicode.UTF8.self)
+    }
+}
+
+extension JSONDecoder {
+    /// Convenience method to allow decoding json directly from a `String`. It can be used to decode a payload from an `APIGateway.V2.Request`'s body.
+    public func decode<T: Decodable>(_ type: T.Type, from string: String) throws -> T {
+        try self.decode(type, from: Data(string.utf8))
     }
 }
