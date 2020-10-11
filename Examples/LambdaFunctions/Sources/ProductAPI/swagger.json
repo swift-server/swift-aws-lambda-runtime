@@ -1,0 +1,202 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "2020-05-25T15:42:57Z",
+    "title": "lambda-api-swift",
+    "contact": {
+      "name": "swift-server",
+      "url": "https://github.com/swift-server/"
+    },
+    "license": {
+      "name": "Apache 2.0"
+    },
+    "description": "Product API - Demo"
+  },
+  "host": "<BASE_URL>",
+  "basePath": "/dev",
+  "schemes": [
+    "https"
+  ],
+  "paths": {
+    "/products": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Product"
+              }
+            }
+          }
+        },
+        "description": "List Products",
+        "operationId": "get-products"
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/Product"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/Product"
+            }
+          }
+        ],
+        "description": "Create Product",
+        "operationId": "post-product"
+      },
+      "put": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/Product"
+            },
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Product"
+            }
+          }
+        },
+        "description": "Update Product",
+        "operationId": "put-product"
+      },
+      "options": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "type": "string"
+              },
+              "Access-Control-Allow-Methods": {
+                "type": "string"
+              },
+              "Access-Control-Allow-Headers": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/products/{sku}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Product"
+            }
+          }
+        },
+        "parameters": [],
+        "description": "Get Product",
+        "operationId": "get-product"
+      },
+      "delete": {
+        "responses": {
+          "204": {
+            "description": "No Content",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        },
+        "parameters": [],
+        "description": "Delete Product",
+        "operationId": "delete-product"
+      },
+      "options": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "200 response",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "type": "string"
+              },
+              "Access-Control-Allow-Methods": {
+                "type": "string"
+              },
+              "Access-Control-Allow-Headers": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "type": "string",
+          "name": "sku",
+          "in": "path",
+          "required": true
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "Product": {
+      "title": "Product",
+      "type": "object",
+      "x-examples": {
+        "example-1": {
+          "sku": "3",
+          "name": "Book",
+          "description": "Book 3"
+        }
+      },
+      "properties": {
+        "sku": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sku",
+        "name",
+        "description"
+      ]
+    }
+  }
+}

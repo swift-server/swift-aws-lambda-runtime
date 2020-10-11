@@ -1,0 +1,103 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the SwiftAWSLambdaRuntime open source project
+//
+// Copyright (c) 2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Licensed under Apache License v2.0
+//
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
+
+import SotoDynamoDB
+import AWSLambdaEvents
+import AWSLambdaRuntime
+import AsyncHTTPClient
+import Logging
+import NIO
+
+enum Operation: String {
+    case create
+    case read
+    case update
+    case delete
+    case list
+}
+
+struct EmptyResponse: Codable {}
+
+struct ProductLambda: LambdaHandler {
+    
+    typealias In = APIGateway.V2.Request
+    typealias Out = APIGateway.V2.Response
+    
+    let dbTimeout: Int64 = 30
+    let region: Region
+    let db: SotoDynamoDB.DynamoDB
+    let service: ProductService
+    let tableName: String
+    let operation: Operation
+    var httpClient: HTTPClient
+    
+    static func currentRegion() -> Region {
+        if let awsRegion = Lambda.env("AWS_REGION") {
+            let value = Region(rawValue: awsRegion)
+            return value
+        } else {
+            return .useast1
+        }
+    }
+    
+    static func tableName() throws -> String {
+        guard let tableName = Lambda.env("PRODUCTS_TABLE_NAME") else {
+            throw APIError.tableNameNotFound
+        }
+        return tableName
+    }
+    
+    init(context: Lambda.InitializationContext) throws {
+        
+        guard let handler = Lambda.env("_HANDLER"),
+            let operation = Operation(rawValue: handler) else {
+                throw APIError.invalidHandler
+        }
+        self.operation = operation
+        self.region = Self.currentRegion()
+        
+        let lambdaRuntimeTimeout: TimeAmount = .seconds(dbTimeout)
+        let timeout = HTTPClient.Configuration.Timeout(
+            connect: lambdaRuntimeTimeout,
+            read: lambdaRuntimeTimeout
+        )
+    
+        let configuration = HTTPClient.Configuration(timeout: timeout)
+        self.httpClient = HTTPClient(
+            eventLoopGroupProvider: .shared(context.eventLoop),
+            configuration: configuration
+        )
+        
+        let awsClient = AWSClient(httpClientProvider: .shared(self.httpClient))
+        
+        self.db = SotoDynamoDB.DynamoDB(client: awsClient, region: region)
+        self.tableName = try Self.tableName()
+
+        self.service = ProductService(
+            db: db,
+            tableName: tableName
+        )
+    }
+    
+    func handle(
+        context: Lambda.Context, event: APIGateway.V2.Request,
+        callback: @escaping (Result<APIGateway.V2.Response, Error>) -> Void
+    ) {
+        let _ = ProductLambdaHandler(service: service, operation: operation)
+            .handle(context: context, event: event)
+            .always { (result) in
+                callback(result)
+        }
+    }
+}

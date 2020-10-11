@@ -1,0 +1,96 @@
+service: swift-awslambda-runtime-api
+
+# package:
+#     individually: true
+package:
+    artifact: .build/lambda/ProductAPI/lambda.zip
+
+provider:
+    name: aws
+    httpApi:
+        payload: '2.0'
+    runtime: provided
+    environment:
+        PRODUCTS_TABLE_NAME: "${self:custom.productsTableName}"
+    iamRoleStatements:
+        - Effect: Allow
+          Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+          Resource: "*"
+        - Effect: Allow
+          Action:
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+              - dynamodb:GetItem
+              - dynamodb:DeleteItem
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:DescribeTable
+          Resource:
+              - { Fn::GetAtt: [ProductsTable, Arn] }            
+
+custom:
+    productsTableName: products-table-${self:provider.stage}
+
+functions:
+    createProduct:
+        handler: create
+        memorySize: 256
+        description: "[${self:provider.stage}] Create Product"
+        events:
+            - httpApi:
+                path: /products
+                method: post
+                cors: true
+    readProduct:
+        handler: read
+        memorySize: 256
+        description: "[${self:provider.stage}] Get Product"
+        events:
+            - httpApi:
+                path: /products/{sku}
+                method: get
+                cors: true
+    updateProduct:
+        handler: update
+        memorySize: 256
+        description: "[${self:provider.stage}] Update Product"
+        events:
+            - httpApi:
+                path: /products
+                method: put
+                cors: true
+    deleteProduct:
+        handler: delete
+        memorySize: 256
+        description: "[${self:provider.stage}] Delete Product"
+        events:
+            - httpApi:
+                path: /products/{sku}
+                method: delete
+                cors: true
+    listProducts:
+        handler: list
+        memorySize: 256
+        description: "[${self:provider.stage}] List Products"
+        events:
+            - httpApi:
+                path: /products
+                method: get
+                cors: true
+
+resources:
+    Resources:
+        ProductsTable:
+            Type: AWS::DynamoDB::Table
+            Properties:
+                TableName: ${self:custom.productsTableName}
+                AttributeDefinitions:
+                    - AttributeName: sku
+                      AttributeType: S
+                KeySchema:
+                    - AttributeName: sku
+                      KeyType: HASH
+                BillingMode: PAY_PER_REQUEST
