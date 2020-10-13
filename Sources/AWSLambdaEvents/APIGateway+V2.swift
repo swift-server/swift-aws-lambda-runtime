@@ -93,24 +93,21 @@ extension APIGateway.V2 {
 
 extension APIGateway.V2 {
     public struct Response: Codable {
-        public let statusCode: HTTPResponseStatus
-        public let headers: HTTPHeaders?
-        public let multiValueHeaders: HTTPMultiValueHeaders?
-        public let body: String?
-        public let isBase64Encoded: Bool?
-        public let cookies: [String]?
+        public var statusCode: HTTPResponseStatus
+        public var headers: HTTPHeaders?
+        public var body: String?
+        public var isBase64Encoded: Bool?
+        public var cookies: [String]?
 
         public init(
             statusCode: HTTPResponseStatus,
             headers: HTTPHeaders? = nil,
-            multiValueHeaders: HTTPMultiValueHeaders? = nil,
             body: String? = nil,
             isBase64Encoded: Bool? = nil,
             cookies: [String]? = nil
         ) {
             self.statusCode = statusCode
             self.headers = headers
-            self.multiValueHeaders = multiValueHeaders
             self.body = body
             self.isBase64Encoded = isBase64Encoded
             self.cookies = cookies

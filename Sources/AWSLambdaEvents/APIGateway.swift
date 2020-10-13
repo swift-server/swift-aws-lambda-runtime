@@ -70,11 +70,11 @@ public enum APIGateway {
 
 extension APIGateway {
     public struct Response: Codable {
-        public let statusCode: HTTPResponseStatus
-        public let headers: HTTPHeaders?
-        public let multiValueHeaders: HTTPMultiValueHeaders?
-        public let body: String?
-        public let isBase64Encoded: Bool?
+        public var statusCode: HTTPResponseStatus
+        public var headers: HTTPHeaders?
+        public var multiValueHeaders: HTTPMultiValueHeaders?
+        public var body: String?
+        public var isBase64Encoded: Bool?
 
         public init(
             statusCode: HTTPResponseStatus,

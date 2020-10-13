@@ -51,12 +51,12 @@ public enum ALB {
     }
 
     public struct TargetGroupResponse: Codable {
-        public let statusCode: HTTPResponseStatus
-        public let statusDescription: String?
-        public let headers: HTTPHeaders?
-        public let multiValueHeaders: HTTPMultiValueHeaders?
-        public let body: String
-        public let isBase64Encoded: Bool
+        public var statusCode: HTTPResponseStatus
+        public var statusDescription: String?
+        public var headers: HTTPHeaders?
+        public var multiValueHeaders: HTTPMultiValueHeaders?
+        public var body: String
+        public var isBase64Encoded: Bool
 
         public init(
             statusCode: HTTPResponseStatus,
