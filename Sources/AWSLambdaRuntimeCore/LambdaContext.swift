@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import BaggageContext
 import Dispatch
 import Logging
 import NIO
@@ -49,40 +50,132 @@ extension Lambda {
 extension Lambda {
     /// Lambda runtime context.
     /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
-    public final class Context: CustomDebugStringConvertible {
+    public struct Context: BaggageContext.Context, CustomDebugStringConvertible {
+        /// Used to store all contents of the context and implement CoW semantics for it.
+        private var storage: Storage
+
+        final class Storage {
+            var baggage: Baggage
+
+            let invokedFunctionARN: String
+            let deadline: DispatchWallTime
+            let cognitoIdentity: String?
+            let clientContext: String?
+
+            // Implementation note: This logger is the "user provided logger" that we will log to when `context.logger` is used.
+            // It must be updated with the latest metadata whenever the `baggage` changes.
+            var _logger: Logger
+
+            let eventLoop: EventLoop
+            let allocator: ByteBufferAllocator
+
+            init(
+                baggage: Baggage,
+                invokedFunctionARN: String,
+                deadline: DispatchWallTime,
+                cognitoIdentity: String?,
+                clientContext: String?,
+                logger: Logger,
+                eventLoop: EventLoop,
+                allocator: ByteBufferAllocator
+            ) {
+                self.baggage = baggage
+                self.invokedFunctionARN = invokedFunctionARN
+                self.deadline = deadline
+                self.cognitoIdentity = cognitoIdentity
+                self.clientContext = clientContext
+                self._logger = logger
+                self.eventLoop = eventLoop
+                self.allocator = allocator
+            }
+        }
+
+        /// Contains contextual metadata such as request and trace identifiers, along with other information which may
+        /// be carried throughout asynchronous and cross-node boundaries (e.g. through HTTPClient calls).
+        public var baggage: Baggage {
+            get {
+                self.storage.baggage
+            }
+            set {
+                if isKnownUniquelyReferenced(&self.storage) {
+                    self.storage._logger.updateMetadata(previous: self.storage.baggage, latest: newValue)
+                    self.storage.baggage = newValue
+                } else {
+                    var logger = self.storage._logger
+                    logger.updateMetadata(previous: self.storage.baggage, latest: newValue)
+                    self.storage = Storage(
+                        baggage: newValue,
+                        invokedFunctionARN: self.storage.invokedFunctionARN,
+                        deadline: self.storage.deadline,
+                        cognitoIdentity: self.storage.cognitoIdentity,
+                        clientContext: self.storage.clientContext,
+                        logger: self.storage._logger,
+                        eventLoop: self.storage.eventLoop,
+                        allocator: self.storage.allocator
+                    )
+                }
+            }
+        }
+
         /// The request ID, which identifies the request that triggered the function invocation.
-        public let requestID: String
+        public var requestID: String {
+            self.storage.baggage.lambdaRequestID
+        }
 
         /// The AWS X-Ray tracing header.
-        public let traceID: String
+        public var traceID: String {
+            self.storage.baggage.lambdaTraceID
+        }
 
         /// The ARN of the Lambda function, version, or alias that's specified in the invocation.
-        public let invokedFunctionARN: String
+        public var invokedFunctionARN: String {
+            self.storage.invokedFunctionARN
+        }
 
         /// The timestamp that the function times out
-        public let deadline: DispatchWallTime
+        public var deadline: DispatchWallTime {
+            self.storage.deadline
+        }
 
         /// For invocations from the AWS Mobile SDK, data about the Amazon Cognito identity provider.
-        public let cognitoIdentity: String?
+        public var cognitoIdentity: String? {
+            self.storage.cognitoIdentity
+        }
 
         /// For invocations from the AWS Mobile SDK, data about the client application and device.
-        public let clientContext: String?
+        public var clientContext: String? {
+            self.storage.clientContext
+        }
 
-        /// `Logger` to log with
+        /// `Logger` to log with, it is automatically populated with `baggage` information (such as `traceID` and `requestID`).
         ///
-        /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
-        public let logger: Logger
+        /// - note: The default `Logger.LogLevel` can be configured using the `LOG_LEVEL` environment variable.
+        public var logger: Logger {
+            get {
+                self.storage._logger
+            }
+            set {
+                if isKnownUniquelyReferenced(&self.storage) {
+                    self.storage._logger = newValue
+                    self.storage._logger.updateMetadata(previous: .topLevel, latest: self.storage.baggage)
+                }
+            }
+        }
 
         /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
         /// This is useful when implementing the `EventLoopLambdaHandler` protocol.
         ///
         /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
         ///         Most importantly the `EventLoop` must never be blocked.
-        public let eventLoop: EventLoop
+        public var eventLoop: EventLoop {
+            self.storage.eventLoop
+        }
 
         /// `ByteBufferAllocator` to allocate `ByteBuffer`
         /// This is useful when implementing `EventLoopLambdaHandler`
-        public let allocator: ByteBufferAllocator
+        public var allocator: ByteBufferAllocator {
+            self.storage.allocator
+        }
 
         internal init(requestID: String,
                       traceID: String,
@@ -93,20 +186,20 @@ extension Lambda {
                       logger: Logger,
                       eventLoop: EventLoop,
                       allocator: ByteBufferAllocator) {
-            self.requestID = requestID
-            self.traceID = traceID
-            self.invokedFunctionARN = invokedFunctionARN
-            self.cognitoIdentity = cognitoIdentity
-            self.clientContext = clientContext
-            self.deadline = deadline
-            // utility
-            self.eventLoop = eventLoop
-            self.allocator = allocator
-            // mutate logger with context
-            var logger = logger
-            logger[metadataKey: "awsRequestID"] = .string(requestID)
-            logger[metadataKey: "awsTraceID"] = .string(traceID)
-            self.logger = logger
+            var baggage = Baggage.topLevel
+            baggage.lambdaRequestID = requestID
+            baggage.lambdaTraceID = traceID
+            self.storage = Storage(
+                baggage: baggage,
+                invokedFunctionARN: invokedFunctionARN,
+                deadline: deadline,
+                cognitoIdentity: cognitoIdentity,
+                clientContext: clientContext,
+                // utility
+                logger: logger,
+                eventLoop: eventLoop,
+                allocator: allocator
+            )
         }
 
         public func getRemainingTime() -> TimeAmount {
@@ -143,6 +236,45 @@ extension Lambda {
         internal init(logger: Logger, eventLoop: EventLoop) {
             self.eventLoop = eventLoop
             self.logger = logger
+        }
+    }
+}
+
+// MARK: - Baggage Items
+
+extension Baggage {
+
+    // MARK: - Baggage: RequestID
+
+    enum LambdaRequestIDKey: Key {
+        typealias Value = String
+        static var name: String? { AmazonHeaders.requestID }
+    }
+
+    /// The request ID, which identifies the request that triggered the function invocation.
+    public internal(set) var lambdaRequestID: String {
+        get {
+            self[LambdaRequestIDKey.self]! // !-safe, the runtime guarantees to always set an identifier, even in testing
+        }
+        set {
+            self[LambdaRequestIDKey.self] = newValue
+        }
+    }
+
+    // MARK: - Baggage: TraceID
+
+    enum LambdaTraceIDKey: Key {
+        typealias Value = String
+        static var name: String? { AmazonHeaders.traceID }
+    }
+
+    /// The AWS X-Ray tracing header.
+    public internal(set) var lambdaTraceID: String {
+        get {
+            self[LambdaTraceIDKey.self]! // !-safe, the runtime guarantees to always set an identifier, even in testing
+        }
+        set {
+            self[LambdaTraceIDKey.self] = newValue
         }
     }
 }
