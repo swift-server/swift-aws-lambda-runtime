@@ -37,7 +37,7 @@ extension APIGateway.V2 {
                     public let scopes: [String]?
                 }
 
-                let jwt: JWT
+                public let jwt: JWT
             }
 
             public let accountId: String
