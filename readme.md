@@ -93,8 +93,8 @@ Next, create a `main.swift` and implement your Lambda.
  import AWSLambdaRuntime
  import AWSLambdaEvents
 
- // In this example we are receiving an SQS Message, with no response (Void).
- Lambda.run { (context, message: SQS.Message, callback: @escaping (Result<Void, Error>) -> Void) in
+ // In this example we are receiving an SQS Event, with no response (Void).
+ Lambda.run { (context, message: SQS.Event, callback: @escaping (Result<Void, Error>) -> Void) in
    ...
    callback(.success(Void()))
  }
