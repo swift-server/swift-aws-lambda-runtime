@@ -25,7 +25,7 @@ public enum ALB {
 
         public let httpMethod: HTTPMethod
         public let path: String
-        public let queryStringParameters: [String: [String]]
+        public let queryStringParameters: [String: String]
 
         /// Depending on your configuration of your target group either `headers` or `multiValueHeaders`
         /// are set.
