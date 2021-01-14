@@ -323,7 +323,7 @@ The library encapsulates the workflow via the internal `LambdaRuntimeClient` and
 
 ### Lifecycle Management
 
-AWS Lambda Runtime Engine controls the Application lifecycle and in the happy case never terminates the application, only suspends it's execution when no work is avaialble.
+AWS Lambda Runtime Engine controls the Application lifecycle and in the happy case never terminates the application, only suspends it's execution when no work is available.
 
 As such, the library main entry point is designed to run forever in a blocking fashion, performing the workflow described above in an endless loop.
 
