@@ -22,9 +22,9 @@ services:
       - CAP_NET_RAW
       - CAP_NET_BIND_SERVICE
 
-  sanity:
+  soundness:
     <<: *common
-    command: /bin/bash -cl "./scripts/sanity.sh"
+    command: /bin/bash -cl "./scripts/soundness.sh"
 
   test:
     <<: *common
