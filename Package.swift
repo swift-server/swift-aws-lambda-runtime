@@ -19,7 +19,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.0.0")),
         .package(url: "https://github.com/swift-server/swift-backtrace.git", .upToNextMajor(from: "1.1.0")),
 //        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", .upToNextMajor(from: "1.0.0-alpha")),
-        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", .branch("master")),
+        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", .branch("main")),
     ],
     targets: [
         .target(name: "AWSLambdaRuntime", dependencies: [
