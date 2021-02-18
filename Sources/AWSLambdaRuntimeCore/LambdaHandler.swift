@@ -85,6 +85,39 @@ extension LambdaHandler {
     }
 }
 
+// MARK: - AsyncLambdaHandler
+
+/// Strongly typed, processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` async.
+public protocol AsyncLambdaHandler: EventLoopLambdaHandler {
+    
+    /// The Lambda handling method
+    /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
+    ///
+    /// - parameters:
+    ///     - context: Runtime `Context`.
+    ///     - event: Event of type `In` representing the event or request.
+    ///
+    /// - Returns: A Lambda result ot type `Out`.
+    func handle(context: Lambda.Context, event: In) async throws -> Out
+}
+
+extension AsyncLambdaHandler {
+    public func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
+        @asyncHandler func _run(context: Lambda.Context, event: In, promise: EventLoopPromise<Out>) {
+            do {
+                let result = try await handle(context: context, event: event)
+                promise.succeed(result)
+            } catch {
+                promise.fail(error)
+            }
+        }
+        
+        let promise = context.eventLoop.makePromise(of: Out.self)
+        _run(context: context, event: event, promise: promise)
+        return promise.futureResult
+    }
+}
+
 // MARK: - EventLoopLambdaHandler
 
 /// Strongly typed, `EventLoopFuture` based processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` asynchronously.

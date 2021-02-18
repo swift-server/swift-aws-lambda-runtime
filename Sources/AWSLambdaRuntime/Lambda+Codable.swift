@@ -78,6 +78,69 @@ internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
     }
 }
 
+// MARK: - Async
+
+extension Lambda {
+    
+    /// An async Lambda Closure that takes a `In: Decodable` and returns an `Out: Encodable`
+    public typealias CodableAsyncClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In) async throws -> Out
+    
+    /// Run a Lambda defined by implementing the `CodableAsyncClosure` function.
+    ///
+    /// - parameters:
+    ///     - closure: `CodableAsyncClosure` based Lambda.
+    ///
+    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
+    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableAsyncClosure<In, Out>) {
+        self.run(CodableAsyncWrapper(closure))
+    }
+
+    /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns nothing.
+    public typealias CodableVoidAsyncClosure<In: Decodable> = (Lambda.Context, In) async throws -> ()
+
+    /// Run a Lambda defined by implementing the `CodableVoidAsyncClosure` function.
+    ///
+    /// - parameters:
+    ///     - closure: `CodableVoidAsyncClosure` based Lambda.
+    ///
+    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
+    public static func run<In: Decodable>(_ closure: @escaping CodableVoidAsyncClosure<In>) {
+        self.run(CodableVoidAsyncWrapper(closure))
+    }
+}
+
+internal struct CodableAsyncWrapper<In: Decodable, Out: Encodable>: AsyncLambdaHandler {
+    typealias In = In
+    typealias Out = Out
+
+    private let closure: Lambda.CodableAsyncClosure<In, Out>
+
+    init(_ closure: @escaping Lambda.CodableAsyncClosure<In, Out>) {
+        self.closure = closure
+    }
+
+    func handle(context: Lambda.Context, event: In) async throws -> Out {
+        try await self.closure(context, event)
+    }
+}
+
+internal struct CodableVoidAsyncWrapper<In: Decodable>: AsyncLambdaHandler {
+    typealias In = In
+    typealias Out = Void
+
+    private let closure: Lambda.CodableVoidAsyncClosure<In>
+
+    init(_ closure: @escaping Lambda.CodableVoidAsyncClosure<In>) {
+        self.closure = closure
+    }
+
+    func handle(context: Lambda.Context, event: In) async throws -> Void {
+        try await self.closure(context, event)
+    }
+}
+
+// MARK: - Codable support
+
 /// Implementation of  a`ByteBuffer` to `In` decoding
 extension EventLoopLambdaHandler where In: Decodable {
     @inlinable
