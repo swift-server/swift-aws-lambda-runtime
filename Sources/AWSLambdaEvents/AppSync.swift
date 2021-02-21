@@ -15,7 +15,7 @@
 import Foundation
 
 public struct AppSync {
-	public struct Request: Codable {
+	public struct Event: Decodable {
 		public let arguments: [String: ArgumentValue]
 		
 		public enum ArgumentValue: Codable {
@@ -46,8 +46,14 @@ public struct AppSync {
 				}
 			}
 		}
-		
-		public let info: Info
+        public let request: Request
+        public struct Request: Decodable {
+            let headers: HTTPHeaders
+        }
+           public let source: [String: String]?
+           public let stash: [String: String]?
+
+           public let info: Info
 		public struct Info: Codable {
 			public var selectionSetList: [String]
 			public var selectionSetGraphQL: String
@@ -55,7 +61,7 @@ public struct AppSync {
 			public var fieldName: String
 			public var variables: [String: String]
 		}
-		public let identity: Identity
+		public let identity: Identity?
 		public struct Identity: Codable {
 			public struct Claims {
 				let sub: String
@@ -107,4 +113,3 @@ extension AppSync {
 	
 	public typealias JSONStringResponse = Response<String>
 }
-

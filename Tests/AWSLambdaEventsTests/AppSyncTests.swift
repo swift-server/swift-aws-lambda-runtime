@@ -96,18 +96,76 @@ class AppSyncTests: XCTestCase {
 	// MARK: Decoding
 	func testRequestDecodingExampleEvent() {
 		let data = AppSyncTests.exampleEventBody.data(using: .utf8)!
-		var req: AppSync.Request?
-		XCTAssertNoThrow(req = try JSONDecoder().decode(AppSync.Request.self, from: data))
+		var event: AppSync.Event?
+		XCTAssertNoThrow(event = try JSONDecoder().decode(AppSync.Event.self, from: data))
 
-		XCTAssertNotNil(req?.arguments)
-		XCTAssertEqual(req?.arguments["id"], .string("my identifier"))
-		XCTAssertEqual(req?.info.fieldName, "createSomething")
-		XCTAssertEqual(req?.info.parentTypeName, "Mutation")
-		XCTAssertEqual(req?.info.selectionSetList, ["id", "field1", "field2"])
+		XCTAssertNotNil(event?.arguments)
+		XCTAssertEqual(event?.arguments["id"], .string("my identifier"))
+		XCTAssertEqual(event?.info.fieldName, "createSomething")
+		XCTAssertEqual(event?.info.parentTypeName, "Mutation")
+		XCTAssertEqual(event?.info.selectionSetList, ["id", "field1", "field2"])
+             XCTAssertEqual(event?.request.headers["accept-language"], "en-US,en;q=0.9")
 	}
+    func testRequestDecodingEventWithSource() {
+        let eventBody = """
+        {
+            "arguments": {},
+            "identity": null,
+            "source": {
+                "name": "Hello",
+                "id": "1"
+            },
+            "request": {
+                "headers": {
+                    "x-forwarded-for": "1.1.1.1, 2.2.2.2",
+                    "accept-encoding": "gzip, deflate, br",
+                    "cloudfront-viewer-country": "CA",
+                    "cloudfront-is-tablet-viewer": "false",
+                    "referer": "https://us-west-2.console.aws.amazon.com/",
+                    "via": "2.0 xxxxxx.cloudfront.net (CloudFront)",
+                    "cloudfront-forwarded-proto": "https",
+                    "origin": "https://us-west-2.console.aws.amazon.com",
+                    "x-api-key": "xxxxxxxxxxxxxxxxxxxxx",
+                    "content-type": "application/json",
+                    "x-amzn-trace-id": "Root=1-5fcd9a24-364c62405b418bd53c7984ce",
+                    "x-amz-cf-id": "3aykhqlUwQeANU-HGY7E_guV5EkNeMMtwyOgiA==",
+                    "content-length": "173",
+                    "x-amz-user-agent": "AWS-Console-AppSync/",
+                    "x-forwarded-proto": "https",
+                    "host": "xxxxxxxxxxxxxxxx.appsync-api.us-west-2.amazonaws.com",
+                    "accept-language": "en-ca",
+                    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15",
+                    "cloudfront-is-desktop-viewer": "true",
+                    "cloudfront-is-mobile-viewer": "false",
+                    "accept": "*/*",
+                    "x-forwarded-port": "443",
+                    "cloudfront-is-smarttv-viewer": "false"
+                }
+            },
+            "prev": null,
+            "info": {
+                "selectionSetList": [
+                    "address",
+                    "id"
+                ],
+                "selectionSetGraphQL": "{ address id}",
+                "parentTypeName": "Customer",
+                "fieldName": "address",
+                "variables": {}
+            },
+            "stash": {}
+        }
+        """
+
+        let data = eventBody.data(using: .utf8)!
+        var event: AppSync.Event?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(AppSync.Event.self, from: data))
+        XCTAssertEqual(event?.source?["name"], "Hello")
+        XCTAssertTrue(event?.stash?.isEmpty ?? false, "stash dictionary must be empty")
+    }
 }
 
-extension AppSync.Request.ArgumentValue: Equatable {
+extension AppSync.Event.ArgumentValue: Equatable {
 	public static func == (lhs: Self, rhs: Self) -> Bool {
 		switch (lhs, rhs) {
 		case (.string(let lhsString), .string(let rhsString)):
