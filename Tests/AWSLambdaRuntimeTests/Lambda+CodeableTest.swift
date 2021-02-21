@@ -53,7 +53,7 @@ class CodableLambdaTest: XCTestCase {
         var response: Response?
 
         let closureWrapper = CodableClosureWrapper { (_, req: Request, completion: (Result<Response, Error>) -> Void) in
-            XCTAssertEqual(request, request)
+            XCTAssertEqual(request, req)
             completion(.success(Response(requestId: req.requestId)))
         }
 
@@ -62,6 +62,39 @@ class CodableLambdaTest: XCTestCase {
         XCTAssertNoThrow(response = try JSONDecoder().decode(Response.self, from: XCTUnwrap(outputBuffer)))
         XCTAssertEqual(response?.requestId, request.requestId)
     }
+    
+    #if compiler(>=5.4) && $AsyncAwait
+    func testCodableVoidAsyncWrapper() {
+        let request = Request(requestId: UUID().uuidString)
+        var inputBuffer: ByteBuffer?
+        var outputBuffer: ByteBuffer?
+
+        let closureWrapper = CodableVoidAsyncWrapper { (context, req: Request) in
+            XCTAssertEqual(request, req)
+        }
+
+        XCTAssertNoThrow(inputBuffer = try JSONEncoder().encode(request, using: self.allocator))
+        XCTAssertNoThrow(outputBuffer = try closureWrapper.handle(context: self.newContext(), event: XCTUnwrap(inputBuffer)).wait())
+        XCTAssertNil(outputBuffer)
+    }
+
+    func testCodableAsyncWrapper() {
+        let request = Request(requestId: UUID().uuidString)
+        var inputBuffer: ByteBuffer?
+        var outputBuffer: ByteBuffer?
+        var response: Response?
+
+        let closureWrapper = CodableAsyncWrapper { (context, req: Request) -> Response in
+            XCTAssertEqual(req, request)
+            return Response(requestId: req.requestId)
+        }
+
+        XCTAssertNoThrow(inputBuffer = try JSONEncoder().encode(request, using: self.allocator))
+        XCTAssertNoThrow(outputBuffer = try closureWrapper.handle(context: self.newContext(), event: XCTUnwrap(inputBuffer)).wait())
+        XCTAssertNoThrow(response = try JSONDecoder().decode(Response.self, from: XCTUnwrap(outputBuffer)))
+        XCTAssertEqual(response?.requestId, request.requestId)
+    }
+    #endif
 
     // convencience method
     func newContext() -> Lambda.Context {

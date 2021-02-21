@@ -38,7 +38,7 @@ let package = Package(
         .testTarget(name: "AWSLambdaRuntimeTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
             .byName(name: "AWSLambdaRuntime"),
-        ]),
+        ], swiftSettings: [.unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])]),
         .target(name: "AWSLambdaEvents", dependencies: []),
         .testTarget(name: "AWSLambdaEventsTests", dependencies: ["AWSLambdaEvents"]),
         // testing helper

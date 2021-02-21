@@ -80,6 +80,7 @@ internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
 
 // MARK: - Async
 
+#if compiler(>=5.4) && $AsyncAwait
 extension Lambda {
     
     /// An async Lambda Closure that takes a `In: Decodable` and returns an `Out: Encodable`
@@ -138,6 +139,7 @@ internal struct CodableVoidAsyncWrapper<In: Decodable>: AsyncLambdaHandler {
         try await self.closure(context, event)
     }
 }
+#endif
 
 // MARK: - Codable support
 
