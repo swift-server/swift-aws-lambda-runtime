@@ -55,6 +55,25 @@ public enum Lambda {
             fatalError("\(error)")
         }
     }
+    
+    #if compiler(>=5.4) && $AsyncAwait
+    public static func run(_ factory: @escaping (InitializationContext) async throws -> Handler) {
+        self.run { context -> EventLoopFuture<Handler> in
+            @asyncHandler func _createLambda(_ context: InitializationContext, promise: EventLoopPromise<Handler>) {
+                do {
+                    let handler = try await factory(context)
+                    promise.succeed(handler)
+                } catch {
+                    promise.fail(error)
+                }
+            }
+            
+            let promise = context.eventLoop.makePromise(of: Handler.self)
+            _createLambda(context, promise: promise)
+            return promise.futureResult
+        }
+    }
+    #endif
 
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol provided via a factory, typically a constructor.
     ///
