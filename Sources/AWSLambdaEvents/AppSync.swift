@@ -12,104 +12,118 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 // https://docs.aws.amazon.com/appsync/latest/devguide/resolver-context-reference.html
-public struct AppSync {
-	public struct Event: Decodable {
-		public let arguments: [String: ArgumentValue]
-		
-		public enum ArgumentValue: Codable {
-			case string(String)
-			case dictionary([String: String])
-			
-			public init(from decoder: Decoder) throws {
-				let container = try decoder.singleValueContainer()
-				if let strValue = try? container.decode(String.self) {
-					self = .string(strValue)
-				} else if let dictionaryValue = try? container.decode([String: String].self) {
-					self = .dictionary(dictionaryValue)
-				} else {
-					throw DecodingError.dataCorruptedError(in: container, debugDescription: """
-					Unexpected AppSync argument.
-					Expected a String or a Dictionary.
-					""")
-				}
-			}
-			
-			public func encode(to encoder: Encoder) throws {
-				var container = encoder.singleValueContainer()
-				switch self {
-				case .dictionary(let array):
-					try container.encode(array)
-				case .string(let str):
-					try container.encode(str)
-				}
-			}
-		}
+public enum AppSync {
+    public struct Event: Decodable {
+        public let arguments: [String: ArgumentValue]
+
+        public enum ArgumentValue: Codable {
+            case string(String)
+            case dictionary([String: String])
+
+            public init(from decoder: Decoder) throws {
+                let container = try decoder.singleValueContainer()
+                if let strValue = try? container.decode(String.self) {
+                    self = .string(strValue)
+                } else if let dictionaryValue = try? container.decode([String: String].self) {
+                    self = .dictionary(dictionaryValue)
+                } else {
+                    throw DecodingError.dataCorruptedError(in: container, debugDescription: """
+                    Unexpected AppSync argument.
+                    Expected a String or a Dictionary.
+                    """)
+                }
+            }
+
+            public func encode(to encoder: Encoder) throws {
+                var container = encoder.singleValueContainer()
+                switch self {
+                case .dictionary(let array):
+                    try container.encode(array)
+                case .string(let str):
+                    try container.encode(str)
+                }
+            }
+        }
+
         public let request: Request
         public struct Request: Decodable {
             let headers: HTTPHeaders
         }
-           public let source: [String: String]?
-           public let stash: [String: String]?
 
-           public let info: Info
-		public struct Info: Codable {
-			public var selectionSetList: [String]
-			public var selectionSetGraphQL: String
-			public var parentTypeName: String
-			public var fieldName: String
-			public var variables: [String: String]
-		}
-		public let identity: Identity?
-		public struct Identity: Codable {
-			public struct Claims {
-				let sub: String
-				let emailVerified: Bool
-				let iss: String
-				let phoneNumberVerified: Bool
-				let cognitoUsername: String
-				let aud: String
-				let eventId: String
-				let tokenUse: String
-				let authTime: Int
-				let phoneNumber: String?
-				let exp: Int
-				let iat: Int
-				let email: String?
-				
-				enum CodingKeys: String, CodingKey {
-					case sub, emailVerified = "email_verified", iss, phoneNumberVerified = "phone_number_verified", cognitoUsername = "cognito:username", aud, eventId = "event_id", tokenUse = "token_use", authTime = "auth_time", phoneNumber = "phone_number", exp, iat, email
-				}
-			}
-			
-			public let defaultAuthStrategy: String
-			public let issuer: String
-			public let sourceIp: [String]
-			public let sub: String
-			public let userName: String?
-		}
-	}
+        public let source: [String: String]?
+        public let stash: [String: String]?
+
+        public let info: Info
+        public struct Info: Codable {
+            public var selectionSetList: [String]
+            public var selectionSetGraphQL: String
+            public var parentTypeName: String
+            public var fieldName: String
+            public var variables: [String: String]
+        }
+
+        public let identity: Identity?
+        public struct Identity: Codable {
+            public struct Claims {
+                let sub: String
+                let emailVerified: Bool
+                let iss: String
+                let phoneNumberVerified: Bool
+                let cognitoUsername: String
+                let aud: String
+                let eventId: String
+                let tokenUse: String
+                let authTime: Int
+                let phoneNumber: String?
+                let exp: Int
+                let iat: Int
+                let email: String?
+
+                enum CodingKeys: String, CodingKey {
+                    case sub
+                    case emailVerified = "email_verified"
+                    case iss
+                    case phoneNumberVerified = "phone_number_verified"
+                    case cognitoUsername = "cognito:username"
+                    case aud
+                    case eventId = "event_id"
+                    case tokenUse = "token_use"
+                    case authTime = "auth_time"
+                    case phoneNumber = "phone_number"
+                    case exp
+                    case iat
+                    case email
+                }
+            }
+
+            public let defaultAuthStrategy: String
+            public let issuer: String
+            public let sourceIp: [String]
+            public let sub: String
+            public let userName: String?
+        }
+    }
 }
 
-extension AppSync {
-	public enum Response<ResultType: Codable>: Encodable {
-		public func encode(to encoder: Encoder) throws {
-			var container = encoder.singleValueContainer()
-			switch self {
-			case .array(let array):
-				try container.encode(array)
-			case .object(let object):
-				try container.encode(object)
-			case .dictionary(let dictionary):
-				try container.encode(dictionary)
-			}
-		}
+public extension AppSync {
+    enum Response<ResultType: Encodable>: Encodable {
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            switch self {
+            case .array(let array):
+                try container.encode(array)
+            case .object(let object):
+                try container.encode(object)
+            case .dictionary(let dictionary):
+                try container.encode(dictionary)
+            }
+        }
 
-		case object(ResultType)
-		case array([ResultType])
-		case dictionary([String: ResultType])
-	}
-	
-	public typealias JSONStringResponse = Response<String>
+        case object(ResultType)
+        case array([ResultType])
+        case dictionary([String: ResultType])
+    }
+
+    typealias JSONStringResponse = Response<String>
 }
