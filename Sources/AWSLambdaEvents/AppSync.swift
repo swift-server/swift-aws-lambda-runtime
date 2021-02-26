@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-
+// https://docs.aws.amazon.com/appsync/latest/devguide/resolver-context-reference.html
 public struct AppSync {
 	public struct Event: Decodable {
 		public let arguments: [String: ArgumentValue]
