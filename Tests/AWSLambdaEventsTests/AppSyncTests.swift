@@ -106,6 +106,17 @@ class AppSyncTests: XCTestCase {
         XCTAssertEqual(event?.info.parentTypeName, "Mutation")
         XCTAssertEqual(event?.info.selectionSetList, ["id", "field1", "field2"])
         XCTAssertEqual(event?.request.headers["accept-language"], "en-US,en;q=0.9")
+
+        switch event?.identity {
+        case .cognitoUserPools(let cognitoIdentity):
+            XCTAssertEqual(cognitoIdentity.defaultAuthStrategy, "ALLOW")
+            XCTAssertEqual(cognitoIdentity.issuer, "https://cognito-idp.us-west-2.amazonaws.com/us-west-xxxxxxxxxxx")
+            XCTAssertEqual(cognitoIdentity.sourceIp, ["1.1.1.1"])
+            XCTAssertEqual(cognitoIdentity.username, "jdoe")
+            XCTAssertEqual(cognitoIdentity.sub, "192879fc-a240-4bf1-ab5a-d6a00f3063f9")
+        default:
+            XCTAssertTrue(false, "a cognito identity was expected, but didn't find one.")
+        }
     }
 
     func testRequestDecodingEventWithSource() {
@@ -164,6 +175,85 @@ class AppSyncTests: XCTestCase {
         XCTAssertNoThrow(event = try JSONDecoder().decode(AppSync.Event.self, from: data))
         XCTAssertEqual(event?.source?["name"], "Hello")
         XCTAssertTrue(event?.stash?.isEmpty ?? false, "stash dictionary must be empty")
+        XCTAssertNil(event?.identity)
+    }
+
+    func testRequestDecodingIamIdentity() {
+        let eventBody = """
+        {
+            "arguments": {},
+            "identity": {
+                "accountId" : "accountId1",
+                "cognitoIdentityPoolId" : "cognitoIdentityPool2",
+                "cognitoIdentityId" : "cognitoIdentity3",
+                "sourceIp" : ["1.1.1.1"],
+                "username" : null,
+                "userArn" : "arn123",
+                "cognitoIdentityAuthType" : "authenticated",
+                "cognitoIdentityAuthProvider" : "authprovider"
+            },
+            "source": {
+                "name": "Hello",
+                "id": "1"
+            },
+            "request": {
+                "headers": {
+                    "x-forwarded-for": "1.1.1.1, 2.2.2.2",
+                    "accept-encoding": "gzip, deflate, br",
+                    "cloudfront-viewer-country": "CA",
+                    "cloudfront-is-tablet-viewer": "false",
+                    "referer": "https://us-west-2.console.aws.amazon.com/",
+                    "via": "2.0 xxxxxx.cloudfront.net (CloudFront)",
+                    "cloudfront-forwarded-proto": "https",
+                    "origin": "https://us-west-2.console.aws.amazon.com",
+                    "x-api-key": "xxxxxxxxxxxxxxxxxxxxx",
+                    "content-type": "application/json",
+                    "x-amzn-trace-id": "Root=1-5fcd9a24-364c62405b418bd53c7984ce",
+                    "x-amz-cf-id": "3aykhqlUwQeANU-HGY7E_guV5EkNeMMtwyOgiA==",
+                    "content-length": "173",
+                    "x-amz-user-agent": "AWS-Console-AppSync/",
+                    "x-forwarded-proto": "https",
+                    "host": "xxxxxxxxxxxxxxxx.appsync-api.us-west-2.amazonaws.com",
+                    "accept-language": "en-ca",
+                    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Safari/605.1.15",
+                    "cloudfront-is-desktop-viewer": "true",
+                    "cloudfront-is-mobile-viewer": "false",
+                    "accept": "*/*",
+                    "x-forwarded-port": "443",
+                    "cloudfront-is-smarttv-viewer": "false"
+                }
+            },
+            "prev": null,
+            "info": {
+                "selectionSetList": [
+                    "address",
+                    "id"
+                ],
+                "selectionSetGraphQL": "{ address id}",
+                "parentTypeName": "Customer",
+                "fieldName": "address",
+                "variables": {}
+            },
+            "stash": {}
+        }
+        """
+
+        let data = eventBody.data(using: .utf8)!
+        var event: AppSync.Event?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(AppSync.Event.self, from: data))
+        switch event?.identity {
+        case .iam(let iamIdentity):
+            XCTAssertEqual(iamIdentity.accountId, "accountId1")
+            XCTAssertEqual(iamIdentity.cognitoIdentityPoolId, "cognitoIdentityPool2")
+            XCTAssertEqual(iamIdentity.cognitoIdentityId, "cognitoIdentity3")
+            XCTAssertEqual(iamIdentity.sourceIp, ["1.1.1.1"])
+            XCTAssertNil(iamIdentity.username)
+            XCTAssertEqual(iamIdentity.userArn, "arn123")
+            XCTAssertEqual(iamIdentity.cognitoIdentityAuthType, "authenticated")
+            XCTAssertEqual(iamIdentity.cognitoIdentityAuthProvider, "authprovider")
+        default:
+            XCTAssertTrue(false, "an iam identity was expected, but didn't find one.")
+        }
     }
 }
 

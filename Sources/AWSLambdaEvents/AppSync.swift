@@ -64,44 +64,84 @@ public enum AppSync {
         }
 
         public let identity: Identity?
-        public struct Identity: Codable {
-            public struct Claims {
-                let sub: String
-                let emailVerified: Bool
-                let iss: String
-                let phoneNumberVerified: Bool
-                let cognitoUsername: String
-                let aud: String
-                let eventId: String
-                let tokenUse: String
-                let authTime: Int
-                let phoneNumber: String?
-                let exp: Int
-                let iat: Int
-                let email: String?
+        public enum Identity: Codable {
+            case iam(IAMIdentity)
+            case cognitoUserPools(CognitoUserPoolIdentity)
 
-                enum CodingKeys: String, CodingKey {
-                    case sub
-                    case emailVerified = "email_verified"
-                    case iss
-                    case phoneNumberVerified = "phone_number_verified"
-                    case cognitoUsername = "cognito:username"
-                    case aud
-                    case eventId = "event_id"
-                    case tokenUse = "token_use"
-                    case authTime = "auth_time"
-                    case phoneNumber = "phone_number"
-                    case exp
-                    case iat
-                    case email
+            public struct IAMIdentity: Codable {
+                public let accountId: String
+                public let cognitoIdentityPoolId: String
+                public let cognitoIdentityId: String
+                public let sourceIp: [String]
+                public let username: String?
+                public let userArn: String
+                public let cognitoIdentityAuthType: String
+                public let cognitoIdentityAuthProvider: String
+            }
+
+            public struct CognitoUserPoolIdentity: Codable {
+                public let defaultAuthStrategy: String
+                public let issuer: String
+                public let sourceIp: [String]
+                public let sub: String
+                public let username: String?
+
+                public struct Claims {
+                    let sub: String
+                    let emailVerified: Bool
+                    let iss: String
+                    let phoneNumberVerified: Bool
+                    let cognitoUsername: String
+                    let aud: String
+                    let eventId: String
+                    let tokenUse: String
+                    let authTime: Int
+                    let phoneNumber: String?
+                    let exp: Int
+                    let iat: Int
+                    let email: String?
+
+                    enum CodingKeys: String, CodingKey {
+                        case sub
+                        case emailVerified = "email_verified"
+                        case iss
+                        case phoneNumberVerified = "phone_number_verified"
+                        case cognitoUsername = "cognito:username"
+                        case aud
+                        case eventId = "event_id"
+                        case tokenUse = "token_use"
+                        case authTime = "auth_time"
+                        case phoneNumber = "phone_number"
+                        case exp
+                        case iat
+                        case email
+                    }
                 }
             }
 
-            public let defaultAuthStrategy: String
-            public let issuer: String
-            public let sourceIp: [String]
-            public let sub: String
-            public let userName: String?
+            public init(from decoder: Decoder) throws {
+                let container = try decoder.singleValueContainer()
+                if let iamIdentity = try? container.decode(IAMIdentity.self) {
+                    self = .iam(iamIdentity)
+                } else if let cognitoIdentity = try? container.decode(CognitoUserPoolIdentity.self) {
+                    self = .cognitoUserPools(cognitoIdentity)
+                } else {
+                    throw DecodingError.dataCorruptedError(in: container, debugDescription: """
+                    Unexpected Identity argument.
+                    Expected a IAM Identity or a Cognito User Pool Identity.
+                    """)
+                }
+            }
+
+            public func encode(to encoder: Encoder) throws {
+                var container = encoder.singleValueContainer()
+                switch self {
+                case .iam(let iamIdentity):
+                    try container.encode(iamIdentity)
+                case .cognitoUserPools(let cognitoUserPool):
+                    try container.encode(cognitoUserPool)
+                }
+            }
         }
     }
 }
