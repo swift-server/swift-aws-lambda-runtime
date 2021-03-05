@@ -31,7 +31,7 @@ unacceptable_terms=(
     -e slav[e]
     -e sanit[y]
 )
-if git grep --color=never -i "${unacceptable_terms[@]}" > /dev/null; then
+if git grep --color=never -i "${unacceptable_terms[@]}" -- . ":(exclude)CODE_OF_CONDUCT.md" > /dev/null; then
     printf "\033[0;31mUnacceptable language found.\033[0m\n"
     git grep -i "${unacceptable_terms[@]}"
     exit 1
