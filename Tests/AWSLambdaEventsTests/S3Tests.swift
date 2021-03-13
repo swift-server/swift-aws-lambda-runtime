@@ -151,6 +151,7 @@ class S3Tests: XCTestCase {
         XCTAssertEqual(record.s3.bucket.ownerIdentity, S3.UserIdentity(principalId: "AAAAAAAAAAAAAA"))
         XCTAssertEqual(record.s3.bucket.arn, "arn:aws:s3:::eventsources")
         XCTAssertEqual(record.s3.object.key, "Hi.md")
+        XCTAssertNil(record.s3.object.size)
         XCTAssertEqual(record.s3.object.eTag, "91a7f2c3ae81bcc6afef83979b463f0e")
         XCTAssertEqual(record.s3.object.sequencer, "005E1C37948E783A6E")
     }
