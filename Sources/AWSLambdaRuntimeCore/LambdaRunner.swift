@@ -18,7 +18,7 @@ import NIO
 
 extension Lambda {
     /// LambdaRunner manages the Lambda runtime workflow, or business logic.
-    internal final class Runner {
+    final class Runner {
         private let runtimeClient: RuntimeClient
         private let eventLoop: EventLoop
         private let allocator: ByteBufferAllocator

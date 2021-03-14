@@ -162,8 +162,8 @@ internal final class HTTPHandler: ChannelInboundHandler {
             }
         } else if request.head.uri.hasSuffix(Consts.postErrorURLSuffix) {
             guard let requestId = request.head.uri.split(separator: "/").dropFirst(3).first,
-                let json = requestBody,
-                let error = ErrorResponse.fromJson(json)
+                  let json = requestBody,
+                  let error = ErrorResponse.fromJson(json)
             else {
                 return self.writeResponse(context: context, status: .badRequest)
             }

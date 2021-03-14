@@ -22,7 +22,7 @@ import NIOHTTP1
 /// * /runtime/invocation/error
 /// * /runtime/init/error
 extension Lambda {
-    internal struct RuntimeClient {
+    struct RuntimeClient {
         private let eventLoop: EventLoop
         private let allocator = ByteBufferAllocator()
         private let httpClient: HTTPClient
@@ -146,9 +146,9 @@ internal extension ErrorResponse {
     func toJSONBytes() -> [UInt8] {
         var bytes = [UInt8]()
         bytes.append(UInt8(ascii: "{"))
-        bytes.append(contentsOf: #""errorType":"# .utf8)
+        bytes.append(contentsOf: #""errorType":"#.utf8)
         self.errorType.encodeAsJSONString(into: &bytes)
-        bytes.append(contentsOf: #","errorMessage":"# .utf8)
+        bytes.append(contentsOf: #","errorMessage":"#.utf8)
         self.errorMessage.encodeAsJSONString(into: &bytes)
         bytes.append(UInt8(ascii: "}"))
         return bytes
@@ -156,7 +156,7 @@ internal extension ErrorResponse {
 }
 
 extension Lambda {
-    internal struct Invocation {
+    struct Invocation {
         let requestID: String
         let deadlineInMillisSinceEpoch: Int64
         let invokedFunctionARN: String
@@ -170,7 +170,8 @@ extension Lambda {
             }
 
             guard let deadline = headers.first(name: AmazonHeaders.deadline),
-                let unixTimeInMilliseconds = Int64(deadline) else {
+                  let unixTimeInMilliseconds = Int64(deadline)
+            else {
                 throw RuntimeError.invocationMissingHeader(AmazonHeaders.deadline)
             }
 
@@ -193,10 +194,10 @@ extension Lambda {
 }
 
 extension Lambda.RuntimeClient {
-    internal static let defaultHeaders = HTTPHeaders([("user-agent", "Swift-Lambda/Unknown")])
+    static let defaultHeaders = HTTPHeaders([("user-agent", "Swift-Lambda/Unknown")])
 
     /// These headers must be sent along an invocation or initialization error report
-    internal static let errorHeaders = HTTPHeaders([
+    static let errorHeaders = HTTPHeaders([
         ("user-agent", "Swift-Lambda/Unknown"),
         ("lambda-runtime-function-error-type", "Unhandled"),
     ])

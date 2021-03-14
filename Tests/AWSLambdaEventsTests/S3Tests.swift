@@ -56,7 +56,7 @@ class S3Tests: XCTestCase {
       ]
     }
     """
-    
+
     // A S3 ObjectRemoved:* event does not contain the object size
     static let eventBodyObjectRemoved = """
     {
@@ -126,7 +126,7 @@ class S3Tests: XCTestCase {
         XCTAssertEqual(record.s3.object.eTag, "91a7f2c3ae81bcc6afef83979b463f0e")
         XCTAssertEqual(record.s3.object.sequencer, "005E1C37948E783A6E")
     }
-    
+
     func testObjectRemovedEvent() {
         let data = S3Tests.eventBodyObjectRemoved.data(using: .utf8)!
         var event: S3.Event?

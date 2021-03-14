@@ -15,7 +15,7 @@
 import struct Foundation.Date
 
 // https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html
-public struct DynamoDB {
+public enum DynamoDB {
     public struct Event: Decodable {
         public let records: [EventRecord]
 
@@ -188,8 +188,8 @@ extension DynamoDB.StreamRecord: Decodable {
 
 // MARK: - AttributeValue -
 
-extension DynamoDB {
-    public enum AttributeValue {
+public extension DynamoDB {
+    enum AttributeValue {
         case boolean(Bool)
         case binary([UInt8])
         case binarySet([[UInt8]])
@@ -341,7 +341,8 @@ extension DynamoDB {
         }
 
         @usableFromInline func container<Key>(keyedBy type: Key.Type) throws ->
-            KeyedDecodingContainer<Key> where Key: CodingKey {
+            KeyedDecodingContainer<Key> where Key: CodingKey
+        {
             guard case .map(let dictionary) = self.value else {
                 throw DecodingError.typeMismatch([String: AttributeValue].self, DecodingError.Context(
                     codingPath: self.codingPath,
@@ -510,8 +511,9 @@ extension DynamoDB {
         }
 
         func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: K) throws
-            -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey {
-            return try self.decoderForKey(key).container(keyedBy: type)
+            -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey
+        {
+            try self.decoderForKey(key).container(keyedBy: type)
         }
 
         func nestedUnkeyedContainer(forKey key: K) throws -> UnkeyedDecodingContainer {
@@ -677,7 +679,7 @@ extension DynamoDB {
         }
 
         func decode<T>(_: T.Type) throws -> T where T: Decodable {
-            return try T(from: self.impl)
+            try T(from: self.impl)
         }
 
         @inline(__always) private func createTypeMismatchError(type: Any.Type, value: AttributeValue) -> DecodingError {
@@ -849,8 +851,9 @@ extension DynamoDB {
         }
 
         mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws
-            -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey {
-            return try self.impl.container(keyedBy: type)
+            -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey
+        {
+            try self.impl.container(keyedBy: type)
         }
 
         mutating func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer {
@@ -914,8 +917,8 @@ extension DynamoDB {
     }
 }
 
-extension DynamoDB.AttributeValue {
-    fileprivate var debugDataTypeDescription: String {
+private extension DynamoDB.AttributeValue {
+    var debugDataTypeDescription: String {
         switch self {
         case .list:
             return "a list"

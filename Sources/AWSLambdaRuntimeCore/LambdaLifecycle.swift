@@ -16,11 +16,11 @@ import Logging
 import NIO
 import NIOConcurrencyHelpers
 
-extension Lambda {
+public extension Lambda {
     /// `Lifecycle` manages the Lambda process lifecycle.
     ///
     /// - note: It is intended to be used within a single `EventLoop`. For this reason this class is not thread safe.
-    public final class Lifecycle {
+    final class Lifecycle {
         private let eventLoop: EventLoop
         private let shutdownPromise: EventLoopPromise<Int>
         private let logger: Logger

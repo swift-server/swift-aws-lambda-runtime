@@ -157,7 +157,7 @@ extension HTTPResponseStatus: Codable {
 }
 
 extension String {
-    internal var isValidHTTPToken: Bool {
+    var isValidHTTPToken: Bool {
         self.utf8.allSatisfy { (char) -> Bool in
             switch char {
             case UInt8(ascii: "a") ... UInt8(ascii: "z"),

@@ -20,9 +20,9 @@ import NIO
 import NIOFoundationCompat
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` events.
-extension Lambda {
+public extension Lambda {
     /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Out: Encodable, Error>` via a completion handler.
-    public typealias CodableClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
+    typealias CodableClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
 
     /// Run a Lambda defined by implementing the `CodableClosure` function.
     ///
@@ -30,12 +30,12 @@ extension Lambda {
     ///     - closure: `CodableClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableClosure<In, Out>) {
+    static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableClosure<In, Out>) {
         self.run(CodableClosureWrapper(closure))
     }
 
     /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Void, Error>` via a completion handler.
-    public typealias CodableVoidClosure<In: Decodable> = (Lambda.Context, In, @escaping (Result<Void, Error>) -> Void) -> Void
+    typealias CodableVoidClosure<In: Decodable> = (Lambda.Context, In, @escaping (Result<Void, Error>) -> Void) -> Void
 
     /// Run a Lambda defined by implementing the `CodableVoidClosure` function.
     ///
@@ -43,7 +43,7 @@ extension Lambda {
     ///     - closure: `CodableVoidClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<In: Decodable>(_ closure: @escaping CodableVoidClosure<In>) {
+    static func run<In: Decodable>(_ closure: @escaping CodableVoidClosure<In>) {
         self.run(CodableVoidClosureWrapper(closure))
     }
 }
@@ -132,16 +132,16 @@ extension JSONEncoder: LambdaCodableEncoder {
     }
 }
 
-extension JSONEncoder {
+public extension JSONEncoder {
     /// Convenience method to allow encoding json directly into a `String`. It can be used to encode a payload into an `APIGateway.V2.Response`'s body.
-    public func encodeAsString<T: Encodable>(_ value: T) throws -> String {
+    func encodeAsString<T: Encodable>(_ value: T) throws -> String {
         try String(decoding: self.encode(value), as: Unicode.UTF8.self)
     }
 }
 
-extension JSONDecoder {
+public extension JSONDecoder {
     /// Convenience method to allow decoding json directly from a `String`. It can be used to decode a payload from an `APIGateway.V2.Request`'s body.
-    public func decode<T: Decodable>(_ type: T.Type, from string: String) throws -> T {
+    func decode<T: Decodable>(_ type: T.Type, from string: String) throws -> T {
         try self.decode(type, from: Data(string.utf8))
     }
 }

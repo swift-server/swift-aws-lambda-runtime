@@ -14,9 +14,9 @@
 import NIO
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `String` events.
-extension Lambda {
+public extension Lambda {
     /// An asynchronous Lambda Closure that takes a `String` and returns a `Result<String, Error>` via a completion handler.
-    public typealias StringClosure = (Lambda.Context, String, @escaping (Result<String, Error>) -> Void) -> Void
+    typealias StringClosure = (Lambda.Context, String, @escaping (Result<String, Error>) -> Void) -> Void
 
     /// Run a Lambda defined by implementing the `StringClosure` function.
     ///
@@ -24,14 +24,14 @@ extension Lambda {
     ///     - closure: `StringClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ closure: @escaping StringClosure) {
+    static func run(_ closure: @escaping StringClosure) {
         if case .failure(let error) = self.run(closure: closure) {
             fatalError("\(error)")
         }
     }
 
     /// An asynchronous Lambda Closure that takes a `String` and returns a `Result<Void, Error>` via a completion handler.
-    public typealias StringVoidClosure = (Lambda.Context, String, @escaping (Result<Void, Error>) -> Void) -> Void
+    typealias StringVoidClosure = (Lambda.Context, String, @escaping (Result<Void, Error>) -> Void) -> Void
 
     /// Run a Lambda defined by implementing the `StringVoidClosure` function.
     ///
@@ -39,7 +39,7 @@ extension Lambda {
     ///     - closure: `StringVoidClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ closure: @escaping StringVoidClosure) {
+    static func run(_ closure: @escaping StringVoidClosure) {
         if case .failure(let error) = self.run(closure: closure) {
             fatalError("\(error)")
         }

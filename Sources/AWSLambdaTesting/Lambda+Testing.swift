@@ -40,8 +40,8 @@ import Dispatch
 import Logging
 import NIO
 
-extension Lambda {
-    public struct TestConfig {
+public extension Lambda {
+    struct TestConfig {
         public var requestID: String
         public var traceID: String
         public var invokedFunctionARN: String
@@ -50,7 +50,8 @@ extension Lambda {
         public init(requestID: String = "\(DispatchTime.now().uptimeNanoseconds)",
                     traceID: String = "Root=\(DispatchTime.now().uptimeNanoseconds);Parent=\(DispatchTime.now().uptimeNanoseconds);Sampled=1",
                     invokedFunctionARN: String = "arn:aws:lambda:us-west-1:\(DispatchTime.now().uptimeNanoseconds):function:custom-runtime",
-                    timeout: DispatchTimeInterval = .seconds(5)) {
+                    timeout: DispatchTimeInterval = .seconds(5))
+        {
             self.requestID = requestID
             self.traceID = traceID
             self.invokedFunctionARN = invokedFunctionARN
@@ -58,19 +59,21 @@ extension Lambda {
         }
     }
 
-    public static func test(_ closure: @escaping Lambda.StringClosure,
-                            with event: String,
-                            using config: TestConfig = .init()) throws -> String {
+    static func test(_ closure: @escaping Lambda.StringClosure,
+                     with event: String,
+                     using config: TestConfig = .init()) throws -> String
+    {
         try Self.test(StringClosureWrapper(closure), with: event, using: config)
     }
 
-    public static func test(_ closure: @escaping Lambda.StringVoidClosure,
-                            with event: String,
-                            using config: TestConfig = .init()) throws {
+    static func test(_ closure: @escaping Lambda.StringVoidClosure,
+                     with event: String,
+                     using config: TestConfig = .init()) throws
+    {
         _ = try Self.test(StringVoidClosureWrapper(closure), with: event, using: config)
     }
 
-    public static func test<In: Decodable, Out: Encodable>(
+    static func test<In: Decodable, Out: Encodable>(
         _ closure: @escaping Lambda.CodableClosure<In, Out>,
         with event: In,
         using config: TestConfig = .init()
@@ -78,7 +81,7 @@ extension Lambda {
         try Self.test(CodableClosureWrapper(closure), with: event, using: config)
     }
 
-    public static func test<In: Decodable>(
+    static func test<In: Decodable>(
         _ closure: @escaping Lambda.CodableVoidClosure<In>,
         with event: In,
         using config: TestConfig = .init()
@@ -86,7 +89,7 @@ extension Lambda {
         _ = try Self.test(CodableVoidClosureWrapper(closure), with: event, using: config)
     }
 
-    public static func test<In, Out, Handler: EventLoopLambdaHandler>(
+    static func test<In, Out, Handler: EventLoopLambdaHandler>(
         _ handler: Handler,
         with event: In,
         using config: TestConfig = .init()
