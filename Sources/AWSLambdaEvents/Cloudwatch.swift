@@ -21,8 +21,8 @@ public protocol CloudwatchDetail: Decodable {
     static var name: String { get }
 }
 
-public extension CloudwatchDetail {
-    var detailType: String {
+extension CloudwatchDetail {
+    public var detailType: String {
         Self.name
     }
 }

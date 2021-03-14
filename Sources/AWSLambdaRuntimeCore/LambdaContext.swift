@@ -92,7 +92,8 @@ extension Lambda {
                       clientContext: String? = nil,
                       logger: Logger,
                       eventLoop: EventLoop,
-                      allocator: ByteBufferAllocator) {
+                      allocator: ByteBufferAllocator)
+        {
             self.requestID = requestID
             self.traceID = traceID
             self.invokedFunctionARN = invokedFunctionARN

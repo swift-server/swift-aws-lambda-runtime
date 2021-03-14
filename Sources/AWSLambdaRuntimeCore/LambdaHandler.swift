@@ -39,20 +39,20 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
     func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void)
 }
 
-internal extension Lambda {
-    static let defaultOffloadQueue = DispatchQueue(label: "LambdaHandler.offload")
+extension Lambda {
+    internal static let defaultOffloadQueue = DispatchQueue(label: "LambdaHandler.offload")
 }
 
-public extension LambdaHandler {
+extension LambdaHandler {
     /// The queue on which `handle` is invoked on.
-    var offloadQueue: DispatchQueue {
+    public var offloadQueue: DispatchQueue {
         Lambda.defaultOffloadQueue
     }
 
     /// `LambdaHandler` is offloading the processing to a `DispatchQueue`
     /// This is slower but safer, in case the implementation blocks the `EventLoop`
     /// Performance sensitive Lambdas should be based on `EventLoopLambdaHandler` which does not offload.
-    func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
+    public func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
         let promise = context.eventLoop.makePromise(of: Out.self)
         // FIXME: reusable DispatchQueue
         self.offloadQueue.async {
@@ -62,8 +62,8 @@ public extension LambdaHandler {
     }
 }
 
-public extension LambdaHandler {
-    func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
+extension LambdaHandler {
+    public func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
         let promise = context.eventLoop.makePromise(of: Void.self)
         self.offloadQueue.async {
             do {
@@ -78,7 +78,7 @@ public extension LambdaHandler {
 
     /// Clean up the Lambda resources synchronously.
     /// Concrete Lambda handlers implement this method to shutdown resources like `HTTPClient`s and database connections.
-    func syncShutdown(context: Lambda.ShutdownContext) throws {
+    public func syncShutdown(context: Lambda.ShutdownContext) throws {
         // noop
     }
 }
@@ -126,9 +126,9 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
     func decode(buffer: ByteBuffer) throws -> In
 }
 
-public extension EventLoopLambdaHandler {
+extension EventLoopLambdaHandler {
     /// Driver for `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding
-    func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
+    public func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
         switch self.decodeIn(buffer: event) {
         case .failure(let error):
             return context.eventLoop.makeFailedFuture(CodecError.requestDecoding(error))
@@ -162,8 +162,8 @@ public extension EventLoopLambdaHandler {
 }
 
 /// Implementation of  `ByteBuffer` to `Void` decoding
-public extension EventLoopLambdaHandler where Out == Void {
-    func encode(allocator: ByteBufferAllocator, value: Void) throws -> ByteBuffer? {
+extension EventLoopLambdaHandler where Out == Void {
+    public func encode(allocator: ByteBufferAllocator, value: Void) throws -> ByteBuffer? {
         nil
     }
 }
@@ -194,8 +194,8 @@ public protocol ByteBufferLambdaHandler {
     func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void>
 }
 
-public extension ByteBufferLambdaHandler {
-    func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
+extension ByteBufferLambdaHandler {
+    public func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
         context.eventLoop.makeSucceededFuture(())
     }
 }
