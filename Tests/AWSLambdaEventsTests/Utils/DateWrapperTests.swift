@@ -42,7 +42,7 @@ class DateWrapperTests: XCTestCase {
                 XCTFail("Unexpected error: \(error)"); return
             }
 
-            XCTAssertEqual(context.codingPath.compactMap { $0.stringValue }, ["date"])
+            XCTAssertEqual(context.codingPath.map(\.stringValue), ["date"])
             XCTAssertEqual(context.debugDescription, "Expected date to be in ISO8601 date format, but `\(date)` is not in the correct format")
             XCTAssertNil(context.underlyingError)
         }
@@ -74,7 +74,7 @@ class DateWrapperTests: XCTestCase {
                 XCTFail("Unexpected error: \(error)"); return
             }
 
-            XCTAssertEqual(context.codingPath.compactMap { $0.stringValue }, ["date"])
+            XCTAssertEqual(context.codingPath.map(\.stringValue), ["date"])
             XCTAssertEqual(context.debugDescription, "Expected date to be in ISO8601 date format with fractional seconds, but `\(date)` is not in the correct format")
             XCTAssertNil(context.underlyingError)
         }
@@ -132,7 +132,7 @@ class DateWrapperTests: XCTestCase {
                 XCTFail("Unexpected error: \(error)"); return
             }
 
-            XCTAssertEqual(context.codingPath.compactMap { $0.stringValue }, ["date"])
+            XCTAssertEqual(context.codingPath.map(\.stringValue), ["date"])
             XCTAssertEqual(context.debugDescription, "Expected date to be in RFC5322 date-time format with fractional seconds, but `\(date)` is not in the correct format")
             XCTAssertNil(context.underlyingError)
         }

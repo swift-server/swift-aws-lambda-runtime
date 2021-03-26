@@ -146,8 +146,8 @@ public enum AppSync {
     }
 }
 
-public extension AppSync {
-    enum Response<ResultType: Encodable>: Encodable {
+extension AppSync {
+    public enum Response<ResultType: Encodable>: Encodable {
         public func encode(to encoder: Encoder) throws {
             var container = encoder.singleValueContainer()
             switch self {
@@ -165,5 +165,5 @@ public extension AppSync {
         case dictionary([String: ResultType])
     }
 
-    typealias JSONStringResponse = Response<String>
+    public typealias JSONStringResponse = Response<String>
 }

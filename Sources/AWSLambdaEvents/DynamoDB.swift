@@ -15,7 +15,7 @@
 import struct Foundation.Date
 
 // https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html
-public struct DynamoDB {
+public enum DynamoDB {
     public struct Event: Decodable {
         public let records: [EventRecord]
 
@@ -311,14 +311,12 @@ extension DynamoDB {
         public init() {}
 
         @inlinable public func decode<T: Decodable>(_ type: T.Type, from image: [String: AttributeValue])
-            throws -> T
-        {
+            throws -> T {
             try self.decode(type, from: .map(image))
         }
 
         @inlinable public func decode<T: Decodable>(_ type: T.Type, from value: AttributeValue)
-            throws -> T
-        {
+            throws -> T {
             let decoder = _DecoderImpl(userInfo: userInfo, from: value, codingPath: [])
             return try decoder.decode(T.self)
         }
@@ -511,7 +509,7 @@ extension DynamoDB {
 
         func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: K) throws
             -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey {
-            return try self.decoderForKey(key).container(keyedBy: type)
+            try self.decoderForKey(key).container(keyedBy: type)
         }
 
         func nestedUnkeyedContainer(forKey key: K) throws -> UnkeyedDecodingContainer {
@@ -557,8 +555,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger>(key: Self.Key)
-            throws -> T
-        {
+            throws -> T {
             let value = try getValue(forKey: key)
 
             guard case .number(let number) = value else {
@@ -577,8 +574,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private func decodeLosslessStringConvertible<T: LosslessStringConvertible>(
-            key: Self.Key) throws -> T
-        {
+            key: Self.Key) throws -> T {
             let value = try getValue(forKey: key)
 
             guard case .number(let number) = value else {
@@ -677,7 +673,7 @@ extension DynamoDB {
         }
 
         func decode<T>(_: T.Type) throws -> T where T: Decodable {
-            return try T(from: self.impl)
+            try T(from: self.impl)
         }
 
         @inline(__always) private func createTypeMismatchError(type: Any.Type, value: AttributeValue) -> DecodingError {
@@ -688,8 +684,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger>() throws
-            -> T
-        {
+            -> T {
             guard case .number(let number) = self.value else {
                 throw self.createTypeMismatchError(type: T.self, value: self.value)
             }
@@ -705,8 +700,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private func decodeLosslessStringConvertible<T: LosslessStringConvertible>()
-            throws -> T
-        {
+            throws -> T {
             guard case .number(let number) = self.value else {
                 throw self.createTypeMismatchError(type: T.self, value: self.value)
             }
@@ -850,7 +844,7 @@ extension DynamoDB {
 
         mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws
             -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey {
-            return try self.impl.container(keyedBy: type)
+            try self.impl.container(keyedBy: type)
         }
 
         mutating func nestedUnkeyedContainer() throws -> UnkeyedDecodingContainer {
@@ -869,8 +863,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private mutating func decodeFixedWidthInteger<T: FixedWidthInteger>() throws
-            -> T
-        {
+            -> T {
             defer {
                 currentIndex += 1
                 if currentIndex == count {
@@ -891,8 +884,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private mutating func decodeLosslessStringConvertible<T: LosslessStringConvertible>()
-            throws -> T
-        {
+            throws -> T {
             defer {
                 currentIndex += 1
                 if currentIndex == count {
