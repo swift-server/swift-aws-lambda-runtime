@@ -14,9 +14,9 @@
 import NIO
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `String` events.
-public extension Lambda {
+extension Lambda {
     /// An asynchronous Lambda Closure that takes a `String` and returns a `Result<String, Error>` via a completion handler.
-    typealias StringClosure = (Lambda.Context, String, @escaping (Result<String, Error>) -> Void) -> Void
+    public typealias StringClosure = (Lambda.Context, String, @escaping (Result<String, Error>) -> Void) -> Void
 
     /// Run a Lambda defined by implementing the `StringClosure` function.
     ///
@@ -24,14 +24,14 @@ public extension Lambda {
     ///     - closure: `StringClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    static func run(_ closure: @escaping StringClosure) {
+    public static func run(_ closure: @escaping StringClosure) {
         if case .failure(let error) = self.run(closure: closure) {
             fatalError("\(error)")
         }
     }
 
     /// An asynchronous Lambda Closure that takes a `String` and returns a `Result<Void, Error>` via a completion handler.
-    typealias StringVoidClosure = (Lambda.Context, String, @escaping (Result<Void, Error>) -> Void) -> Void
+    public typealias StringVoidClosure = (Lambda.Context, String, @escaping (Result<Void, Error>) -> Void) -> Void
 
     /// Run a Lambda defined by implementing the `StringVoidClosure` function.
     ///
@@ -39,7 +39,7 @@ public extension Lambda {
     ///     - closure: `StringVoidClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    static func run(_ closure: @escaping StringVoidClosure) {
+    public static func run(_ closure: @escaping StringVoidClosure) {
         if case .failure(let error) = self.run(closure: closure) {
             fatalError("\(error)")
         }
@@ -86,9 +86,9 @@ internal struct StringVoidClosureWrapper: LambdaHandler {
     }
 }
 
-public extension EventLoopLambdaHandler where In == String {
+extension EventLoopLambdaHandler where In == String {
     /// Implementation of a `ByteBuffer` to `String` decoding
-    func decode(buffer: ByteBuffer) throws -> String {
+    public func decode(buffer: ByteBuffer) throws -> String {
         var buffer = buffer
         guard let string = buffer.readString(length: buffer.readableBytes) else {
             fatalError("buffer.readString(length: buffer.readableBytes) failed")
@@ -97,9 +97,9 @@ public extension EventLoopLambdaHandler where In == String {
     }
 }
 
-public extension EventLoopLambdaHandler where Out == String {
+extension EventLoopLambdaHandler where Out == String {
     /// Implementation of `String` to `ByteBuffer` encoding
-    func encode(allocator: ByteBufferAllocator, value: String) throws -> ByteBuffer? {
+    public func encode(allocator: ByteBufferAllocator, value: String) throws -> ByteBuffer? {
         // FIXME: reusable buffer
         var buffer = allocator.buffer(capacity: value.utf8.count)
         buffer.writeString(value)

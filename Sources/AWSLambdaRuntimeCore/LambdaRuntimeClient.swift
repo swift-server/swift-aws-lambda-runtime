@@ -126,8 +126,8 @@ extension Lambda {
     }
 }
 
-internal extension Lambda {
-    enum RuntimeError: Error {
+extension Lambda {
+    internal enum RuntimeError: Error {
         case badStatusCode(HTTPResponseStatus)
         case upstreamError(String)
         case invocationMissingHeader(String)
@@ -142,8 +142,8 @@ internal struct ErrorResponse: Codable {
     var errorMessage: String
 }
 
-internal extension ErrorResponse {
-    func toJSONBytes() -> [UInt8] {
+extension ErrorResponse {
+    internal func toJSONBytes() -> [UInt8] {
         var bytes = [UInt8]()
         bytes.append(UInt8(ascii: "{"))
         bytes.append(contentsOf: #""errorType":"#.utf8)

@@ -188,8 +188,8 @@ extension DynamoDB.StreamRecord: Decodable {
 
 // MARK: - AttributeValue -
 
-public extension DynamoDB {
-    enum AttributeValue {
+extension DynamoDB {
+    public enum AttributeValue {
         case boolean(Bool)
         case binary([UInt8])
         case binarySet([[UInt8]])
@@ -311,14 +311,12 @@ extension DynamoDB {
         public init() {}
 
         @inlinable public func decode<T: Decodable>(_ type: T.Type, from image: [String: AttributeValue])
-            throws -> T
-        {
+            throws -> T {
             try self.decode(type, from: .map(image))
         }
 
         @inlinable public func decode<T: Decodable>(_ type: T.Type, from value: AttributeValue)
-            throws -> T
-        {
+            throws -> T {
             let decoder = _DecoderImpl(userInfo: userInfo, from: value, codingPath: [])
             return try decoder.decode(T.self)
         }
@@ -341,8 +339,7 @@ extension DynamoDB {
         }
 
         @usableFromInline func container<Key>(keyedBy type: Key.Type) throws ->
-            KeyedDecodingContainer<Key> where Key: CodingKey
-        {
+            KeyedDecodingContainer<Key> where Key: CodingKey {
             guard case .map(let dictionary) = self.value else {
                 throw DecodingError.typeMismatch([String: AttributeValue].self, DecodingError.Context(
                     codingPath: self.codingPath,
@@ -511,8 +508,7 @@ extension DynamoDB {
         }
 
         func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: K) throws
-            -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey
-        {
+            -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey {
             try self.decoderForKey(key).container(keyedBy: type)
         }
 
@@ -559,8 +555,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger>(key: Self.Key)
-            throws -> T
-        {
+            throws -> T {
             let value = try getValue(forKey: key)
 
             guard case .number(let number) = value else {
@@ -579,8 +574,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private func decodeLosslessStringConvertible<T: LosslessStringConvertible>(
-            key: Self.Key) throws -> T
-        {
+            key: Self.Key) throws -> T {
             let value = try getValue(forKey: key)
 
             guard case .number(let number) = value else {
@@ -690,8 +684,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private func decodeFixedWidthInteger<T: FixedWidthInteger>() throws
-            -> T
-        {
+            -> T {
             guard case .number(let number) = self.value else {
                 throw self.createTypeMismatchError(type: T.self, value: self.value)
             }
@@ -707,8 +700,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private func decodeLosslessStringConvertible<T: LosslessStringConvertible>()
-            throws -> T
-        {
+            throws -> T {
             guard case .number(let number) = self.value else {
                 throw self.createTypeMismatchError(type: T.self, value: self.value)
             }
@@ -851,8 +843,7 @@ extension DynamoDB {
         }
 
         mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws
-            -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey
-        {
+            -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey {
             try self.impl.container(keyedBy: type)
         }
 
@@ -872,8 +863,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private mutating func decodeFixedWidthInteger<T: FixedWidthInteger>() throws
-            -> T
-        {
+            -> T {
             defer {
                 currentIndex += 1
                 if currentIndex == count {
@@ -894,8 +884,7 @@ extension DynamoDB {
         }
 
         @inline(__always) private mutating func decodeLosslessStringConvertible<T: LosslessStringConvertible>()
-            throws -> T
-        {
+            throws -> T {
             defer {
                 currentIndex += 1
                 if currentIndex == count {
@@ -917,8 +906,8 @@ extension DynamoDB {
     }
 }
 
-private extension DynamoDB.AttributeValue {
-    var debugDataTypeDescription: String {
+extension DynamoDB.AttributeValue {
+    fileprivate var debugDataTypeDescription: String {
         switch self {
         case .list:
             return "a list"

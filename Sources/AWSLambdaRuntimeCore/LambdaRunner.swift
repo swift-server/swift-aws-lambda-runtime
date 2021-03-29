@@ -100,8 +100,8 @@ extension Lambda {
     }
 }
 
-private extension Lambda.Context {
-    convenience init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Lambda.Invocation) {
+extension Lambda.Context {
+    fileprivate convenience init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Lambda.Invocation) {
         self.init(requestID: invocation.requestID,
                   traceID: invocation.traceID,
                   invokedFunctionARN: invocation.invokedFunctionARN,
@@ -144,8 +144,8 @@ extension EventLoopFuture {
     }
 }
 
-private extension Result {
-    var successful: Bool {
+extension Result {
+    private var successful: Bool {
         switch self {
         case .success:
             return true

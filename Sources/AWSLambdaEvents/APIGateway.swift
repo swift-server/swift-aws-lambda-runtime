@@ -68,8 +68,8 @@ public enum APIGateway {
 
 // MARK: - Response -
 
-public extension APIGateway {
-    struct Response: Codable {
+extension APIGateway {
+    public struct Response: Codable {
         public var statusCode: HTTPResponseStatus
         public var headers: HTTPHeaders?
         public var multiValueHeaders: HTTPMultiValueHeaders?

@@ -40,8 +40,8 @@ import Dispatch
 import Logging
 import NIO
 
-public extension Lambda {
-    struct TestConfig {
+extension Lambda {
+    public struct TestConfig {
         public var requestID: String
         public var traceID: String
         public var invokedFunctionARN: String
@@ -59,21 +59,19 @@ public extension Lambda {
         }
     }
 
-    static func test(_ closure: @escaping Lambda.StringClosure,
-                     with event: String,
-                     using config: TestConfig = .init()) throws -> String
-    {
+    public static func test(_ closure: @escaping Lambda.StringClosure,
+                            with event: String,
+                            using config: TestConfig = .init()) throws -> String {
         try Self.test(StringClosureWrapper(closure), with: event, using: config)
     }
 
-    static func test(_ closure: @escaping Lambda.StringVoidClosure,
-                     with event: String,
-                     using config: TestConfig = .init()) throws
-    {
+    public static func test(_ closure: @escaping Lambda.StringVoidClosure,
+                            with event: String,
+                            using config: TestConfig = .init()) throws {
         _ = try Self.test(StringVoidClosureWrapper(closure), with: event, using: config)
     }
 
-    static func test<In: Decodable, Out: Encodable>(
+    public static func test<In: Decodable, Out: Encodable>(
         _ closure: @escaping Lambda.CodableClosure<In, Out>,
         with event: In,
         using config: TestConfig = .init()
@@ -81,7 +79,7 @@ public extension Lambda {
         try Self.test(CodableClosureWrapper(closure), with: event, using: config)
     }
 
-    static func test<In: Decodable>(
+    public static func test<In: Decodable>(
         _ closure: @escaping Lambda.CodableVoidClosure<In>,
         with event: In,
         using config: TestConfig = .init()
@@ -89,7 +87,7 @@ public extension Lambda {
         _ = try Self.test(CodableVoidClosureWrapper(closure), with: event, using: config)
     }
 
-    static func test<In, Out, Handler: EventLoopLambdaHandler>(
+    public static func test<In, Out, Handler: EventLoopLambdaHandler>(
         _ handler: Handler,
         with event: In,
         using config: TestConfig = .init()

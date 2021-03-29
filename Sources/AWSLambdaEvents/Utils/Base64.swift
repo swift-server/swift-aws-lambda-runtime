@@ -37,8 +37,7 @@ extension Base64 {
 
     @inlinable
     static func decode<Buffer: Collection>(encoded: Buffer, options: DecodingOptions = [])
-        throws -> [UInt8] where Buffer.Element == UInt8
-    {
+        throws -> [UInt8] where Buffer.Element == UInt8 {
         let alphabet = options.contains(.base64UrlAlphabet)
             ? Base64.decodeBase64Url
             : Base64.decodeBase64

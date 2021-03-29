@@ -12,13 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-public extension APIGateway {
-    struct V2 {}
+extension APIGateway {
+    public struct V2 {}
 }
 
-public extension APIGateway.V2 {
+extension APIGateway.V2 {
     /// APIGateway.V2.Request contains data coming from the new HTTP API Gateway
-    struct Request: Codable {
+    public struct Request: Codable {
         /// Context contains the information to identify the AWS account and resources invoking the Lambda function.
         public struct Context: Codable {
             public struct HTTP: Codable {
@@ -91,8 +91,8 @@ public extension APIGateway.V2 {
     }
 }
 
-public extension APIGateway.V2 {
-    struct Response: Codable {
+extension APIGateway.V2 {
+    public struct Response: Codable {
         public var statusCode: HTTPResponseStatus
         public var headers: HTTPHeaders?
         public var body: String?

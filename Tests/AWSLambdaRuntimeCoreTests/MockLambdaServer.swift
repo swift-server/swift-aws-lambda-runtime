@@ -245,8 +245,8 @@ internal enum ServerError: Error {
     case cantBind
 }
 
-private extension ErrorResponse {
-    static func fromJson(_ s: String) -> ErrorResponse? {
+extension ErrorResponse {
+    fileprivate static func fromJson(_ s: String) -> ErrorResponse? {
         let decoder = JSONDecoder()
         do {
             if let data = s.data(using: .utf8) {

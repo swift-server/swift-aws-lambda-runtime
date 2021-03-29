@@ -20,9 +20,9 @@ import NIO
 import NIOFoundationCompat
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` events.
-public extension Lambda {
+extension Lambda {
     /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Out: Encodable, Error>` via a completion handler.
-    typealias CodableClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
+    public typealias CodableClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
 
     /// Run a Lambda defined by implementing the `CodableClosure` function.
     ///
@@ -30,12 +30,12 @@ public extension Lambda {
     ///     - closure: `CodableClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableClosure<In, Out>) {
+    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableClosure<In, Out>) {
         self.run(CodableClosureWrapper(closure))
     }
 
     /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Void, Error>` via a completion handler.
-    typealias CodableVoidClosure<In: Decodable> = (Lambda.Context, In, @escaping (Result<Void, Error>) -> Void) -> Void
+    public typealias CodableVoidClosure<In: Decodable> = (Lambda.Context, In, @escaping (Result<Void, Error>) -> Void) -> Void
 
     /// Run a Lambda defined by implementing the `CodableVoidClosure` function.
     ///
@@ -43,7 +43,7 @@ public extension Lambda {
     ///     - closure: `CodableVoidClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    static func run<In: Decodable>(_ closure: @escaping CodableVoidClosure<In>) {
+    public static func run<In: Decodable>(_ closure: @escaping CodableVoidClosure<In>) {
         self.run(CodableVoidClosureWrapper(closure))
     }
 }
@@ -79,31 +79,31 @@ internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
 }
 
 /// Implementation of  a`ByteBuffer` to `In` decoding
-public extension EventLoopLambdaHandler where In: Decodable {
-    func decode(buffer: ByteBuffer) throws -> In {
+extension EventLoopLambdaHandler where In: Decodable {
+    public func decode(buffer: ByteBuffer) throws -> In {
         try self.decoder.decode(In.self, from: buffer)
     }
 }
 
 /// Implementation of  `Out` to `ByteBuffer` encoding
-public extension EventLoopLambdaHandler where Out: Encodable {
-    func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer? {
+extension EventLoopLambdaHandler where Out: Encodable {
+    public func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer? {
         try self.encoder.encode(value, using: allocator)
     }
 }
 
 /// Default `ByteBuffer` to `In` decoder using Foundation's JSONDecoder
 /// Advanced users that want to inject their own codec can do it by overriding these functions.
-public extension EventLoopLambdaHandler where In: Decodable {
-    var decoder: LambdaCodableDecoder {
+extension EventLoopLambdaHandler where In: Decodable {
+    public var decoder: LambdaCodableDecoder {
         Lambda.defaultJSONDecoder
     }
 }
 
 /// Default `Out` to `ByteBuffer` encoder using Foundation's JSONEncoder
 /// Advanced users that want to inject their own codec can do it by overriding these functions.
-public extension EventLoopLambdaHandler where Out: Encodable {
-    var encoder: LambdaCodableEncoder {
+extension EventLoopLambdaHandler where Out: Encodable {
+    public var encoder: LambdaCodableEncoder {
         Lambda.defaultJSONEncoder
     }
 }
@@ -116,9 +116,9 @@ public protocol LambdaCodableEncoder {
     func encode<T: Encodable>(_ value: T, using allocator: ByteBufferAllocator) throws -> ByteBuffer
 }
 
-private extension Lambda {
-    static let defaultJSONDecoder = JSONDecoder()
-    static let defaultJSONEncoder = JSONEncoder()
+extension Lambda {
+    fileprivate static let defaultJSONDecoder = JSONDecoder()
+    fileprivate static let defaultJSONEncoder = JSONEncoder()
 }
 
 extension JSONDecoder: LambdaCodableDecoder {}
@@ -132,16 +132,16 @@ extension JSONEncoder: LambdaCodableEncoder {
     }
 }
 
-public extension JSONEncoder {
+extension JSONEncoder {
     /// Convenience method to allow encoding json directly into a `String`. It can be used to encode a payload into an `APIGateway.V2.Response`'s body.
-    func encodeAsString<T: Encodable>(_ value: T) throws -> String {
+    public func encodeAsString<T: Encodable>(_ value: T) throws -> String {
         try String(decoding: self.encode(value), as: Unicode.UTF8.self)
     }
 }
 
-public extension JSONDecoder {
+extension JSONDecoder {
     /// Convenience method to allow decoding json directly from a `String`. It can be used to decode a payload from an `APIGateway.V2.Request`'s body.
-    func decode<T: Decodable>(_ type: T.Type, from string: String) throws -> T {
+    public func decode<T: Decodable>(_ type: T.Type, from string: String) throws -> T {
         try self.decode(type, from: Data(string.utf8))
     }
 }

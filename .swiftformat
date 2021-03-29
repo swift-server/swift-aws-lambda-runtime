@@ -1,6 +1,6 @@
 # file options
 
---swiftversion 5.1
+--swiftversion 5.2
 --exclude .build
 
 # format options
@@ -9,5 +9,10 @@
 --patternlet inline
 --stripunusedargs unnamed-only
 --ifdef no-indent
+--extensionacl on-declarations
+--disable typeSugar
+--disable andOperator
+--disable wrapMultilineStatementBraces
+--disable enumNamespaces
 
 # rules

@@ -18,10 +18,10 @@ import NIO
 
 // MARK: - InitializationContext
 
-public extension Lambda {
+extension Lambda {
     /// Lambda runtime initialization context.
     /// The Lambda runtime generates and passes the `InitializationContext` to the Lambda factory as an argument.
-    final class InitializationContext {
+    public final class InitializationContext {
         /// `Logger` to log with
         ///
         /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
@@ -46,10 +46,10 @@ public extension Lambda {
 
 // MARK: - Context
 
-public extension Lambda {
+extension Lambda {
     /// Lambda runtime context.
     /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
-    final class Context: CustomDebugStringConvertible {
+    public final class Context: CustomDebugStringConvertible {
         /// The request ID, which identifies the request that triggered the function invocation.
         public let requestID: String
 
@@ -126,10 +126,10 @@ public extension Lambda {
 
 // MARK: - ShutdownContext
 
-public extension Lambda {
+extension Lambda {
     /// Lambda runtime shutdown context.
     /// The Lambda runtime generates and passes the `ShutdownContext` to the Lambda handler as an argument.
-    final class ShutdownContext {
+    public final class ShutdownContext {
         /// `Logger` to log with
         ///
         /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.

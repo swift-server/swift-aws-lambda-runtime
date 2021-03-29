@@ -146,8 +146,7 @@ struct ExchangeRatesCalculator {
         dateFormatter.dateFormat = "dd/MMM/yy"
         let interval: DateInterval?
         if let period = try document.nodes(forXPath: "/exchangeRateMonthList/@Period").first?.stringValue,
-           period.count == 26
-        {
+           period.count == 26 {
             // "01/Sep/2018 to 30/Sep/2018"
             let startString = period[period.startIndex ..< period.index(period.startIndex, offsetBy: 11)]
             let to = period[startString.endIndex ..< period.index(startString.endIndex, offsetBy: 4)]
@@ -156,8 +155,7 @@ struct ExchangeRatesCalculator {
                let startDay = calendar.dateInterval(of: .day, for: startDate),
                to == " to ",
                let endDate = dateFormatter.date(from: String(endString)),
-               let endDay = calendar.dateInterval(of: .day, for: endDate)
-            {
+               let endDay = calendar.dateInterval(of: .day, for: endDate) {
                 interval = DateInterval(start: startDay.start, end: endDay.end)
             } else {
                 interval = nil
@@ -170,8 +168,7 @@ struct ExchangeRatesCalculator {
             let xpathCurrency = $0.replacingOccurrences(of: "'", with: "&apos;")
             if let rateString = try document.nodes(forXPath: "/exchangeRateMonthList/exchangeRate/currencyCode[text()='\(xpathCurrency)']/../rateNew/text()").first?.stringValue,
                // We must parse the decimal data using the UK locale, not the system one.
-               let rate = Decimal(string: rateString, locale: self.locale)
-            {
+               let rate = Decimal(string: rateString, locale: self.locale) {
                 return ($0, rate)
             } else {
                 return ($0, nil)
