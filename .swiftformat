@@ -14,5 +14,6 @@
 --disable andOperator
 --disable wrapMultilineStatementBraces
 --disable enumNamespaces
+--disable redundantExtensionACL
 
 # rules
