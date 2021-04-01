@@ -55,8 +55,8 @@ public enum Lambda {
             fatalError("\(error)")
         }
     }
-    
-    #if compiler(>=5.4) && $AsyncAwait
+
+    #if compiler(>=5.5) && $AsyncAwait
     public static func run(_ factory: @escaping (InitializationContext) async throws -> Handler) {
         self.run { context -> EventLoopFuture<Handler> in
             @asyncHandler func _createLambda(_ context: InitializationContext, promise: EventLoopPromise<Handler>) {
@@ -67,7 +67,7 @@ public enum Lambda {
                     promise.fail(error)
                 }
             }
-            
+
             let promise = context.eventLoop.makePromise(of: Handler.self)
             _createLambda(context, promise: promise)
             return promise.futureResult

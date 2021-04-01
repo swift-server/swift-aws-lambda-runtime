@@ -62,14 +62,14 @@ class CodableLambdaTest: XCTestCase {
         XCTAssertNoThrow(response = try JSONDecoder().decode(Response.self, from: XCTUnwrap(outputBuffer)))
         XCTAssertEqual(response?.requestId, request.requestId)
     }
-    
-    #if compiler(>=5.4) && $AsyncAwait
+
+    #if compiler(>=5.5) && $AsyncAwait
     func testCodableVoidAsyncWrapper() {
         let request = Request(requestId: UUID().uuidString)
         var inputBuffer: ByteBuffer?
         var outputBuffer: ByteBuffer?
 
-        let closureWrapper = CodableVoidAsyncWrapper { (context, req: Request) in
+        let closureWrapper = CodableVoidAsyncWrapper { (_, req: Request) in
             XCTAssertEqual(request, req)
         }
 
@@ -84,7 +84,7 @@ class CodableLambdaTest: XCTestCase {
         var outputBuffer: ByteBuffer?
         var response: Response?
 
-        let closureWrapper = CodableAsyncWrapper { (context, req: Request) -> Response in
+        let closureWrapper = CodableAsyncWrapper { (_, req: Request) -> Response in
             XCTAssertEqual(req, request)
             return Response(requestId: req.requestId)
         }

@@ -87,10 +87,9 @@ extension LambdaHandler {
 
 // MARK: - AsyncLambdaHandler
 
-#if compiler(>=5.4) && $AsyncAwait
+#if compiler(>=5.5) && $AsyncAwait
 /// Strongly typed, processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` async.
 public protocol AsyncLambdaHandler: EventLoopLambdaHandler {
-    
     /// The Lambda handling method
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
@@ -108,7 +107,7 @@ extension AsyncLambdaHandler {
         self._run(context: context, event: event, promise: promise)
         return promise.futureResult
     }
-    
+
     @asyncHandler private func _run(context: Lambda.Context, event: In, promise: EventLoopPromise<Out>) {
         do {
             let result = try await handle(context: context, event: event)

@@ -24,12 +24,12 @@ let package = Package(
             .byName(name: "AWSLambdaRuntimeCore"),
             .product(name: "NIO", package: "swift-nio"),
             .product(name: "NIOFoundationCompat", package: "swift-nio"),
-        ], swiftSettings: [.unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])]),
+        ]),
         .target(name: "AWSLambdaRuntimeCore", dependencies: [
             .product(name: "Logging", package: "swift-log"),
             .product(name: "Backtrace", package: "swift-backtrace"),
             .product(name: "NIOHTTP1", package: "swift-nio"),
-        ], swiftSettings: [.unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])]),
+        ]),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
             .product(name: "NIOTestUtils", package: "swift-nio"),
@@ -38,7 +38,7 @@ let package = Package(
         .testTarget(name: "AWSLambdaRuntimeTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
             .byName(name: "AWSLambdaRuntime"),
-        ], swiftSettings: [.unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])]),
+        ]),
         .target(name: "AWSLambdaEvents", dependencies: []),
         .testTarget(name: "AWSLambdaEventsTests", dependencies: ["AWSLambdaEvents"]),
         // testing helper
