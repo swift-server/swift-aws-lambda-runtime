@@ -18,6 +18,7 @@ import Glibc
 import Darwin.C
 #endif
 
+import _NIOConcurrency
 import Backtrace
 import Logging
 import NIO
@@ -59,17 +60,10 @@ public enum Lambda {
     #if compiler(>=5.5) && $AsyncAwait
     public static func run(_ factory: @escaping (InitializationContext) async throws -> Handler) {
         self.run { context -> EventLoopFuture<Handler> in
-            @asyncHandler func _createLambda(_ context: InitializationContext, promise: EventLoopPromise<Handler>) {
-                do {
-                    let handler = try await factory(context)
-                    promise.succeed(handler)
-                } catch {
-                    promise.fail(error)
-                }
-            }
-
             let promise = context.eventLoop.makePromise(of: Handler.self)
-            _createLambda(context, promise: promise)
+            promise.completeWithAsync {
+                try await factory(context)
+            }
             return promise.futureResult
         }
     }

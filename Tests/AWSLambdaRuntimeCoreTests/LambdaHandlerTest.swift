@@ -92,7 +92,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias In = String
             typealias Out = String
 
-            func handle(context: Lambda.Context, event: String) async throws -> String {
+            func handle(event: String, context: Lambda.Context) async throws -> String {
                 event
             }
         }
@@ -112,7 +112,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias In = String
             typealias Out = Void
 
-            func handle(context: Lambda.Context, event: String) async throws {}
+            func handle(event: String, context: Lambda.Context) async throws {}
         }
 
         let maxTimes = Int.random(in: 1 ... 10)
@@ -130,7 +130,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias In = String
             typealias Out = String
 
-            func handle(context: Lambda.Context, event: String) async throws -> String {
+            func handle(event: String, context: Lambda.Context) async throws -> String {
                 throw TestError("boom")
             }
         }

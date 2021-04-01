@@ -69,7 +69,7 @@ class CodableLambdaTest: XCTestCase {
         var inputBuffer: ByteBuffer?
         var outputBuffer: ByteBuffer?
 
-        let closureWrapper = CodableVoidAsyncWrapper { (_, req: Request) in
+        let closureWrapper = CodableVoidAsyncWrapper { (req: Request, _) in
             XCTAssertEqual(request, req)
         }
 
@@ -84,7 +84,7 @@ class CodableLambdaTest: XCTestCase {
         var outputBuffer: ByteBuffer?
         var response: Response?
 
-        let closureWrapper = CodableAsyncWrapper { (_, req: Request) -> Response in
+        let closureWrapper = CodableAsyncWrapper { (req: Request, _) -> Response in
             XCTAssertEqual(req, request)
             return Response(requestId: req.requestId)
         }

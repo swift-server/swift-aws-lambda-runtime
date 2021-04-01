@@ -82,21 +82,15 @@ internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
 
 #if compiler(>=5.5) && $AsyncAwait
 extension Lambda {
-    /// An async Lambda Closure that takes a `In: Decodable` and returns an `Out: Encodable`
-    public typealias CodableAsyncClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In) async throws -> Out
-
     /// Run a Lambda defined by implementing the `CodableAsyncClosure` function.
     ///
     /// - parameters:
     ///     - closure: `CodableAsyncClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableAsyncClosure<In, Out>) {
+    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping (In, Lambda.Context) async throws -> Out) {
         self.run(CodableAsyncWrapper(closure))
     }
-
-    /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns nothing.
-    public typealias CodableVoidAsyncClosure<In: Decodable> = (Lambda.Context, In) async throws -> Void
 
     /// Run a Lambda defined by implementing the `CodableVoidAsyncClosure` function.
     ///
@@ -104,7 +98,7 @@ extension Lambda {
     ///     - closure: `CodableVoidAsyncClosure` based Lambda.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<In: Decodable>(_ closure: @escaping CodableVoidAsyncClosure<In>) {
+    public static func run<In: Decodable>(_ closure: @escaping (In, Lambda.Context) async throws -> Void) {
         self.run(CodableVoidAsyncWrapper(closure))
     }
 }
@@ -113,14 +107,14 @@ internal struct CodableAsyncWrapper<In: Decodable, Out: Encodable>: AsyncLambdaH
     typealias In = In
     typealias Out = Out
 
-    private let closure: Lambda.CodableAsyncClosure<In, Out>
+    private let closure: (In, Lambda.Context) async throws -> Out
 
-    init(_ closure: @escaping Lambda.CodableAsyncClosure<In, Out>) {
+    init(_ closure: @escaping (In, Lambda.Context) async throws -> Out) {
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, event: In) async throws -> Out {
-        try await self.closure(context, event)
+    func handle(event: In, context: Lambda.Context) async throws -> Out {
+        try await self.closure(event, context)
     }
 }
 
@@ -128,14 +122,14 @@ internal struct CodableVoidAsyncWrapper<In: Decodable>: AsyncLambdaHandler {
     typealias In = In
     typealias Out = Void
 
-    private let closure: Lambda.CodableVoidAsyncClosure<In>
+    private let closure: (In, Lambda.Context) async throws -> Void
 
-    init(_ closure: @escaping Lambda.CodableVoidAsyncClosure<In>) {
+    init(_ closure: @escaping (In, Lambda.Context) async throws -> Void) {
         self.closure = closure
     }
 
-    func handle(context: Lambda.Context, event: In) async throws {
-        try await self.closure(context, event)
+    func handle(event: In, context: Lambda.Context) async throws {
+        try await self.closure(event, context)
     }
 }
 #endif
