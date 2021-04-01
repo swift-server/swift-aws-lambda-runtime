@@ -110,7 +110,7 @@ extension AsyncLambdaHandler {
 
     @asyncHandler private func _run(context: Lambda.Context, event: In, promise: EventLoopPromise<Out>) {
         do {
-            let result = try await handle(context: context, event: event)
+            let result = try await self.handle(context: context, event: event)
             promise.succeed(result)
         } catch {
             promise.fail(error)

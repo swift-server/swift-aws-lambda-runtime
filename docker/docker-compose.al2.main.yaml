@@ -10,9 +10,14 @@ services:
 
   test:
     image: swift-aws-lambda:al2-main
+    command: /bin/bash -cl "swift test --enable-test-discovery -Xswiftc -warnings-as-errors $${SANITIZER_ARG-} -Xswiftc -Xfrontend -Xswiftc -enable-experimental-concurrency"
 
   test-samples:
     image: swift-aws-lambda:al2-main
+    command: >-
+      /bin/bash -clx "
+      swift build -Xswiftc -Xfrontend -Xswiftc -enable-experimental-concurrency --package-path Examples/LambdaFunctions &&
+      swift build -Xswiftc -Xfrontend -Xswiftc -enable-experimental-concurrency --package-path Examples/LocalDebugging/MyLambda"
 
   shell:
     image: swift-aws-lambda:al2-main
