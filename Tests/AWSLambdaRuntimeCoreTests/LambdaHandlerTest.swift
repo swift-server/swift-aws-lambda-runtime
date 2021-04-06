@@ -17,7 +17,7 @@ import NIO
 import XCTest
 
 class LambdaHandlerTest: XCTestCase {
-    // MARK: Callback
+    // MARK: - Callback
 
     func testCallbackSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
@@ -81,7 +81,7 @@ class LambdaHandlerTest: XCTestCase {
 
     #if compiler(>=5.5) && $AsyncAwait
 
-    // MARK: AsyncLambdaHandler
+    // MARK: - AsyncLambdaHandler
 
     func testAsyncHandlerSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
@@ -142,7 +142,7 @@ class LambdaHandlerTest: XCTestCase {
     }
     #endif
 
-    // MARK: EventLoop
+    // MARK: - EventLoop
 
     func testEventLoopSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
@@ -204,7 +204,7 @@ class LambdaHandlerTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    // MARK: Closure
+    // MARK: - Closure
 
     func testClosureSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
