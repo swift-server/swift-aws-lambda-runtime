@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -64,7 +64,6 @@ extension Lambda {
         struct RuntimeEngine: CustomStringConvertible {
             let ip: String
             let port: Int
-            let keepAlive: Bool
             let requestTimeout: TimeAmount?
 
             init(address: String? = nil, keepAlive: Bool? = nil, requestTimeout: TimeAmount? = nil) {
@@ -74,12 +73,11 @@ extension Lambda {
                 }
                 self.ip = String(ipPort[0])
                 self.port = port
-                self.keepAlive = keepAlive ?? env("KEEP_ALIVE").flatMap(Bool.init) ?? true
                 self.requestTimeout = requestTimeout ?? env("REQUEST_TIMEOUT").flatMap(Int64.init).flatMap { .milliseconds($0) }
             }
 
             var description: String {
-                "\(RuntimeEngine.self)(ip: \(self.ip), port: \(self.port), keepAlive: \(self.keepAlive), requestTimeout: \(String(describing: self.requestTimeout))"
+                "\(RuntimeEngine.self)(ip: \(self.ip), port: \(self.port), requestTimeout: \(String(describing: self.requestTimeout))"
             }
         }
 

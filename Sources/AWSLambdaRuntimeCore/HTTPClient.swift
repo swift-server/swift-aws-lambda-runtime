@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -103,8 +103,7 @@ internal final class HTTPClient {
                     //   https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
                     try channel.pipeline.syncOperations.addHandler(
                         NIOHTTPClientResponseAggregator(maxContentLength: 6 * 1024 * 1024))
-                    try channel.pipeline.syncOperations.addHandler(
-                        UnaryHandler(keepAlive: self.configuration.keepAlive))
+                    try channel.pipeline.syncOperations.addHandler(LambdaChannelHandler())
                     return channel.eventLoop.makeSucceededFuture(())
                 } catch {
                     return channel.eventLoop.makeFailedFuture(error)
@@ -139,10 +138,10 @@ internal final class HTTPClient {
     }
 
     internal struct Response: Equatable {
-        public var version: HTTPVersion
-        public var status: HTTPResponseStatus
-        public var headers: HTTPHeaders
-        public var body: ByteBuffer?
+        var version: HTTPVersion
+        var status: HTTPResponseStatus
+        var headers: HTTPHeaders
+        var body: ByteBuffer?
     }
 
     internal enum Errors: Error {
@@ -158,31 +157,34 @@ internal final class HTTPClient {
 }
 
 // no need in locks since we validate only one request can run at a time
-private final class UnaryHandler: ChannelDuplexHandler {
+private final class LambdaChannelHandler: ChannelDuplexHandler {
     typealias InboundIn = NIOHTTPClientResponseFull
     typealias OutboundIn = HTTPRequestWrapper
     typealias OutboundOut = HTTPClientRequestPart
 
-    private let keepAlive: Bool
-
-    private var pending: (promise: EventLoopPromise<HTTPClient.Response>, timeout: Scheduled<Void>?)?
-    private var lastError: Error?
-
-    init(keepAlive: Bool) {
-        self.keepAlive = keepAlive
+    enum State {
+        case idle
+        case running(promise: EventLoopPromise<HTTPClient.Response>, timeout: Scheduled<Void>?)
+        case waitForConnectionClose(HTTPClient.Response, EventLoopPromise<HTTPClient.Response>)
     }
 
+    private var state: State = .idle
+    private var lastError: Error?
+
+    init() {}
+
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        guard self.pending == nil else {
+        guard case .idle = self.state else {
             preconditionFailure("invalid state, outstanding request")
         }
         let wrapper = unwrapOutboundIn(data)
-        
+
         var head = HTTPRequestHead(
             version: .http1_1,
             method: wrapper.request.method,
             uri: wrapper.request.url,
-            headers: wrapper.request.headers)
+            headers: wrapper.request.headers
+        )
         head.headers.add(name: "host", value: wrapper.request.targetHost)
         switch head.method {
         case .POST, .PUT:
@@ -191,29 +193,17 @@ private final class UnaryHandler: ChannelDuplexHandler {
             break
         }
 
-        // We don't add a "Connection" header here if we want to keep the connection open,
-        // HTTP/1.1 specified in RFC 7230, Section 6.3 Persistence:
-        //
-        // HTTP/1.1 defaults to the use of "persistent connections", allowing
-        // multiple requests and responses to be carried over a single
-        // connection.  The "close" connection option is used to signal that a
-        // connection will not persist after the current request/response.  HTTP
-        // implementations SHOULD support persistent connections.
-        //
-        // See also UnaryHandler.channelRead below.
-        if !self.keepAlive {
-            head.headers.add(name: "connection", value: "close")
-        }
-
         let timeoutTask = wrapper.request.timeout.map {
             context.eventLoop.scheduleTask(in: $0) {
-                if self.pending != nil {
-                    context.pipeline.fireErrorCaught(HTTPClient.Errors.timeout)
+                guard case .running = self.state else {
+                    preconditionFailure("invalid state")
                 }
+
+                context.pipeline.fireErrorCaught(HTTPClient.Errors.timeout)
             }
         }
-        self.pending = (promise: wrapper.promise, timeout: timeoutTask)
-        
+        self.state = .running(promise: wrapper.promise, timeout: timeoutTask)
+
         context.write(wrapOutboundOut(.head(head)), promise: nil)
         if let body = wrapper.request.body {
             context.write(wrapOutboundOut(.body(IOData.byteBuffer(body))), promise: nil)
@@ -222,20 +212,21 @@ private final class UnaryHandler: ChannelDuplexHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        guard let pending = self.pending else {
+        guard case .running(let promise, let timeout) = self.state else {
             preconditionFailure("invalid state, no pending request")
         }
-        
+
         let response = unwrapInboundIn(data)
-        
+
         let httpResponse = HTTPClient.Response(
             version: response.head.version,
             status: response.head.status,
             headers: response.head.headers,
-            body: response.body)
-        
-        self.completeWith(.success(httpResponse))
-        
+            body: response.body
+        )
+
+        timeout?.cancel()
+
         // As defined in RFC 7230 Section 6.3:
         // HTTP/1.1 defaults to the use of "persistent connections", allowing
         // multiple requests and responses to be carried over a single
@@ -248,10 +239,27 @@ private final class UnaryHandler: ChannelDuplexHandler {
         let serverCloseConnection =
             response.head.headers["connection"].contains(where: { $0.lowercased() == "close" })
 
-        if !self.keepAlive || serverCloseConnection || response.head.version != .http1_1 {
-            pending.promise.futureResult.whenComplete { _ in
-                _ = context.channel.close()
-            }
+        let closeConnection = serverCloseConnection || response.head.version != .http1_1
+
+        if closeConnection {
+            // If we were succeeding the request promise here directly and closing the connection
+            // after succeeding the promise we may run into a race condition:
+            //
+            // The lambda runtime will ask for the next work item directly after a succeeded post
+            // response request. The desire for the next work item might be faster than the attempt
+            // to close the connection. This will lead to a situation where we try to the connection
+            // but the next request has already been scheduled on the connection that we want to
+            // close. For this reason we postpone succeeding the promise until the connection has
+            // been closed. This codepath will only be hit in the very, very unlikely event of the
+            // Lambda control plane demanding to close connection. (It's more or less only
+            // implemented to support http1.1 correctly.) This behavior is ensured with the test
+            // `LambdaTest.testNoKeepAliveServer`.
+            self.state = .waitForConnectionClose(httpResponse, promise)
+            _ = context.channel.close()
+            return
+        } else {
+            self.state = .idle
+            promise.succeed(httpResponse)
         }
     }
 
@@ -263,35 +271,43 @@ private final class UnaryHandler: ChannelDuplexHandler {
 
     func channelInactive(context: ChannelHandlerContext) {
         // fail any pending responses with last error or assume peer disconnected
-        if self.pending != nil {
-            let error = self.lastError ?? HTTPClient.Errors.connectionResetByPeer
-            self.completeWith(.failure(error))
-        }
         context.fireChannelInactive()
+
+        switch self.state {
+        case .idle:
+            break
+        case .running(let promise, let timeout):
+            self.state = .idle
+            timeout?.cancel()
+            promise.fail(self.lastError ?? HTTPClient.Errors.connectionResetByPeer)
+
+        case .waitForConnectionClose(let response, let promise):
+            self.state = .idle
+            promise.succeed(response)
+        }
     }
 
     func triggerUserOutboundEvent(context: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
         switch event {
         case is RequestCancelEvent:
-            if self.pending != nil {
-                self.completeWith(.failure(HTTPClient.Errors.cancelled))
+            switch self.state {
+            case .idle:
+                break
+            case .running(let promise, let timeout):
+                self.state = .idle
+                timeout?.cancel()
+                promise.fail(HTTPClient.Errors.cancelled)
+
                 // after the cancel error has been send, we want to close the connection so
                 // that no more packets can be read on this connection.
                 _ = context.channel.close()
+            case .waitForConnectionClose(_, let promise):
+                self.state = .idle
+                promise.fail(HTTPClient.Errors.cancelled)
             }
         default:
             context.triggerUserOutboundEvent(event, promise: promise)
         }
-    }
-
-    private func completeWith(_ result: Result<HTTPClient.Response, Error>) {
-        guard let pending = self.pending else {
-            preconditionFailure("invalid state, no pending request")
-        }
-        self.pending = nil
-        self.lastError = nil
-        pending.timeout?.cancel()
-        pending.promise.completeWith(result)
     }
 }
 
