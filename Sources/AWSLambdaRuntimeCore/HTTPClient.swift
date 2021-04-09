@@ -97,9 +97,17 @@ internal final class HTTPClient {
     private func connect() -> EventLoopFuture<Channel> {
         let bootstrap = ClientBootstrap(group: self.eventLoop)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().flatMap {
-                    channel.pipeline.addHandlers([HTTPHandler(keepAlive: self.configuration.keepAlive),
-                                                  UnaryHandler(keepAlive: self.configuration.keepAlive)])
+                do {
+                    try channel.pipeline.syncOperations.addHTTPClientHandlers()
+                    // Lambda quotas... An invocation payload is maximal 6MB in size:
+                    //   https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
+                    try channel.pipeline.syncOperations.addHandler(
+                        NIOHTTPClientResponseAggregator(maxContentLength: 6 * 1024 * 1024))
+                    try channel.pipeline.syncOperations.addHandler(
+                        UnaryHandler(keepAlive: self.configuration.keepAlive))
+                    return channel.eventLoop.makeSucceededFuture(())
+                } catch {
+                    return channel.eventLoop.makeFailedFuture(error)
                 }
             }
 
@@ -149,101 +157,11 @@ internal final class HTTPClient {
     }
 }
 
-private final class HTTPHandler: ChannelDuplexHandler {
-    typealias OutboundIn = HTTPClient.Request
-    typealias InboundOut = HTTPClient.Response
-    typealias InboundIn = HTTPClientResponsePart
-    typealias OutboundOut = HTTPClientRequestPart
-
-    private let keepAlive: Bool
-    private var readState: ReadState = .idle
-
-    init(keepAlive: Bool) {
-        self.keepAlive = keepAlive
-    }
-
-    func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let request = unwrapOutboundIn(data)
-
-        var head = HTTPRequestHead(version: .init(major: 1, minor: 1), method: request.method, uri: request.url, headers: request.headers)
-        head.headers.add(name: "host", value: request.targetHost)
-        switch request.method {
-        case .POST, .PUT:
-            head.headers.add(name: "content-length", value: String(request.body?.readableBytes ?? 0))
-        default:
-            break
-        }
-
-        // We don't add a "Connection" header here if we want to keep the connection open,
-        // HTTP/1.1 defines specifies the following in RFC 2616, Section 8.1.2.1:
-        //
-        // An HTTP/1.1 server MAY assume that a HTTP/1.1 client intends to
-        // maintain a persistent connection unless a Connection header including
-        // the connection-token "close" was sent in the request. If the server
-        // chooses to close the connection immediately after sending the
-        // response, it SHOULD send a Connection header including the
-        // connection-token close.
-        //
-        // See also UnaryHandler.channelRead below.
-        if !self.keepAlive {
-            head.headers.add(name: "connection", value: "close")
-        }
-
-        context.write(self.wrapOutboundOut(HTTPClientRequestPart.head(head))).flatMap { _ -> EventLoopFuture<Void> in
-            if let body = request.body {
-                return context.writeAndFlush(self.wrapOutboundOut(HTTPClientRequestPart.body(.byteBuffer(body))))
-            } else {
-                context.flush()
-                return context.eventLoop.makeSucceededFuture(())
-            }
-        }.cascade(to: promise)
-    }
-
-    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let response = unwrapInboundIn(data)
-
-        switch response {
-        case .head(let head):
-            guard case .idle = self.readState else {
-                preconditionFailure("invalid read state \(self.readState)")
-            }
-            self.readState = .head(head)
-        case .body(var bodyPart):
-            switch self.readState {
-            case .head(let head):
-                self.readState = .body(head, bodyPart)
-            case .body(let head, var body):
-                body.writeBuffer(&bodyPart)
-                self.readState = .body(head, body)
-            default:
-                preconditionFailure("invalid read state \(self.readState)")
-            }
-        case .end:
-            switch self.readState {
-            case .head(let head):
-                context.fireChannelRead(wrapInboundOut(HTTPClient.Response(version: head.version, status: head.status, headers: head.headers, body: nil)))
-                self.readState = .idle
-            case .body(let head, let body):
-                context.fireChannelRead(wrapInboundOut(HTTPClient.Response(version: head.version, status: head.status, headers: head.headers, body: body)))
-                self.readState = .idle
-            default:
-                preconditionFailure("invalid read state \(self.readState)")
-            }
-        }
-    }
-
-    private enum ReadState {
-        case idle
-        case head(HTTPResponseHead)
-        case body(HTTPResponseHead, ByteBuffer)
-    }
-}
-
 // no need in locks since we validate only one request can run at a time
 private final class UnaryHandler: ChannelDuplexHandler {
+    typealias InboundIn = NIOHTTPClientResponseFull
     typealias OutboundIn = HTTPRequestWrapper
-    typealias InboundIn = HTTPClient.Response
-    typealias OutboundOut = HTTPClient.Request
+    typealias OutboundOut = HTTPClientRequestPart
 
     private let keepAlive: Bool
 
@@ -259,6 +177,34 @@ private final class UnaryHandler: ChannelDuplexHandler {
             preconditionFailure("invalid state, outstanding request")
         }
         let wrapper = unwrapOutboundIn(data)
+        
+        var head = HTTPRequestHead(
+            version: .http1_1,
+            method: wrapper.request.method,
+            uri: wrapper.request.url,
+            headers: wrapper.request.headers)
+        head.headers.add(name: "host", value: wrapper.request.targetHost)
+        switch head.method {
+        case .POST, .PUT:
+            head.headers.add(name: "content-length", value: String(wrapper.request.body?.readableBytes ?? 0))
+        default:
+            break
+        }
+
+        // We don't add a "Connection" header here if we want to keep the connection open,
+        // HTTP/1.1 specified in RFC 7230, Section 6.3 Persistence:
+        //
+        // HTTP/1.1 defaults to the use of "persistent connections", allowing
+        // multiple requests and responses to be carried over a single
+        // connection.  The "close" connection option is used to signal that a
+        // connection will not persist after the current request/response.  HTTP
+        // implementations SHOULD support persistent connections.
+        //
+        // See also UnaryHandler.channelRead below.
+        if !self.keepAlive {
+            head.headers.add(name: "connection", value: "close")
+        }
+
         let timeoutTask = wrapper.request.timeout.map {
             context.eventLoop.scheduleTask(in: $0) {
                 if self.pending != nil {
@@ -267,15 +213,29 @@ private final class UnaryHandler: ChannelDuplexHandler {
             }
         }
         self.pending = (promise: wrapper.promise, timeout: timeoutTask)
-        context.writeAndFlush(wrapOutboundOut(wrapper.request), promise: promise)
+        
+        context.write(wrapOutboundOut(.head(head)), promise: nil)
+        if let body = wrapper.request.body {
+            context.write(wrapOutboundOut(.body(IOData.byteBuffer(body))), promise: nil)
+        }
+        context.writeAndFlush(wrapOutboundOut(.end(nil)), promise: promise)
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let response = unwrapInboundIn(data)
         guard let pending = self.pending else {
             preconditionFailure("invalid state, no pending request")
         }
-
+        
+        let response = unwrapInboundIn(data)
+        
+        let httpResponse = HTTPClient.Response(
+            version: response.head.version,
+            status: response.head.status,
+            headers: response.head.headers,
+            body: response.body)
+        
+        self.completeWith(.success(httpResponse))
+        
         // As defined in RFC 7230 Section 6.3:
         // HTTP/1.1 defaults to the use of "persistent connections", allowing
         // multiple requests and responses to be carried over a single
@@ -285,14 +245,14 @@ private final class UnaryHandler: ChannelDuplexHandler {
         //
         // That's why we only assume the connection shall be closed if we receive
         // a "connection = close" header.
-        let serverCloseConnection = response.headers.first(name: "connection")?.lowercased() == "close"
+        let serverCloseConnection =
+            response.head.headers["connection"].contains(where: { $0.lowercased() == "close" })
 
-        if !self.keepAlive || serverCloseConnection || response.version != .init(major: 1, minor: 1) {
+        if !self.keepAlive || serverCloseConnection || response.head.version != .http1_1 {
             pending.promise.futureResult.whenComplete { _ in
                 _ = context.channel.close()
             }
         }
-        self.completeWith(.success(response))
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {

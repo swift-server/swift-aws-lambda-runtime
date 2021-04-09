@@ -22,7 +22,7 @@ func runLambda(behavior: LambdaServerBehavior, handler: Lambda.Handler) throws {
 }
 
 func runLambda(behavior: LambdaServerBehavior, factory: @escaping Lambda.HandlerFactory) throws {
-    let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+    let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
     let configuration = Lambda.Configuration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
