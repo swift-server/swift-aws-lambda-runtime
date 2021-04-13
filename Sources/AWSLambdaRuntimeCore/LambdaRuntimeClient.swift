@@ -163,6 +163,22 @@ extension Lambda {
         let traceID: String
         let clientContext: String?
         let cognitoIdentity: String?
+        
+        init(
+            requestID: String,
+            deadlineInMillisSinceEpoch: Int64,
+            invokedFunctionARN: String,
+            traceID: String,
+            clientContext: String?,
+            cognitoIdentity: String?)
+        {
+            self.requestID = requestID
+            self.deadlineInMillisSinceEpoch = deadlineInMillisSinceEpoch
+            self.invokedFunctionARN = invokedFunctionARN
+            self.traceID = traceID
+            self.clientContext = clientContext
+            self.cognitoIdentity = cognitoIdentity
+        }
 
         init(headers: HTTPHeaders) throws {
             guard let requestID = headers.first(name: AmazonHeaders.requestID), !requestID.isEmpty else {

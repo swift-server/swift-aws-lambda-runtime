@@ -101,7 +101,7 @@ extension Lambda {
 }
 
 extension Lambda.Context {
-    fileprivate convenience init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Lambda.Invocation) {
+    convenience init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Lambda.Invocation) {
         self.init(requestID: invocation.requestID,
                   traceID: invocation.traceID,
                   invokedFunctionARN: invocation.invokedFunctionARN,

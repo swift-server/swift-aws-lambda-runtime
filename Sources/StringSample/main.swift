@@ -14,6 +14,13 @@
 
 import AWSLambdaRuntimeCore
 import NIO
+import Logging
+import Backtrace
+#if os(Linux)
+import Glibc
+#else
+import Darwin.C
+#endif
 
 // in this example we are receiving and responding with strings
 struct Handler: EventLoopLambdaHandler {
@@ -26,7 +33,28 @@ struct Handler: EventLoopLambdaHandler {
     }
 }
 
-Lambda.run(Handler())
+func run<H: Lambda.Handler>(factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<H>) {
+    
+    Backtrace.install()
+    var logger = Logger(label: "Lambda")
+    logger.logLevel = .info
+
+    MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
+        let runtime = Lambda.Runtime(eventLoop: eventLoop, logger: logger, factory: factory)
+
+        _ = runtime.start().whenSuccess { _ in
+            _ = runtime.closeFuture.always { _ in
+                eventLoop.shutdownGracefully { _ in
+                    
+                }
+            }
+        }
+    }
+
+    logger.info("shutdown completed")
+}
+
+run { $0.eventLoop.makeSucceededFuture(Handler()) }
 
 // MARK: - this can also be expressed as a closure:
 
