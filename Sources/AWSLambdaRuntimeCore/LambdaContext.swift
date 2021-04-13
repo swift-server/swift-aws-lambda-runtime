@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import Lifecycle
 import Logging
 import NIO
 
@@ -32,13 +33,16 @@ extension Lambda {
         /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
         ///         Most importantly the `EventLoop` must never be blocked.
         public let eventLoop: EventLoop
+        
+        public let lifeycle: ComponentLifecycle
 
         /// `ByteBufferAllocator` to allocate `ByteBuffer`
         public let allocator: ByteBufferAllocator
 
-        internal init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator) {
+        internal init(logger: Logger, eventLoop: EventLoop, lifecycle: ComponentLifecycle, allocator: ByteBufferAllocator) {
             self.eventLoop = eventLoop
             self.logger = logger
+            self.lifeycle = lifecycle
             self.allocator = allocator
         }
     }

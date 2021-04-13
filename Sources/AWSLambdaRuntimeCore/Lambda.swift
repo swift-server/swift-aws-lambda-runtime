@@ -18,7 +18,8 @@ import Glibc
 import Darwin.C
 #endif
 
-import Backtrace
+import Lifecycle
+import LifecycleNIOCompat
 import Logging
 import NIO
 
@@ -100,55 +101,45 @@ public enum Lambda {
 
     // for testing and internal use
     internal static func run(configuration: Configuration = .init(), factory: @escaping HandlerFactory) -> Result<Int, Error> {
-        let _run = { (configuration: Configuration, factory: @escaping HandlerFactory) -> Result<Int, Error> in
-            Backtrace.install()
-            var logger = Logger(label: "Lambda")
-            logger.logLevel = configuration.general.logLevel
-
-            var result: Result<Int, Error>!
-            MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
-                let lifecycle = Lifecycle(eventLoop: eventLoop, logger: logger, configuration: configuration, factory: factory)
-                #if DEBUG
-                let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
-                    logger.info("intercepted signal: \(signal)")
-                    lifecycle.shutdown()
-                }
-                #endif
-
-                lifecycle.start().flatMap {
-                    lifecycle.shutdownFuture
-                }.whenComplete { lifecycleResult in
-                    #if DEBUG
-                    signalSource.cancel()
-                    #endif
-                    eventLoop.shutdownGracefully { error in
-                        if let error = error {
-                            preconditionFailure("Failed to shutdown eventloop: \(error)")
-                        }
-                    }
-                    result = lifecycleResult
-                }
-            }
-
-            logger.info("shutdown completed")
-            return result
-        }
-
-        // start local server for debugging in DEBUG mode only
+        var logger = Logger(label: "Lambda")
+        logger.logLevel = configuration.general.logLevel
+        
+        let serviceLifecycle = ServiceLifecycle(configuration: .init(label: "lambda.lifecycle", logger: logger, installBacktrace: true))
+        
         #if DEBUG
         if Lambda.env("LOCAL_LAMBDA_SERVER_ENABLED").flatMap(Bool.init) ?? false {
-            do {
-                return try Lambda.withLocalServer {
-                    _run(configuration, factory)
-                }
-            } catch {
-                return .failure(error)
-            }
-        } else {
-            return _run(configuration, factory)
+            let server = LocalLambda.Server(invocationEndpoint: nil)
+            serviceLifecycle.register(
+                label: "LocalServer",
+                start: .eventLoopFuture(server.start),
+                shutdown: .sync(server.stop))
         }
-        #else
-        return _run(configuration, factory)
         #endif
+        
+        var result: Result<Int, Error>!
+        
+        MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
+            
+            serviceLifecycle.registerShutdown(label: "EventLoop", .async( eventLoop.shutdownGracefully ))
+            
+            let lambdaLifecycle = Lifecycle(eventLoop: eventLoop, logger: logger, configuration: configuration, factory: factory)
+            serviceLifecycle.register(
+                label: "LambdaLifecycle",
+                start: .eventLoopFuture(lambdaLifecycle.start),
+                shutdown: .async { cb in
+                    lambdaLifecycle.shutdown()
+                    lambdaLifecycle.shutdownFuture.whenComplete { localResult in
+                        result = localResult
+                        cb(nil)
+                    }
+                })
+            
+            serviceLifecycle.start { error in }
+        }
+        
+        serviceLifecycle.wait()
+
+        logger.info("shutdown completed")
+        return result
     }
 }

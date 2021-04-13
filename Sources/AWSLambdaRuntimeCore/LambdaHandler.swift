@@ -62,27 +62,6 @@ extension LambdaHandler {
     }
 }
 
-extension LambdaHandler {
-    public func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
-        let promise = context.eventLoop.makePromise(of: Void.self)
-        self.offloadQueue.async {
-            do {
-                try self.syncShutdown(context: context)
-                promise.succeed(())
-            } catch {
-                promise.fail(error)
-            }
-        }
-        return promise.futureResult
-    }
-
-    /// Clean up the Lambda resources synchronously.
-    /// Concrete Lambda handlers implement this method to shutdown resources like `HTTPClient`s and database connections.
-    public func syncShutdown(context: Lambda.ShutdownContext) throws {
-        // noop
-    }
-}
-
 // MARK: - EventLoopLambdaHandler
 
 /// Strongly typed, `EventLoopFuture` based processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` asynchronously.
@@ -185,19 +164,6 @@ public protocol ByteBufferLambdaHandler {
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     ///            The `EventLoopFuture` should be completed with either a response encoded as `ByteBuffer` or an `Error`
     func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?>
-
-    /// Clean up the Lambda resources asynchronously.
-    /// Concrete Lambda handlers implement this method to shutdown resources like `HTTPClient`s and database connections.
-    ///
-    /// - Note: In case your Lambda fails while creating your LambdaHandler in the `HandlerFactory`, this method
-    ///         **is not invoked**. In this case you must cleanup the created resources immediately in the `HandlerFactory`.
-    func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void>
-}
-
-extension ByteBufferLambdaHandler {
-    public func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
-        context.eventLoop.makeSucceededFuture(())
-    }
 }
 
 private enum CodecError: Error {

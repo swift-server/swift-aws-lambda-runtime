@@ -14,6 +14,7 @@
 
 @testable import AWSLambdaRuntimeCore
 import Logging
+import Lifecycle
 import NIO
 import XCTest
 
@@ -27,9 +28,10 @@ func runLambda(behavior: LambdaServerBehavior, factory: @escaping Lambda.Handler
     let logger = Logger(label: "TestLogger")
     let configuration = Lambda.Configuration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
     let runner = Lambda.Runner(eventLoop: eventLoopGroup.next(), configuration: configuration)
+    let lifecycle = ComponentLifecycle(label: "TestLifecycle")
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer { XCTAssertNoThrow(try server.stop().wait()) }
-    try runner.initialize(logger: logger, factory: factory).flatMap { handler in
+    try runner.initialize(logger: logger, lifecycle: lifecycle, factory: factory).flatMap { handler in
         runner.run(logger: logger, handler: handler)
     }.wait()
 }

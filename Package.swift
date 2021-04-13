@@ -18,6 +18,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.17.0")),
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.0.0")),
         .package(url: "https://github.com/swift-server/swift-backtrace.git", .upToNextMajor(from: "1.1.0")),
+        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", .upToNextMajor(from: "1.0.0-alpha.7")),
     ],
     targets: [
         .target(name: "AWSLambdaRuntime", dependencies: [
@@ -29,6 +30,8 @@ let package = Package(
             .product(name: "Logging", package: "swift-log"),
             .product(name: "Backtrace", package: "swift-backtrace"),
             .product(name: "NIOHTTP1", package: "swift-nio"),
+            .product(name: "Lifecycle", package: "swift-service-lifecycle"),
+            .product(name: "LifecycleNIOCompat", package: "swift-service-lifecycle"),
         ]),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
