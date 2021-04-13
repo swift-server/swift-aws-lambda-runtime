@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -22,7 +22,7 @@ func runLambda(behavior: LambdaServerBehavior, handler: Lambda.Handler) throws {
 }
 
 func runLambda(behavior: LambdaServerBehavior, factory: @escaping Lambda.HandlerFactory) throws {
-    let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+    let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
     let configuration = Lambda.Configuration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
