@@ -27,7 +27,7 @@ enum ControlPlaneResponse {
     case error(ErrorResponse)
 }
 
-final class LambdaRuntimeHandler<H: Lambda.Handler>: ChannelDuplexHandler {
+final class RuntimeHandler<H: Lambda.Handler>: ChannelDuplexHandler {
     typealias InboundIn = ControlPlaneResponse
     typealias OutboundIn = Never
     typealias OutboundOut = ControlPlaneRequest
@@ -146,7 +146,7 @@ final class LambdaRuntimeHandler<H: Lambda.Handler>: ChannelDuplexHandler {
     
 }
 
-extension LambdaRuntimeHandler {
+extension RuntimeHandler {
     
     struct StateMachine {
         enum InvocationState {
