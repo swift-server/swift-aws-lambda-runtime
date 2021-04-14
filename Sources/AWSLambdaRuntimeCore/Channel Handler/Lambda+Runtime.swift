@@ -55,6 +55,12 @@ extension Lambda {
             self.state = .initialized(factory: factory)
         }
         
+        deinit {
+            guard case .shutdown = self.state else {
+                preconditionFailure("invalid state \(self.state)")
+            }
+        }
+        
         public func start() -> EventLoopFuture<Void> {
             guard self.eventLoop.inEventLoop else {
                 return self.eventLoop.flatSubmit {
@@ -76,9 +82,9 @@ extension Lambda {
                     try channel.pipeline.syncOperations.addHandler(
                         NIOHTTPClientResponseAggregator(maxContentLength: 6 * 1024 * 1024))
                     try channel.pipeline.syncOperations.addHandler(
-                        LambdaRuntimeAPICoder(host: "\(self.configuration.runtimeEngine.ip):\(self.configuration.runtimeEngine.port)"))
+                        RuntimeAPICoder(host: "\(self.configuration.runtimeEngine.ip):\(self.configuration.runtimeEngine.port)"))
                     try channel.pipeline.syncOperations.addHandler(
-                        LambdaRuntimeHandler(maxTimes: self.configuration.lifecycle.maxTimes, logger: self.logger, factory: factory))
+                        RuntimeHandler(maxTimes: self.configuration.lifecycle.maxTimes, logger: self.logger, factory: factory))
                     
                     return channel.eventLoop.makeSucceededFuture(())
                 } catch {
@@ -89,19 +95,27 @@ extension Lambda {
             return bootstrap.connect(host: self.configuration.runtimeEngine.ip, port: self.configuration.runtimeEngine.port)
                 .map { channel in
                     self.state = .running(channel)
+                    
+                    channel.closeFuture.whenComplete { result in
+                        self.state = .shutdown
+                    }
                 }
         }
         
         public func stop() -> EventLoopFuture<Void> {
+            guard self.eventLoop.inEventLoop else {
+                return self.eventLoop.flatSubmit {
+                    self.stop()
+                }
+            }
+            
             guard case .running(let channel) = self.state else {
                 preconditionFailure()
             }
             
             self.state = .shuttingdown
             
-            return channel.close(mode: .all).always { _ in
-                self.state = .shutdown
-            }
+            return channel.close(mode: .all)
         }
     }
 }

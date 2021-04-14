@@ -8,7 +8,7 @@
 import NIO
 import NIOHTTP1
 
-class LambdaRuntimeAPICoder: ChannelDuplexHandler {
+class RuntimeAPICoder: ChannelDuplexHandler {
     typealias InboundIn = NIOHTTPClientResponseFull
     typealias InboundOut = ControlPlaneResponse
     typealias OutboundIn = ControlPlaneRequest
