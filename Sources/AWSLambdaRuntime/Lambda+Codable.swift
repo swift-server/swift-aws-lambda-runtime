@@ -80,6 +80,7 @@ internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
 
 /// Implementation of  a`ByteBuffer` to `In` decoding
 extension EventLoopLambdaHandler where In: Decodable {
+    @inlinable
     public func decode(buffer: ByteBuffer) throws -> In {
         try self.decoder.decode(In.self, from: buffer)
     }
@@ -87,6 +88,7 @@ extension EventLoopLambdaHandler where In: Decodable {
 
 /// Implementation of  `Out` to `ByteBuffer` encoding
 extension EventLoopLambdaHandler where Out: Encodable {
+    @inlinable
     public func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer? {
         try self.encoder.encode(value, using: allocator)
     }

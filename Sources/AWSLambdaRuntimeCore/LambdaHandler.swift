@@ -40,6 +40,7 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
 }
 
 extension Lambda {
+    @usableFromInline
     internal static let defaultOffloadQueue = DispatchQueue(label: "LambdaHandler.offload")
 }
 
@@ -52,6 +53,7 @@ extension LambdaHandler {
     /// `LambdaHandler` is offloading the processing to a `DispatchQueue`
     /// This is slower but safer, in case the implementation blocks the `EventLoop`
     /// Performance sensitive Lambdas should be based on `EventLoopLambdaHandler` which does not offload.
+    @inlinable
     public func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
         let promise = context.eventLoop.makePromise(of: Out.self)
         // FIXME: reusable DispatchQueue
@@ -128,41 +130,28 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
 
 extension EventLoopLambdaHandler {
     /// Driver for `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding
+    @inlinable
     public func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
-        switch self.decodeIn(buffer: event) {
-        case .failure(let error):
+        let input: In
+        do {
+            input = try self.decode(buffer: event)
+        } catch {
             return context.eventLoop.makeFailedFuture(CodecError.requestDecoding(error))
-        case .success(let `in`):
-            return self.handle(context: context, event: `in`).flatMapThrowing { out in
-                switch self.encodeOut(allocator: context.allocator, value: out) {
-                case .failure(let error):
-                    throw CodecError.responseEncoding(error)
-                case .success(let buffer):
-                    return buffer
-                }
+        }
+
+        return self.handle(context: context, event: input).flatMapThrowing { output in
+            do {
+                return try self.encode(allocator: context.allocator, value: output)
+            } catch {
+                throw CodecError.responseEncoding(error)
             }
-        }
-    }
-
-    private func decodeIn(buffer: ByteBuffer) -> Result<In, Error> {
-        do {
-            return .success(try self.decode(buffer: buffer))
-        } catch {
-            return .failure(error)
-        }
-    }
-
-    private func encodeOut(allocator: ByteBufferAllocator, value: Out) -> Result<ByteBuffer?, Error> {
-        do {
-            return .success(try self.encode(allocator: allocator, value: value))
-        } catch {
-            return .failure(error)
         }
     }
 }
 
 /// Implementation of  `ByteBuffer` to `Void` decoding
 extension EventLoopLambdaHandler where Out == Void {
+    @inlinable
     public func encode(allocator: ByteBufferAllocator, value: Void) throws -> ByteBuffer? {
         nil
     }
@@ -200,7 +189,8 @@ extension ByteBufferLambdaHandler {
     }
 }
 
-private enum CodecError: Error {
+@usableFromInline
+enum CodecError: Error {
     case requestDecoding(Error)
     case responseEncoding(Error)
 }
