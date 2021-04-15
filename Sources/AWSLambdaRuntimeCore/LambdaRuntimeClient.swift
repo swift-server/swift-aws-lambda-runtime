@@ -197,7 +197,7 @@ extension Lambda.RuntimeClient {
     static let defaultHeaders = HTTPHeaders([("user-agent", "Swift-Lambda/Unknown")])
 
     /// These headers must be sent along an invocation or initialization error report
-    static let errorHeaders = HTTPHeaders([
+    internal static let errorHeaders = HTTPHeaders([
         ("user-agent", "Swift-Lambda/Unknown"),
         ("lambda-runtime-function-error-type", "Unhandled"),
     ])
