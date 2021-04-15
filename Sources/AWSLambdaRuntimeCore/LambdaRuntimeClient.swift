@@ -156,7 +156,7 @@ extension ErrorResponse {
 }
 
 extension Lambda {
-    struct Invocation {
+    internal struct Invocation {
         let requestID: String
         let deadlineInMillisSinceEpoch: Int64
         let invokedFunctionARN: String
