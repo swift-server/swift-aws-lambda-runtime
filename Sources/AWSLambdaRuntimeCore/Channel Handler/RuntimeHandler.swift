@@ -14,23 +14,23 @@
 import NIO
 import Logging
 
-enum ControlPlaneRequest {
+enum RuntimeAPIRequest {
     case next
     case invocationResponse(String, ByteBuffer?)
     case invocationError(String, ErrorResponse)
     case initializationError(ErrorResponse)
 }
 
-enum ControlPlaneResponse {
+enum RuntimeAPIResponse {
     case next(Lambda.Invocation, ByteBuffer)
     case accepted
     case error(ErrorResponse)
 }
 
 final class RuntimeHandler: ChannelDuplexHandler {
-    typealias InboundIn = ControlPlaneResponse
+    typealias InboundIn = RuntimeAPIResponse
     typealias OutboundIn = Never
-    typealias OutboundOut = ControlPlaneRequest
+    typealias OutboundOut = RuntimeAPIRequest
     
     var state: StateMachine {
         didSet {
@@ -126,14 +126,14 @@ final class RuntimeHandler: ChannelDuplexHandler {
         case .reportInvocationResult(requestID: let requestID, let result):
             switch result {
             case .success(let buffer):
-                context.write(wrapOutboundOut(.invocationResponse(requestID, buffer)), promise: nil)
+                context.writeAndFlush(wrapOutboundOut(.invocationResponse(requestID, buffer)), promise: nil)
             case .failure(let error):
                 let response = ErrorResponse(errorType: "Unhandeled Error", errorMessage: "\(error)")
-                context.write(wrapOutboundOut(.invocationError(requestID, response)), promise: nil)
+                context.writeAndFlush(wrapOutboundOut(.invocationError(requestID, response)), promise: nil)
             }
         case .reportInitializationError(let error):
             let response = ErrorResponse(errorType: "Unhandeled Error", errorMessage: "\(error)")
-            context.write(wrapOutboundOut(.initializationError(response)), promise: nil)
+            context.writeAndFlush(wrapOutboundOut(.initializationError(response)), promise: nil)
         case .closeConnection:
             context.close(mode: .all, promise: nil)
         case .fireChannelInactive:

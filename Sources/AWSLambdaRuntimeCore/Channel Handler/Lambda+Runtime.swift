@@ -27,7 +27,10 @@ extension Lambda {
         
         let configuration: Configuration
         
-        public var closeFuture: EventLoopFuture<Void>! {
+        public var closeFuture: EventLoopFuture<Void>? {
+            guard self.eventLoop.inEventLoop else {
+                return self.closeFuture
+            }
             guard case .running(let channel) = self.state else {
                 return nil
             }

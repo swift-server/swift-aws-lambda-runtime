@@ -10,8 +10,8 @@ import NIOHTTP1
 
 class RuntimeAPICoder: ChannelDuplexHandler {
     typealias InboundIn = NIOHTTPClientResponseFull
-    typealias InboundOut = ControlPlaneResponse
-    typealias OutboundIn = ControlPlaneRequest
+    typealias InboundOut = RuntimeAPIResponse
+    typealias OutboundIn = RuntimeAPIRequest
     typealias OutboundOut = HTTPClientRequestPart
     
     // prepared header cache, to reduce number of total allocs
