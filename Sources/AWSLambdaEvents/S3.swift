@@ -69,7 +69,10 @@ public enum S3 {
 
     public struct Object: Codable {
         public let key: String
-        public let size: UInt64
+        /// The object's size in bytes.
+        ///
+        /// Note: This property is available for all event types except "ObjectRemoved:*"
+        public let size: UInt64?
         public let urlDecodedKey: String?
         public let versionId: String?
         public let eTag: String
