@@ -17,13 +17,11 @@ import Logging
 import NIO
 
 extension Lambda {
-    @usableFromInline
     internal struct Configuration: CustomStringConvertible {
         let general: General
         let lifecycle: Lifecycle
         let runtimeEngine: RuntimeEngine
 
-        @usableFromInline
         init() {
             self.init(general: .init(), lifecycle: .init(), runtimeEngine: .init())
         }
@@ -83,7 +81,6 @@ extension Lambda {
             }
         }
 
-        @usableFromInline
         var description: String {
             "\(Configuration.self)\n  \(self.general))\n  \(self.lifecycle)\n  \(self.runtimeEngine)"
         }

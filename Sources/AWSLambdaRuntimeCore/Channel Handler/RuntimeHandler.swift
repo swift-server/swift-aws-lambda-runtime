@@ -27,7 +27,7 @@ enum ControlPlaneResponse {
     case error(ErrorResponse)
 }
 
-final class RuntimeHandler<H: Lambda.Handler>: ChannelDuplexHandler {
+final class RuntimeHandler: ChannelDuplexHandler {
     typealias InboundIn = ControlPlaneResponse
     typealias OutboundIn = Never
     typealias OutboundOut = ControlPlaneRequest
@@ -41,8 +41,7 @@ final class RuntimeHandler<H: Lambda.Handler>: ChannelDuplexHandler {
     }
     let logger: Logger
     
-    @inlinable
-    init(maxTimes: Int, logger: Logger, factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<H>) {
+    init(maxTimes: Int, logger: Logger, factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>) {
         self.logger = logger
         self.state = StateMachine(maxTimes: maxTimes, factory: factory)
     }
@@ -156,18 +155,18 @@ extension RuntimeHandler {
         }
         
         enum State {
-            case initialized(factory: (Lambda.InitializationContext) -> EventLoopFuture<H>)
-            case starting(handler: Result<H, Error>?, connected: Bool)
-            case running(H, state: InvocationState)
+            case initialized(factory: (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>)
+            case starting(handler: Result<ByteBufferLambdaHandler, Error>?, connected: Bool)
+            case running(ByteBufferLambdaHandler, state: InvocationState)
             case shuttingdown
             case reportInitializationError
             case shutdown
         }
 
         enum Action {
-            case connect(to: SocketAddress, promise: EventLoopPromise<Void>?, andInitializeHandler: (Lambda.InitializationContext) -> EventLoopFuture<H>)
+            case connect(to: SocketAddress, promise: EventLoopPromise<Void>?, andInitializeHandler: (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>)
             case getNextInvocation
-            case invokeHandler(H, Lambda.Invocation, ByteBuffer)
+            case invokeHandler(ByteBufferLambdaHandler, Lambda.Invocation, ByteBuffer)
             case reportInvocationResult(requestID: String, Result<ByteBuffer?, Error>)
             case reportInitializationError(Error)
             case closeConnection
@@ -180,7 +179,7 @@ extension RuntimeHandler {
         private var invocationCount = 0
         private let maxTimes: Int
         
-        init(maxTimes: Int, factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<H>) {
+        init(maxTimes: Int, factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>) {
             self.maxTimes = maxTimes
             self.state = .initialized(factory: factory)
         }
@@ -217,7 +216,7 @@ extension RuntimeHandler {
             }
         }
         
-        mutating func handlerInitialized(_ handler: H) -> Action {
+        mutating func handlerInitialized(_ handler: ByteBufferLambdaHandler) -> Action {
             switch self.state {
             case .starting(.none, connected: false):
                 self.state = .starting(handler: .success(handler), connected: false)

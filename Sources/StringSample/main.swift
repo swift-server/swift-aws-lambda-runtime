@@ -33,7 +33,7 @@ struct Handler: EventLoopLambdaHandler {
     }
 }
 
-func run<H: Lambda.Handler>(factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<H>) {
+func run(factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>) {
     
     Backtrace.install()
     var logger = Logger(label: "Lambda")
