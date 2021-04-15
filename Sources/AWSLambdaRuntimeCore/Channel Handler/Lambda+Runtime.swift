@@ -11,24 +11,20 @@ import Logging
 
 extension Lambda {
     
-    public class Runtime<H: Handler> {
+    public class Runtime {
         
-        @usableFromInline
         enum State {
-            case initialized(factory: (InitializationContext) -> EventLoopFuture<H>)
+            case initialized(factory: (InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>)
             case starting
             case running(Channel)
             case shuttingdown
             case shutdown
         }
         
-        @usableFromInline
         let eventLoop: EventLoop
         
-        @usableFromInline
         let logger: Logger
         
-        @usableFromInline
         let configuration: Configuration
         
         public var closeFuture: EventLoopFuture<Void>! {
@@ -39,16 +35,13 @@ extension Lambda {
             return channel.closeFuture
         }
         
-        @usableFromInline
         /* private */ var state: State
         
-        @inlinable
-        public convenience init(eventLoop: EventLoop, logger: Logger, factory: @escaping (InitializationContext) -> EventLoopFuture<H>) {
+        public convenience init(eventLoop: EventLoop, logger: Logger, factory: @escaping (InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>) {
             self.init(eventLoop: eventLoop, logger: logger, configuration: .init(), factory: factory)
         }
         
-        @inlinable
-        init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, factory: @escaping (InitializationContext) -> EventLoopFuture<H>) {
+        init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, factory: @escaping (InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>) {
             self.eventLoop = eventLoop
             self.logger = logger
             self.configuration = configuration
