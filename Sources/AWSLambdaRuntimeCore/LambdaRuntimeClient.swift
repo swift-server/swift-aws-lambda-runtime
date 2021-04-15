@@ -22,7 +22,7 @@ import NIOHTTP1
 /// * /runtime/invocation/error
 /// * /runtime/init/error
 extension Lambda {
-    struct RuntimeClient {
+    internal struct RuntimeClient {
         private let eventLoop: EventLoop
         private let allocator = ByteBufferAllocator()
         private let httpClient: HTTPClient
