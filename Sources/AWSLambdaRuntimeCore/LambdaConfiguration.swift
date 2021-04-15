@@ -17,7 +17,7 @@ import Logging
 import NIO
 
 extension Lambda {
-    struct Configuration: CustomStringConvertible {
+    internal struct Configuration: CustomStringConvertible {
         let general: General
         let lifecycle: Lifecycle
         let runtimeEngine: RuntimeEngine
