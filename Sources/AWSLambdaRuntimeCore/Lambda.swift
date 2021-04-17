@@ -57,18 +57,6 @@ public enum Lambda {
         }
     }
 
-    #if compiler(>=5.5) && $AsyncAwait
-    public static func run(_ factory: @escaping (InitializationContext) async throws -> Handler) {
-        self.run { context -> EventLoopFuture<Handler> in
-            let promise = context.eventLoop.makePromise(of: Handler.self)
-            promise.completeWithAsync {
-                try await factory(context)
-            }
-            return promise.futureResult
-        }
-    }
-    #endif
-
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol provided via a factory, typically a constructor.
     ///
     /// - parameters:

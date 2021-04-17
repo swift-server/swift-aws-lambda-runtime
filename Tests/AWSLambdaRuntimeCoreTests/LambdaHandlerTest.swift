@@ -79,10 +79,11 @@ class LambdaHandlerTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    #if compiler(>=5.5) && $AsyncAwait
+    #if compiler(>=5.5)
 
     // MARK: - AsyncLambdaHandler
 
+    @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
     func testAsyncHandlerSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
@@ -92,6 +93,8 @@ class LambdaHandlerTest: XCTestCase {
             typealias In = String
             typealias Out = String
 
+            init(context: Lambda.InitializationContext) {}
+
             func handle(event: String, context: Lambda.Context) async throws -> String {
                 event
             }
@@ -99,10 +102,11 @@ class LambdaHandlerTest: XCTestCase {
 
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handler: Handler())
+        let result = Lambda.run(configuration: configuration, factory: Handler.init)
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
+    @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
     func testVoidAsyncHandlerSuccess() {
         let server = MockLambdaServer(behavior: Behavior(result: .success(nil)))
         XCTAssertNoThrow(try server.start().wait())
@@ -112,15 +116,18 @@ class LambdaHandlerTest: XCTestCase {
             typealias In = String
             typealias Out = Void
 
+            init(context: Lambda.InitializationContext) {}
+
             func handle(event: String, context: Lambda.Context) async throws {}
         }
 
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handler: Handler())
+        let result = Lambda.run(configuration: configuration, factory: Handler.init)
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
+    @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
     func testAsyncHandlerFailure() {
         let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
         XCTAssertNoThrow(try server.start().wait())
@@ -130,6 +137,8 @@ class LambdaHandlerTest: XCTestCase {
             typealias In = String
             typealias Out = String
 
+            init(context: Lambda.InitializationContext) {}
+
             func handle(event: String, context: Lambda.Context) async throws -> String {
                 throw TestError("boom")
             }
@@ -137,7 +146,7 @@ class LambdaHandlerTest: XCTestCase {
 
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handler: Handler())
+        let result = Lambda.run(configuration: configuration, factory: Handler.init)
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
     #endif

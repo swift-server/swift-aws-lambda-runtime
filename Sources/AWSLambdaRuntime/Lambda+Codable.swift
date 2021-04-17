@@ -78,62 +78,6 @@ internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
     }
 }
 
-// MARK: - Async
-
-#if compiler(>=5.5) && $AsyncAwait
-extension Lambda {
-    /// Run a Lambda defined by implementing the `CodableAsyncClosure` function.
-    ///
-    /// - parameters:
-    ///     - closure: `CodableAsyncClosure` based Lambda.
-    ///
-    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping (In, Lambda.Context) async throws -> Out) {
-        self.run(CodableAsyncWrapper(closure))
-    }
-
-    /// Run a Lambda defined by implementing the `CodableVoidAsyncClosure` function.
-    ///
-    /// - parameters:
-    ///     - closure: `CodableVoidAsyncClosure` based Lambda.
-    ///
-    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<In: Decodable>(_ closure: @escaping (In, Lambda.Context) async throws -> Void) {
-        self.run(CodableVoidAsyncWrapper(closure))
-    }
-}
-
-internal struct CodableAsyncWrapper<In: Decodable, Out: Encodable>: AsyncLambdaHandler {
-    typealias In = In
-    typealias Out = Out
-
-    private let closure: (In, Lambda.Context) async throws -> Out
-
-    init(_ closure: @escaping (In, Lambda.Context) async throws -> Out) {
-        self.closure = closure
-    }
-
-    func handle(event: In, context: Lambda.Context) async throws -> Out {
-        try await self.closure(event, context)
-    }
-}
-
-internal struct CodableVoidAsyncWrapper<In: Decodable>: AsyncLambdaHandler {
-    typealias In = In
-    typealias Out = Void
-
-    private let closure: (In, Lambda.Context) async throws -> Void
-
-    init(_ closure: @escaping (In, Lambda.Context) async throws -> Void) {
-        self.closure = closure
-    }
-
-    func handle(event: In, context: Lambda.Context) async throws {
-        try await self.closure(event, context)
-    }
-}
-#endif
-
 // MARK: - Codable support
 
 /// Implementation of  a`ByteBuffer` to `In` decoding
