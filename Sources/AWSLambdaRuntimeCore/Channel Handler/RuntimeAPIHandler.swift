@@ -1,14 +1,33 @@
+//===----------------------------------------------------------------------===//
 //
-//  File.swift
-//  
+// This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-//  Created by Fabian Fett on 13.04.21.
+// Copyright (c) 2021 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Licensed under Apache License v2.0
 //
-
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
 import NIO
 import NIOHTTP1
 
-class RuntimeAPICoder: ChannelDuplexHandler {
+enum RuntimeAPIRequest {
+    case next
+    case invocationResponse(String, ByteBuffer?)
+    case invocationError(String, ErrorResponse)
+    case initializationError(ErrorResponse)
+}
+
+enum RuntimeAPIResponse {
+    case next(Lambda.Invocation, ByteBuffer)
+    case accepted
+    case error(ErrorResponse)
+}
+
+final class RuntimeAPIHandler: ChannelDuplexHandler {
     typealias InboundIn = NIOHTTPClientResponseFull
     typealias InboundOut = RuntimeAPIResponse
     typealias OutboundIn = RuntimeAPIRequest
@@ -53,8 +72,8 @@ class RuntimeAPICoder: ChannelDuplexHandler {
                 deadlineInMillisSinceEpoch: unixTimeInMilliseconds,
                 invokedFunctionARN: invokedFunctionARN,
                 traceID: traceID,
-                clientContext: headers["Lambda-Runtime-Client-Context"].first,
-                cognitoIdentity: headers["Lambda-Runtime-Cognito-Identity"].first
+                clientContext: headers.first(name: AmazonHeaders.clientContext),
+                cognitoIdentity: headers.first(name: AmazonHeaders.cognitoIdentity)
             )
             
             guard let event = httpResponse.body else {
@@ -83,7 +102,7 @@ class RuntimeAPICoder: ChannelDuplexHandler {
                 headers: self.headers
             )
             context.write(wrapOutboundOut(.head(head)), promise: nil)
-            context.writeAndFlush(wrapOutboundOut(.end(nil)), promise: promise)
+            context.write(wrapOutboundOut(.end(nil)), promise: promise)
             
         case .invocationResponse(let requestID, let payload):
             var headers = self.headers
@@ -92,13 +111,13 @@ class RuntimeAPICoder: ChannelDuplexHandler {
                 version: .http1_1,
                 method: .POST,
                 uri: "/2018-06-01/runtime/\(requestID)/response",
-                headers: self.headers
+                headers: headers
             )
             context.write(wrapOutboundOut(.head(head)), promise: nil)
             if let payload = payload {
                 context.write(wrapOutboundOut(.body(.byteBuffer(payload))), promise: nil)
             }
-            context.writeAndFlush(wrapOutboundOut(.end(nil)), promise: promise)
+            context.write(wrapOutboundOut(.end(nil)), promise: promise)
             
         case .invocationError(let requestID, let errorMessage):
             let payload = errorMessage.toJSONBytes()
@@ -109,12 +128,12 @@ class RuntimeAPICoder: ChannelDuplexHandler {
                 version: .http1_1,
                 method: .POST,
                 uri: "/2018-06-01/runtime/\(requestID)/error",
-                headers: self.headers
+                headers: headers
             )
             let buffer = context.channel.allocator.buffer(bytes: payload)
             context.write(wrapOutboundOut(.head(head)), promise: nil)
             context.write(wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-            context.writeAndFlush(wrapOutboundOut(.end(nil)), promise: promise)
+            context.write(wrapOutboundOut(.end(nil)), promise: promise)
 
         case .initializationError(let errorMessage):
             let payload = errorMessage.toJSONBytes()
@@ -125,12 +144,22 @@ class RuntimeAPICoder: ChannelDuplexHandler {
                 version: .http1_1,
                 method: .POST,
                 uri: "/2018-06-01/runtime/init/error",
-                headers: self.headers
+                headers: headers
             )
             let buffer = context.channel.allocator.buffer(bytes: payload)
             context.write(wrapOutboundOut(.head(head)), promise: nil)
             context.write(wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-            context.writeAndFlush(wrapOutboundOut(.end(nil)), promise: promise)
+            context.write(wrapOutboundOut(.end(nil)), promise: promise)
         }
     }
+}
+
+/// AWS Lambda HTTP Headers, used to populate the `LambdaContext` object.
+internal enum AmazonHeaders {
+    static let requestID = "Lambda-Runtime-Aws-Request-Id"
+    static let traceID = "Lambda-Runtime-Trace-Id"
+    static let clientContext = "Lambda-Runtime-Client-Context"
+    static let cognitoIdentity = "Lambda-Runtime-Cognito-Identity"
+    static let deadline = "Lambda-Runtime-Deadline-Ms"
+    static let invokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
 }

@@ -1,10 +1,16 @@
+//===----------------------------------------------------------------------===//
 //
-//  File.swift
-//  
+// This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-//  Created by Fabian Fett on 13.04.21.
+// Copyright (c) 2021 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Licensed under Apache License v2.0
 //
-
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
 import NIO
 import NIOHTTP1
 import Logging
@@ -21,21 +27,16 @@ extension Lambda {
             case shutdown
         }
         
+        let shutdownPromise: EventLoopPromise<Void>
+        
         let eventLoop: EventLoop
         
         let logger: Logger
         
         let configuration: Configuration
         
-        public var closeFuture: EventLoopFuture<Void>? {
-            guard self.eventLoop.inEventLoop else {
-                return self.closeFuture
-            }
-            guard case .running(let channel) = self.state else {
-                return nil
-            }
-            
-            return channel.closeFuture
+        public var shutdownFuture: EventLoopFuture<Void>? {
+            shutdownPromise.futureResult
         }
         
         /* private */ var state: State
@@ -46,6 +47,7 @@ extension Lambda {
         
         init(eventLoop: EventLoop, logger: Logger, configuration: Configuration, factory: @escaping (InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>) {
             self.eventLoop = eventLoop
+            self.shutdownPromise = eventLoop.makePromise(of: Void.self)
             self.logger = logger
             self.configuration = configuration
             self.state = .initialized(factory: factory)
@@ -78,9 +80,11 @@ extension Lambda {
                     try channel.pipeline.syncOperations.addHandler(
                         NIOHTTPClientResponseAggregator(maxContentLength: 6 * 1024 * 1024))
                     try channel.pipeline.syncOperations.addHandler(
-                        RuntimeAPICoder(host: "\(self.configuration.runtimeEngine.ip):\(self.configuration.runtimeEngine.port)"))
+                        RuntimeAPIHandler(host: "\(self.configuration.runtimeEngine.ip):\(self.configuration.runtimeEngine.port)"))
                     try channel.pipeline.syncOperations.addHandler(
                         RuntimeHandler(maxTimes: self.configuration.lifecycle.maxTimes, logger: self.logger, factory: factory))
+                    try channel.pipeline.syncOperations.addHandler(
+                        RuntimeEventHandler())
                     
                     return channel.eventLoop.makeSucceededFuture(())
                 } catch {
@@ -89,11 +93,17 @@ extension Lambda {
             }
             
             return bootstrap.connect(host: self.configuration.runtimeEngine.ip, port: self.configuration.runtimeEngine.port)
-                .map { channel in
-                    self.state = .running(channel)
-                    
-                    channel.closeFuture.whenComplete { result in
-                        self.state = .shutdown
+                .flatMap { channel in
+                    // connected
+                    channel.pipeline.handler(type: RuntimeEventHandler.self).flatMap { handler in
+                        handler.startupFuture!.map { _ in
+                            self.state = .running(channel)
+                            
+                            handler.shutdownFuture!.whenComplete { result in
+                                self.state = .shutdown
+                            }
+                            handler.shutdownFuture!.cascade(to: self.shutdownPromise)
+                        }
                     }
                 }
         }

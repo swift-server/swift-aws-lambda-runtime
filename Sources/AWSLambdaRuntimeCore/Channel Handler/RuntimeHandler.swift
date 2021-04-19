@@ -14,19 +14,6 @@
 import NIO
 import Logging
 
-enum RuntimeAPIRequest {
-    case next
-    case invocationResponse(String, ByteBuffer?)
-    case invocationError(String, ErrorResponse)
-    case initializationError(ErrorResponse)
-}
-
-enum RuntimeAPIResponse {
-    case next(Lambda.Invocation, ByteBuffer)
-    case accepted
-    case error(ErrorResponse)
-}
-
 final class RuntimeHandler: ChannelDuplexHandler {
     typealias InboundIn = RuntimeAPIResponse
     typealias OutboundIn = Never
@@ -111,11 +98,20 @@ final class RuntimeHandler: ChannelDuplexHandler {
             }
             
             context.connect(to: address, promise: promise)
+        case .reportStartupSuccessful:
+            context.fireUserInboundEventTriggered(RuntimeEvent.startupCompleted)
+            let action = self.state.startupSuccessReported()
+            self.run(action: action, context: context)
+        case .reportStartupFailure(let error):
+            context.fireErrorCaught(error)
+            
         case .getNextInvocation:
-            context.write(wrapOutboundOut(.next), promise: nil)
-        case .invokeHandler(let handler, let invocation, let bytes):
+            context.writeAndFlush(wrapOutboundOut(.next), promise: nil)
+        case .invokeHandler(let handler, let invocation, let bytes, let invocationCount):
+            var logger = self.logger
+            logger[metadataKey: "lifecycleIteration"] = "\(invocationCount)"
             let lambdaContext = Lambda.Context(
-                logger: self.logger,
+                logger: logger,
                 eventLoop: context.eventLoop,
                 allocator: context.channel.allocator,
                 invocation: invocation)
@@ -157,6 +153,7 @@ extension RuntimeHandler {
         enum State {
             case initialized(factory: (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>)
             case starting(handler: Result<ByteBufferLambdaHandler, Error>?, connected: Bool)
+            case started(handler: ByteBufferLambdaHandler)
             case running(ByteBufferLambdaHandler, state: InvocationState)
             case shuttingdown
             case reportInitializationError
@@ -165,8 +162,10 @@ extension RuntimeHandler {
 
         enum Action {
             case connect(to: SocketAddress, promise: EventLoopPromise<Void>?, andInitializeHandler: (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>)
+            case reportStartupSuccessful
+            case reportStartupFailure(Error)
             case getNextInvocation
-            case invokeHandler(ByteBufferLambdaHandler, Lambda.Invocation, ByteBuffer)
+            case invokeHandler(ByteBufferLambdaHandler, Lambda.Invocation, ByteBuffer, Int)
             case reportInvocationResult(requestID: String, Result<ByteBuffer?, Error>)
             case reportInitializationError(Error)
             case closeConnection
@@ -176,8 +175,8 @@ extension RuntimeHandler {
         
         private var state: State
         private var markShutdown: Bool = false
-        private var invocationCount = 0
         private let maxTimes: Int
+        private var invocationCount = 0
         
         init(maxTimes: Int, factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>) {
             self.maxTimes = maxTimes
@@ -203,8 +202,8 @@ extension RuntimeHandler {
         mutating func connected() -> Action {
             switch self.state {
             case .starting(.some(.success(let handler)), connected: false):
-                self.state = .running(handler, state: .waitingForNextInvocation)
-                return .getNextInvocation
+                self.state = .started(handler: handler)
+                return .reportStartupSuccessful
             case .starting(.some(.failure(let error)), connected: false):
                 self.state = .reportInitializationError
                 return .reportInitializationError(error)
@@ -222,8 +221,8 @@ extension RuntimeHandler {
                 self.state = .starting(handler: .success(handler), connected: false)
                 return .wait
             case .starting(.none, connected: true):
-                self.state = .running(handler, state: .waitingForNextInvocation)
-                return .getNextInvocation
+                self.state = .started(handler: handler)
+                return .reportStartupSuccessful
             default:
                 preconditionFailure()
             }
@@ -242,6 +241,15 @@ extension RuntimeHandler {
             }
         }
         
+        mutating func startupSuccessReported() -> Action {
+            guard case .started(let handler) = self.state else {
+                preconditionFailure()
+            }
+            
+            self.state = .running(handler, state: .waitingForNextInvocation)
+            return .getNextInvocation
+        }
+        
         mutating func nextInvocationReceived(_ invocation: Lambda.Invocation, _ bytes: ByteBuffer) -> Action {
             guard case .running(let handler, .waitingForNextInvocation) = self.state else {
                 preconditionFailure()
@@ -249,7 +257,7 @@ extension RuntimeHandler {
             
             self.invocationCount += 1
             self.state = .running(handler, state: .runningHandler(requestID: invocation.requestID))
-            return .invokeHandler(handler, invocation, bytes)
+            return .invokeHandler(handler, invocation, bytes, self.invocationCount)
         }
         
         mutating func invocationCompleted(_ result: Result<ByteBuffer?, Error>) -> Action {
