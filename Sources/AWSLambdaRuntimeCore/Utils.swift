@@ -26,15 +26,7 @@ internal enum Consts {
     static let initializationError = "InitializationError"
 }
 
-/// AWS Lambda HTTP Headers, used to populate the `LambdaContext` object.
-internal enum AmazonHeaders {
-    static let requestID = "Lambda-Runtime-Aws-Request-Id"
-    static let traceID = "Lambda-Runtime-Trace-Id"
-    static let clientContext = "X-Amz-Client-Context"
-    static let cognitoIdentity = "X-Amz-Cognito-Identity"
-    static let deadline = "Lambda-Runtime-Deadline-Ms"
-    static let invokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
-}
+
 
 /// Helper function to trap signals
 internal func trap(signal sig: Signal, handler: @escaping (Signal) -> Void) -> DispatchSourceSignal {

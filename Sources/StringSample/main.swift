@@ -43,7 +43,7 @@ func run(factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<By
         let runtime = Lambda.Runtime(eventLoop: eventLoop, logger: logger, factory: factory)
 
         _ = runtime.start().whenSuccess { _ in
-            _ = runtime.closeFuture.always { _ in
+            _ = runtime.shutdownFuture?.always { _ in
                 eventLoop.shutdownGracefully { _ in
                     
                 }
