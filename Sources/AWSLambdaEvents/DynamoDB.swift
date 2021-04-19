@@ -15,13 +15,11 @@
 import struct Foundation.Date
 
 // https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html
-public enum DynamoDB {
-    public struct Event: Decodable {
-        public let records: [EventRecord]
+public struct DynamoDBEvent: Decodable {
+    public let records: [EventRecord]
 
-        public enum CodingKeys: String, CodingKey {
-            case records = "Records"
-        }
+    public enum CodingKeys: String, CodingKey {
+        case records = "Records"
     }
 
     public enum KeyType: String, Codable {
@@ -146,7 +144,7 @@ public enum DynamoDB {
     }
 }
 
-extension DynamoDB.StreamRecord: Decodable {
+extension DynamoDBEvent.StreamRecord: Decodable {
     enum CodingKeys: String, CodingKey {
         case approximateCreationDateTime = "ApproximateCreationDateTime"
         case keys = "Keys"
@@ -161,22 +159,22 @@ extension DynamoDB.StreamRecord: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         self.keys = try container.decode(
-            [String: DynamoDB.AttributeValue].self,
+            [String: DynamoDBEvent.AttributeValue].self,
             forKey: .keys
         )
 
         self.newImage = try container.decodeIfPresent(
-            [String: DynamoDB.AttributeValue].self,
+            [String: DynamoDBEvent.AttributeValue].self,
             forKey: .newImage
         )
         self.oldImage = try container.decodeIfPresent(
-            [String: DynamoDB.AttributeValue].self,
+            [String: DynamoDBEvent.AttributeValue].self,
             forKey: .oldImage
         )
 
         self.sequenceNumber = try container.decode(String.self, forKey: .sequenceNumber)
         self.sizeBytes = try container.decode(Int64.self, forKey: .sizeBytes)
-        self.streamViewType = try container.decode(DynamoDB.StreamViewType.self, forKey: .streamViewType)
+        self.streamViewType = try container.decode(DynamoDBEvent.StreamViewType.self, forKey: .streamViewType)
 
         if let timestamp = try container.decodeIfPresent(Double.self, forKey: .approximateCreationDateTime) {
             self.approximateCreationDateTime = Date(timeIntervalSince1970: timestamp)
@@ -188,7 +186,7 @@ extension DynamoDB.StreamRecord: Decodable {
 
 // MARK: - AttributeValue -
 
-extension DynamoDB {
+extension DynamoDBEvent {
     public enum AttributeValue {
         case boolean(Bool)
         case binary([UInt8])
@@ -204,7 +202,7 @@ extension DynamoDB {
     }
 }
 
-extension DynamoDB.AttributeValue: Decodable {
+extension DynamoDBEvent.AttributeValue: Decodable {
     enum CodingKeys: String, CodingKey {
         case binary = "B"
         case bool = "BOOL"
@@ -244,11 +242,11 @@ extension DynamoDB.AttributeValue: Decodable {
             self = .binarySet(buffers)
 
         case .list:
-            let values = try container.decode([DynamoDB.AttributeValue].self, forKey: .list)
+            let values = try container.decode([DynamoDBEvent.AttributeValue].self, forKey: .list)
             self = .list(values)
 
         case .map:
-            let value = try container.decode([String: DynamoDB.AttributeValue].self, forKey: .map)
+            let value = try container.decode([String: DynamoDBEvent.AttributeValue].self, forKey: .map)
             self = .map(value)
 
         case .number:
@@ -273,7 +271,7 @@ extension DynamoDB.AttributeValue: Decodable {
     }
 }
 
-extension DynamoDB.AttributeValue: Equatable {
+extension DynamoDBEvent.AttributeValue: Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
         switch (lhs, rhs) {
         case (.boolean(let lhs), .boolean(let rhs)):
@@ -304,7 +302,7 @@ extension DynamoDB.AttributeValue: Equatable {
 
 // MARK: DynamoDB AttributeValue Decoding
 
-extension DynamoDB {
+extension DynamoDBEvent {
     public struct Decoder {
         @usableFromInline var userInfo: [CodingUserInfoKey: Any] = [:]
 
@@ -906,7 +904,7 @@ extension DynamoDB {
     }
 }
 
-extension DynamoDB.AttributeValue {
+extension DynamoDBEvent.AttributeValue {
     fileprivate var debugDataTypeDescription: String {
         switch self {
         case .list:

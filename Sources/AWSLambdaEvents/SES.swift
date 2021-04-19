@@ -16,19 +16,17 @@ import struct Foundation.Date
 
 // https://docs.aws.amazon.com/lambda/latest/dg/services-ses.html
 
-public enum SES {
-    public struct Event: Decodable {
-        public struct Record: Decodable {
-            public let eventSource: String
-            public let eventVersion: String
-            public let ses: Message
-        }
+public struct SESEvent: Decodable {
+    public struct Record: Decodable {
+        public let eventSource: String
+        public let eventVersion: String
+        public let ses: Message
+    }
 
-        public let records: [Record]
+    public let records: [Record]
 
-        public enum CodingKeys: String, CodingKey {
-            case records = "Records"
-        }
+    public enum CodingKeys: String, CodingKey {
+        case records = "Records"
     }
 
     public struct Message: Decodable {

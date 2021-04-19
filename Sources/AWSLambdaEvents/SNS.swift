@@ -16,27 +16,25 @@ import struct Foundation.Date
 
 // https://docs.aws.amazon.com/lambda/latest/dg/with-sns.html
 
-public enum SNS {
-    public struct Event: Decodable {
-        public struct Record: Decodable {
-            public let eventVersion: String
-            public let eventSubscriptionArn: String
-            public let eventSource: String
-            public let sns: Message
-
-            public enum CodingKeys: String, CodingKey {
-                case eventVersion = "EventVersion"
-                case eventSubscriptionArn = "EventSubscriptionArn"
-                case eventSource = "EventSource"
-                case sns = "Sns"
-            }
-        }
-
-        public let records: [Record]
+public struct SNSEvent: Decodable {
+    public struct Record: Decodable {
+        public let eventVersion: String
+        public let eventSubscriptionArn: String
+        public let eventSource: String
+        public let sns: Message
 
         public enum CodingKeys: String, CodingKey {
-            case records = "Records"
+            case eventVersion = "EventVersion"
+            case eventSubscriptionArn = "EventSubscriptionArn"
+            case eventSource = "EventSource"
+            case sns = "Sns"
         }
+    }
+
+    public let records: [Record]
+
+    public enum CodingKeys: String, CodingKey {
+        case records = "Records"
     }
 
     public struct Message {
@@ -61,7 +59,7 @@ public enum SNS {
     }
 }
 
-extension SNS.Message: Decodable {
+extension SNSEvent.Message: Decodable {
     enum CodingKeys: String, CodingKey {
         case signature = "Signature"
         case messageId = "MessageId"
@@ -77,9 +75,9 @@ extension SNS.Message: Decodable {
     }
 }
 
-extension SNS.Message.Attribute: Equatable {}
+extension SNSEvent.Message.Attribute: Equatable {}
 
-extension SNS.Message.Attribute: Decodable {
+extension SNSEvent.Message.Attribute: Decodable {
     enum CodingKeys: String, CodingKey {
         case dataType = "Type"
         case dataValue = "Value"

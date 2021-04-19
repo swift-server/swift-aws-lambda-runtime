@@ -14,13 +14,11 @@
 
 // https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html
 
-public enum SQS {
-    public struct Event: Decodable {
-        public let records: [Message]
+public struct SQSEvent: Decodable {
+    public let records: [Message]
 
-        enum CodingKeys: String, CodingKey {
-            case records = "Records"
-        }
+    enum CodingKeys: String, CodingKey {
+        case records = "Records"
     }
 
     public struct Message {
@@ -44,7 +42,7 @@ public enum SQS {
     }
 }
 
-extension SQS.Message: Decodable {
+extension SQSEvent.Message: Decodable {
     enum CodingKeys: String, CodingKey {
         case messageId
         case receiptHandle
@@ -59,9 +57,9 @@ extension SQS.Message: Decodable {
     }
 }
 
-extension SQS.Message.Attribute: Equatable {}
+extension SQSEvent.Message.Attribute: Equatable {}
 
-extension SQS.Message.Attribute: Decodable {
+extension SQSEvent.Message.Attribute: Decodable {
     enum CodingKeys: String, CodingKey {
         case dataType
         case stringValue

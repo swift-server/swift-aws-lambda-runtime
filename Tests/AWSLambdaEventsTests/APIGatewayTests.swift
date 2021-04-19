@@ -30,8 +30,8 @@ class APIGatewayTests: XCTestCase {
 
     func testRequestDecodingExampleGetRequest() {
         let data = APIGatewayTests.exampleGetEventBody.data(using: .utf8)!
-        var req: APIGateway.Request?
-        XCTAssertNoThrow(req = try JSONDecoder().decode(APIGateway.Request.self, from: data))
+        var req: APIGatewayRequest?
+        XCTAssertNoThrow(req = try JSONDecoder().decode(APIGatewayRequest.self, from: data))
 
         XCTAssertEqual(req?.path, "/test")
         XCTAssertEqual(req?.httpMethod, .GET)
@@ -39,8 +39,8 @@ class APIGatewayTests: XCTestCase {
 
     func testRequestDecodingTodoPostRequest() {
         let data = APIGatewayTests.todoPostEventBody.data(using: .utf8)!
-        var req: APIGateway.Request?
-        XCTAssertNoThrow(req = try JSONDecoder().decode(APIGateway.Request.self, from: data))
+        var req: APIGatewayRequest?
+        XCTAssertNoThrow(req = try JSONDecoder().decode(APIGatewayRequest.self, from: data))
 
         XCTAssertEqual(req?.path, "/todos")
         XCTAssertEqual(req?.httpMethod, .POST)
@@ -58,7 +58,7 @@ class APIGatewayTests: XCTestCase {
     }
 
     func testResponseEncoding() {
-        let resp = APIGateway.Response(
+        let resp = APIGatewayResponse(
             statusCode: .ok,
             headers: ["Server": "Test"],
             body: "abc123"
