@@ -11,8 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import NIO
+
 import Logging
+import NIO
 
 enum RuntimeEvent {
     case startupCompleted
@@ -22,7 +23,7 @@ enum RuntimeEvent {
 final class RuntimeEventHandler: ChannelDuplexHandler {
     typealias InboundIn = Never
     typealias OutboundIn = Never
-    
+
     enum State {
         case initialized
         case starting(EventLoopPromise<Void>)
@@ -30,14 +31,14 @@ final class RuntimeEventHandler: ChannelDuplexHandler {
         case stopping(EventLoopPromise<Void>)
         case stopped
     }
-    
+
     private var state: State = .initialized
-    
+
     private(set) var startupFuture: EventLoopFuture<Void>?
     private(set) var shutdownFuture: EventLoopFuture<Void>?
-    
+
     init() {}
-    
+
     func connect(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         guard case .initialized = self.state else {
             preconditionFailure()
@@ -47,23 +48,23 @@ final class RuntimeEventHandler: ChannelDuplexHandler {
         self.startupFuture = startupPromise.futureResult
         context.connect(to: address, promise: promise)
     }
-    
+
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         guard case .running(let promise) = self.state else {
             preconditionFailure()
         }
-        
+
         self.state = .stopping(promise)
         context.close(mode: mode, promise: promise)
     }
-    
+
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case RuntimeEvent.startupCompleted:
             guard case .starting(let startupPromise) = self.state else {
                 preconditionFailure()
             }
-            
+
             let shutdownPromise = context.eventLoop.makePromise(of: Void.self)
             self.shutdownFuture = shutdownPromise.futureResult
             self.state = .running(shutdownPromise)
@@ -71,10 +72,10 @@ final class RuntimeEventHandler: ChannelDuplexHandler {
         default:
             preconditionFailure()
         }
-        
+
         context.fireUserInboundEventTriggered(event)
     }
-    
+
     func channelInactive(context: ChannelHandlerContext) {
         switch self.state {
         case .running(let promise), .stopping(let promise):
@@ -82,10 +83,10 @@ final class RuntimeEventHandler: ChannelDuplexHandler {
         default:
             break
         }
-        
+
         context.fireChannelInactive()
     }
-    
+
     func errorCaught(context: ChannelHandlerContext, error: Error) {
         switch self.state {
         case .starting(let startupPromise):
@@ -95,7 +96,7 @@ final class RuntimeEventHandler: ChannelDuplexHandler {
         default:
             preconditionFailure()
         }
-        
+
         context.fireErrorCaught(error)
     }
 }

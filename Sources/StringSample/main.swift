@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntimeCore
-import NIO
-import Logging
 import Backtrace
+import Logging
+import NIO
 #if os(Linux)
 import Glibc
 #else
@@ -29,12 +29,11 @@ struct Handler: EventLoopLambdaHandler {
 
     func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
         // as an example, respond with the event's reversed body
-        context.eventLoop.makeSucceededFuture(String(event.reversed()))
+        context.eventLoop.makeSucceededFuture(event)
     }
 }
 
 func run(factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>) {
-    
     Backtrace.install()
     var logger = Logger(label: "Lambda")
     logger.logLevel = .info
@@ -45,7 +44,6 @@ func run(factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<By
         _ = runtime.start().whenSuccess { _ in
             _ = runtime.shutdownFuture?.always { _ in
                 eventLoop.shutdownGracefully { _ in
-                    
                 }
             }
         }

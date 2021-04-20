@@ -11,17 +11,19 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+import Logging
 import NIO
 import NIOHTTP1
 
-enum RuntimeAPIRequest {
+enum RuntimeAPIRequest: Equatable {
     case next
     case invocationResponse(String, ByteBuffer?)
     case invocationError(String, ErrorResponse)
     case initializationError(ErrorResponse)
 }
 
-enum RuntimeAPIResponse {
+enum RuntimeAPIResponse: Equatable {
     case next(Invocation, ByteBuffer)
     case accepted
     case error(ErrorResponse)
@@ -32,20 +34,31 @@ final class RuntimeAPIHandler: ChannelDuplexHandler {
     typealias InboundOut = RuntimeAPIResponse
     typealias OutboundIn = RuntimeAPIRequest
     typealias OutboundOut = HTTPClientRequestPart
-    
+
     // prepared header cache, to reduce number of total allocs
     let headers: HTTPHeaders
-    
-    init(host: String) {
+
+    let logger: Logger
+
+    init(configuration: Lambda.Configuration.RuntimeEngine, logger: Logger) {
+        let host: String
+        switch configuration.port {
+        case 80:
+            host = configuration.ip
+        default:
+            host = "\(configuration.ip):\(configuration.port)"
+        }
+
+        self.logger = logger
         self.headers = HTTPHeaders([
-            ("host", host),
+            ("host", "\(host)"),
             ("user-agent", "Swift-Lambda/Unknown"),
         ])
     }
-    
+
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let httpResponse = unwrapInboundIn(data)
-        
+
         switch httpResponse.head.status {
         case .ok:
             let headers = httpResponse.head.headers
@@ -66,7 +79,7 @@ final class RuntimeAPIHandler: ChannelDuplexHandler {
             guard let traceID = headers.first(name: AmazonHeaders.traceID) else {
                 return context.fireErrorCaught(Lambda.RuntimeError.invocationMissingHeader(AmazonHeaders.traceID))
             }
-            
+
             let invocation = Invocation(
                 requestID: requestID,
                 deadlineInMillisSinceEpoch: unixTimeInMilliseconds,
@@ -75,25 +88,25 @@ final class RuntimeAPIHandler: ChannelDuplexHandler {
                 clientContext: headers.first(name: AmazonHeaders.clientContext),
                 cognitoIdentity: headers.first(name: AmazonHeaders.cognitoIdentity)
             )
-            
+
             guard let event = httpResponse.body else {
                 return context.fireErrorCaught(Lambda.RuntimeError.noBody)
             }
-            
+
             context.fireChannelRead(wrapInboundOut(.next(invocation, event)))
         case .accepted:
             context.fireChannelRead(wrapInboundOut(.accepted))
-            
+
         case .badRequest, .forbidden, .payloadTooLarge:
             context.fireChannelRead(wrapInboundOut(.error(.init(errorType: "", errorMessage: ""))))
-            
+
         default:
             context.fireErrorCaught(Lambda.RuntimeError.badStatusCode(httpResponse.head.status))
         }
     }
-    
+
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch unwrapOutboundIn(data) {
+        switch self.unwrapOutboundIn(data) {
         case .next:
             let head = HTTPRequestHead(
                 version: .http1_1,
@@ -103,7 +116,7 @@ final class RuntimeAPIHandler: ChannelDuplexHandler {
             )
             context.write(wrapOutboundOut(.head(head)), promise: nil)
             context.write(wrapOutboundOut(.end(nil)), promise: promise)
-            
+
         case .invocationResponse(let requestID, let payload):
             var headers = self.headers
             headers.add(name: "content-length", value: "\(payload?.readableBytes ?? 0)")
@@ -118,7 +131,7 @@ final class RuntimeAPIHandler: ChannelDuplexHandler {
                 context.write(wrapOutboundOut(.body(.byteBuffer(payload))), promise: nil)
             }
             context.write(wrapOutboundOut(.end(nil)), promise: promise)
-            
+
         case .invocationError(let requestID, let errorMessage):
             let payload = errorMessage.toJSONBytes()
             var headers = self.headers
@@ -164,7 +177,7 @@ internal enum AmazonHeaders {
     static let invokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
 }
 
-internal struct ErrorResponse: Codable {
+internal struct ErrorResponse: Codable, Equatable {
     var errorType: String
     var errorMessage: String
 }
@@ -182,22 +195,22 @@ extension ErrorResponse {
     }
 }
 
-internal struct Invocation {
+internal struct Invocation: Equatable {
     let requestID: String
     let deadlineInMillisSinceEpoch: Int64
     let invokedFunctionARN: String
     let traceID: String
     let clientContext: String?
     let cognitoIdentity: String?
-    
+
     init(
         requestID: String,
         deadlineInMillisSinceEpoch: Int64,
         invokedFunctionARN: String,
         traceID: String,
         clientContext: String?,
-        cognitoIdentity: String?)
-    {
+        cognitoIdentity: String?
+    ) {
         self.requestID = requestID
         self.deadlineInMillisSinceEpoch = deadlineInMillisSinceEpoch
         self.invokedFunctionARN = invokedFunctionARN

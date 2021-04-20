@@ -26,8 +26,6 @@ internal enum Consts {
     static let initializationError = "InitializationError"
 }
 
-
-
 /// Helper function to trap signals
 internal func trap(signal sig: Signal, handler: @escaping (Signal) -> Void) -> DispatchSourceSignal {
     let signalSource = DispatchSource.makeSignalSource(signal: sig.rawValue, queue: DispatchQueue.global())

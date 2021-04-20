@@ -11,44 +11,51 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import NIO
+
 import Logging
+import NIO
 
 final class RuntimeHandler: ChannelDuplexHandler {
     typealias InboundIn = RuntimeAPIResponse
     typealias OutboundIn = Never
     typealias OutboundOut = RuntimeAPIRequest
-    
+
     var state: StateMachine {
         didSet {
             self.logger.trace("State changed", metadata: [
-                "state": "\(self.state)"
+                "state": "\(self.state)",
             ])
         }
     }
+
     let logger: Logger
-    
+
     init(maxTimes: Int, logger: Logger, factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>) {
         self.logger = logger
         self.state = StateMachine(maxTimes: maxTimes, factory: factory)
     }
-    
+
+    #if DEBUG
+    init(state: StateMachine, logger: Logger) {
+        self.state = state
+        self.logger = logger
+    }
+    #endif
+
     func handlerAdded(context: ChannelHandlerContext) {
         precondition(!context.channel.isActive, "Channel must not be active when adding handler")
     }
-    
+
     func connect(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        // when we start the connection, we
-        
         let action = self.state.connect(to: address, promise: promise)
         self.run(action: action, context: context)
     }
-    
+
     func channelActive(context: ChannelHandlerContext) {
         let action = self.state.connected()
         self.run(action: action, context: context)
     }
-    
+
     func channelInactive(context: ChannelHandlerContext) {
         let action = self.state.channelInactive()
         self.run(action: action, context: context)
@@ -56,7 +63,7 @@ final class RuntimeHandler: ChannelDuplexHandler {
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let response = unwrapInboundIn(data)
-        
+
         switch response {
         case .accepted:
             let action = self.state.acceptedReceived()
@@ -69,23 +76,24 @@ final class RuntimeHandler: ChannelDuplexHandler {
             self.run(action: action, context: context)
         }
     }
-    
+
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         guard case .all = mode else {
             preconditionFailure("Unsupported close mode. Currently only `.all` is supported.")
         }
-        
+
         let action = self.state.close()
         self.run(action: action, context: context)
     }
-    
+
     func run(action: StateMachine.Action, context: ChannelHandlerContext) {
         switch action {
         case .connect(to: let address, let promise, andInitializeHandler: let factory):
             let lambdaContext = Lambda.InitializationContext(
                 logger: self.logger,
                 eventLoop: context.channel.eventLoop,
-                allocator: context.channel.allocator)
+                allocator: context.channel.allocator
+            )
             factory(lambdaContext).hop(to: context.eventLoop).whenComplete { result in
                 switch result {
                 case .success(let handler):
@@ -96,15 +104,17 @@ final class RuntimeHandler: ChannelDuplexHandler {
                     self.run(action: action, context: context)
                 }
             }
-            
+
             context.connect(to: address, promise: promise)
-        case .reportStartupSuccessful:
+        case .reportStartupSuccessToChannel:
             context.fireUserInboundEventTriggered(RuntimeEvent.startupCompleted)
-            let action = self.state.startupSuccessReported()
+            let action = self.state.startupSuccessToChannelReported()
             self.run(action: action, context: context)
-        case .reportStartupFailure(let error):
+        case .reportStartupFailureToChannel(let error):
             context.fireErrorCaught(error)
-            
+            let action = self.state.startupFailureToChannelReported()
+            self.run(action: action, context: context)
+
         case .getNextInvocation:
             context.writeAndFlush(wrapOutboundOut(.next), promise: nil)
         case .invokeHandler(let handler, let invocation, let bytes, let invocationCount):
@@ -114,7 +124,8 @@ final class RuntimeHandler: ChannelDuplexHandler {
                 logger: logger,
                 eventLoop: context.eventLoop,
                 allocator: context.channel.allocator,
-                invocation: invocation)
+                invocation: invocation
+            )
             handler.handle(context: lambdaContext, event: bytes).hop(to: context.eventLoop).whenComplete {
                 let action = self.state.invocationCompleted($0)
                 self.run(action: action, context: context)
@@ -138,32 +149,31 @@ final class RuntimeHandler: ChannelDuplexHandler {
             break
         }
     }
-    
 }
 
 extension RuntimeHandler {
-    
     struct StateMachine {
         enum InvocationState {
             case waitingForNextInvocation
             case runningHandler(requestID: String)
             case reportingResult
         }
-        
+
         enum State {
             case initialized(factory: (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>)
             case starting(handler: Result<ByteBufferLambdaHandler, Error>?, connected: Bool)
             case started(handler: ByteBufferLambdaHandler)
             case running(ByteBufferLambdaHandler, state: InvocationState)
             case shuttingdown
-            case reportInitializationError
+            case reportingInitializationError(Error)
+            case reportingInitializationErrorToChannel(Error)
             case shutdown
         }
 
         enum Action {
             case connect(to: SocketAddress, promise: EventLoopPromise<Void>?, andInitializeHandler: (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>)
-            case reportStartupSuccessful
-            case reportStartupFailure(Error)
+            case reportStartupSuccessToChannel
+            case reportStartupFailureToChannel(Error)
             case getNextInvocation
             case invokeHandler(ByteBufferLambdaHandler, Invocation, ByteBuffer, Int)
             case reportInvocationResult(requestID: String, Result<ByteBuffer?, Error>)
@@ -172,40 +182,40 @@ extension RuntimeHandler {
             case fireChannelInactive
             case wait
         }
-        
+
         private var state: State
         private var markShutdown: Bool = false
         private let maxTimes: Int
         private var invocationCount = 0
-        
+
         init(maxTimes: Int, factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>) {
             self.maxTimes = maxTimes
             self.state = .initialized(factory: factory)
         }
-        
+
         #if DEBUG
         init(state: State, maxTimes: Int) {
             self.state = state
             self.maxTimes = maxTimes
         }
         #endif
-        
+
         mutating func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) -> Action {
             guard case .initialized(let factory) = self.state else {
                 preconditionFailure()
             }
-            
+
             self.state = .starting(handler: nil, connected: false)
             return .connect(to: address, promise: promise, andInitializeHandler: factory)
         }
-        
+
         mutating func connected() -> Action {
             switch self.state {
             case .starting(.some(.success(let handler)), connected: false):
                 self.state = .started(handler: handler)
-                return .reportStartupSuccessful
+                return .reportStartupSuccessToChannel
             case .starting(.some(.failure(let error)), connected: false):
-                self.state = .reportInitializationError
+                self.state = .reportingInitializationError(error)
                 return .reportInitializationError(error)
             case .starting(.none, connected: false):
                 self.state = .starting(handler: .none, connected: true)
@@ -214,7 +224,7 @@ extension RuntimeHandler {
                 preconditionFailure()
             }
         }
-        
+
         mutating func handlerInitialized(_ handler: ByteBufferLambdaHandler) -> Action {
             switch self.state {
             case .starting(.none, connected: false):
@@ -222,53 +232,62 @@ extension RuntimeHandler {
                 return .wait
             case .starting(.none, connected: true):
                 self.state = .started(handler: handler)
-                return .reportStartupSuccessful
+                return .reportStartupSuccessToChannel
             default:
                 preconditionFailure()
             }
         }
-        
+
         mutating func handlerFailedToInitialize(_ error: Error) -> Action {
             switch self.state {
             case .starting(.none, connected: false):
                 self.state = .starting(handler: .failure(error), connected: false)
                 return .wait
             case .starting(.none, connected: true):
-                self.state = .reportInitializationError
+                self.state = .reportingInitializationError(error)
                 return .reportInitializationError(error)
             default:
                 preconditionFailure()
             }
         }
-        
-        mutating func startupSuccessReported() -> Action {
+
+        mutating func startupSuccessToChannelReported() -> Action {
             guard case .started(let handler) = self.state else {
                 preconditionFailure()
             }
-            
+
             self.state = .running(handler, state: .waitingForNextInvocation)
             return .getNextInvocation
         }
-        
+
+        mutating func startupFailureToChannelReported() -> Action {
+            guard case .reportingInitializationErrorToChannel = self.state else {
+                preconditionFailure()
+            }
+
+            self.state = .shuttingdown
+            return .closeConnection
+        }
+
         mutating func nextInvocationReceived(_ invocation: Invocation, _ bytes: ByteBuffer) -> Action {
             guard case .running(let handler, .waitingForNextInvocation) = self.state else {
                 preconditionFailure()
             }
-            
+
             self.invocationCount += 1
             self.state = .running(handler, state: .runningHandler(requestID: invocation.requestID))
             return .invokeHandler(handler, invocation, bytes, self.invocationCount)
         }
-        
+
         mutating func invocationCompleted(_ result: Result<ByteBuffer?, Error>) -> Action {
             guard case .running(let handler, .runningHandler(let requestID)) = self.state else {
                 preconditionFailure()
             }
-            
+
             self.state = .running(handler, state: .reportingResult)
             return .reportInvocationResult(requestID: requestID, result)
         }
-        
+
         mutating func acceptedReceived() -> Action {
             switch self.state {
             case .running(_, state: .reportingResult) where self.markShutdown == true || (self.maxTimes > 0 && self.invocationCount == self.maxTimes):
@@ -277,14 +296,14 @@ extension RuntimeHandler {
             case .running(let handler, state: .reportingResult):
                 self.state = .running(handler, state: .waitingForNextInvocation)
                 return .getNextInvocation
-            case .reportInitializationError:
-                self.state = .shuttingdown
-                return .closeConnection
+            case .reportingInitializationError(let error):
+                self.state = .reportingInitializationErrorToChannel(error)
+                return .reportStartupFailureToChannel(error)
             default:
                 preconditionFailure()
             }
         }
-        
+
         mutating func close() -> Action {
             switch self.state {
             case .running(_, state: .waitingForNextInvocation):
@@ -297,23 +316,39 @@ extension RuntimeHandler {
                 preconditionFailure()
             }
         }
-        
+
         mutating func channelInactive() -> Action {
             switch self.state {
             case .shuttingdown:
                 self.state = .shutdown
                 return .fireChannelInactive
-            default:
-                preconditionFailure()
-            }
+            case .initialized, .shutdown, .starting(_, connected: false):
+                preconditionFailure("Invalid state")
+            case .starting(_, connected: true):
+                preconditionFailure("Todo: Unexpected connection closure during startup")
+            case .started:
+                preconditionFailure("Todo: Unexpected connection closure during startup")
+            case .running(_, state: .waitingForNextInvocation):
+                self.state = .shutdown
+                return .fireChannelInactive
+            case .running(_, state: .runningHandler):
+                preconditionFailure("Todo: Unexpected connection closure")
+            case .running(_, state: .reportingResult):
+                preconditionFailure("Todo: Unexpected connection closure")
+            case .reportingInitializationError:
+                preconditionFailure("Todo: Unexpected connection closure during startup")
+            case .reportingInitializationErrorToChannel(_):
+                self.state = .shutdown
+                return .fireChannelInactive
 
+            }
         }
-        
-        mutating func errorMessageReceived(_ error: ErrorResponse) -> Action {
+
+        mutating func errorMessageReceived(_: ErrorResponse) -> Action {
             preconditionFailure()
         }
-        
-        mutating func errorHappened(_ error: Error) -> Action {
+
+        mutating func errorHappened(_: Error) -> Action {
             preconditionFailure()
         }
     }

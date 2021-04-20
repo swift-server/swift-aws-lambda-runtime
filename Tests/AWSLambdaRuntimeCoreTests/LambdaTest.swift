@@ -154,18 +154,6 @@ class LambdaTest: XCTestCase {
         }
     }
 
-    func testTimeout() {
-        let timeout: Int64 = 100
-        let server = MockLambdaServer(behavior: Behavior(requestId: "timeout", event: "\(timeout * 2)"))
-        XCTAssertNoThrow(try server.start().wait())
-        defer { XCTAssertNoThrow(try server.stop().wait()) }
-
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1),
-                                                 runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
-        let result = Lambda.run(configuration: configuration, handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("timeout"))
-    }
-
     func testDisconnect() {
         let server = MockLambdaServer(behavior: Behavior(requestId: "disconnect"))
         XCTAssertNoThrow(try server.start().wait())

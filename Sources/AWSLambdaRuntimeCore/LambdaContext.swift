@@ -109,7 +109,7 @@ extension Lambda {
             logger[metadataKey: "awsTraceID"] = .string(traceID)
             self.logger = logger
         }
-        
+
         convenience init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Invocation) {
             self.init(requestID: invocation.requestID,
                       traceID: invocation.traceID,
@@ -121,7 +121,6 @@ extension Lambda {
                       eventLoop: eventLoop,
                       allocator: allocator)
         }
-
 
         public func getRemainingTime() -> TimeAmount {
             let deadline = self.deadline.millisSinceEpoch
