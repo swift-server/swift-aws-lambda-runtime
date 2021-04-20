@@ -125,3 +125,14 @@ extension Lambda {
         }
     }
 }
+
+extension Lambda {
+    internal enum RuntimeError: Error {
+        case badStatusCode(HTTPResponseStatus)
+        case upstreamError(String)
+        case invocationMissingHeader(String)
+        case noBody
+        case json(Error)
+        case shutdownError(shutdownError: Error, runnerResult: Result<Int, Error>)
+    }
+}

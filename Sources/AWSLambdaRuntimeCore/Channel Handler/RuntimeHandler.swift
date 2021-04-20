@@ -165,7 +165,7 @@ extension RuntimeHandler {
             case reportStartupSuccessful
             case reportStartupFailure(Error)
             case getNextInvocation
-            case invokeHandler(ByteBufferLambdaHandler, Lambda.Invocation, ByteBuffer, Int)
+            case invokeHandler(ByteBufferLambdaHandler, Invocation, ByteBuffer, Int)
             case reportInvocationResult(requestID: String, Result<ByteBuffer?, Error>)
             case reportInitializationError(Error)
             case closeConnection
@@ -250,7 +250,7 @@ extension RuntimeHandler {
             return .getNextInvocation
         }
         
-        mutating func nextInvocationReceived(_ invocation: Lambda.Invocation, _ bytes: ByteBuffer) -> Action {
+        mutating func nextInvocationReceived(_ invocation: Invocation, _ bytes: ByteBuffer) -> Action {
             guard case .running(let handler, .waitingForNextInvocation) = self.state else {
                 preconditionFailure()
             }
