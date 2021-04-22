@@ -45,7 +45,7 @@ extension Lambda {
 
 // MARK: - Local Mock Server
 
-private enum LocalLambda {
+enum LocalLambda {
     struct Server {
         private let logger: Logger
         private let group: EventLoopGroup
@@ -53,7 +53,7 @@ private enum LocalLambda {
         private let port: Int
         private let invocationEndpoint: String
 
-        public init(invocationEndpoint: String?) {
+        init(invocationEndpoint: String?) {
             let configuration = Lambda.Configuration()
             var logger = Logger(label: "LocalLambdaServer")
             logger.logLevel = configuration.general.logLevel

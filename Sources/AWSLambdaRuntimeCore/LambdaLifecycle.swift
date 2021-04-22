@@ -15,6 +15,7 @@
 import Logging
 import NIO
 import NIOConcurrencyHelpers
+import Lifecycle
 
 extension Lambda {
     /// `Lifecycle` manages the Lambda process lifecycle.
@@ -26,6 +27,7 @@ extension Lambda {
         private let logger: Logger
         private let configuration: Configuration
         private let factory: HandlerFactory
+        private let lifecycle: ComponentLifecycle
 
         private var state = State.idle {
             willSet {
@@ -50,6 +52,7 @@ extension Lambda {
             self.logger = logger
             self.configuration = configuration
             self.factory = factory
+            self.lifecycle = ComponentLifecycle(label: "User lifecycle", logger: logger)
         }
 
         deinit {
@@ -71,7 +74,11 @@ extension Lambda {
         ///
         /// - note: This method must be called  on the `EventLoop` the `Lifecycle` has been initialized with.
         public func start() -> EventLoopFuture<Void> {
-            self.eventLoop.assertInEventLoop()
+            guard self.eventLoop.inEventLoop else {
+                return self.eventLoop.flatSubmit {
+                    self.start()
+                }
+            }
 
             logger.info("lambda lifecycle starting with \(self.configuration)")
             self.state = .initializing
@@ -80,25 +87,25 @@ extension Lambda {
             logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
             let runner = Runner(eventLoop: self.eventLoop, configuration: self.configuration)
 
-            let startupFuture = runner.initialize(logger: logger, factory: self.factory)
-            startupFuture.flatMap { handler -> EventLoopFuture<(ByteBufferLambdaHandler, Result<Int, Error>)> in
+            let startupFuture = runner.initialize(logger: logger, lifecycle: lifecycle, factory: self.factory).flatMap { handler in
+                self.lifecycle.start(on: self.eventLoop).map { _ in handler }
+            }
+            startupFuture.flatMap { handler -> EventLoopFuture<Result<Int, Error>> in
                 // after the startup future has succeeded, we have a handler that we can use
                 // to `run` the lambda.
                 let finishedPromise = self.eventLoop.makePromise(of: Int.self)
                 self.state = .active(runner, handler)
                 self.run(promise: finishedPromise)
-                return finishedPromise.futureResult.mapResult { (handler, $0) }
+                return finishedPromise.futureResult.mapResult { ($0) }
             }
-            .flatMap { (handler, runnerResult) -> EventLoopFuture<Int> in
+            .flatMap { (runnerResult) -> EventLoopFuture<Int> in
                 // after the lambda finishPromise has succeeded or failed we need to
                 // shutdown the handler
-                let shutdownContext = ShutdownContext(logger: logger, eventLoop: self.eventLoop)
-                return handler.shutdown(context: shutdownContext).flatMapErrorThrowing { error in
-                    // if, we had an error shuting down the lambda, we want to concatenate it with
-                    // the runner result
-                    logger.error("Error shutting down handler: \(error)")
-                    throw RuntimeError.shutdownError(shutdownError: error, runnerResult: runnerResult)
-                }.flatMapResult { (_) -> Result<Int, Error> in
+                
+                let promise = self.eventLoop.makePromise(of: Void.self)
+                self.lifecycle.shutdown { promise.completeWith($0 != nil ? .failure($0!) : .success(()))}
+                
+                return promise.futureResult.flatMapResult { (_) -> Result<Int, Error> in
                     // we had no error shutting down the lambda. let's return the runner's result
                     runnerResult
                 }

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import Lifecycle
 import Logging
 import NIO
 
@@ -34,12 +35,13 @@ extension Lambda {
         /// Run the user provided initializer. This *must* only be called once.
         ///
         /// - Returns: An `EventLoopFuture<LambdaHandler>` fulfilled with the outcome of the initialization.
-        func initialize(logger: Logger, factory: @escaping HandlerFactory) -> EventLoopFuture<Handler> {
+        func initialize(logger: Logger, lifecycle: ComponentLifecycle, factory: @escaping HandlerFactory) -> EventLoopFuture<Handler> {
             logger.debug("initializing lambda")
             // 1. create the handler from the factory
             // 2. report initialization error if one occured
             let context = InitializationContext(logger: logger,
                                                 eventLoop: self.eventLoop,
+                                                lifecycle: lifecycle,
                                                 allocator: self.allocator)
             return factory(context)
                 // Hopping back to "our" EventLoop is important in case the factory returns a future
