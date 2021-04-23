@@ -251,6 +251,7 @@ class LambdaTest: XCTestCase {
                                      cognitoIdentity: nil,
                                      clientContext: nil,
                                      logger: Logger(label: "test"),
+                                     invocationCount: 0,
                                      eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next(),
                                      allocator: ByteBufferAllocator())
         XCTAssertGreaterThan(context.deadline, .now())
@@ -262,6 +263,7 @@ class LambdaTest: XCTestCase {
                                             cognitoIdentity: context.cognitoIdentity,
                                             clientContext: context.clientContext,
                                             logger: context.logger,
+                                            invocationCount: 1,
                                             eventLoop: context.eventLoop,
                                             allocator: context.allocator)
         XCTAssertLessThan(expiredContext.deadline, .now())
@@ -275,6 +277,7 @@ class LambdaTest: XCTestCase {
                                      cognitoIdentity: nil,
                                      clientContext: nil,
                                      logger: Logger(label: "test"),
+                                     invocationCount: 0,
                                      eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next(),
                                      allocator: ByteBufferAllocator())
         XCTAssertLessThanOrEqual(context.getRemainingTime(), .seconds(1))
