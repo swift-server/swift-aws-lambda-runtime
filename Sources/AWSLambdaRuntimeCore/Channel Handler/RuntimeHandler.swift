@@ -118,13 +118,12 @@ final class RuntimeHandler: ChannelDuplexHandler {
         case .getNextInvocation:
             context.writeAndFlush(wrapOutboundOut(.next), promise: nil)
         case .invokeHandler(let handler, let invocation, let bytes, let invocationCount):
-            var logger = self.logger
-            logger[metadataKey: "lifecycleIteration"] = "\(invocationCount)"
             let lambdaContext = Lambda.Context(
-                logger: logger,
+                logger: self.logger,
                 eventLoop: context.eventLoop,
                 allocator: context.channel.allocator,
-                invocation: invocation
+                invocation: invocation,
+                invocationCount: invocationCount
             )
             handler.handle(context: lambdaContext, event: bytes).hop(to: context.eventLoop).whenComplete {
                 let action = self.state.invocationCompleted($0)

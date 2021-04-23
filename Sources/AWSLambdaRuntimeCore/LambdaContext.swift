@@ -91,6 +91,7 @@ extension Lambda {
                       cognitoIdentity: String? = nil,
                       clientContext: String? = nil,
                       logger: Logger,
+                      invocationCount: Int,
                       eventLoop: EventLoop,
                       allocator: ByteBufferAllocator)
         {
@@ -107,10 +108,11 @@ extension Lambda {
             var logger = logger
             logger[metadataKey: "awsRequestID"] = .string(requestID)
             logger[metadataKey: "awsTraceID"] = .string(traceID)
+            logger[metadataKey: "lifecycleIteration"] = "\(invocationCount)"
             self.logger = logger
         }
 
-        convenience init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Invocation) {
+        convenience init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Invocation, invocationCount: Int) {
             self.init(requestID: invocation.requestID,
                       traceID: invocation.traceID,
                       invokedFunctionARN: invocation.invokedFunctionARN,
@@ -118,6 +120,7 @@ extension Lambda {
                       cognitoIdentity: invocation.cognitoIdentity,
                       clientContext: invocation.clientContext,
                       logger: logger,
+                      invocationCount: invocationCount,
                       eventLoop: eventLoop,
                       allocator: allocator)
         }

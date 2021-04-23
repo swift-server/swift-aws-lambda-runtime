@@ -103,6 +103,7 @@ extension Lambda {
                               invokedFunctionARN: config.invokedFunctionARN,
                               deadline: .now() + config.timeout,
                               logger: logger,
+                              invocationCount: 0,
                               eventLoop: eventLoop,
                               allocator: ByteBufferAllocator())
 
