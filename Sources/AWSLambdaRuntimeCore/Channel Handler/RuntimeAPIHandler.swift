@@ -98,9 +98,11 @@ final class RuntimeAPIHandler: ChannelDuplexHandler {
             context.fireChannelRead(wrapInboundOut(.accepted))
 
         case .badRequest, .forbidden, .payloadTooLarge:
+            self.logger.trace("Unexpected http message", metadata: ["http_message": "\(httpResponse)"])
             context.fireChannelRead(wrapInboundOut(.error(.init(errorType: "", errorMessage: ""))))
 
         default:
+            self.logger.trace("Unexpected http message", metadata: ["http_message": "\(httpResponse)"])
             context.fireErrorCaught(Lambda.RuntimeError.badStatusCode(httpResponse.head.status))
         }
     }
