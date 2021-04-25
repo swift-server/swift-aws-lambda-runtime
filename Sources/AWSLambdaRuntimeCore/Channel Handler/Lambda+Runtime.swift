@@ -34,7 +34,7 @@ extension Lambda {
 
         let configuration: Configuration
 
-        public var shutdownFuture: EventLoopFuture<Void>? {
+        public var shutdownFuture: EventLoopFuture<Void> {
             self.shutdownPromise.futureResult
         }
 
@@ -122,6 +122,8 @@ extension Lambda {
         }
 
         public func stop() -> EventLoopFuture<Void> {
+            self.logger.trace("Runtime stop triggered.")
+            
             guard self.eventLoop.inEventLoop else {
                 return self.eventLoop.flatSubmit {
                     self.stop()

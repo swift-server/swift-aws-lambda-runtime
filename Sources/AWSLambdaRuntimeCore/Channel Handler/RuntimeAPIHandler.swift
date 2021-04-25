@@ -125,7 +125,7 @@ final class RuntimeAPIHandler: ChannelDuplexHandler {
             let head = HTTPRequestHead(
                 version: .http1_1,
                 method: .POST,
-                uri: "/2018-06-01/runtime/\(requestID)/response",
+                uri: "/2018-06-01/runtime/invocation/\(requestID)/response",
                 headers: headers
             )
             context.write(wrapOutboundOut(.head(head)), promise: nil)
@@ -142,7 +142,7 @@ final class RuntimeAPIHandler: ChannelDuplexHandler {
             let head = HTTPRequestHead(
                 version: .http1_1,
                 method: .POST,
-                uri: "/2018-06-01/runtime/\(requestID)/error",
+                uri: "/2018-06-01/runtime/invocation/\(requestID)/error",
                 headers: headers
             )
             let buffer = context.channel.allocator.buffer(bytes: payload)

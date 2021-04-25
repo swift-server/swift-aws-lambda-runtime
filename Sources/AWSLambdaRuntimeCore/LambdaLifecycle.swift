@@ -41,7 +41,7 @@ extension Lambda {
         ///
         /// - Returns: An `EventLoopFuture` that is fulfilled after the Lambda lifecycle has fully shutdown.
         public var shutdownFuture: EventLoopFuture<Int> {
-            self.runtime.shutdownFuture!.map { _ in 1 }
+            self.runtime.shutdownFuture.map { _ in 1 }
         }
 
         /// Start the `Lifecycle`.
