@@ -52,18 +52,23 @@ final class RuntimeHandler: ChannelDuplexHandler {
     }
 
     func channelActive(context: ChannelHandlerContext) {
+        self.logger.trace("Channel active")
+        
         let action = self.state.connected()
         self.run(action: action, context: context)
     }
 
     func channelInactive(context: ChannelHandlerContext) {
+        self.logger.trace("Channel inactive")
+        
         let action = self.state.channelInactive()
         self.run(action: action, context: context)
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let response = unwrapInboundIn(data)
-
+        self.logger.trace("Channel read", metadata: ["message": "\(response)"])
+        
         switch response {
         case .accepted:
             let action = self.state.acceptedReceived()
@@ -78,6 +83,8 @@ final class RuntimeHandler: ChannelDuplexHandler {
     }
 
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        self.logger.trace("Outbound close channel received")
+        
         guard case .all = mode else {
             preconditionFailure("Unsupported close mode. Currently only `.all` is supported.")
         }
