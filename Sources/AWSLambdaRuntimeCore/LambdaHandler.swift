@@ -85,6 +85,56 @@ extension LambdaHandler {
     }
 }
 
+// MARK: - AsyncLambdaHandler
+
+#if compiler(>=5.5)
+/// Strongly typed, processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` async.
+@available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+public protocol AsyncLambdaHandler: EventLoopLambdaHandler {
+    /// The Lambda initialization method
+    /// Use this method to initialize resources that will be used in every request.
+    ///
+    /// Examples for this can be HTTP or database clients.
+    /// - parameters:
+    ///     - context: Runtime `InitializationContext`.
+    init(context: Lambda.InitializationContext) async throws
+
+    /// The Lambda handling method
+    /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
+    ///
+    /// - parameters:
+    ///     - event: Event of type `In` representing the event or request.
+    ///     - context: Runtime `Context`.
+    ///
+    /// - Returns: A Lambda result ot type `Out`.
+    func handle(event: In, context: Lambda.Context) async throws -> Out
+}
+
+@available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+extension AsyncLambdaHandler {
+    public func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
+        let promise = context.eventLoop.makePromise(of: Out.self)
+        promise.completeWithAsync {
+            try await self.handle(event: event, context: context)
+        }
+        return promise.futureResult
+    }
+}
+
+@available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+extension AsyncLambdaHandler {
+    public static func main() {
+        Lambda.run { context -> EventLoopFuture<ByteBufferLambdaHandler> in
+            let promise = context.eventLoop.makePromise(of: ByteBufferLambdaHandler.self)
+            promise.completeWithAsync {
+                try await Self(context: context)
+            }
+            return promise.futureResult
+        }
+    }
+}
+#endif
+
 // MARK: - EventLoopLambdaHandler
 
 /// Strongly typed, `EventLoopFuture` based processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` asynchronously.

@@ -78,6 +78,8 @@ internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
     }
 }
 
+// MARK: - Codable support
+
 /// Implementation of  a`ByteBuffer` to `In` decoding
 extension EventLoopLambdaHandler where In: Decodable {
     @inlinable
