@@ -72,6 +72,7 @@ class CodableLambdaTest: XCTestCase {
                        cognitoIdentity: nil,
                        clientContext: nil,
                        logger: Logger(label: "test"),
+                       invocationCount: 0,
                        eventLoop: self.eventLoopGroup.next(),
                        allocator: ByteBufferAllocator())
     }

@@ -22,16 +22,16 @@ func runLambda(behavior: LambdaServerBehavior, handler: Lambda.Handler) throws {
 }
 
 func runLambda(behavior: LambdaServerBehavior, factory: @escaping Lambda.HandlerFactory) throws {
-    let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-    defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-    let logger = Logger(label: "TestLogger")
-    let configuration = Lambda.Configuration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
-    let runner = Lambda.Runner(eventLoop: eventLoopGroup.next(), configuration: configuration)
-    let server = try MockLambdaServer(behavior: behavior).start().wait()
-    defer { XCTAssertNoThrow(try server.stop().wait()) }
-    try runner.initialize(logger: logger, factory: factory).flatMap { handler in
-        runner.run(logger: logger, handler: handler)
-    }.wait()
+//    let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+//    defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
+//    let logger = Logger(label: "TestLogger")
+//    let configuration = Lambda.Configuration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
+//    let runner = Lambda.Runner(eventLoop: eventLoopGroup.next(), configuration: configuration)
+//    let server = try MockLambdaServer(behavior: behavior).start().wait()
+//    defer { XCTAssertNoThrow(try server.stop().wait()) }
+//    try runner.initialize(logger: logger, factory: factory).flatMap { handler in
+//        runner.run(logger: logger, handler: handler)
+//    }.wait()
 }
 
 struct EchoHandler: LambdaHandler {
