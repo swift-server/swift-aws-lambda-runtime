@@ -87,8 +87,8 @@ class SESTests: XCTestCase {
 
     func testSimpleEventFromJSON() {
         let data = Data(SESTests.eventBody.utf8)
-        var event: SES.Event?
-        XCTAssertNoThrow(event = try JSONDecoder().decode(SES.Event.self, from: data))
+        var event: SESEvent?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(SESEvent.self, from: data))
 
         guard let record = event?.records.first else {
             XCTFail("Expected to have one record")

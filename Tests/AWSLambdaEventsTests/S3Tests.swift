@@ -98,10 +98,10 @@ class S3Tests: XCTestCase {
     }
     """
 
-    func testObjectCreatedEvent() {
+    func testSimpleEventFromJSON() {
         let data = S3Tests.eventBodyObjectCreated.data(using: .utf8)!
-        var event: S3.Event?
-        XCTAssertNoThrow(event = try JSONDecoder().decode(S3.Event.self, from: data))
+        var event: S3Event?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(S3Event.self, from: data))
 
         guard let record = event?.records.first else {
             XCTFail("Expected to have one record")
@@ -113,13 +113,13 @@ class S3Tests: XCTestCase {
         XCTAssertEqual(record.awsRegion, .eu_central_1)
         XCTAssertEqual(record.eventName, "ObjectCreated:Put")
         XCTAssertEqual(record.eventTime, Date(timeIntervalSince1970: 1_578_907_540.621))
-        XCTAssertEqual(record.userIdentity, S3.UserIdentity(principalId: "AWS:AAAAAAAJ2MQ4YFQZ7AULJ"))
-        XCTAssertEqual(record.requestParameters, S3.RequestParameters(sourceIPAddress: "123.123.123.123"))
+        XCTAssertEqual(record.userIdentity, S3Event.UserIdentity(principalId: "AWS:AAAAAAAJ2MQ4YFQZ7AULJ"))
+        XCTAssertEqual(record.requestParameters, S3Event.RequestParameters(sourceIPAddress: "123.123.123.123"))
         XCTAssertEqual(record.responseElements.count, 2)
         XCTAssertEqual(record.s3.schemaVersion, "1.0")
         XCTAssertEqual(record.s3.configurationId, "98b55bc4-3c0c-4007-b727-c6b77a259dde")
         XCTAssertEqual(record.s3.bucket.name, "eventsources")
-        XCTAssertEqual(record.s3.bucket.ownerIdentity, S3.UserIdentity(principalId: "AAAAAAAAAAAAAA"))
+        XCTAssertEqual(record.s3.bucket.ownerIdentity, S3Event.UserIdentity(principalId: "AAAAAAAAAAAAAA"))
         XCTAssertEqual(record.s3.bucket.arn, "arn:aws:s3:::eventsources")
         XCTAssertEqual(record.s3.object.key, "Hi.md")
         XCTAssertEqual(record.s3.object.size, 2880)
@@ -129,8 +129,8 @@ class S3Tests: XCTestCase {
 
     func testObjectRemovedEvent() {
         let data = S3Tests.eventBodyObjectRemoved.data(using: .utf8)!
-        var event: S3.Event?
-        XCTAssertNoThrow(event = try JSONDecoder().decode(S3.Event.self, from: data))
+        var event: S3Event?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(S3Event.self, from: data))
 
         guard let record = event?.records.first else {
             XCTFail("Expected to have one record")
@@ -142,13 +142,13 @@ class S3Tests: XCTestCase {
         XCTAssertEqual(record.awsRegion, .eu_central_1)
         XCTAssertEqual(record.eventName, "ObjectRemoved:DeleteMarkerCreated")
         XCTAssertEqual(record.eventTime, Date(timeIntervalSince1970: 1_578_907_540.621))
-        XCTAssertEqual(record.userIdentity, S3.UserIdentity(principalId: "AWS:AAAAAAAJ2MQ4YFQZ7AULJ"))
-        XCTAssertEqual(record.requestParameters, S3.RequestParameters(sourceIPAddress: "123.123.123.123"))
+        XCTAssertEqual(record.userIdentity, S3Event.UserIdentity(principalId: "AWS:AAAAAAAJ2MQ4YFQZ7AULJ"))
+        XCTAssertEqual(record.requestParameters, S3Event.RequestParameters(sourceIPAddress: "123.123.123.123"))
         XCTAssertEqual(record.responseElements.count, 2)
         XCTAssertEqual(record.s3.schemaVersion, "1.0")
         XCTAssertEqual(record.s3.configurationId, "98b55bc4-3c0c-4007-b727-c6b77a259dde")
         XCTAssertEqual(record.s3.bucket.name, "eventsources")
-        XCTAssertEqual(record.s3.bucket.ownerIdentity, S3.UserIdentity(principalId: "AAAAAAAAAAAAAA"))
+        XCTAssertEqual(record.s3.bucket.ownerIdentity, S3Event.UserIdentity(principalId: "AAAAAAAAAAAAAA"))
         XCTAssertEqual(record.s3.bucket.arn, "arn:aws:s3:::eventsources")
         XCTAssertEqual(record.s3.object.key, "Hi.md")
         XCTAssertNil(record.s3.object.size)

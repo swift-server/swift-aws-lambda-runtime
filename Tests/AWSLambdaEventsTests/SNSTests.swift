@@ -52,8 +52,8 @@ class SNSTests: XCTestCase {
 
     func testSimpleEventFromJSON() {
         let data = SNSTests.eventBody.data(using: .utf8)!
-        var event: SNS.Event?
-        XCTAssertNoThrow(event = try JSONDecoder().decode(SNS.Event.self, from: data))
+        var event: SNSEvent?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(SNSEvent.self, from: data))
 
         guard let record = event?.records.first else {
             XCTFail("Expected to have one record")

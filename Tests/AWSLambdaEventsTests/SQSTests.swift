@@ -61,8 +61,8 @@ class SQSTests: XCTestCase {
 
     func testSimpleEventFromJSON() {
         let data = SQSTests.eventBody.data(using: .utf8)!
-        var event: SQS.Event?
-        XCTAssertNoThrow(event = try JSONDecoder().decode(SQS.Event.self, from: data))
+        var event: SQSEvent?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(SQSEvent.self, from: data))
 
         guard let message = event?.records.first else {
             XCTFail("Expected to have one message in the event")

@@ -114,8 +114,8 @@ class DynamoDBTests: XCTestCase {
 
     func testEventFromJSON() {
         let data = DynamoDBTests.streamEventBody.data(using: .utf8)!
-        var event: DynamoDB.Event?
-        XCTAssertNoThrow(event = try JSONDecoder().decode(DynamoDB.Event.self, from: data))
+        var event: DynamoDBEvent?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(DynamoDBEvent.self, from: data))
 
         XCTAssertEqual(event?.records.count, 3)
     }
@@ -124,71 +124,71 @@ class DynamoDBTests: XCTestCase {
 
     func testAttributeValueBoolDecoding() {
         let json = "{\"BOOL\": true}"
-        var value: DynamoDB.AttributeValue?
-        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDB.AttributeValue.self, from: json.data(using: .utf8)!))
+        var value: DynamoDBEvent.AttributeValue?
+        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDBEvent.AttributeValue.self, from: json.data(using: .utf8)!))
         XCTAssertEqual(value, .boolean(true))
     }
 
     func testAttributeValueBinaryDecoding() {
         let json = "{\"B\": \"YmFzZTY0\"}"
-        var value: DynamoDB.AttributeValue?
-        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDB.AttributeValue.self, from: json.data(using: .utf8)!))
+        var value: DynamoDBEvent.AttributeValue?
+        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDBEvent.AttributeValue.self, from: json.data(using: .utf8)!))
         XCTAssertEqual(value, .binary([UInt8]("base64".utf8)))
     }
 
     func testAttributeValueBinarySetDecoding() {
         let json = "{\"BS\": [\"YmFzZTY0\", \"YWJjMTIz\"]}"
-        var value: DynamoDB.AttributeValue?
-        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDB.AttributeValue.self, from: json.data(using: .utf8)!))
+        var value: DynamoDBEvent.AttributeValue?
+        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDBEvent.AttributeValue.self, from: json.data(using: .utf8)!))
         XCTAssertEqual(value, .binarySet([[UInt8]("base64".utf8), [UInt8]("abc123".utf8)]))
     }
 
     func testAttributeValueStringDecoding() {
         let json = "{\"S\": \"huhu\"}"
-        var value: DynamoDB.AttributeValue?
-        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDB.AttributeValue.self, from: json.data(using: .utf8)!))
+        var value: DynamoDBEvent.AttributeValue?
+        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDBEvent.AttributeValue.self, from: json.data(using: .utf8)!))
         XCTAssertEqual(value, .string("huhu"))
     }
 
     func testAttributeValueStringSetDecoding() {
         let json = "{\"SS\": [\"huhu\", \"haha\"]}"
-        var value: DynamoDB.AttributeValue?
-        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDB.AttributeValue.self, from: json.data(using: .utf8)!))
+        var value: DynamoDBEvent.AttributeValue?
+        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDBEvent.AttributeValue.self, from: json.data(using: .utf8)!))
         XCTAssertEqual(value, .stringSet(["huhu", "haha"]))
     }
 
     func testAttributeValueNullDecoding() {
         let json = "{\"NULL\": true}"
-        var value: DynamoDB.AttributeValue?
-        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDB.AttributeValue.self, from: json.data(using: .utf8)!))
+        var value: DynamoDBEvent.AttributeValue?
+        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDBEvent.AttributeValue.self, from: json.data(using: .utf8)!))
         XCTAssertEqual(value, .null)
     }
 
     func testAttributeValueNumberDecoding() {
         let json = "{\"N\": \"1.2345\"}"
-        var value: DynamoDB.AttributeValue?
-        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDB.AttributeValue.self, from: json.data(using: .utf8)!))
+        var value: DynamoDBEvent.AttributeValue?
+        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDBEvent.AttributeValue.self, from: json.data(using: .utf8)!))
         XCTAssertEqual(value, .number("1.2345"))
     }
 
     func testAttributeValueNumberSetDecoding() {
         let json = "{\"NS\": [\"1.2345\", \"-19\"]}"
-        var value: DynamoDB.AttributeValue?
-        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDB.AttributeValue.self, from: json.data(using: .utf8)!))
+        var value: DynamoDBEvent.AttributeValue?
+        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDBEvent.AttributeValue.self, from: json.data(using: .utf8)!))
         XCTAssertEqual(value, .numberSet(["1.2345", "-19"]))
     }
 
     func testAttributeValueListDecoding() {
         let json = "{\"L\": [{\"NS\": [\"1.2345\", \"-19\"]}, {\"S\": \"huhu\"}]}"
-        var value: DynamoDB.AttributeValue?
-        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDB.AttributeValue.self, from: json.data(using: .utf8)!))
+        var value: DynamoDBEvent.AttributeValue?
+        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDBEvent.AttributeValue.self, from: json.data(using: .utf8)!))
         XCTAssertEqual(value, .list([.numberSet(["1.2345", "-19"]), .string("huhu")]))
     }
 
     func testAttributeValueMapDecoding() {
         let json = "{\"M\": {\"numbers\": {\"NS\": [\"1.2345\", \"-19\"]}, \"string\": {\"S\": \"huhu\"}}}"
-        var value: DynamoDB.AttributeValue?
-        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDB.AttributeValue.self, from: json.data(using: .utf8)!))
+        var value: DynamoDBEvent.AttributeValue?
+        XCTAssertNoThrow(value = try JSONDecoder().decode(DynamoDBEvent.AttributeValue.self, from: json.data(using: .utf8)!))
         XCTAssertEqual(value, .map([
             "numbers": .numberSet(["1.2345", "-19"]),
             "string": .string("huhu"),
@@ -197,7 +197,7 @@ class DynamoDBTests: XCTestCase {
 
     func testAttributeValueEmptyDecoding() {
         let json = "{\"haha\": 1}"
-        XCTAssertThrowsError(_ = try JSONDecoder().decode(DynamoDB.AttributeValue.self, from: json.data(using: .utf8)!)) { error in
+        XCTAssertThrowsError(_ = try JSONDecoder().decode(DynamoDBEvent.AttributeValue.self, from: json.data(using: .utf8)!)) { error in
             guard case DecodingError.dataCorrupted = error else {
                 XCTFail("Unexpected error: \(String(describing: error))")
                 return
@@ -206,15 +206,15 @@ class DynamoDBTests: XCTestCase {
     }
 
     func testAttributeValueEquatable() {
-        XCTAssertEqual(DynamoDB.AttributeValue.boolean(true), .boolean(true))
-        XCTAssertNotEqual(DynamoDB.AttributeValue.boolean(true), .boolean(false))
-        XCTAssertNotEqual(DynamoDB.AttributeValue.boolean(true), .string("haha"))
+        XCTAssertEqual(DynamoDBEvent.AttributeValue.boolean(true), .boolean(true))
+        XCTAssertNotEqual(DynamoDBEvent.AttributeValue.boolean(true), .boolean(false))
+        XCTAssertNotEqual(DynamoDBEvent.AttributeValue.boolean(true), .string("haha"))
     }
 
     // MARK: - DynamoDB Decoder Tests -
 
     func testDecoderSimple() {
-        let value: [String: DynamoDB.AttributeValue] = [
+        let value: [String: DynamoDBEvent.AttributeValue] = [
             "foo": .string("bar"),
             "xyz": .number("123"),
         ]
@@ -225,7 +225,7 @@ class DynamoDBTests: XCTestCase {
         }
 
         var test: Test?
-        XCTAssertNoThrow(test = try DynamoDB.Decoder().decode(Test.self, from: value))
+        XCTAssertNoThrow(test = try DynamoDBEvent.Decoder().decode(Test.self, from: value))
         XCTAssertEqual(test?.foo, "bar")
         XCTAssertEqual(test?.xyz, 123)
     }

@@ -16,27 +16,25 @@ import struct Foundation.Date
 
 // https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html
 
-public enum S3 {
-    public struct Event: Decodable {
-        public struct Record: Decodable {
-            public let eventVersion: String
-            public let eventSource: String
-            public let awsRegion: AWSRegion
+public struct S3Event: Decodable {
+    public struct Record: Decodable {
+        public let eventVersion: String
+        public let eventSource: String
+        public let awsRegion: AWSRegion
 
-            @ISO8601WithFractionalSecondsCoding
-            public var eventTime: Date
-            public let eventName: String
-            public let userIdentity: UserIdentity
-            public let requestParameters: RequestParameters
-            public let responseElements: [String: String]
-            public let s3: Entity
-        }
+        @ISO8601WithFractionalSecondsCoding
+        public var eventTime: Date
+        public let eventName: String
+        public let userIdentity: UserIdentity
+        public let requestParameters: RequestParameters
+        public let responseElements: [String: String]
+        public let s3: Entity
+    }
 
-        public let records: [Record]
+    public let records: [Record]
 
-        public enum CodingKeys: String, CodingKey {
-            case records = "Records"
-        }
+    public enum CodingKeys: String, CodingKey {
+        case records = "Records"
     }
 
     public struct RequestParameters: Codable, Equatable {

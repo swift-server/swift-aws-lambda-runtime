@@ -97,8 +97,8 @@ class AppSyncTests: XCTestCase {
 
     func testRequestDecodingExampleEvent() {
         let data = AppSyncTests.exampleEventBody.data(using: .utf8)!
-        var event: AppSync.Event?
-        XCTAssertNoThrow(event = try JSONDecoder().decode(AppSync.Event.self, from: data))
+        var event: AppSyncEvent?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(AppSyncEvent.self, from: data))
 
         XCTAssertNotNil(event?.arguments)
         XCTAssertEqual(event?.arguments["id"], .string("my identifier"))
@@ -171,8 +171,8 @@ class AppSyncTests: XCTestCase {
         """
 
         let data = eventBody.data(using: .utf8)!
-        var event: AppSync.Event?
-        XCTAssertNoThrow(event = try JSONDecoder().decode(AppSync.Event.self, from: data))
+        var event: AppSyncEvent?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(AppSyncEvent.self, from: data))
         XCTAssertEqual(event?.source?["name"], "Hello")
         XCTAssertTrue(event?.stash?.isEmpty ?? false, "stash dictionary must be empty")
         XCTAssertNil(event?.identity)
@@ -239,8 +239,8 @@ class AppSyncTests: XCTestCase {
         """
 
         let data = eventBody.data(using: .utf8)!
-        var event: AppSync.Event?
-        XCTAssertNoThrow(event = try JSONDecoder().decode(AppSync.Event.self, from: data))
+        var event: AppSyncEvent?
+        XCTAssertNoThrow(event = try JSONDecoder().decode(AppSyncEvent.self, from: data))
         switch event?.identity {
         case .iam(let iamIdentity):
             XCTAssertEqual(iamIdentity.accountId, "accountId1")
@@ -257,7 +257,7 @@ class AppSyncTests: XCTestCase {
     }
 }
 
-extension AppSync.Event.ArgumentValue: Equatable {
+extension AppSyncEvent.ArgumentValue: Equatable {
     public static func == (lhs: Self, rhs: Self) -> Bool {
         switch (lhs, rhs) {
         case (.string(let lhsString), .string(let rhsString)):

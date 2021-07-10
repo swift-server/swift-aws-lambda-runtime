@@ -78,8 +78,8 @@ class APIGatewayV2Tests: XCTestCase {
 
     func testRequestDecodingExampleGetRequest() {
         let data = APIGatewayV2Tests.exampleGetEventBody.data(using: .utf8)!
-        var req: APIGateway.V2.Request?
-        XCTAssertNoThrow(req = try JSONDecoder().decode(APIGateway.V2.Request.self, from: data))
+        var req: APIGatewayV2Request?
+        XCTAssertNoThrow(req = try JSONDecoder().decode(APIGatewayV2Request.self, from: data))
 
         XCTAssertEqual(req?.rawPath, "/hello")
         XCTAssertEqual(req?.context.http.method, .GET)

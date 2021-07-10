@@ -34,10 +34,10 @@ class CloudwatchTests: XCTestCase {
     }
 
     func testScheduledEventFromJSON() {
-        let eventBody = CloudwatchTests.eventBody(type: Cloudwatch.Scheduled.name, details: "{}")
+        let eventBody = CloudwatchTests.eventBody(type: CloudwatchDetails.Scheduled.name, details: "{}")
         let data = eventBody.data(using: .utf8)!
-        var maybeEvent: Cloudwatch.ScheduledEvent?
-        XCTAssertNoThrow(maybeEvent = try JSONDecoder().decode(Cloudwatch.ScheduledEvent.self, from: data))
+        var maybeEvent: CloudwatchScheduledEvent?
+        XCTAssertNoThrow(maybeEvent = try JSONDecoder().decode(CloudwatchScheduledEvent.self, from: data))
 
         guard let event = maybeEvent else {
             return XCTFail("Expected to have an event")
@@ -52,11 +52,11 @@ class CloudwatchTests: XCTestCase {
     }
 
     func testEC2InstanceStateChangeNotificationEventFromJSON() {
-        let eventBody = CloudwatchTests.eventBody(type: Cloudwatch.EC2.InstanceStateChangeNotification.name,
+        let eventBody = CloudwatchTests.eventBody(type: CloudwatchDetails.EC2.InstanceStateChangeNotification.name,
                                                   details: "{ \"instance-id\": \"0\", \"state\": \"stopping\" }")
         let data = eventBody.data(using: .utf8)!
-        var maybeEvent: Cloudwatch.EC2.InstanceStateChangeNotificationEvent?
-        XCTAssertNoThrow(maybeEvent = try JSONDecoder().decode(Cloudwatch.EC2.InstanceStateChangeNotificationEvent.self, from: data))
+        var maybeEvent: CloudwatchEC2InstanceStateChangeNotificationEvent?
+        XCTAssertNoThrow(maybeEvent = try JSONDecoder().decode(CloudwatchEC2InstanceStateChangeNotificationEvent.self, from: data))
 
         guard let event = maybeEvent else {
             return XCTFail("Expected to have an event")
@@ -73,11 +73,11 @@ class CloudwatchTests: XCTestCase {
     }
 
     func testEC2SpotInstanceInterruptionNoticeEventFromJSON() {
-        let eventBody = CloudwatchTests.eventBody(type: Cloudwatch.EC2.SpotInstanceInterruptionNotice.name,
+        let eventBody = CloudwatchTests.eventBody(type: CloudwatchDetails.EC2.SpotInstanceInterruptionNotice.name,
                                                   details: "{ \"instance-id\": \"0\", \"instance-action\": \"terminate\" }")
         let data = eventBody.data(using: .utf8)!
-        var maybeEvent: Cloudwatch.EC2.SpotInstanceInterruptionNoticeEvent?
-        XCTAssertNoThrow(maybeEvent = try JSONDecoder().decode(Cloudwatch.EC2.SpotInstanceInterruptionNoticeEvent.self, from: data))
+        var maybeEvent: CloudwatchEC2SpotInstanceInterruptionNoticeEvent?
+        XCTAssertNoThrow(maybeEvent = try JSONDecoder().decode(CloudwatchEC2SpotInstanceInterruptionNoticeEvent.self, from: data))
 
         guard let event = maybeEvent else {
             return XCTFail("Expected to have an event")
@@ -102,8 +102,8 @@ class CloudwatchTests: XCTestCase {
 
         let eventBody = CloudwatchTests.eventBody(type: Custom.name, details: "{ \"name\": \"foo\" }")
         let data = eventBody.data(using: .utf8)!
-        var maybeEvent: Cloudwatch.Event<Custom>?
-        XCTAssertNoThrow(maybeEvent = try JSONDecoder().decode(Cloudwatch.Event<Custom>.self, from: data))
+        var maybeEvent: CloudwatchEvent<Custom>?
+        XCTAssertNoThrow(maybeEvent = try JSONDecoder().decode(CloudwatchEvent<Custom>.self, from: data))
 
         guard let event = maybeEvent else {
             return XCTFail("Expected to have an event")
@@ -121,17 +121,17 @@ class CloudwatchTests: XCTestCase {
     func testUnregistredType() {
         let eventBody = CloudwatchTests.eventBody(type: UUID().uuidString, details: "{}")
         let data = eventBody.data(using: .utf8)!
-        XCTAssertThrowsError(try JSONDecoder().decode(Cloudwatch.ScheduledEvent.self, from: data)) { error in
-            XCTAssert(error is Cloudwatch.DetailTypeMismatch, "expected DetailTypeMismatch but received \(error)")
+        XCTAssertThrowsError(try JSONDecoder().decode(CloudwatchScheduledEvent.self, from: data)) { error in
+            XCTAssert(error is CloudwatchDetails.TypeMismatch, "expected DetailTypeMismatch but received \(error)")
         }
     }
 
     func testTypeMismatch() {
-        let eventBody = CloudwatchTests.eventBody(type: Cloudwatch.EC2.InstanceStateChangeNotification.name,
+        let eventBody = CloudwatchTests.eventBody(type: CloudwatchDetails.EC2.InstanceStateChangeNotification.name,
                                                   details: "{ \"instance-id\": \"0\", \"state\": \"stopping\" }")
         let data = eventBody.data(using: .utf8)!
-        XCTAssertThrowsError(try JSONDecoder().decode(Cloudwatch.ScheduledEvent.self, from: data)) { error in
-            XCTAssert(error is Cloudwatch.DetailTypeMismatch, "expected DetailTypeMismatch but received \(error)")
+        XCTAssertThrowsError(try JSONDecoder().decode(CloudwatchScheduledEvent.self, from: data)) { error in
+            XCTAssert(error is CloudwatchDetails.TypeMismatch, "expected DetailTypeMismatch but received \(error)")
         }
     }
 }

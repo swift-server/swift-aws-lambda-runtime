@@ -49,7 +49,7 @@ class ALBTests: XCTestCase {
         do {
             let decoder = JSONDecoder()
 
-            let event = try decoder.decode(ALB.TargetGroupRequest.self, from: data)
+            let event = try decoder.decode(ALBTargetGroupRequest.self, from: data)
 
             XCTAssertEqual(event.httpMethod, .GET)
             XCTAssertEqual(event.body, "")

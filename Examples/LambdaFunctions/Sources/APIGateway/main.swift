@@ -24,11 +24,11 @@ Lambda.run(APIGatewayProxyLambda())
 
 // FIXME: Use proper Event abstractions once added to AWSLambdaRuntime
 struct APIGatewayProxyLambda: EventLoopLambdaHandler {
-    public typealias In = APIGateway.V2.Request
-    public typealias Out = APIGateway.V2.Response
+    typealias In = APIGatewayV2Request
+    typealias Out = APIGatewayV2Response
 
-    public func handle(context: Lambda.Context, event: APIGateway.V2.Request) -> EventLoopFuture<APIGateway.V2.Response> {
+    func handle(context: Lambda.Context, event: APIGatewayV2Request) -> EventLoopFuture<APIGatewayV2Response> {
         context.logger.debug("hello, api gateway!")
-        return context.eventLoop.makeSucceededFuture(APIGateway.V2.Response(statusCode: .ok, body: "hello, world!"))
+        return context.eventLoop.makeSucceededFuture(APIGatewayV2Response(statusCode: .ok, body: "hello, world!"))
     }
 }
