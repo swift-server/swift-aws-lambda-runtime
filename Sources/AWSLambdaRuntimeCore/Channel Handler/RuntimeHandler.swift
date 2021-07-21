@@ -113,10 +113,12 @@ final class RuntimeHandler: ChannelDuplexHandler {
             }
 
             context.connect(to: address, promise: promise)
+            
         case .reportStartupSuccessToChannel:
             context.fireUserInboundEventTriggered(RuntimeEvent.startupCompleted)
             let action = self.state.startupSuccessToChannelReported()
             self.run(action: action, context: context)
+            
         case .reportStartupFailureToChannel(let error):
             context.fireErrorCaught(error)
             let action = self.state.startupFailureToChannelReported()
@@ -124,6 +126,7 @@ final class RuntimeHandler: ChannelDuplexHandler {
 
         case .getNextInvocation:
             context.writeAndFlush(wrapOutboundOut(.next), promise: nil)
+            
         case .invokeHandler(let handler, let invocation, let bytes, let invocationCount):
             let lambdaContext = Lambda.Context(
                 logger: self.logger,
@@ -136,21 +139,26 @@ final class RuntimeHandler: ChannelDuplexHandler {
                 let action = self.state.invocationCompleted($0)
                 self.run(action: action, context: context)
             }
+            
         case .reportInvocationResult(requestID: let requestID, let result):
             switch result {
             case .success(let buffer):
                 context.writeAndFlush(wrapOutboundOut(.invocationResponse(requestID, buffer)), promise: nil)
             case .failure(let error):
-                let response = ErrorResponse(errorType: "Unhandeled Error", errorMessage: "\(error)")
+                let response = ErrorResponse(errorType: "Unhandled Error", errorMessage: "\(error)")
                 context.writeAndFlush(wrapOutboundOut(.invocationError(requestID, response)), promise: nil)
             }
+            
         case .reportInitializationError(let error):
-            let response = ErrorResponse(errorType: "Unhandeled Error", errorMessage: "\(error)")
+            let response = ErrorResponse(errorType: "Unhandled Error", errorMessage: "\(error)")
             context.writeAndFlush(wrapOutboundOut(.initializationError(response)), promise: nil)
+            
         case .closeConnection:
             context.close(mode: .all, promise: nil)
+            
         case .fireChannelInactive:
             context.fireChannelInactive()
+            
         case .wait:
             break
         }
@@ -170,7 +178,7 @@ extension RuntimeHandler {
             case starting(handler: Result<ByteBufferLambdaHandler, Error>?, connected: Bool)
             case started(handler: ByteBufferLambdaHandler)
             case running(ByteBufferLambdaHandler, state: InvocationState)
-            case shuttingdown
+            case shuttingDown
             case reportingInitializationError(Error)
             case reportingInitializationErrorToChannel(Error)
             case shutdown
@@ -271,7 +279,7 @@ extension RuntimeHandler {
                 preconditionFailure()
             }
 
-            self.state = .shuttingdown
+            self.state = .shuttingDown
             return .closeConnection
         }
 
@@ -287,7 +295,7 @@ extension RuntimeHandler {
 
         mutating func invocationCompleted(_ result: Result<ByteBuffer?, Error>) -> Action {
             guard case .running(let handler, .runningHandler(let requestID)) = self.state else {
-                preconditionFailure()
+                preconditionFailure("Invalid state: \(self.state)")
             }
 
             self.state = .running(handler, state: .reportingResult)
@@ -297,23 +305,33 @@ extension RuntimeHandler {
         mutating func acceptedReceived() -> Action {
             switch self.state {
             case .running(_, state: .reportingResult) where self.markShutdown == true || (self.maxTimes > 0 && self.invocationCount == self.maxTimes):
-                self.state = .shuttingdown
+                self.state = .shuttingDown
                 return .closeConnection
+                
             case .running(let handler, state: .reportingResult):
                 self.state = .running(handler, state: .waitingForNextInvocation)
                 return .getNextInvocation
+                
             case .reportingInitializationError(let error):
                 self.state = .reportingInitializationErrorToChannel(error)
                 return .reportStartupFailureToChannel(error)
-            default:
-                preconditionFailure()
+            
+            case .initialized,
+                 .starting,
+                 .started,
+                 .reportingInitializationErrorToChannel,
+                 .running(_, state: .waitingForNextInvocation),
+                 .running(_, state: .runningHandler),
+                 .shuttingDown,
+                 .shutdown:
+                preconditionFailure("Invalid state: \(self.state)")
             }
         }
 
         mutating func close() -> Action {
             switch self.state {
             case .running(_, state: .waitingForNextInvocation):
-                self.state = .shuttingdown
+                self.state = .shuttingDown
                 return .closeConnection
             case .running(_, state: _):
                 self.markShutdown = true
@@ -325,11 +343,11 @@ extension RuntimeHandler {
 
         mutating func channelInactive() -> Action {
             switch self.state {
-            case .shuttingdown:
+            case .shuttingDown:
                 self.state = .shutdown
                 return .fireChannelInactive
             case .initialized, .shutdown, .starting(_, connected: false):
-                preconditionFailure("Invalid state")
+                preconditionFailure("Invalid state: \(self.state)")
             case .starting(_, connected: true):
                 preconditionFailure("Todo: Unexpected connection closure during startup")
             case .started:

@@ -22,7 +22,7 @@ extension Lambda {
             case initialized(factory: (InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>)
             case starting
             case running(Channel)
-            case shuttingdown
+            case shuttingDown
             case shutdown
         }
 
@@ -134,7 +134,7 @@ extension Lambda {
                 preconditionFailure()
             }
 
-            self.state = .shuttingdown
+            self.state = .shuttingDown
 
             return channel.close(mode: .all)
         }
