@@ -78,32 +78,36 @@ internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
     }
 }
 
+// MARK: - Codable support
+
 /// Implementation of  a`ByteBuffer` to `In` decoding
-public extension EventLoopLambdaHandler where In: Decodable {
-    func decode(buffer: ByteBuffer) throws -> In {
+extension EventLoopLambdaHandler where In: Decodable {
+    @inlinable
+    public func decode(buffer: ByteBuffer) throws -> In {
         try self.decoder.decode(In.self, from: buffer)
     }
 }
 
 /// Implementation of  `Out` to `ByteBuffer` encoding
-public extension EventLoopLambdaHandler where Out: Encodable {
-    func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer? {
+extension EventLoopLambdaHandler where Out: Encodable {
+    @inlinable
+    public func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer? {
         try self.encoder.encode(value, using: allocator)
     }
 }
 
 /// Default `ByteBuffer` to `In` decoder using Foundation's JSONDecoder
 /// Advanced users that want to inject their own codec can do it by overriding these functions.
-public extension EventLoopLambdaHandler where In: Decodable {
-    var decoder: LambdaCodableDecoder {
+extension EventLoopLambdaHandler where In: Decodable {
+    public var decoder: LambdaCodableDecoder {
         Lambda.defaultJSONDecoder
     }
 }
 
 /// Default `Out` to `ByteBuffer` encoder using Foundation's JSONEncoder
 /// Advanced users that want to inject their own codec can do it by overriding these functions.
-public extension EventLoopLambdaHandler where Out: Encodable {
-    var encoder: LambdaCodableEncoder {
+extension EventLoopLambdaHandler where Out: Encodable {
+    public var encoder: LambdaCodableEncoder {
         Lambda.defaultJSONEncoder
     }
 }
@@ -116,9 +120,9 @@ public protocol LambdaCodableEncoder {
     func encode<T: Encodable>(_ value: T, using allocator: ByteBufferAllocator) throws -> ByteBuffer
 }
 
-private extension Lambda {
-    static let defaultJSONDecoder = JSONDecoder()
-    static let defaultJSONEncoder = JSONEncoder()
+extension Lambda {
+    fileprivate static let defaultJSONDecoder = JSONDecoder()
+    fileprivate static let defaultJSONEncoder = JSONEncoder()
 }
 
 extension JSONDecoder: LambdaCodableDecoder {}

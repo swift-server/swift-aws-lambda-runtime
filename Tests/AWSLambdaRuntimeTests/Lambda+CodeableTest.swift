@@ -53,7 +53,7 @@ class CodableLambdaTest: XCTestCase {
         var response: Response?
 
         let closureWrapper = CodableClosureWrapper { (_, req: Request, completion: (Result<Response, Error>) -> Void) in
-            XCTAssertEqual(request, request)
+            XCTAssertEqual(request, req)
             completion(.success(Response(requestId: req.requestId)))
         }
 

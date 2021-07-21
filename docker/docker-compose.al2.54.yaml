@@ -6,7 +6,7 @@ services:
     image: swift-aws-lambda:al2-5.4
     build:
       args:
-        base_image: "swiftlang/swift:nightly-5.4-amazonlinux2"
+        swift_version: "5.4"
 
   test:
     image: swift-aws-lambda:al2-5.4

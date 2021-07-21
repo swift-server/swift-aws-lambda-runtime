@@ -39,20 +39,22 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
     func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void)
 }
 
-internal extension Lambda {
-    static let defaultOffloadQueue = DispatchQueue(label: "LambdaHandler.offload")
+extension Lambda {
+    @usableFromInline
+    internal static let defaultOffloadQueue = DispatchQueue(label: "LambdaHandler.offload")
 }
 
-public extension LambdaHandler {
+extension LambdaHandler {
     /// The queue on which `handle` is invoked on.
-    var offloadQueue: DispatchQueue {
+    public var offloadQueue: DispatchQueue {
         Lambda.defaultOffloadQueue
     }
 
     /// `LambdaHandler` is offloading the processing to a `DispatchQueue`
     /// This is slower but safer, in case the implementation blocks the `EventLoop`
     /// Performance sensitive Lambdas should be based on `EventLoopLambdaHandler` which does not offload.
-    func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
+    @inlinable
+    public func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
         let promise = context.eventLoop.makePromise(of: Out.self)
         // FIXME: reusable DispatchQueue
         self.offloadQueue.async {
@@ -62,8 +64,8 @@ public extension LambdaHandler {
     }
 }
 
-public extension LambdaHandler {
-    func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
+extension LambdaHandler {
+    public func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
         let promise = context.eventLoop.makePromise(of: Void.self)
         self.offloadQueue.async {
             do {
@@ -78,10 +80,60 @@ public extension LambdaHandler {
 
     /// Clean up the Lambda resources synchronously.
     /// Concrete Lambda handlers implement this method to shutdown resources like `HTTPClient`s and database connections.
-    func syncShutdown(context: Lambda.ShutdownContext) throws {
+    public func syncShutdown(context: Lambda.ShutdownContext) throws {
         // noop
     }
 }
+
+// MARK: - AsyncLambdaHandler
+
+#if compiler(>=5.5)
+/// Strongly typed, processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` async.
+@available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+public protocol AsyncLambdaHandler: EventLoopLambdaHandler {
+    /// The Lambda initialization method
+    /// Use this method to initialize resources that will be used in every request.
+    ///
+    /// Examples for this can be HTTP or database clients.
+    /// - parameters:
+    ///     - context: Runtime `InitializationContext`.
+    init(context: Lambda.InitializationContext) async throws
+
+    /// The Lambda handling method
+    /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
+    ///
+    /// - parameters:
+    ///     - event: Event of type `In` representing the event or request.
+    ///     - context: Runtime `Context`.
+    ///
+    /// - Returns: A Lambda result ot type `Out`.
+    func handle(event: In, context: Lambda.Context) async throws -> Out
+}
+
+@available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+extension AsyncLambdaHandler {
+    public func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
+        let promise = context.eventLoop.makePromise(of: Out.self)
+        promise.completeWithAsync {
+            try await self.handle(event: event, context: context)
+        }
+        return promise.futureResult
+    }
+}
+
+@available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+extension AsyncLambdaHandler {
+    public static func main() {
+        Lambda.run { context -> EventLoopFuture<ByteBufferLambdaHandler> in
+            let promise = context.eventLoop.makePromise(of: ByteBufferLambdaHandler.self)
+            promise.completeWithAsync {
+                try await Self(context: context)
+            }
+            return promise.futureResult
+        }
+    }
+}
+#endif
 
 // MARK: - EventLoopLambdaHandler
 
@@ -126,44 +178,31 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
     func decode(buffer: ByteBuffer) throws -> In
 }
 
-public extension EventLoopLambdaHandler {
+extension EventLoopLambdaHandler {
     /// Driver for `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding
-    func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
-        switch self.decodeIn(buffer: event) {
-        case .failure(let error):
+    @inlinable
+    public func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?> {
+        let input: In
+        do {
+            input = try self.decode(buffer: event)
+        } catch {
             return context.eventLoop.makeFailedFuture(CodecError.requestDecoding(error))
-        case .success(let `in`):
-            return self.handle(context: context, event: `in`).flatMapThrowing { out in
-                switch self.encodeOut(allocator: context.allocator, value: out) {
-                case .failure(let error):
-                    throw CodecError.responseEncoding(error)
-                case .success(let buffer):
-                    return buffer
-                }
+        }
+
+        return self.handle(context: context, event: input).flatMapThrowing { output in
+            do {
+                return try self.encode(allocator: context.allocator, value: output)
+            } catch {
+                throw CodecError.responseEncoding(error)
             }
-        }
-    }
-
-    private func decodeIn(buffer: ByteBuffer) -> Result<In, Error> {
-        do {
-            return .success(try self.decode(buffer: buffer))
-        } catch {
-            return .failure(error)
-        }
-    }
-
-    private func encodeOut(allocator: ByteBufferAllocator, value: Out) -> Result<ByteBuffer?, Error> {
-        do {
-            return .success(try self.encode(allocator: allocator, value: value))
-        } catch {
-            return .failure(error)
         }
     }
 }
 
 /// Implementation of  `ByteBuffer` to `Void` decoding
-public extension EventLoopLambdaHandler where Out == Void {
-    func encode(allocator: ByteBufferAllocator, value: Void) throws -> ByteBuffer? {
+extension EventLoopLambdaHandler where Out == Void {
+    @inlinable
+    public func encode(allocator: ByteBufferAllocator, value: Void) throws -> ByteBuffer? {
         nil
     }
 }
@@ -194,13 +233,14 @@ public protocol ByteBufferLambdaHandler {
     func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void>
 }
 
-public extension ByteBufferLambdaHandler {
-    func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
+extension ByteBufferLambdaHandler {
+    public func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
         context.eventLoop.makeSucceededFuture(())
     }
 }
 
-private enum CodecError: Error {
+@usableFromInline
+enum CodecError: Error {
     case requestDecoding(Error)
     case responseEncoding(Error)
 }

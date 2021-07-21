@@ -74,9 +74,9 @@ class SNSTests: XCTestCase {
         XCTAssertEqual(record.sns.signingCertURL, "https://sns.eu-central-1.amazonaws.com/SimpleNotificationService-6aad65c2f9911b05cd53efda11f913f9.pem")
         XCTAssertEqual(record.sns.unsubscribeUrl, "https://sns.eu-central-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:eu-central-1:079477498937:EventSources-SNSTopic-1NHENSE2MQKF5:6fabdb7f-b27e-456d-8e8a-14679db9e40c")
 
-        XCTAssertEqual(record.sns.messageAttributes.count, 2)
+        XCTAssertEqual(record.sns.messageAttributes?.count, 2)
 
-        XCTAssertEqual(record.sns.messageAttributes["binary"], .binary([UInt8]("base64".utf8)))
-        XCTAssertEqual(record.sns.messageAttributes["string"], .string("abc123"))
+        XCTAssertEqual(record.sns.messageAttributes?["binary"], .binary([UInt8]("base64".utf8)))
+        XCTAssertEqual(record.sns.messageAttributes?["string"], .string("abc123"))
     }
 }

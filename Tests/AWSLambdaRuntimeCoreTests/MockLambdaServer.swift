@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -30,7 +30,7 @@ internal final class MockLambdaServer {
     private var shutdown = false
 
     public init(behavior: LambdaServerBehavior, host: String = "127.0.0.1", port: Int = 7000, keepAlive: Bool = true) {
-        self.group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         self.behavior = behavior
         self.host = host
         self.port = port
@@ -162,8 +162,8 @@ internal final class HTTPHandler: ChannelInboundHandler {
             }
         } else if request.head.uri.hasSuffix(Consts.postErrorURLSuffix) {
             guard let requestId = request.head.uri.split(separator: "/").dropFirst(3).first,
-                let json = requestBody,
-                let error = ErrorResponse.fromJson(json)
+                  let json = requestBody,
+                  let error = ErrorResponse.fromJson(json)
             else {
                 return self.writeResponse(context: context, status: .badRequest)
             }
@@ -245,8 +245,8 @@ internal enum ServerError: Error {
     case cantBind
 }
 
-private extension ErrorResponse {
-    static func fromJson(_ s: String) -> ErrorResponse? {
+extension ErrorResponse {
+    fileprivate static func fromJson(_ s: String) -> ErrorResponse? {
         let decoder = JSONDecoder()
         do {
             if let data = s.data(using: .utf8) {
