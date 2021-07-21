@@ -79,9 +79,7 @@ extension Lambda {
                     try channel.pipeline.syncOperations.addHandler(
                         NIOHTTPClientResponseAggregator(maxContentLength: 6 * 1024 * 1024))
                     try channel.pipeline.syncOperations.addHandler(
-                        RuntimeAPIHandler(configuration: self.configuration.runtimeEngine, logger: self.logger))
-                    try channel.pipeline.syncOperations.addHandler(
-                        RuntimeHandler(maxTimes: self.configuration.lifecycle.maxTimes, logger: self.logger, factory: factory))
+                        RuntimeHandler(configuration: self.configuration, logger: self.logger, factory: factory))
                     try channel.pipeline.syncOperations.addHandler(
                         RuntimeEventHandler())
 

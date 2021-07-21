@@ -14,11 +14,12 @@
 
 import Logging
 import NIO
+import NIOHTTP1
 
 final class RuntimeHandler: ChannelDuplexHandler {
-    typealias InboundIn = RuntimeAPIResponse
+    typealias InboundIn = NIOHTTPClientResponseFull
     typealias OutboundIn = Never
-    typealias OutboundOut = RuntimeAPIRequest
+    typealias OutboundOut = HTTPClientRequestPart
 
     var state: StateMachine {
         didSet {
@@ -29,18 +30,30 @@ final class RuntimeHandler: ChannelDuplexHandler {
     }
 
     let logger: Logger
+    let headers: HTTPHeaders
 
-    init(maxTimes: Int, logger: Logger, factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>) {
+    init(
+        configuration: Lambda.Configuration,
+        logger: Logger,
+        factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>
+    ) {
         self.logger = logger
+        let maxTimes = configuration.lifecycle.maxTimes
         self.state = StateMachine(maxTimes: maxTimes, factory: factory)
-    }
+        
+        let host: String
+        switch configuration.runtimeEngine.port {
+        case 80:
+            host = configuration.runtimeEngine.ip
+        default:
+            host = "\(configuration.runtimeEngine.ip):\(configuration.runtimeEngine.port)"
+        }
 
-    #if DEBUG
-    init(state: StateMachine, logger: Logger) {
-        self.state = state
-        self.logger = logger
+        self.headers = HTTPHeaders([
+            ("host", "\(host)"),
+            ("user-agent", "Swift-Lambda/Unknown"),
+        ])
     }
-    #endif
 
     func handlerAdded(context: ChannelHandlerContext) {
         precondition(!context.channel.isActive, "Channel must not be active when adding handler")
@@ -63,23 +76,6 @@ final class RuntimeHandler: ChannelDuplexHandler {
         
         let action = self.state.channelInactive()
         self.run(action: action, context: context)
-    }
-
-    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let response = unwrapInboundIn(data)
-        self.logger.trace("Channel read", metadata: ["message": "\(response)"])
-        
-        switch response {
-        case .accepted:
-            let action = self.state.acceptedReceived()
-            self.run(action: action, context: context)
-        case .error(let errorResponse):
-            let action = self.state.errorMessageReceived(errorResponse)
-            self.run(action: action, context: context)
-        case .next(let invocation, let buffer):
-            let action = self.state.nextInvocationReceived(invocation, buffer)
-            self.run(action: action, context: context)
-        }
     }
 
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
@@ -125,7 +121,7 @@ final class RuntimeHandler: ChannelDuplexHandler {
             self.run(action: action, context: context)
 
         case .getNextInvocation:
-            context.writeAndFlush(wrapOutboundOut(.next), promise: nil)
+            self.writeRequest(.next, context: context)
             
         case .invokeHandler(let handler, let invocation, let bytes, let invocationCount):
             let lambdaContext = Lambda.Context(
@@ -143,15 +139,16 @@ final class RuntimeHandler: ChannelDuplexHandler {
         case .reportInvocationResult(requestID: let requestID, let result):
             switch result {
             case .success(let buffer):
-                context.writeAndFlush(wrapOutboundOut(.invocationResponse(requestID, buffer)), promise: nil)
+                self.writeRequest(.invocationResponse(requestID, buffer), context: context)
+                
             case .failure(let error):
                 let response = ErrorResponse(errorType: "Unhandled Error", errorMessage: "\(error)")
-                context.writeAndFlush(wrapOutboundOut(.invocationError(requestID, response)), promise: nil)
+                self.writeRequest(.invocationError(requestID, response), context: context)
             }
             
         case .reportInitializationError(let error):
             let response = ErrorResponse(errorType: "Unhandled Error", errorMessage: "\(error)")
-            context.writeAndFlush(wrapOutboundOut(.initializationError(response)), promise: nil)
+            self.writeRequest(.initializationError(response), context: context)
             
         case .closeConnection:
             context.close(mode: .all, promise: nil)
@@ -161,6 +158,138 @@ final class RuntimeHandler: ChannelDuplexHandler {
             
         case .wait:
             break
+        }
+    }
+    
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        let httpResponse = unwrapInboundIn(data)
+
+        switch httpResponse.head.status {
+        case .ok:
+            let headers = httpResponse.head.headers
+            guard let requestID = headers.first(name: AmazonHeaders.requestID), !requestID.isEmpty else {
+                return context.fireErrorCaught(Lambda.RuntimeError.invocationMissingHeader(AmazonHeaders.requestID))
+            }
+
+            guard let deadline = headers.first(name: AmazonHeaders.deadline),
+                  let unixTimeInMilliseconds = Int64(deadline)
+            else {
+                return context.fireErrorCaught(Lambda.RuntimeError.invocationMissingHeader(AmazonHeaders.deadline))
+            }
+
+            guard let invokedFunctionARN = headers.first(name: AmazonHeaders.invokedFunctionARN) else {
+                return context.fireErrorCaught(Lambda.RuntimeError.invocationMissingHeader(AmazonHeaders.invokedFunctionARN))
+            }
+
+            guard let traceID = headers.first(name: AmazonHeaders.traceID) else {
+                return context.fireErrorCaught(Lambda.RuntimeError.invocationMissingHeader(AmazonHeaders.traceID))
+            }
+
+            let invocation = Invocation(
+                requestID: requestID,
+                deadlineInMillisSinceEpoch: unixTimeInMilliseconds,
+                invokedFunctionARN: invokedFunctionARN,
+                traceID: traceID,
+                clientContext: headers.first(name: AmazonHeaders.clientContext),
+                cognitoIdentity: headers.first(name: AmazonHeaders.cognitoIdentity)
+            )
+
+            guard let event = httpResponse.body else {
+                return context.fireErrorCaught(Lambda.RuntimeError.noBody)
+            }
+            self.readResponse(.next(invocation, event), context: context)
+            
+        case .accepted:
+            self.readResponse(.accepted, context: context)
+
+        case .badRequest, .forbidden, .payloadTooLarge:
+            self.logger.trace("Unexpected http message", metadata: ["http_message": "\(httpResponse)"])
+            self.readResponse(.error(.init(errorType: "", errorMessage: "")), context: context)
+
+        default:
+            self.logger.trace("Unexpected http message", metadata: ["http_message": "\(httpResponse)"])
+            context.fireErrorCaught(Lambda.RuntimeError.badStatusCode(httpResponse.head.status))
+        }
+    }
+    
+    func readResponse(_ response: APIResponse, context: ChannelHandlerContext) {
+        self.logger.trace("Channel read", metadata: ["message": "\(response)"])
+        
+        switch response {
+        case .accepted:
+            let action = self.state.acceptedReceived()
+            self.run(action: action, context: context)
+        case .error(let errorResponse):
+            let action = self.state.errorMessageReceived(errorResponse)
+            self.run(action: action, context: context)
+        case .next(let invocation, let buffer):
+            let action = self.state.nextInvocationReceived(invocation, buffer)
+            self.run(action: action, context: context)
+        }
+    }
+
+    func writeRequest(_ request: APIRequest, context: ChannelHandlerContext) {
+        switch request {
+        case .next:
+            let head = HTTPRequestHead(
+                version: .http1_1,
+                method: .GET,
+                uri: "/2018-06-01/runtime/invocation/next",
+                headers: self.headers
+            )
+            context.write(wrapOutboundOut(.head(head)), promise: nil)
+            context.write(wrapOutboundOut(.end(nil)), promise: nil)
+            context.flush()
+
+        case .invocationResponse(let requestID, let payload):
+            var headers = self.headers
+            headers.add(name: "content-length", value: "\(payload?.readableBytes ?? 0)")
+            let head = HTTPRequestHead(
+                version: .http1_1,
+                method: .POST,
+                uri: "/2018-06-01/runtime/invocation/\(requestID)/response",
+                headers: headers
+            )
+            context.write(wrapOutboundOut(.head(head)), promise: nil)
+            if let payload = payload {
+                context.write(wrapOutboundOut(.body(.byteBuffer(payload))), promise: nil)
+            }
+            context.write(wrapOutboundOut(.end(nil)), promise: nil)
+            context.flush()
+
+        case .invocationError(let requestID, let errorMessage):
+            let payload = errorMessage.toJSONBytes()
+            var headers = self.headers
+            headers.add(name: "content-length", value: "\(payload.count)")
+            headers.add(name: "lambda-runtime-function-error-type", value: "Unhandled")
+            let head = HTTPRequestHead(
+                version: .http1_1,
+                method: .POST,
+                uri: "/2018-06-01/runtime/invocation/\(requestID)/error",
+                headers: headers
+            )
+            let buffer = context.channel.allocator.buffer(bytes: payload)
+            context.write(wrapOutboundOut(.head(head)), promise: nil)
+            context.write(wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+            context.write(wrapOutboundOut(.end(nil)), promise: nil)
+            context.flush()
+
+        case .initializationError(let errorMessage):
+            let payload = errorMessage.toJSONBytes()
+            var headers = self.headers
+            headers.add(name: "content-length", value: "\(payload.count)")
+            headers.add(name: "lambda-runtime-function-error-type", value: "Unhandled")
+            let head = HTTPRequestHead(
+                version: .http1_1,
+                method: .POST,
+                uri: "/2018-06-01/runtime/init/error",
+                headers: headers
+            )
+            let buffer = context.channel.allocator.buffer(bytes: payload)
+            context.write(wrapOutboundOut(.head(head)), promise: nil)
+            context.write(wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+            context.write(wrapOutboundOut(.end(nil)), promise: nil)
+            context.flush()
         }
     }
 }

@@ -186,16 +186,16 @@ class LambdaTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    func testNoKeepAliveServer() {
-        let server = MockLambdaServer(behavior: Behavior(), keepAlive: false)
-        XCTAssertNoThrow(try server.start().wait())
-        defer { XCTAssertNoThrow(try server.stop().wait()) }
-
-        let maxTimes = 10
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
-    }
+//    func testNoKeepAliveServer() {
+//        let server = MockLambdaServer(behavior: Behavior(), keepAlive: false)
+//        XCTAssertNoThrow(try server.start().wait())
+//        defer { XCTAssertNoThrow(try server.stop().wait()) }
+//
+//        let maxTimes = 10
+//        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+//        let result = Lambda.run(configuration: configuration, handler: EchoHandler())
+//        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+//    }
 
     func testServerFailure() {
         let server = MockLambdaServer(behavior: Behavior())

@@ -38,7 +38,7 @@ final class RuntimeHandlerTests: XCTestCase {
     func testRuntimeHandler() {
         let logger = Logger(label: "Test")
         let handler = RuntimeHandler(
-            maxTimes: 2,
+            configuration: .init(lifecycle: .init(maxTimes: 2)),
             logger: logger,
             factory: { $0.eventLoop.makeSucceededFuture(EchoHandler()) }
         )
@@ -48,10 +48,10 @@ final class RuntimeHandlerTests: XCTestCase {
         XCTAssertNoThrow(try embedded.connect(to: .init(ipAddress: "127.0.0.1", port: 7000), promise: promise))
         XCTAssertNoThrow(try promise.futureResult.wait())
 
-        XCTAssertEqual(try embedded.readOutbound(as: RuntimeAPIRequest.self), .next)
+        XCTAssertEqual(try embedded.readOutbound(as: APIRequest.self), .next)
 
         let (invocation, payload) = self.createTestInvocation()
-        XCTAssertNoThrow(try embedded.writeInbound(RuntimeAPIResponse.next(invocation, payload)))
+        XCTAssertNoThrow(try embedded.writeInbound(APIResponse.next(invocation, payload)))
     }
 
     // MARK: - State Machine Tests
