@@ -83,7 +83,7 @@ class LambdaHandlerTest: XCTestCase {
 
     // MARK: - AsyncLambdaHandler
 
-    @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testAsyncHandlerSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
@@ -106,7 +106,7 @@ class LambdaHandlerTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testVoidAsyncHandlerSuccess() {
         let server = MockLambdaServer(behavior: Behavior(result: .success(nil)))
         XCTAssertNoThrow(try server.start().wait())
@@ -127,7 +127,7 @@ class LambdaHandlerTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    @available(macOS 9999, iOS 9999, watchOS 9999, tvOS 9999, *)
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testAsyncHandlerFailure() {
         let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
         XCTAssertNoThrow(try server.start().wait())
