@@ -27,7 +27,7 @@ enum AmazonHeaders {
     static let invokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
 }
 
-struct ErrorResponse: Codable, Equatable {
+struct ErrorResponse: Codable, Hashable {
     var errorType: String
     var errorMessage: String
 }
@@ -70,14 +70,14 @@ struct Invocation: Hashable {
     }
 }
 
-enum APIRequest: Equatable {
+enum APIRequest: Hashable {
     case next
     case invocationResponse(String, ByteBuffer?)
     case invocationError(String, ErrorResponse)
     case initializationError(ErrorResponse)
 }
 
-enum APIResponse: Equatable {
+enum APIResponse: Hashable {
     case next(Invocation, ByteBuffer)
     case accepted
     case error(ErrorResponse)
