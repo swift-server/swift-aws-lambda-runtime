@@ -140,7 +140,7 @@ extension Lambda {
 }
 
 extension Lambda {
-    internal enum RuntimeError: Error {
+    enum RuntimeError: Error {
         case badStatusCode(HTTPResponseStatus)
         case upstreamError(String)
         case invocationMissingHeader(String)
