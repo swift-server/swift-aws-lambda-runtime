@@ -47,7 +47,7 @@ public struct SNSEvent: Decodable {
         public let messageId: String
         public let type: String
         public let topicArn: String
-        public let messageAttributes: [String: Attribute]
+        public let messageAttributes: [String: Attribute]?
         public let signatureVersion: String
 
         @ISO8601WithFractionalSecondsCoding

@@ -355,3 +355,7 @@ Lambda functions performance is usually measured across two axes:
 Larger packages size (Zip file uploaded to AWS Lambda) negatively impact the cold start time, since AWS needs to download and unpack the package before starting the process.
 
 Swift provides great Unicode support via [ICU](http://site.icu-project.org/home). Therefore, Swift-based Lambda functions include the ICU libraries which tend to be large. This impacts the download time mentioned above and an area for further optimization. Some of the alternatives worth exploring are using the system ICU that comes with Amazon Linux (albeit older than the one Swift ships with) or working to remove the ICU dependency altogether. We welcome ideas and contributions to this end.
+
+## Security
+
+Please see [SECURITY.md](SECURITY.md) for details on the security process.
