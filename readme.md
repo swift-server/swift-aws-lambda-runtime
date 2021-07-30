@@ -10,17 +10,6 @@ Combine this with Swift's developer friendliness, expressiveness, and emphasis o
 
 Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift simple and safe. The library is an implementation of the [AWS Lambda Runtime API](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-custom.html) and uses an embedded asynchronous HTTP Client based on [SwiftNIO](http://github.com/apple/swift-nio) that is fine-tuned for performance in the AWS Runtime context. The library provides a multi-tier API that allows building a range of Lambda functions: From quick and simple closures to complex, performance-sensitive event handlers.
 
-## Project status
-
-This is the beginning of a community-driven open-source project actively seeking contributions.
-While the core API is considered stable, the API may still evolve as we get closer to a `1.0` version.
-There are several areas which need additional attention, including but not limited to:
-
-* Further performance tuning
-* Additional trigger events
-* Additional documentation and best practices
-* Additional examples
-
 ## Getting started
 
 If you have never used AWS Lambda or Docker before, check out this [getting started guide](https://fabianfett.de/getting-started-with-swift-aws-lambda-runtime) which helps you with every step from zero to a running Lambda.
@@ -86,7 +75,33 @@ Next, create a `main.swift` and implement your Lambda.
  }
  ```
 
- Since most Lambda functions are triggered by events originating in the AWS platform like `SNS`, `SQS` or `APIGateway`, the package also includes a `AWSLambdaEvents` module that provides implementations for most common AWS event types further simplifying writing Lambda functions. For example, handling an `SQS` message:
+ Since most Lambda functions are triggered by events originating in the AWS platform like `SNS`, `SQS` or `APIGateway`, the [Swift AWS Lambda Events](http://github.com/swift-server/swift-aws-lambda-events) package includes a `AWSLambdaEvents` module that provides implementations for most common AWS event types further simplifying writing Lambda functions. For example, handling an `SQS` message:
+
+First, add a dependency on the event packages:
+
+ ```swift
+ // swift-tools-version:5.2
+
+ import PackageDescription
+
+ let package = Package(
+     name: "my-lambda",
+     products: [
+         .executable(name: "MyLambda", targets: ["MyLambda"]),
+     ],
+     dependencies: [
+         .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "0.1.0"),
+         .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", from: "0.1.0"),
+     ],
+     targets: [
+         .target(name: "MyLambda", dependencies: [
+           .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+           .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
+         ]),
+     ]
+ )
+ ```
+
 
  ```swift
  // Import the modules
@@ -333,16 +348,7 @@ By default, the library also registers a Signal handler that traps `INT` and `TE
 
 ### Integration with AWS Platform Events
 
-AWS Lambda functions can be invoked directly from the AWS Lambda console UI, AWS Lambda API, AWS SDKs, AWS CLI, and AWS toolkits. More commonly, they are invoked as a reaction to an events coming from the AWS platform. To make it easier to integrate with AWS platform events, the library includes an `AWSLambdaEvents` target which provides abstractions for many commonly used events. Additional events can be easily modeled when needed following the same patterns set by `AWSLambdaEvents`. Integration points with the AWS Platform include:
-
-* [APIGateway Proxy](https://docs.aws.amazon.com/lambda/latest/dg/services-apigateway.html)
-* [S3 Events](https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html)
-* [SES Events](https://docs.aws.amazon.com/lambda/latest/dg/services-ses.html)
-* [SNS Events](https://docs.aws.amazon.com/lambda/latest/dg/with-sns.html)
-* [SQS Events](https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html)
-* [CloudWatch Events](https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents.html)
-
-**Note**: Each one of the integration points mentioned above includes a set of `Codable` structs that mirror AWS' data model for these APIs.
+AWS Lambda functions can be invoked directly from the AWS Lambda console UI, AWS Lambda API, AWS SDKs, AWS CLI, and AWS toolkits. More commonly, they are invoked as a reaction to an events coming from the AWS platform. To make it easier to integrate with AWS platform events, [Swift AWS Lambda Runtime Events](http://github.com/swift-server/swift-aws-lambda-events) library is available, designed to work together with this runtime library. [Swift AWS Lambda Runtime Events](http://github.com/swift-server/swift-aws-lambda-events) includes an `AWSLambdaEvents` target which provides abstractions for many commonly used events.
 
 ## Performance
 
@@ -359,3 +365,13 @@ Swift provides great Unicode support via [ICU](http://site.icu-project.org/home)
 ## Security
 
 Please see [SECURITY.md](SECURITY.md) for details on the security process.
+
+## Project status
+
+This is a community-driven open-source project actively seeking contributions.
+While the core API is considered stable, the API may still evolve as we get closer to a `1.0` version.
+There are several areas which need additional attention, including but not limited to:
+
+* Further performance tuning
+* Additional documentation and best practices
+* Additional examples
