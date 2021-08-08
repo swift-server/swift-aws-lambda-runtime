@@ -49,41 +49,95 @@ extension Lambda {
 extension Lambda {
     /// Lambda runtime context.
     /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
-    public final class Context: CustomDebugStringConvertible {
+    public struct Context: CustomDebugStringConvertible {
+        final class _Storage {
+            var requestID: String
+            var traceID: String
+            var invokedFunctionARN: String
+            var deadline: DispatchWallTime
+            var cognitoIdentity: String?
+            var clientContext: String?
+            var logger: Logger
+            var eventLoop: EventLoop
+            var allocator: ByteBufferAllocator
+            
+            init(
+                requestID: String,
+                traceID: String,
+                invokedFunctionARN: String,
+                deadline: DispatchWallTime,
+                cognitoIdentity: String?,
+                clientContext: String?,
+                logger: Logger,
+                eventLoop: EventLoop,
+                allocator: ByteBufferAllocator
+            ) {
+                self.requestID = requestID
+                self.traceID = traceID
+                self.invokedFunctionARN = invokedFunctionARN
+                self.deadline = deadline
+                self.cognitoIdentity = cognitoIdentity
+                self.clientContext = clientContext
+                self.logger = logger
+                self.eventLoop = eventLoop
+                self.allocator = allocator
+            }
+        }
+        
+        private var storage: _Storage
+        
         /// The request ID, which identifies the request that triggered the function invocation.
-        public let requestID: String
-
+        public var requestID: String {
+            self.storage.requestID
+        }
+        
         /// The AWS X-Ray tracing header.
-        public let traceID: String
-
+        public var traceID: String {
+            self.storage.traceID
+        }
+        
         /// The ARN of the Lambda function, version, or alias that's specified in the invocation.
-        public let invokedFunctionARN: String
-
+        public var invokedFunctionARN: String {
+            self.storage.invokedFunctionARN
+        }
+        
         /// The timestamp that the function times out
-        public let deadline: DispatchWallTime
-
+        public var deadline: DispatchWallTime {
+            self.storage.deadline
+        }
+        
         /// For invocations from the AWS Mobile SDK, data about the Amazon Cognito identity provider.
-        public let cognitoIdentity: String?
-
+        public var cognitoIdentity: String? {
+            self.storage.cognitoIdentity
+        }
+        
         /// For invocations from the AWS Mobile SDK, data about the client application and device.
-        public let clientContext: String?
-
+        public var clientContext: String? {
+            self.storage.clientContext
+        }
+        
         /// `Logger` to log with
         ///
         /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
-        public let logger: Logger
-
+        public var logger: Logger {
+            self.storage.logger
+        }
+        
         /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
         /// This is useful when implementing the `EventLoopLambdaHandler` protocol.
         ///
         /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
         ///         Most importantly the `EventLoop` must never be blocked.
-        public let eventLoop: EventLoop
-
+        public var eventLoop: EventLoop {
+            self.storage.eventLoop
+        }
+        
         /// `ByteBufferAllocator` to allocate `ByteBuffer`
         /// This is useful when implementing `EventLoopLambdaHandler`
-        public let allocator: ByteBufferAllocator
-
+        public var allocator: ByteBufferAllocator {
+            self.storage.allocator
+        }
+        
         internal init(requestID: String,
                       traceID: String,
                       invokedFunctionARN: String,
@@ -92,22 +146,17 @@ extension Lambda {
                       clientContext: String? = nil,
                       logger: Logger,
                       eventLoop: EventLoop,
-                      allocator: ByteBufferAllocator)
-        {
-            self.requestID = requestID
-            self.traceID = traceID
-            self.invokedFunctionARN = invokedFunctionARN
-            self.cognitoIdentity = cognitoIdentity
-            self.clientContext = clientContext
-            self.deadline = deadline
-            // utility
-            self.eventLoop = eventLoop
-            self.allocator = allocator
-            // mutate logger with context
-            var logger = logger
-            logger[metadataKey: "awsRequestID"] = .string(requestID)
-            logger[metadataKey: "awsTraceID"] = .string(traceID)
-            self.logger = logger
+                      allocator: ByteBufferAllocator) {
+            self.storage = _Storage(requestID: requestID,
+                                    traceID: traceID,
+                                    invokedFunctionARN: invokedFunctionARN,
+                                    deadline: deadline,
+                                    cognitoIdentity: cognitoIdentity,
+                                    clientContext: clientContext,
+                                    logger: logger,
+                                    eventLoop: eventLoop,
+                                    allocator: allocator
+            )
         }
 
         public func getRemainingTime() -> TimeAmount {
