@@ -60,7 +60,7 @@ extension Lambda {
             var logger: Logger
             var eventLoop: EventLoop
             var allocator: ByteBufferAllocator
-            
+
             init(
                 requestID: String,
                 traceID: String,
@@ -83,46 +83,46 @@ extension Lambda {
                 self.allocator = allocator
             }
         }
-        
+
         private var storage: _Storage
-        
+
         /// The request ID, which identifies the request that triggered the function invocation.
         public var requestID: String {
             self.storage.requestID
         }
-        
+
         /// The AWS X-Ray tracing header.
         public var traceID: String {
             self.storage.traceID
         }
-        
+
         /// The ARN of the Lambda function, version, or alias that's specified in the invocation.
         public var invokedFunctionARN: String {
             self.storage.invokedFunctionARN
         }
-        
+
         /// The timestamp that the function times out
         public var deadline: DispatchWallTime {
             self.storage.deadline
         }
-        
+
         /// For invocations from the AWS Mobile SDK, data about the Amazon Cognito identity provider.
         public var cognitoIdentity: String? {
             self.storage.cognitoIdentity
         }
-        
+
         /// For invocations from the AWS Mobile SDK, data about the client application and device.
         public var clientContext: String? {
             self.storage.clientContext
         }
-        
+
         /// `Logger` to log with
         ///
         /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
         public var logger: Logger {
             self.storage.logger
         }
-        
+
         /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
         /// This is useful when implementing the `EventLoopLambdaHandler` protocol.
         ///
@@ -131,13 +131,13 @@ extension Lambda {
         public var eventLoop: EventLoop {
             self.storage.eventLoop
         }
-        
+
         /// `ByteBufferAllocator` to allocate `ByteBuffer`
         /// This is useful when implementing `EventLoopLambdaHandler`
         public var allocator: ByteBufferAllocator {
             self.storage.allocator
         }
-        
+
         internal init(requestID: String,
                       traceID: String,
                       invokedFunctionARN: String,
@@ -155,8 +155,7 @@ extension Lambda {
                                     clientContext: clientContext,
                                     logger: logger,
                                     eventLoop: eventLoop,
-                                    allocator: allocator
-            )
+                                    allocator: allocator)
         }
 
         public func getRemainingTime() -> TimeAmount {
