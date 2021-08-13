@@ -29,6 +29,7 @@ let package = Package(
             .product(name: "Logging", package: "swift-log"),
             .product(name: "Backtrace", package: "swift-backtrace"),
             .product(name: "NIOHTTP1", package: "swift-nio"),
+            .product(name: "NIO", package: "swift-nio"),
             .product(name: "_NIOConcurrency", package: "swift-nio"),
         ]),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [
@@ -51,6 +52,7 @@ let package = Package(
         // for perf testing
         .target(name: "MockServer", dependencies: [
             .product(name: "NIOHTTP1", package: "swift-nio"),
+            .product(name: "NIO", package: "swift-nio"),
         ]),
         .target(name: "StringSample", dependencies: ["AWSLambdaRuntime"]),
         .target(name: "CodableSample", dependencies: ["AWSLambdaRuntime"]),
