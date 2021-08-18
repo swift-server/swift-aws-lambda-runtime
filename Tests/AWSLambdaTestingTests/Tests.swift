@@ -14,7 +14,7 @@
 
 import AWSLambdaRuntime
 import AWSLambdaTesting
-import NIO
+import NIOCore
 import XCTest
 
 class LambdaTestingTests: XCTestCase {

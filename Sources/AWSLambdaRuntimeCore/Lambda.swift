@@ -21,7 +21,8 @@ import Darwin.C
 import _NIOConcurrency
 import Backtrace
 import Logging
-import NIO
+import NIOCore
+import NIOPosix
 
 public enum Lambda {
     public typealias Handler = ByteBufferLambdaHandler

@@ -15,7 +15,8 @@
 #if DEBUG
 import Dispatch
 import Logging
-import NIO
+import NIOCore
+import NIOPosix
 import NIOConcurrencyHelpers
 import NIOHTTP1
 

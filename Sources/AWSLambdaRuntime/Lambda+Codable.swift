@@ -16,7 +16,7 @@
 import struct Foundation.Data
 import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
-import NIO
+import NIOCore
 import NIOFoundationCompat
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` events.

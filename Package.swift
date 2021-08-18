@@ -15,21 +15,23 @@ let package = Package(
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.30.0")),
+        .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.32.0")),
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.4.2")),
         .package(url: "https://github.com/swift-server/swift-backtrace.git", .upToNextMajor(from: "1.2.3")),
     ],
     targets: [
         .target(name: "AWSLambdaRuntime", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
-            .product(name: "NIO", package: "swift-nio"),
+            .product(name: "NIOCore", package: "swift-nio"),
             .product(name: "NIOFoundationCompat", package: "swift-nio"),
         ]),
         .target(name: "AWSLambdaRuntimeCore", dependencies: [
             .product(name: "Logging", package: "swift-log"),
             .product(name: "Backtrace", package: "swift-backtrace"),
             .product(name: "NIOHTTP1", package: "swift-nio"),
-            .product(name: "NIO", package: "swift-nio"),
+            .product(name: "NIOCore", package: "swift-nio"),
+            .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
+            .product(name: "NIOPosix", package: "swift-nio"),
             .product(name: "_NIOConcurrency", package: "swift-nio"),
         ]),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [

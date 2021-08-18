@@ -15,7 +15,8 @@
 @testable import AWSLambdaRuntime
 @testable import AWSLambdaRuntimeCore
 import Logging
-import NIO
+import NIOCore
+import NIOPosix
 import NIOFoundationCompat
 import XCTest
 

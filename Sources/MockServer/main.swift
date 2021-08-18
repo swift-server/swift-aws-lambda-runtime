@@ -13,7 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import NIO
+import NIOCore
+import NIOPosix
 import NIOHTTP1
 
 internal struct MockServer {

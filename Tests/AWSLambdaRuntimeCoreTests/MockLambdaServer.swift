@@ -15,7 +15,8 @@
 @testable import AWSLambdaRuntimeCore
 import Foundation // for JSON
 import Logging
-import NIO
+import NIOCore
+import NIOPosix
 import NIOHTTP1
 
 internal final class MockLambdaServer {
