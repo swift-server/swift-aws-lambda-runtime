@@ -15,6 +15,7 @@
 @testable import AWSLambdaRuntimeCore
 import Logging
 import NIO
+import NIOHTTP1
 import XCTest
 
 final class RuntimeHandlerTests: XCTestCase {
@@ -24,14 +25,6 @@ final class RuntimeHandlerTests: XCTestCase {
 
         func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
             context.eventLoop.makeSucceededFuture(event)
-        }
-    }
-
-    struct EchoError: Error {
-        let message: String
-
-        init(_ message: String) {
-            self.message = message
         }
     }
 
@@ -50,78 +43,31 @@ final class RuntimeHandlerTests: XCTestCase {
 
         XCTAssertEqual(try embedded.readOutbound(as: APIRequest.self), .next)
 
-        let (invocation, payload) = self.createTestInvocation()
-        XCTAssertNoThrow(try embedded.writeInbound(APIResponse.next(invocation, payload)))
+        let nextRequest = self.createTestHTTPInvocation()
+        XCTAssertNoThrow(try embedded.writeInbound(nextRequest))
     }
 
     // MARK: - State Machine Tests
 
-    func testStateMachineStartupSuccessTwoInvocations() {
-        let embedded = EmbeddedChannel()
-        let logger = Logger(label: "Test")
-        let factory: Lambda.HandlerFactory = { $0.eventLoop.makeSucceededFuture(EchoHandler()) }
-        var state = RuntimeHandler.StateMachine(maxTimes: 3, factory: factory)
-        let socket = try! SocketAddress(ipAddress: "127.0.0.1", port: 7000)
-
-        // --- startup
-        XCTAssertEqual(state.connect(to: socket, promise: nil), .connect(to: socket, promise: nil, andInitializeHandler: factory))
-        let initContext = Lambda.InitializationContext(logger: logger, eventLoop: embedded.eventLoop, allocator: embedded.allocator)
-        XCTAssertEqual(try state.handlerInitialized(factory(initContext).wait()), .wait)
-        XCTAssertEqual(state.connected(), .reportStartupSuccessToChannel)
-        XCTAssertEqual(state.startupSuccessToChannelReported(), .getNextInvocation)
-
-        // --- 1. invocation - success
-        let (fstInvocation, fstPayload) = self.createTestInvocation()
-        XCTAssertEqual(state.nextInvocationReceived(fstInvocation, fstPayload), .invokeHandler(EchoHandler(), fstInvocation, fstPayload, 1))
-        XCTAssertEqual(state.invocationCompleted(.success(fstPayload)), .reportInvocationResult(requestID: fstInvocation.requestID, .success(fstPayload)))
-        XCTAssertEqual(state.acceptedReceived(), .getNextInvocation)
-
-        // --- 2. invocation - failure
-        let (sndInvocation, sndPayload) = self.createTestInvocation()
-        XCTAssertEqual(state.nextInvocationReceived(sndInvocation, sndPayload), .invokeHandler(EchoHandler(), sndInvocation, sndPayload, 2))
-        let error = EchoError("Boom")
-        XCTAssertEqual(state.invocationCompleted(.failure(error)), .reportInvocationResult(requestID: sndInvocation.requestID, .failure(error)))
-        XCTAssertEqual(state.acceptedReceived(), .getNextInvocation)
-
-        // --- 3. invocation - success
-        let (thrInvocation, thrPayload) = self.createTestInvocation()
-        XCTAssertEqual(state.nextInvocationReceived(thrInvocation, thrPayload), .invokeHandler(EchoHandler(), thrInvocation, thrPayload, 3))
-        XCTAssertEqual(state.invocationCompleted(.success(thrPayload)), .reportInvocationResult(requestID: thrInvocation.requestID, .success(thrPayload)))
-        XCTAssertEqual(state.acceptedReceived(), .closeConnection)
-
-        // --- shutdown
-        XCTAssertEqual(state.channelInactive(), .fireChannelInactive)
-    }
-
-    func testStateMachineStartupFailure() {
-        let error = EchoError("Boom")
-        let factory: Lambda.HandlerFactory = { $0.eventLoop.makeFailedFuture(error) }
-        var state = RuntimeHandler.StateMachine(maxTimes: 3, factory: factory)
-        let socket = try! SocketAddress(ipAddress: "127.0.0.1", port: 7000)
-
-        // --- startup
-        XCTAssertEqual(state.connect(to: socket, promise: nil), .connect(to: socket, promise: nil, andInitializeHandler: factory))
-        XCTAssertEqual(state.handlerFailedToInitialize(error), .wait)
-        XCTAssertEqual(state.connected(), .reportInitializationError(error))
-        XCTAssertEqual(state.acceptedReceived(), .reportStartupFailureToChannel(error))
-        XCTAssertEqual(state.startupFailureToChannelReported(), .closeConnection)
-        XCTAssertEqual(state.channelInactive(), .fireChannelInactive)
-    }
 
     // MARK: - Utilities
 
-    func createTestInvocation() -> (Invocation, ByteBuffer) {
-        let invocation = Invocation(
-            requestID: UUID().uuidString,
-            deadlineInMillisSinceEpoch: Int64(Date().addingTimeInterval(5).timeIntervalSince1970 * 1000),
-            invokedFunctionARN: "function:arn",
-            traceID: AmazonHeaders.generateXRayTraceID(),
-            clientContext: nil,
-            cognitoIdentity: nil
-        )
-        let buffer = ByteBuffer(string: "Hello world")
+    func createTestHTTPInvocation() -> NIOHTTPClientResponseFull {
+        let headers: HTTPHeaders = [
+            "Lambda-Runtime-Aws-Request-Id": "\(UUID().uuidString)",
+            "Lambda-Runtime-Trace-Id": AmazonHeaders.generateXRayTraceID(),
+//            "Lambda-Runtime-Client-Context": "",
+//            "Lambda-Runtime-Cognito-Identity": "",
+            "Lambda-Runtime-Deadline-Ms": "\(Int64(Date().addingTimeInterval(5).timeIntervalSince1970 * 1000))",
+            "Lambda-Runtime-Invoked-Function-Arn": "function:arn"
+        ]
 
-        return (invocation, buffer)
+        let buffer = ByteBuffer(string: "Hello world")
+        
+        return NIOHTTPClientResponseFull(
+            head: HTTPResponseHead(version: .http1_1, status: .ok, headers: headers),
+            body: buffer
+        )
     }
 }
 
