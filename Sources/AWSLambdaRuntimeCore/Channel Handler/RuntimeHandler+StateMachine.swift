@@ -222,7 +222,8 @@ extension RuntimeHandler {
         }
 
         mutating func errorHappened(_: Error) -> Action {
-            preconditionFailure()
+            self.state = .shuttingDown
+            return .closeConnection
         }
     }
 }

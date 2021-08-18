@@ -35,8 +35,8 @@ class LambdaHandlerTest: XCTestCase {
 
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handler: Handler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        Lambda.run(configuration: configuration, handler: Handler())
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     func testVoidCallbackSuccess() {
@@ -55,8 +55,8 @@ class LambdaHandlerTest: XCTestCase {
 
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handler: Handler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        Lambda.run(configuration: configuration, handler: Handler())
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     func testCallbackFailure() {
@@ -76,7 +76,7 @@ class LambdaHandlerTest: XCTestCase {
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handler: Handler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     #if compiler(>=5.5)
@@ -103,7 +103,7 @@ class LambdaHandlerTest: XCTestCase {
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, factory: Handler.init)
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -124,7 +124,7 @@ class LambdaHandlerTest: XCTestCase {
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, factory: Handler.init)
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -147,7 +147,7 @@ class LambdaHandlerTest: XCTestCase {
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, factory: Handler.init)
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
     #endif
 
@@ -170,7 +170,7 @@ class LambdaHandlerTest: XCTestCase {
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handler: Handler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     func testVoidEventLoopSuccess() {
@@ -190,7 +190,7 @@ class LambdaHandlerTest: XCTestCase {
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handler: Handler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     func testEventLoopFailure() {
@@ -210,7 +210,7 @@ class LambdaHandlerTest: XCTestCase {
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handler: Handler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     // MARK: - Closure
@@ -225,7 +225,7 @@ class LambdaHandlerTest: XCTestCase {
         let result = Lambda.run(configuration: configuration) { (_, event: String, callback) in
             callback(.success(event))
         }
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     func testVoidClosureSuccess() {
@@ -238,7 +238,7 @@ class LambdaHandlerTest: XCTestCase {
         let result = Lambda.run(configuration: configuration) { (_, _: String, callback) in
             callback(.success(()))
         }
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     func testClosureFailure() {
@@ -251,7 +251,7 @@ class LambdaHandlerTest: XCTestCase {
         let result: Result<Int, Error> = Lambda.run(configuration: configuration) { (_, _: String, callback: (Result<String, Error>) -> Void) in
             callback(.failure(TestError("boom")))
         }
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     func testBootstrapFailure() {

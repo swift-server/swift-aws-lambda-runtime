@@ -41,7 +41,7 @@ final class RuntimeHandlerTests: XCTestCase {
         XCTAssertNoThrow(try embedded.connect(to: .init(ipAddress: "127.0.0.1", port: 7000), promise: promise))
         XCTAssertNoThrow(try promise.futureResult.wait())
 
-        XCTAssertEqual(try embedded.readOutbound(as: APIRequest.self), .next)
+        XCTAssertNoThrow(try embedded.readNextRequest())
 
         let nextRequest = self.createTestHTTPInvocation()
         XCTAssertNoThrow(try embedded.writeInbound(nextRequest))
@@ -110,6 +110,47 @@ extension RuntimeHandler.StateMachine.Action: Equatable {
             return true
         default:
             return false
+        }
+    }
+}
+
+struct RequestError: Error {
+    let description: String
+    
+    init(_ description: String) {
+        self.description = description
+    }
+}
+
+extension EmbeddedChannel {
+    
+    func readNextRequest() throws {
+        guard case .head(let head) = try self.readOutbound(as: HTTPClientRequestPart.self) else {
+            throw RequestError("Expected a request head first")
+        }
+        
+        guard head.version == .http1_1 else {
+            throw RequestError("Invalid http version: \(head.version)")
+        }
+        
+        guard head.method == .GET else {
+            throw RequestError("Invalid http method. Expected GET but got: \(head.method)")
+        }
+        
+        guard head.uri == "/2018-06-01/runtime/invocation/next" else {
+            throw RequestError("Invalid http uri: \(head.uri)")
+        }
+        
+        guard head.headers["host"].first != nil else {
+            throw RequestError("Expected to get a host header.")
+        }
+        
+        guard head.headers["user-agent"].first != nil else {
+            throw RequestError("Expected to get a user-agent header.")
+        }
+        
+        guard case .end(nil) = try self.readOutbound(as: HTTPClientRequestPart.self) else {
+            throw RequestError("Expected a request end next")
         }
     }
 }

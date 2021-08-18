@@ -17,6 +17,7 @@ import Foundation // for JSON
 import Logging
 import NIO
 import NIOHTTP1
+import NIOConcurrencyHelpers
 
 internal final class MockLambdaServer {
     private let logger = Logger(label: "MockLambdaServer")
@@ -25,9 +26,15 @@ internal final class MockLambdaServer {
     private let port: Int
     private let keepAlive: Bool
     private let group: EventLoopGroup
+    
+    private let counter: NIOAtomic<Int> = .makeAtomic(value: 0)
 
     private var channel: Channel?
     private var shutdown = false
+    
+    public var requestCycles: Int {
+        self.counter.load()
+    }
 
     public init(behavior: LambdaServerBehavior, host: String = "127.0.0.1", port: Int = 7000, keepAlive: Bool = true) {
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -45,8 +52,16 @@ internal final class MockLambdaServer {
         let bootstrap = ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap { _ in
-                    channel.pipeline.addHandler(HTTPHandler(logger: self.logger, keepAlive: self.keepAlive, behavior: self.behavior))
+                let sync = channel.pipeline.syncOperations
+                do {
+                    try sync.configureHTTPServerPipeline(withErrorHandling: true)
+                    
+                    let handler = HTTPHandler(logger: self.logger, keepAlive: self.keepAlive, counter: self.counter, behavior: self.behavior)
+                    try sync.addHandler(handler)
+                    
+                    return channel.eventLoop.makeSucceededVoidFuture()
+                } catch {
+                    return channel.eventLoop.makeFailedFuture(error)
                 }
             }
         return bootstrap.bind(host: self.host, port: self.port).flatMap { channel in
@@ -77,13 +92,15 @@ internal final class HTTPHandler: ChannelInboundHandler {
 
     private let logger: Logger
     private let keepAlive: Bool
+    private let counter: NIOAtomic<Int>
     private let behavior: LambdaServerBehavior
-
+    
     private var pending = CircularBuffer<(head: HTTPRequestHead, body: ByteBuffer?)>()
 
-    public init(logger: Logger, keepAlive: Bool, behavior: LambdaServerBehavior) {
+    public init(logger: Logger, keepAlive: Bool, counter: NIOAtomic<Int>, behavior: LambdaServerBehavior) {
         self.logger = logger
         self.keepAlive = keepAlive
+        self.counter = counter
         self.behavior = behavior
     }
 
@@ -154,6 +171,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
             guard let requestId = request.head.uri.split(separator: "/").dropFirst(3).first else {
                 return self.writeResponse(context: context, status: .badRequest)
             }
+            self.counter.add(1)
             switch self.behavior.processResponse(requestId: String(requestId), response: requestBody) {
             case .success:
                 responseStatus = .accepted
@@ -167,6 +185,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
             else {
                 return self.writeResponse(context: context, status: .badRequest)
             }
+            self.counter.add(1)
             switch self.behavior.processError(requestId: String(requestId), error: error) {
             case .success():
                 responseStatus = .accepted

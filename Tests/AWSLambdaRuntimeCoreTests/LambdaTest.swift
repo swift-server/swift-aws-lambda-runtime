@@ -26,7 +26,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     func testFailure() {
@@ -37,7 +37,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handler: FailedHandler("boom"))
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     func testBootstrapOnce() {
@@ -64,7 +64,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, factory: Handler.init)
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
     func testBootstrapFailure() {
