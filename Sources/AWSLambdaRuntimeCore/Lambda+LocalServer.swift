@@ -15,10 +15,10 @@
 #if DEBUG
 import Dispatch
 import Logging
-import NIOCore
-import NIOPosix
 import NIOConcurrencyHelpers
+import NIOCore
 import NIOHTTP1
+import NIOPosix
 
 // This functionality is designed for local testing hence beind a #if DEBUG flag.
 // For example:

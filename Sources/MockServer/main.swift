@@ -14,8 +14,8 @@
 
 import Foundation
 import NIOCore
-import NIOPosix
 import NIOHTTP1
+import NIOPosix
 
 internal struct MockServer {
     private let group: EventLoopGroup

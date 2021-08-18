@@ -16,8 +16,8 @@
 import Foundation // for JSON
 import Logging
 import NIOCore
-import NIOPosix
 import NIOHTTP1
+import NIOPosix
 
 internal final class MockLambdaServer {
     private let logger = Logger(label: "MockLambdaServer")

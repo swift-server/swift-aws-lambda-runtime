@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import NIOPosix
 
 internal enum Consts {
     static let apiPrefix = "/2018-06-01"
