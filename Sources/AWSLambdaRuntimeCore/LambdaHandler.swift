@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import _NIOConcurrency
 import Dispatch
 import NIO
 import _NIOConcurrency
