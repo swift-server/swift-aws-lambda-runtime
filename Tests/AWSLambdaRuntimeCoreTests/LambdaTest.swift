@@ -183,7 +183,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = 10
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handler: EchoHandler())
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        XCTAssertEqual(server.requestCycles, maxTimes)
     }
 
 //    func testNoKeepAliveServer() {
