@@ -25,7 +25,11 @@ struct ContentView: View {
             TextField("Username", text: $name)
             SecureField("Password", text: $password)
             Button(
-                action: self.register,
+                action: {
+                    Task {
+                        await self.register()
+                    }
+                },
                 label: {
                     Text("Register")
                         .padding()
@@ -38,8 +42,8 @@ struct ContentView: View {
         }.padding(100)
     }
 
-    func register() {
-        guard let url = URL(string: "http://localhost:7000/invoke") else {
+    func register() async {
+        guard let url = URL(string: "http://127.0.0.1:7000/invoke") else {
             fatalError("invalid url")
         }
         var request = URLRequest(url: url)
@@ -50,27 +54,21 @@ struct ContentView: View {
         }
         request.httpBody = jsonRequest
 
-        let task = URLSession.shared.dataTask(with: request as URLRequest) { data, response, error in
-            do {
-                if let error = error {
-                    throw CommunicationError(reason: error.localizedDescription)
-                }
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    throw CommunicationError(reason: "invalid response, expected HTTPURLResponse")
-                }
-                guard httpResponse.statusCode == 200 else {
-                    throw CommunicationError(reason: "invalid response code: \(httpResponse.statusCode)")
-                }
-                guard let data = data else {
-                    throw CommunicationError(reason: "invald response, empty body")
-                }
-                let response = try JSONDecoder().decode(Response.self, from: data)
-                self.setResponse(response.message)
-            } catch {
-                self.setResponse("\(error)")
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw CommunicationError(reason: "invalid response, expected HTTPURLResponse")
             }
+            guard httpResponse.statusCode == 200 else {
+                throw CommunicationError(reason: "invalid response code: \(httpResponse.statusCode)")
+            }
+            let jsonResponse = try JSONDecoder().decode(Response.self, from: data)
+
+            self.response = jsonResponse.message
+        } catch {
+            self.response = error.localizedDescription
         }
-        task.resume()
     }
 
     func setResponse(_ text: String) {

@@ -19,7 +19,7 @@ import NIO
 // use this example which is more performant.
 // `EventLoopLambdaHandler` does not offload the Lambda processing to a separate thread
 // while the closure-based handlers do.
-Lambda.run(BenchmarkHandler())
+Lambda.run { $0.eventLoop.makeSucceededFuture(BenchmarkHandler()) }
 
 struct BenchmarkHandler: EventLoopLambdaHandler {
     typealias In = String
