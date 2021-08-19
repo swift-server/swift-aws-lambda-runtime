@@ -35,7 +35,7 @@ struct Handler: EventLoopLambdaHandler {
     }
 }
 
-Lambda.run({ $0.eventLoop.makeSucceededFuture(Handler()) })
+Lambda.run { $0.eventLoop.makeSucceededFuture(Handler()) }
 
 // MARK: - this can also be expressed as a closure:
 

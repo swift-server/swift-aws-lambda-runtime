@@ -20,7 +20,7 @@ class LambdaHandlerTest: XCTestCase {
     #if compiler(>=5.5)
 
     // MARK: - LambdaHandler
-    
+
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testBootstrapSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
@@ -38,7 +38,7 @@ class LambdaHandlerTest: XCTestCase {
                 try await Task.sleep(nanoseconds: 100 * 1000 * 1000) // 0.1 seconds
                 self.initialized = true
             }
-            
+
             func handle(event: String, context: Lambda.Context) async throws -> String {
                 event
             }
@@ -49,7 +49,7 @@ class LambdaHandlerTest: XCTestCase {
         let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
-    
+
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testBootstrapFailure() {
         let server = MockLambdaServer(behavior: FailedBootstrapBehavior())
@@ -67,7 +67,7 @@ class LambdaHandlerTest: XCTestCase {
                 try await Task.sleep(nanoseconds: 100 * 1000 * 1000) // 0.1 seconds
                 throw TestError("kaboom")
             }
-            
+
             func handle(event: String, context: Lambda.Context) async throws {
                 XCTFail("How can this be called if init failed")
             }
@@ -119,7 +119,7 @@ class LambdaHandlerTest: XCTestCase {
 
         let maxTimes = Int.random(in: 1 ... 10)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        
+
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }

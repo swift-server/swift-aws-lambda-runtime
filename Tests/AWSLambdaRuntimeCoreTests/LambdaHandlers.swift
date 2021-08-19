@@ -33,7 +33,7 @@ struct FailedHandler: EventLoopLambdaHandler {
     public init(_ reason: String) {
         self.reason = reason
     }
-    
+
     func handle(context: Lambda.Context, event: String) -> EventLoopFuture<Void> {
         context.eventLoop.makeFailedFuture(TestError(self.reason))
     }

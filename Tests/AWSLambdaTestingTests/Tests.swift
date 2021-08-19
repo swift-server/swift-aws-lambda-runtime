@@ -28,13 +28,13 @@ class LambdaTestingTests: XCTestCase {
         struct Response: Codable {
             let message: String
         }
-        
+
         struct MyLambda: LambdaHandler {
             typealias In = Request
             typealias Out = Response
-    
+
             init(context: Lambda.InitializationContext) {}
-    
+
             func handle(event: Request, context: Lambda.Context) async throws -> Response {
                 Response(message: "echo" + event.name)
             }
@@ -56,9 +56,9 @@ class LambdaTestingTests: XCTestCase {
         struct MyLambda: LambdaHandler {
             typealias In = Request
             typealias Out = Void
-    
+
             init(context: Lambda.InitializationContext) {}
-    
+
             func handle(event: Request, context: Lambda.Context) async throws {
                 LambdaTestingTests.VoidLambdaHandlerInvokeCount += 1
             }
@@ -72,13 +72,13 @@ class LambdaTestingTests: XCTestCase {
 
     func testInvocationFailure() {
         struct MyError: Error {}
-        
+
         struct MyLambda: LambdaHandler {
             typealias In = String
             typealias Out = Void
-    
+
             init(context: Lambda.InitializationContext) {}
-    
+
             func handle(event: String, context: Lambda.Context) async throws {
                 throw MyError()
             }
@@ -93,9 +93,9 @@ class LambdaTestingTests: XCTestCase {
         struct MyLambda: LambdaHandler {
             typealias In = String
             typealias Out = String
-    
+
             init(context: Lambda.InitializationContext) {}
-    
+
             func handle(event: String, context: Lambda.Context) async throws -> String {
                 try await Task.sleep(nanoseconds: 500 * 1000 * 1000)
                 return event

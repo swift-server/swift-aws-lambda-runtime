@@ -36,13 +36,13 @@
 // }
 
 #if swift(>=5.5)
+import _NIOConcurrency
 import AWSLambdaRuntime
 import AWSLambdaRuntimeCore
 import Dispatch
 import Logging
 import NIOCore
 import NIOPosix
-import _NIOConcurrency
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension Lambda {
@@ -75,13 +75,14 @@ extension Lambda {
             try! eventLoopGroup.syncShutdownGracefully()
         }
         let eventLoop = eventLoopGroup.next()
-        
+
         let promise = eventLoop.makePromise(of: Handler.self)
         let initContext = Lambda.InitializationContext(
             logger: logger,
             eventLoop: eventLoop,
-            allocator: ByteBufferAllocator())
-        
+            allocator: ByteBufferAllocator()
+        )
+
         let context = Context(requestID: config.requestID,
                               traceID: config.traceID,
                               invokedFunctionARN: config.invokedFunctionARN,
@@ -89,12 +90,12 @@ extension Lambda {
                               logger: logger,
                               eventLoop: eventLoop,
                               allocator: ByteBufferAllocator())
-        
+
         promise.completeWithTask {
             try await Handler(context: initContext)
         }
         let handler = try promise.futureResult.wait()
-        
+
         return try eventLoop.flatSubmit {
             handler.handle(context: context, event: event)
         }.wait()
