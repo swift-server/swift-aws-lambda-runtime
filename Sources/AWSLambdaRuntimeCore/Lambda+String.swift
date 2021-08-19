@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import NIO
+import NIOCore
 
 /// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `String` events.
 extension Lambda {

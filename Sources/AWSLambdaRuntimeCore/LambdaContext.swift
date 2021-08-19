@@ -14,7 +14,7 @@
 
 import Dispatch
 import Logging
-import NIO
+import NIOCore
 
 // MARK: - InitializationContext
 

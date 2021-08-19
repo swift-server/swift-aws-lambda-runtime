@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
 import NIOConcurrencyHelpers
+import NIOCore
 import NIOHTTP1
+import NIOPosix
 
 /// A barebone HTTP client to interact with AWS Runtime Engine which is an HTTP server.
 /// Note that Lambda Runtime API dictate that only one requests runs at a time.
