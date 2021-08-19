@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntimeCore
-import NIO
+import NIOCore
 
 // in this example we are receiving and responding with strings
 struct Handler: EventLoopLambdaHandler {

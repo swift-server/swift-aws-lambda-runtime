@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 @testable import AWSLambdaRuntimeCore
-import NIO
+import NIOCore
 import XCTest
 
 class LambdaHandlerTest: XCTestCase {

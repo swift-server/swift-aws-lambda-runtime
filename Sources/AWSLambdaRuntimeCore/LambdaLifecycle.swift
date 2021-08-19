@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
-import NIO
 import NIOConcurrencyHelpers
+import NIOCore
 
 extension Lambda {
     /// `Lifecycle` manages the Lambda process lifecycle.

@@ -20,14 +20,16 @@ let package = Package(
     targets: [
         .target(name: "AWSLambdaRuntime", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
-            .product(name: "NIO", package: "swift-nio"),
+            .product(name: "NIOCore", package: "swift-nio"),
             .product(name: "NIOFoundationCompat", package: "swift-nio"),
         ]),
         .target(name: "AWSLambdaRuntimeCore", dependencies: [
             .product(name: "Logging", package: "swift-log"),
             .product(name: "Backtrace", package: "swift-backtrace"),
             .product(name: "NIOHTTP1", package: "swift-nio"),
-            .product(name: "NIO", package: "swift-nio"),
+            .product(name: "NIOCore", package: "swift-nio"),
+            .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
+            .product(name: "NIOPosix", package: "swift-nio"),
             .product(name: "_NIOConcurrency", package: "swift-nio"),
         ]),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [

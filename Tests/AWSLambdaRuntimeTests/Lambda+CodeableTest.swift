@@ -15,8 +15,9 @@
 @testable import AWSLambdaRuntime
 @testable import AWSLambdaRuntimeCore
 import Logging
-import NIO
+import NIOCore
 import NIOFoundationCompat
+import NIOPosix
 import XCTest
 
 class CodableLambdaTest: XCTestCase {

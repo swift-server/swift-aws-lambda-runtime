@@ -38,7 +38,8 @@
 @testable import AWSLambdaRuntimeCore
 import Dispatch
 import Logging
-import NIO
+import NIOCore
+import NIOPosix
 
 extension Lambda {
     public struct TestConfig {

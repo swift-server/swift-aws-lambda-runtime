@@ -14,7 +14,7 @@
 
 import Dispatch
 import Logging
-import NIO
+import NIOCore
 
 extension Lambda {
     /// LambdaRunner manages the Lambda runtime workflow, or business logic.

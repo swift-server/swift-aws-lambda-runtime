@@ -14,7 +14,8 @@
 
 @testable import AWSLambdaRuntimeCore
 import Logging
-import NIO
+import NIOCore
+import NIOPosix
 import XCTest
 
 func runLambda(behavior: LambdaServerBehavior, handler: Lambda.Handler) throws {

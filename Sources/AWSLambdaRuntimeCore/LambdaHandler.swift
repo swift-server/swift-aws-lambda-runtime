@@ -14,7 +14,7 @@
 
 import _NIOConcurrency
 import Dispatch
-import NIO
+import NIOCore
 
 // MARK: - LambdaHandler
 
