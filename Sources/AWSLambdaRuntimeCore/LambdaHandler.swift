@@ -114,7 +114,7 @@ public protocol AsyncLambdaHandler: EventLoopLambdaHandler {
 extension AsyncLambdaHandler {
     public func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
         let promise = context.eventLoop.makePromise(of: Out.self)
-        promise.completeWithAsync {
+        promise.completeWithTask {
             try await self.handle(event: event, context: context)
         }
         return promise.futureResult
@@ -126,7 +126,7 @@ extension AsyncLambdaHandler {
     public static func main() {
         Lambda.run { context -> EventLoopFuture<ByteBufferLambdaHandler> in
             let promise = context.eventLoop.makePromise(of: ByteBufferLambdaHandler.self)
-            promise.completeWithAsync {
+            promise.completeWithTask {
                 try await Self(context: context)
             }
             return promise.futureResult
