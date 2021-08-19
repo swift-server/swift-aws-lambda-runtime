@@ -53,7 +53,8 @@ public enum Lambda {
         }
         return String(cString: value)
     }
-    
+
+    #if swift(>=5.5)
     // for testing and internal use
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     internal static func run<Handler: LambdaHandler>(configuration: Configuration = .init(), handlerType: Handler.Type) -> Result<Int, Error> {
@@ -65,6 +66,7 @@ public enum Lambda {
             return promise.futureResult
         })
     }
+    #endif
 
     // for testing and internal use
     internal static func run(configuration: Configuration = .init(), factory: @escaping HandlerFactory) -> Result<Int, Error> {
