@@ -1,4 +1,4 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.5
 
 import PackageDescription
 
@@ -18,7 +18,7 @@ let package = Package(
         .package(name: "Shared", path: "../Shared"),
     ],
     targets: [
-        .target(
+        .executableTarget(
             name: "MyLambda", dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
                 .product(name: "Shared", package: "Shared"),
