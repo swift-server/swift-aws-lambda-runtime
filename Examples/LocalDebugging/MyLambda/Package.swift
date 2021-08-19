@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "MyLambda",
     platforms: [
-        .macOS(.v10_13),
+        .macOS(.v12),
     ],
     products: [
         .executable(name: "MyLambda", targets: ["MyLambda"]),
