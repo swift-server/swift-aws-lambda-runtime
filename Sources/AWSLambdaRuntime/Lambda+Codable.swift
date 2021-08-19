@@ -19,65 +19,6 @@ import class Foundation.JSONEncoder
 import NIOCore
 import NIOFoundationCompat
 
-/// Extension to the `Lambda` companion to enable execution of Lambdas that take and return `Codable` events.
-extension Lambda {
-    /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Out: Encodable, Error>` via a completion handler.
-    public typealias CodableClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
-
-    /// Run a Lambda defined by implementing the `CodableClosure` function.
-    ///
-    /// - parameters:
-    ///     - closure: `CodableClosure` based Lambda.
-    ///
-    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<In: Decodable, Out: Encodable>(_ closure: @escaping CodableClosure<In, Out>) {
-        self.run(CodableClosureWrapper(closure))
-    }
-
-    /// An asynchronous Lambda Closure that takes a `In: Decodable` and returns a `Result<Void, Error>` via a completion handler.
-    public typealias CodableVoidClosure<In: Decodable> = (Lambda.Context, In, @escaping (Result<Void, Error>) -> Void) -> Void
-
-    /// Run a Lambda defined by implementing the `CodableVoidClosure` function.
-    ///
-    /// - parameters:
-    ///     - closure: `CodableVoidClosure` based Lambda.
-    ///
-    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run<In: Decodable>(_ closure: @escaping CodableVoidClosure<In>) {
-        self.run(CodableVoidClosureWrapper(closure))
-    }
-}
-
-internal struct CodableClosureWrapper<In: Decodable, Out: Encodable>: LambdaHandler {
-    typealias In = In
-    typealias Out = Out
-
-    private let closure: Lambda.CodableClosure<In, Out>
-
-    init(_ closure: @escaping Lambda.CodableClosure<In, Out>) {
-        self.closure = closure
-    }
-
-    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, event, callback)
-    }
-}
-
-internal struct CodableVoidClosureWrapper<In: Decodable>: LambdaHandler {
-    typealias In = In
-    typealias Out = Void
-
-    private let closure: Lambda.CodableVoidClosure<In>
-
-    init(_ closure: @escaping Lambda.CodableVoidClosure<In>) {
-        self.closure = closure
-    }
-
-    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
-        self.closure(context, event, callback)
-    }
-}
-
 // MARK: - Codable support
 
 /// Implementation of  a`ByteBuffer` to `In` decoding

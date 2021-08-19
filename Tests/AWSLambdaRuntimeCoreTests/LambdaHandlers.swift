@@ -15,15 +15,26 @@
 import AWSLambdaRuntimeCore
 import NIOCore
 
-// in this example we are receiving and responding with strings
-struct Handler: EventLoopLambdaHandler {
+struct EchoHandler: EventLoopLambdaHandler {
     typealias In = String
     typealias Out = String
 
     func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
-        // as an example, respond with the event's reversed body
-        context.eventLoop.makeSucceededFuture(String(event.reversed()))
+        context.eventLoop.makeSucceededFuture(event)
     }
 }
 
-Lambda.run({ $0.eventLoop.makeSucceededFuture(Handler()) })
+struct FailedHandler: EventLoopLambdaHandler {
+    typealias In = String
+    typealias Out = Void
+
+    private let reason: String
+
+    public init(_ reason: String) {
+        self.reason = reason
+    }
+    
+    func handle(context: Lambda.Context, event: String) -> EventLoopFuture<Void> {
+        context.eventLoop.makeFailedFuture(TestError(self.reason))
+    }
+}

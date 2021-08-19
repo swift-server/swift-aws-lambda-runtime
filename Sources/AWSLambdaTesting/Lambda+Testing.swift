@@ -60,34 +60,6 @@ extension Lambda {
         }
     }
 
-    public static func test(_ closure: @escaping Lambda.StringClosure,
-                            with event: String,
-                            using config: TestConfig = .init()) throws -> String {
-        try Self.test(StringClosureWrapper(closure), with: event, using: config)
-    }
-
-    public static func test(_ closure: @escaping Lambda.StringVoidClosure,
-                            with event: String,
-                            using config: TestConfig = .init()) throws {
-        _ = try Self.test(StringVoidClosureWrapper(closure), with: event, using: config)
-    }
-
-    public static func test<In: Decodable, Out: Encodable>(
-        _ closure: @escaping Lambda.CodableClosure<In, Out>,
-        with event: In,
-        using config: TestConfig = .init()
-    ) throws -> Out {
-        try Self.test(CodableClosureWrapper(closure), with: event, using: config)
-    }
-
-    public static func test<In: Decodable>(
-        _ closure: @escaping Lambda.CodableVoidClosure<In>,
-        with event: In,
-        using config: TestConfig = .init()
-    ) throws {
-        _ = try Self.test(CodableVoidClosureWrapper(closure), with: event, using: config)
-    }
-
     public static func test<In, Out, Handler: EventLoopLambdaHandler>(
         _ handler: Handler,
         with event: In,
