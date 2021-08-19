@@ -16,21 +16,29 @@ import AWSLambdaRuntime
 
 // MARK: - Run Lambda
 
-// switch over the error type "requested" by the request, and trigger such error accordingly
-Lambda.run { (context: Lambda.Context, request: Request, callback: (Result<Response, Error>) -> Void) in
-    switch request.error {
-    // no error here!
-    case .none:
-        callback(.success(Response(awsRequestID: context.requestID, requestID: request.requestID, status: .ok)))
-    // trigger a "managed" error - domain specific business logic failure
-    case .managed:
-        callback(.success(Response(awsRequestID: context.requestID, requestID: request.requestID, status: .error)))
-    // trigger an "unmanaged" error - an unexpected Swift Error triggered while processing the request
-    case .unmanaged(let error):
-        callback(.failure(UnmanagedError(description: error)))
-    // trigger a "fatal" error - a panic type error which will crash the process
-    case .fatal:
-        fatalError("crash!")
+@main
+struct ErrorsHappenHandler: AsyncLambdaHandler {
+    typealias In = Request
+    typealias Out = Response
+
+    init(context: Lambda.InitializationContext) async throws {}
+
+    func handle(event request: Request, context: Lambda.Context) async throws -> Response {
+        // switch over the error type "requested" by the request, and trigger such error accordingly
+        switch request.error {
+        // no error here!
+        case .none:
+            return Response(awsRequestID: context.requestID, requestID: request.requestID, status: .ok)
+        // trigger a "managed" error - domain specific business logic failure
+        case .managed:
+            return Response(awsRequestID: context.requestID, requestID: request.requestID, status: .error)
+        // trigger an "unmanaged" error - an unexpected Swift Error triggered while processing the request
+        case .unmanaged(let error):
+            throw UnmanagedError(description: error)
+        // trigger a "fatal" error - a panic type error which will crash the process
+        case .fatal:
+            fatalError("crash!")
+        }
     }
 }
 
