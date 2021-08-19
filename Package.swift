@@ -9,8 +9,6 @@ let package = Package(
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
         // this has all the main functionality for lambda and it does not link Foundation
         .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
-        // common AWS events
-        .library(name: "AWSLambdaEvents", targets: ["AWSLambdaEvents"]),
         // for testing only
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
@@ -41,8 +39,6 @@ let package = Package(
             .byName(name: "AWSLambdaRuntimeCore"),
             .byName(name: "AWSLambdaRuntime"),
         ]),
-        .target(name: "AWSLambdaEvents", dependencies: []),
-        .testTarget(name: "AWSLambdaEventsTests", dependencies: ["AWSLambdaEvents"]),
         // testing helper
         .target(name: "AWSLambdaTesting", dependencies: [
             .byName(name: "AWSLambdaRuntime"),
