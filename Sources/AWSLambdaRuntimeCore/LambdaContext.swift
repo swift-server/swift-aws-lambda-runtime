@@ -36,7 +36,7 @@ extension Lambda {
         /// `ByteBufferAllocator` to allocate `ByteBuffer`
         public let allocator: ByteBufferAllocator
 
-        internal init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator) {
+        public init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator) {
             self.eventLoop = eventLoop
             self.logger = logger
             self.allocator = allocator
@@ -138,15 +138,15 @@ extension Lambda {
             self.storage.allocator
         }
 
-        internal init(requestID: String,
-                      traceID: String,
-                      invokedFunctionARN: String,
-                      deadline: DispatchWallTime,
-                      cognitoIdentity: String? = nil,
-                      clientContext: String? = nil,
-                      logger: Logger,
-                      eventLoop: EventLoop,
-                      allocator: ByteBufferAllocator) {
+        public init(requestID: String,
+                    traceID: String,
+                    invokedFunctionARN: String,
+                    deadline: DispatchWallTime,
+                    cognitoIdentity: String? = nil,
+                    clientContext: String? = nil,
+                    logger: Logger,
+                    eventLoop: EventLoop,
+                    allocator: ByteBufferAllocator) {
             self.storage = _Storage(requestID: requestID,
                                     traceID: traceID,
                                     invokedFunctionARN: invokedFunctionARN,

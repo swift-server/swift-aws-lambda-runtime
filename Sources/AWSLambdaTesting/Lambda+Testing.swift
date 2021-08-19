@@ -18,29 +18,33 @@
 // For exmaple:
 //
 // func test() {
-//     struct MyLambda: EventLoopLambdaHandler {
+//     struct MyLambda: LambdaHandler {
 //         typealias In = String
 //         typealias Out = String
 //
-//         func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
-//             return context.eventLoop.makeSucceededFuture("echo" + event)
+//         init(context: Lambda.InitializationContext) {}
+//
+//         func handle(event: String, context: Lambda.Context) async throws -> String {
+//             "echo" + event
 //         }
 //     }
 //
 //     let input = UUID().uuidString
 //     var result: String?
-//     XCTAssertNoThrow(result = try Lambda.test(MyLambda(), with: input))
+//     XCTAssertNoThrow(result = try Lambda.test(MyLambda.self, with: input))
 //     XCTAssertEqual(result, "echo" + input)
 // }
 
-#if DEBUG
-@testable import AWSLambdaRuntime
-@testable import AWSLambdaRuntimeCore
+#if swift(>=5.5)
+import AWSLambdaRuntime
+import AWSLambdaRuntimeCore
 import Dispatch
 import Logging
 import NIOCore
 import NIOPosix
+import _NIOConcurrency
 
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension Lambda {
     public struct TestConfig {
         public var requestID: String
@@ -60,17 +64,24 @@ extension Lambda {
         }
     }
 
-    public static func test<In, Out, Handler: EventLoopLambdaHandler>(
-        _ handler: Handler,
-        with event: In,
+    public static func test<Handler: LambdaHandler>(
+        _ handlerType: Handler.Type,
+        with event: Handler.In,
         using config: TestConfig = .init()
-    ) throws -> Out where Handler.In == In, Handler.Out == Out {
+    ) throws -> Handler.Out {
         let logger = Logger(label: "test")
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             try! eventLoopGroup.syncShutdownGracefully()
         }
         let eventLoop = eventLoopGroup.next()
+        
+        let promise = eventLoop.makePromise(of: Handler.self)
+        let initContext = Lambda.InitializationContext(
+            logger: logger,
+            eventLoop: eventLoop,
+            allocator: ByteBufferAllocator())
+        
         let context = Context(requestID: config.requestID,
                               traceID: config.traceID,
                               invokedFunctionARN: config.invokedFunctionARN,
@@ -78,7 +89,12 @@ extension Lambda {
                               logger: logger,
                               eventLoop: eventLoop,
                               allocator: ByteBufferAllocator())
-
+        
+        promise.completeWithTask {
+            try await Handler(context: initContext)
+        }
+        let handler = try promise.futureResult.wait()
+        
         return try eventLoop.flatSubmit {
             handler.handle(context: context, event: event)
         }.wait()
