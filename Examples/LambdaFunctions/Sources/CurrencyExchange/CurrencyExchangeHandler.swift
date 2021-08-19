@@ -23,9 +23,30 @@ import Logging
 
 // MARK: - Run Lambda
 
-Lambda.run { (context: Lambda.Context, _: Request, callback: @escaping (Result<[Exchange], Error>) -> Void) in
-    let calculator = ExchangeRatesCalculator()
-    calculator.run(logger: context.logger, callback: callback)
+@main
+struct CurrencyExchangeHandler: AsyncLambdaHandler {
+    typealias In = Request
+    typealias Out = [Exchange]
+
+    let calculator: ExchangeRatesCalculator
+
+    init(context: Lambda.InitializationContext) async throws {
+        // the ExchangeRatesCalculator() can be reused over and over
+        self.calculator = ExchangeRatesCalculator()
+    }
+
+    func handle(event: Request, context: Lambda.Context) async throws -> [Exchange] {
+        try await withCheckedThrowingContinuation { continuation in
+            self.calculator.run(logger: context.logger) { result in
+                switch result {
+                case .success(let exchanges):
+                    continuation.resume(returning: exchanges)
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Business Logic
