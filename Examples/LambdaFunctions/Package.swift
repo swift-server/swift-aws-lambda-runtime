@@ -14,8 +14,6 @@ let package = Package(
         .executable(name: "Benchmark", targets: ["Benchmark"]),
         // demonstrate different types of error handling
         .executable(name: "ErrorHandling", targets: ["ErrorHandling"]),
-        // demostrate how to integrate with AWS API Gateway
-        .executable(name: "APIGateway", targets: ["APIGateway"]),
         // fully featured example with domain specific business logic
         .executable(name: "CurrencyExchange", targets: ["CurrencyExchange"]),
     ],
@@ -34,10 +32,6 @@ let package = Package(
         ]),
         .target(name: "ErrorHandling", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-        ]),
-        .target(name: "APIGateway", dependencies: [
-            .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-            .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-runtime"),
         ]),
         .target(name: "CurrencyExchange", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
