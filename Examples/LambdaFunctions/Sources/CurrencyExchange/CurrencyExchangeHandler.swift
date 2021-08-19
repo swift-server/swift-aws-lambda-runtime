@@ -24,7 +24,7 @@ import Logging
 // MARK: - Run Lambda
 
 @main
-struct CurrencyExchangeHandler: AsyncLambdaHandler {
+struct CurrencyExchangeHandler: LambdaHandler {
     typealias In = Request
     typealias Out = [Exchange]
 

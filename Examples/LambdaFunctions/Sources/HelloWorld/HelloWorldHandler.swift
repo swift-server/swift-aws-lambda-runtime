@@ -16,7 +16,7 @@ import AWSLambdaRuntime
 
 // introductory example, the obligatory "hello, world!"
 @main
-struct HelloWorldHandler: AsyncLambdaHandler {
+struct HelloWorldHandler: LambdaHandler {
     typealias In = String
     typealias Out = String
 

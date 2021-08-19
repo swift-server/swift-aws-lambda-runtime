@@ -18,7 +18,7 @@ import Shared
 // set LOCAL_LAMBDA_SERVER_ENABLED env variable to "true" to start
 // a local server simulator which will allow local debugging
 @main
-struct MyLambdaHandler: AsyncLambdaHandler {
+struct MyLambdaHandler: LambdaHandler {
     typealias In = Request
     typealias Out = Response
 
