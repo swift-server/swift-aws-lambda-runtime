@@ -30,7 +30,7 @@ struct FailedHandler: EventLoopLambdaHandler {
 
     private let reason: String
 
-    public init(_ reason: String) {
+    init(_ reason: String) {
         self.reason = reason
     }
 

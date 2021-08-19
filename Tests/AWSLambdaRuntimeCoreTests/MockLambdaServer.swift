@@ -30,7 +30,7 @@ internal final class MockLambdaServer {
     private var channel: Channel?
     private var shutdown = false
 
-    public init(behavior: LambdaServerBehavior, host: String = "127.0.0.1", port: Int = 7000, keepAlive: Bool = true) {
+    init(behavior: LambdaServerBehavior, host: String = "127.0.0.1", port: Int = 7000, keepAlive: Bool = true) {
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         self.behavior = behavior
         self.host = host
@@ -73,8 +73,8 @@ internal final class MockLambdaServer {
 }
 
 internal final class HTTPHandler: ChannelInboundHandler {
-    public typealias InboundIn = HTTPServerRequestPart
-    public typealias OutboundOut = HTTPServerResponsePart
+    typealias InboundIn = HTTPServerRequestPart
+    typealias OutboundOut = HTTPServerResponsePart
 
     private let logger: Logger
     private let keepAlive: Bool
@@ -82,7 +82,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
 
     private var pending = CircularBuffer<(head: HTTPRequestHead, body: ByteBuffer?)>()
 
-    public init(logger: Logger, keepAlive: Bool, behavior: LambdaServerBehavior) {
+    init(logger: Logger, keepAlive: Bool, behavior: LambdaServerBehavior) {
         self.logger = logger
         self.keepAlive = keepAlive
         self.behavior = behavior

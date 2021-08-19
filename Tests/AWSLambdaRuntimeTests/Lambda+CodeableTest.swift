@@ -184,7 +184,7 @@ private struct Response: Codable, Equatable {
 //         https://github.com/apple/swift-corelibs-xctest/pull/326
 extension XCTestCase {
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public func XCTAsyncTest(
+    func XCTAsyncTest(
         expectationDescription: String = "Async operation",
         timeout: TimeInterval = 3,
         file: StaticString = #file,
