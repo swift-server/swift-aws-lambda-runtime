@@ -32,18 +32,6 @@ public enum Lambda {
     /// A function that takes a `InitializationContext` and returns an `EventLoopFuture` of a `ByteBufferLambdaHandler`
     public typealias HandlerFactory = (InitializationContext) -> EventLoopFuture<Handler>
 
-    /// Run a Lambda defined by implementing the `LambdaHandler` protocol.
-    ///
-    /// - parameters:
-    ///     - handler: `ByteBufferLambdaHandler` based Lambda.
-    ///
-    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ handler: Handler) {
-        if case .failure(let error) = self.run(handler: handler) {
-            fatalError("\(error)")
-        }
-    }
-
     /// Run a Lambda defined by implementing the `LambdaHandler` protocol provided via a `LambdaHandlerFactory`.
     /// Use this to initialize all your resources that you want to cache between invocations. This could be database connections and HTTP clients for example.
     /// It is encouraged to use the given `EventLoop`'s conformance to `EventLoopGroup` when initializing NIO dependencies. This will improve overall performance.
@@ -58,18 +46,6 @@ public enum Lambda {
         }
     }
 
-    /// Run a Lambda defined by implementing the `LambdaHandler` protocol provided via a factory, typically a constructor.
-    ///
-    /// - parameters:
-    ///     - factory: A `ByteBufferLambdaHandler` factory.
-    ///
-    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    public static func run(_ factory: @escaping (InitializationContext) throws -> Handler) {
-        if case .failure(let error) = self.run(factory: factory) {
-            fatalError("\(error)")
-        }
-    }
-
     /// Utility to access/read environment variables
     public static func env(_ name: String) -> String? {
         guard let value = getenv(name) else {
@@ -78,27 +54,19 @@ public enum Lambda {
         return String(cString: value)
     }
 
+    #if swift(>=5.5)
     // for testing and internal use
-    internal static func run(configuration: Configuration = .init(), handler: Handler) -> Result<Int, Error> {
-        self.run(configuration: configuration, factory: { $0.eventLoop.makeSucceededFuture(handler) })
-    }
-
-    // for testing and internal use
-    internal static func run(configuration: Configuration = .init(), factory: @escaping (InitializationContext) throws -> Handler) -> Result<Int, Error> {
-        self.run(configuration: configuration, factory: { context -> EventLoopFuture<Handler> in
-            let promise = context.eventLoop.makePromise(of: Handler.self)
-            // if we have a callback based handler factory, we offload the creation of the handler
-            // onto the default offload queue, to ensure that the eventloop is never blocked.
-            Lambda.defaultOffloadQueue.async {
-                do {
-                    promise.succeed(try factory(context))
-                } catch {
-                    promise.fail(error)
-                }
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    internal static func run<Handler: LambdaHandler>(configuration: Configuration = .init(), handlerType: Handler.Type) -> Result<Int, Error> {
+        self.run(configuration: configuration, factory: { context -> EventLoopFuture<ByteBufferLambdaHandler> in
+            let promise = context.eventLoop.makePromise(of: ByteBufferLambdaHandler.self)
+            promise.completeWithTask {
+                try await Handler(context: context)
             }
             return promise.futureResult
         })
     }
+    #endif
 
     // for testing and internal use
     internal static func run(configuration: Configuration = .init(), factory: @escaping HandlerFactory) -> Result<Int, Error> {

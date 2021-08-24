@@ -18,80 +18,10 @@ import NIOCore
 
 // MARK: - LambdaHandler
 
-/// Strongly typed, callback based processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` asynchronously.
-/// `LambdaHandler` implements `EventLoopLambdaHandler`, performing callback to `EventLoopFuture` mapping, over a `DispatchQueue` for safety.
-///
-/// - note: To implement a Lambda, implement either `LambdaHandler` or the `EventLoopLambdaHandler` protocol.
-///         The `LambdaHandler` will offload the Lambda execution to a `DispatchQueue` making processing safer but slower.
-///         The `EventLoopLambdaHandler` will execute the Lambda on the same `EventLoop` as the core runtime engine, making the processing faster but requires
-///         more care from the implementation to never block the `EventLoop`.
-public protocol LambdaHandler: EventLoopLambdaHandler {
-    /// Defines to which `DispatchQueue` the Lambda execution is offloaded to.
-    var offloadQueue: DispatchQueue { get }
-
-    /// The Lambda handling method
-    /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
-    ///
-    /// - parameters:
-    ///     - context: Runtime `Context`.
-    ///     - event: Event of type `In` representing the event or request.
-    ///     - callback: Completion handler to report the result of the Lambda back to the runtime engine.
-    ///                 The completion handler expects a `Result` with either a response of type `Out` or an `Error`
-    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void)
-}
-
-extension Lambda {
-    @usableFromInline
-    internal static let defaultOffloadQueue = DispatchQueue(label: "LambdaHandler.offload")
-}
-
-extension LambdaHandler {
-    /// The queue on which `handle` is invoked on.
-    public var offloadQueue: DispatchQueue {
-        Lambda.defaultOffloadQueue
-    }
-
-    /// `LambdaHandler` is offloading the processing to a `DispatchQueue`
-    /// This is slower but safer, in case the implementation blocks the `EventLoop`
-    /// Performance sensitive Lambdas should be based on `EventLoopLambdaHandler` which does not offload.
-    @inlinable
-    public func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
-        let promise = context.eventLoop.makePromise(of: Out.self)
-        // FIXME: reusable DispatchQueue
-        self.offloadQueue.async {
-            self.handle(context: context, event: event, callback: promise.completeWith)
-        }
-        return promise.futureResult
-    }
-}
-
-extension LambdaHandler {
-    public func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
-        let promise = context.eventLoop.makePromise(of: Void.self)
-        self.offloadQueue.async {
-            do {
-                try self.syncShutdown(context: context)
-                promise.succeed(())
-            } catch {
-                promise.fail(error)
-            }
-        }
-        return promise.futureResult
-    }
-
-    /// Clean up the Lambda resources synchronously.
-    /// Concrete Lambda handlers implement this method to shutdown resources like `HTTPClient`s and database connections.
-    public func syncShutdown(context: Lambda.ShutdownContext) throws {
-        // noop
-    }
-}
-
-// MARK: - AsyncLambdaHandler
-
 #if compiler(>=5.5)
 /// Strongly typed, processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out` async.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol AsyncLambdaHandler: EventLoopLambdaHandler {
+public protocol LambdaHandler: EventLoopLambdaHandler {
     /// The Lambda initialization method
     /// Use this method to initialize resources that will be used in every request.
     ///
@@ -112,7 +42,7 @@ public protocol AsyncLambdaHandler: EventLoopLambdaHandler {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AsyncLambdaHandler {
+extension LambdaHandler {
     public func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
         let promise = context.eventLoop.makePromise(of: Out.self)
         promise.completeWithTask {
@@ -123,15 +53,9 @@ extension AsyncLambdaHandler {
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension AsyncLambdaHandler {
+extension LambdaHandler {
     public static func main() {
-        Lambda.run { context -> EventLoopFuture<ByteBufferLambdaHandler> in
-            let promise = context.eventLoop.makePromise(of: ByteBufferLambdaHandler.self)
-            promise.completeWithTask {
-                try await Self(context: context)
-            }
-            return promise.futureResult
-        }
+        _ = Lambda.run(handlerType: Self.self)
     }
 }
 #endif

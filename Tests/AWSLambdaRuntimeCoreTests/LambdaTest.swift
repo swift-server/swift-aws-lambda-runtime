@@ -26,7 +26,9 @@ class LambdaTest: XCTestCase {
 
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handler: EchoHandler())
+        let result = Lambda.run(configuration: configuration, factory: {
+            $0.eventLoop.makeSucceededFuture(EchoHandler())
+        })
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
@@ -37,34 +39,9 @@ class LambdaTest: XCTestCase {
 
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handler: FailedHandler("boom"))
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
-    }
-
-    func testBootstrapOnce() {
-        let server = MockLambdaServer(behavior: Behavior())
-        XCTAssertNoThrow(try server.start().wait())
-        defer { XCTAssertNoThrow(try server.stop().wait()) }
-
-        struct Handler: LambdaHandler {
-            typealias In = String
-            typealias Out = String
-
-            var initialized = false
-
-            init(context: Lambda.InitializationContext) {
-                XCTAssertFalse(self.initialized)
-                self.initialized = true
-            }
-
-            func handle(context: Lambda.Context, event: String, callback: (Result<String, Error>) -> Void) {
-                callback(.success(event))
-            }
-        }
-
-        let maxTimes = Int.random(in: 10 ... 20)
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, factory: Handler.init)
+        let result = Lambda.run(configuration: configuration, factory: {
+            $0.eventLoop.makeSucceededFuture(FailedHandler("boom"))
+        })
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
@@ -74,28 +51,6 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let result = Lambda.run(factory: { $0.eventLoop.makeFailedFuture(TestError("kaboom")) })
-        assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
-    }
-
-    func testBootstrapFailure2() {
-        let server = MockLambdaServer(behavior: FailedBootstrapBehavior())
-        XCTAssertNoThrow(try server.start().wait())
-        defer { XCTAssertNoThrow(try server.stop().wait()) }
-
-        struct Handler: LambdaHandler {
-            typealias In = String
-            typealias Out = Void
-
-            init(context: Lambda.InitializationContext) throws {
-                throw TestError("kaboom")
-            }
-
-            func handle(context: Lambda.Context, event: String, callback: (Result<Void, Error>) -> Void) {
-                callback(.failure(TestError("should not be called")))
-            }
-        }
-
-        let result = Lambda.run(factory: Handler.init)
         assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
@@ -163,7 +118,9 @@ class LambdaTest: XCTestCase {
 
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1),
                                                  runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
-        let result = Lambda.run(configuration: configuration, handler: EchoHandler())
+        let result = Lambda.run(configuration: configuration, factory: {
+            $0.eventLoop.makeSucceededFuture(EchoHandler())
+        })
         assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("timeout"))
     }
 
@@ -173,7 +130,9 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
-        let result = Lambda.run(configuration: configuration, handler: EchoHandler())
+        let result = Lambda.run(configuration: configuration, factory: {
+            $0.eventLoop.makeSucceededFuture(EchoHandler())
+        })
         assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("connectionResetByPeer"))
     }
 
@@ -184,7 +143,9 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
-        let result = Lambda.run(configuration: configuration, handler: EchoHandler())
+        let result = Lambda.run(configuration: configuration, factory: {
+            $0.eventLoop.makeSucceededFuture(EchoHandler())
+        })
         assertLambdaLifecycleResult(result, shoudHaveRun: 1)
     }
 
@@ -195,7 +156,9 @@ class LambdaTest: XCTestCase {
 
         let maxTimes = 10
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handler: EchoHandler())
+        let result = Lambda.run(configuration: configuration, factory: {
+            $0.eventLoop.makeSucceededFuture(EchoHandler())
+        })
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
@@ -206,7 +169,9 @@ class LambdaTest: XCTestCase {
 
         let maxTimes = 10
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handler: EchoHandler())
+        let result = Lambda.run(configuration: configuration, factory: {
+            $0.eventLoop.makeSucceededFuture(EchoHandler())
+        })
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
@@ -234,7 +199,9 @@ class LambdaTest: XCTestCase {
             }
         }
 
-        let result = Lambda.run(handler: EchoHandler())
+        let result = Lambda.run(configuration: .init(), factory: {
+            $0.eventLoop.makeSucceededFuture(EchoHandler())
+        })
         assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeError.badStatusCode(.internalServerError))
     }
 

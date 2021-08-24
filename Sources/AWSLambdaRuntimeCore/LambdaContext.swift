@@ -36,10 +36,22 @@ extension Lambda {
         /// `ByteBufferAllocator` to allocate `ByteBuffer`
         public let allocator: ByteBufferAllocator
 
-        internal init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator) {
+        init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator) {
             self.eventLoop = eventLoop
             self.logger = logger
             self.allocator = allocator
+        }
+
+        /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
+        public static func __forTestsOnly(
+            logger: Logger,
+            eventLoop: EventLoop
+        ) -> InitializationContext {
+            InitializationContext(
+                logger: logger,
+                eventLoop: eventLoop,
+                allocator: ByteBufferAllocator()
+            )
         }
     }
 }
@@ -138,24 +150,26 @@ extension Lambda {
             self.storage.allocator
         }
 
-        internal init(requestID: String,
-                      traceID: String,
-                      invokedFunctionARN: String,
-                      deadline: DispatchWallTime,
-                      cognitoIdentity: String? = nil,
-                      clientContext: String? = nil,
-                      logger: Logger,
-                      eventLoop: EventLoop,
-                      allocator: ByteBufferAllocator) {
-            self.storage = _Storage(requestID: requestID,
-                                    traceID: traceID,
-                                    invokedFunctionARN: invokedFunctionARN,
-                                    deadline: deadline,
-                                    cognitoIdentity: cognitoIdentity,
-                                    clientContext: clientContext,
-                                    logger: logger,
-                                    eventLoop: eventLoop,
-                                    allocator: allocator)
+        init(requestID: String,
+             traceID: String,
+             invokedFunctionARN: String,
+             deadline: DispatchWallTime,
+             cognitoIdentity: String? = nil,
+             clientContext: String? = nil,
+             logger: Logger,
+             eventLoop: EventLoop,
+             allocator: ByteBufferAllocator) {
+            self.storage = _Storage(
+                requestID: requestID,
+                traceID: traceID,
+                invokedFunctionARN: invokedFunctionARN,
+                deadline: deadline,
+                cognitoIdentity: cognitoIdentity,
+                clientContext: clientContext,
+                logger: logger,
+                eventLoop: eventLoop,
+                allocator: allocator
+            )
         }
 
         public func getRemainingTime() -> TimeAmount {
@@ -168,6 +182,26 @@ extension Lambda {
 
         public var debugDescription: String {
             "\(Self.self)(requestID: \(self.requestID), traceID: \(self.traceID), invokedFunctionARN: \(self.invokedFunctionARN), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(self.clientContext ?? "nil"), deadline: \(self.deadline))"
+        }
+
+        /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
+        public static func __forTestsOnly(
+            requestID: String,
+            traceID: String,
+            invokedFunctionARN: String,
+            timeout: DispatchTimeInterval,
+            logger: Logger,
+            eventLoop: EventLoop
+        ) -> Context {
+            Context(
+                requestID: requestID,
+                traceID: traceID,
+                invokedFunctionARN: invokedFunctionARN,
+                deadline: .now() + timeout,
+                logger: logger,
+                eventLoop: eventLoop,
+                allocator: ByteBufferAllocator()
+            )
         }
     }
 }

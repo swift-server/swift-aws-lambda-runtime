@@ -18,29 +18,33 @@
 // For exmaple:
 //
 // func test() {
-//     struct MyLambda: EventLoopLambdaHandler {
+//     struct MyLambda: LambdaHandler {
 //         typealias In = String
 //         typealias Out = String
 //
-//         func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
-//             return context.eventLoop.makeSucceededFuture("echo" + event)
+//         init(context: Lambda.InitializationContext) {}
+//
+//         func handle(event: String, context: Lambda.Context) async throws -> String {
+//             "echo" + event
 //         }
 //     }
 //
 //     let input = UUID().uuidString
 //     var result: String?
-//     XCTAssertNoThrow(result = try Lambda.test(MyLambda(), with: input))
+//     XCTAssertNoThrow(result = try Lambda.test(MyLambda.self, with: input))
 //     XCTAssertEqual(result, "echo" + input)
 // }
 
-#if DEBUG
-@testable import AWSLambdaRuntime
-@testable import AWSLambdaRuntimeCore
+#if swift(>=5.5)
+import _NIOConcurrency
+import AWSLambdaRuntime
+import AWSLambdaRuntimeCore
 import Dispatch
 import Logging
 import NIOCore
 import NIOPosix
 
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension Lambda {
     public struct TestConfig {
         public var requestID: String
@@ -60,52 +64,37 @@ extension Lambda {
         }
     }
 
-    public static func test(_ closure: @escaping Lambda.StringClosure,
-                            with event: String,
-                            using config: TestConfig = .init()) throws -> String {
-        try Self.test(StringClosureWrapper(closure), with: event, using: config)
-    }
-
-    public static func test(_ closure: @escaping Lambda.StringVoidClosure,
-                            with event: String,
-                            using config: TestConfig = .init()) throws {
-        _ = try Self.test(StringVoidClosureWrapper(closure), with: event, using: config)
-    }
-
-    public static func test<In: Decodable, Out: Encodable>(
-        _ closure: @escaping Lambda.CodableClosure<In, Out>,
-        with event: In,
+    public static func test<Handler: LambdaHandler>(
+        _ handlerType: Handler.Type,
+        with event: Handler.In,
         using config: TestConfig = .init()
-    ) throws -> Out {
-        try Self.test(CodableClosureWrapper(closure), with: event, using: config)
-    }
-
-    public static func test<In: Decodable>(
-        _ closure: @escaping Lambda.CodableVoidClosure<In>,
-        with event: In,
-        using config: TestConfig = .init()
-    ) throws {
-        _ = try Self.test(CodableVoidClosureWrapper(closure), with: event, using: config)
-    }
-
-    public static func test<In, Out, Handler: EventLoopLambdaHandler>(
-        _ handler: Handler,
-        with event: In,
-        using config: TestConfig = .init()
-    ) throws -> Out where Handler.In == In, Handler.Out == Out {
+    ) throws -> Handler.Out {
         let logger = Logger(label: "test")
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             try! eventLoopGroup.syncShutdownGracefully()
         }
         let eventLoop = eventLoopGroup.next()
-        let context = Context(requestID: config.requestID,
-                              traceID: config.traceID,
-                              invokedFunctionARN: config.invokedFunctionARN,
-                              deadline: .now() + config.timeout,
-                              logger: logger,
-                              eventLoop: eventLoop,
-                              allocator: ByteBufferAllocator())
+
+        let promise = eventLoop.makePromise(of: Handler.self)
+        let initContext = Lambda.InitializationContext.__forTestsOnly(
+            logger: logger,
+            eventLoop: eventLoop
+        )
+
+        let context = Lambda.Context.__forTestsOnly(
+            requestID: config.requestID,
+            traceID: config.traceID,
+            invokedFunctionARN: config.invokedFunctionARN,
+            timeout: config.timeout,
+            logger: logger,
+            eventLoop: eventLoop
+        )
+
+        promise.completeWithTask {
+            try await Handler(context: initContext)
+        }
+        let handler = try promise.futureResult.wait()
 
         return try eventLoop.flatSubmit {
             handler.handle(context: context, event: event)
