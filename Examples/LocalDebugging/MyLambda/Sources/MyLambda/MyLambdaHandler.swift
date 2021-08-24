@@ -17,7 +17,17 @@ import Shared
 
 // set LOCAL_LAMBDA_SERVER_ENABLED env variable to "true" to start
 // a local server simulator which will allow local debugging
-Lambda.run { (_, request: Request, callback: @escaping (Result<Response, Error>) -> Void) in
-    // TODO: something useful
-    callback(.success(Response(message: "Hello, \(request.name)!")))
+@main
+struct MyLambdaHandler: LambdaHandler {
+    typealias In = Request
+    typealias Out = Response
+
+    init(context: Lambda.InitializationContext) async throws {
+        // setup your resources that you want to reuse for every invocation here.
+    }
+
+    func handle(event request: Request, context: Lambda.Context) async throws -> Response {
+        // TODO: something useful
+        Response(message: "Hello, \(request.name)!")
+    }
 }

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2017-2018 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -13,19 +13,28 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntimeCore
-import NIO
+import NIOCore
 
-// If you would like to benchmark Swift's Lambda Runtime,
-// use this example which is more performant.
-// `EventLoopLambdaHandler` does not offload the Lambda processing to a separate thread
-// while the closure-based handlers do.
-Lambda.run { $0.eventLoop.makeSucceededFuture(BenchmarkHandler()) }
-
-struct BenchmarkHandler: EventLoopLambdaHandler {
+struct EchoHandler: EventLoopLambdaHandler {
     typealias In = String
     typealias Out = String
 
     func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
-        context.eventLoop.makeSucceededFuture("hello, world!")
+        context.eventLoop.makeSucceededFuture(event)
+    }
+}
+
+struct FailedHandler: EventLoopLambdaHandler {
+    typealias In = String
+    typealias Out = Void
+
+    private let reason: String
+
+    init(_ reason: String) {
+        self.reason = reason
+    }
+
+    func handle(context: Lambda.Context, event: String) -> EventLoopFuture<Void> {
+        context.eventLoop.makeFailedFuture(TestError(self.reason))
     }
 }

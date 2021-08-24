@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntime
-import NIO
+import NIOCore
 
 struct Request: Codable {
     let body: String
@@ -35,7 +35,7 @@ struct Handler: EventLoopLambdaHandler {
     }
 }
 
-Lambda.run(Handler())
+Lambda.run { $0.eventLoop.makeSucceededFuture(Handler()) }
 
 // MARK: - this can also be expressed as a closure:
 

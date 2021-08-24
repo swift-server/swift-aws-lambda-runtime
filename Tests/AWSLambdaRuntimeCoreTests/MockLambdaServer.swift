@@ -15,9 +15,10 @@
 @testable import AWSLambdaRuntimeCore
 import Foundation // for JSON
 import Logging
-import NIO
-import NIOHTTP1
 import NIOConcurrencyHelpers
+import NIOCore
+import NIOPosix
+import NIOHTTP1
 
 internal final class MockLambdaServer {
     private let logger = Logger(label: "MockLambdaServer")
@@ -36,7 +37,7 @@ internal final class MockLambdaServer {
         self.counter.load()
     }
 
-    public init(behavior: LambdaServerBehavior, host: String = "127.0.0.1", port: Int = 7000, keepAlive: Bool = true) {
+    init(behavior: LambdaServerBehavior, host: String = "127.0.0.1", port: Int = 7000, keepAlive: Bool = true) {
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         self.behavior = behavior
         self.host = host
@@ -87,8 +88,8 @@ internal final class MockLambdaServer {
 }
 
 internal final class HTTPHandler: ChannelInboundHandler {
-    public typealias InboundIn = HTTPServerRequestPart
-    public typealias OutboundOut = HTTPServerResponsePart
+    typealias InboundIn = HTTPServerRequestPart
+    typealias OutboundOut = HTTPServerResponsePart
 
     private let logger: Logger
     private let keepAlive: Bool
@@ -97,7 +98,7 @@ internal final class HTTPHandler: ChannelInboundHandler {
     
     private var pending = CircularBuffer<(head: HTTPRequestHead, body: ByteBuffer?)>()
 
-    public init(logger: Logger, keepAlive: Bool, counter: NIOAtomic<Int>, behavior: LambdaServerBehavior) {
+    init(logger: Logger, keepAlive: Bool, counter: NIOAtomic<Int>, behavior: LambdaServerBehavior) {
         self.logger = logger
         self.keepAlive = keepAlive
         self.counter = counter

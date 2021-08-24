@@ -1,11 +1,11 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.5
 
 import PackageDescription
 
 let package = Package(
     name: "swift-aws-lambda-runtime-samples",
     platforms: [
-        .macOS(.v10_13),
+        .macOS(.v12),
     ],
     products: [
         // introductory example
@@ -14,8 +14,6 @@ let package = Package(
         .executable(name: "Benchmark", targets: ["Benchmark"]),
         // demonstrate different types of error handling
         .executable(name: "ErrorHandling", targets: ["ErrorHandling"]),
-        // demostrate how to integrate with AWS API Gateway
-        .executable(name: "APIGateway", targets: ["APIGateway"]),
         // fully featured example with domain specific business logic
         .executable(name: "CurrencyExchange", targets: ["CurrencyExchange"]),
     ],
@@ -26,20 +24,16 @@ let package = Package(
         .package(name: "swift-aws-lambda-runtime", path: "../.."),
     ],
     targets: [
-        .target(name: "HelloWorld", dependencies: [
-            .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-        ]),
-        .target(name: "Benchmark", dependencies: [
+        .executableTarget(name: "Benchmark", dependencies: [
             .product(name: "AWSLambdaRuntimeCore", package: "swift-aws-lambda-runtime"),
         ]),
-        .target(name: "ErrorHandling", dependencies: [
+        .executableTarget(name: "HelloWorld", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
         ]),
-        .target(name: "APIGateway", dependencies: [
+        .executableTarget(name: "ErrorHandling", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-            .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-runtime"),
         ]),
-        .target(name: "CurrencyExchange", dependencies: [
+        .executableTarget(name: "CurrencyExchange", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
         ]),
     ]

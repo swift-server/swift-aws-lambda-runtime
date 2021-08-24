@@ -12,45 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if swift(>=5.5)
 import AWSLambdaRuntime
 import AWSLambdaTesting
-import NIO
+import NIOCore
 import XCTest
 
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 class LambdaTestingTests: XCTestCase {
     func testCodableClosure() {
-        struct Request: Codable {
-            let name: String
-        }
-
-        struct Response: Codable {
-            let message: String
-        }
-
-        let myLambda = { (_: Lambda.Context, request: Request, callback: (Result<Response, Error>) -> Void) in
-            callback(.success(Response(message: "echo" + request.name)))
-        }
-
-        let request = Request(name: UUID().uuidString)
-        var response: Response?
-        XCTAssertNoThrow(response = try Lambda.test(myLambda, with: request))
-        XCTAssertEqual(response?.message, "echo" + request.name)
-    }
-
-    func testCodableVoidClosure() {
-        struct Request: Codable {
-            let name: String
-        }
-
-        let myLambda = { (_: Lambda.Context, _: Request, callback: (Result<Void, Error>) -> Void) in
-            callback(.success(()))
-        }
-
-        let request = Request(name: UUID().uuidString)
-        XCTAssertNoThrow(try Lambda.test(myLambda, with: request))
-    }
-
-    func testLambdaHandler() {
         struct Request: Codable {
             let name: String
         }
@@ -63,85 +33,77 @@ class LambdaTestingTests: XCTestCase {
             typealias In = Request
             typealias Out = Response
 
-            func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
-                XCTAssertFalse(context.eventLoop.inEventLoop)
-                callback(.success(Response(message: "echo" + event.name)))
+            init(context: Lambda.InitializationContext) {}
+
+            func handle(event: Request, context: Lambda.Context) async throws -> Response {
+                Response(message: "echo" + event.name)
             }
         }
 
         let request = Request(name: UUID().uuidString)
         var response: Response?
-        XCTAssertNoThrow(response = try Lambda.test(MyLambda(), with: request))
+        XCTAssertNoThrow(response = try Lambda.test(MyLambda.self, with: request))
         XCTAssertEqual(response?.message, "echo" + request.name)
     }
 
-    func testEventLoopLambdaHandler() {
-        struct MyLambda: EventLoopLambdaHandler {
-            typealias In = String
-            typealias Out = String
+    // DIRTY HACK: To verify the handler was actually invoked, we change a global variable.
+    static var VoidLambdaHandlerInvokeCount: Int = 0
+    func testCodableVoidClosure() {
+        struct Request: Codable {
+            let name: String
+        }
 
-            func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
-                XCTAssertTrue(context.eventLoop.inEventLoop)
-                return context.eventLoop.makeSucceededFuture("echo" + event)
+        struct MyLambda: LambdaHandler {
+            typealias In = Request
+            typealias Out = Void
+
+            init(context: Lambda.InitializationContext) {}
+
+            func handle(event: Request, context: Lambda.Context) async throws {
+                LambdaTestingTests.VoidLambdaHandlerInvokeCount += 1
             }
         }
 
-        let input = UUID().uuidString
-        var result: String?
-        XCTAssertNoThrow(result = try Lambda.test(MyLambda(), with: input))
-        XCTAssertEqual(result, "echo" + input)
+        Self.VoidLambdaHandlerInvokeCount = 0
+        let request = Request(name: UUID().uuidString)
+        XCTAssertNoThrow(try Lambda.test(MyLambda.self, with: request))
+        XCTAssertEqual(Self.VoidLambdaHandlerInvokeCount, 1)
     }
 
-    func testFailure() {
+    func testInvocationFailure() {
         struct MyError: Error {}
 
         struct MyLambda: LambdaHandler {
             typealias In = String
             typealias Out = Void
 
-            func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void) {
-                callback(.failure(MyError()))
+            init(context: Lambda.InitializationContext) {}
+
+            func handle(event: String, context: Lambda.Context) async throws {
+                throw MyError()
             }
         }
 
-        XCTAssertThrowsError(try Lambda.test(MyLambda(), with: UUID().uuidString)) { error in
+        XCTAssertThrowsError(try Lambda.test(MyLambda.self, with: UUID().uuidString)) { error in
             XCTAssert(error is MyError)
         }
     }
 
     func testAsyncLongRunning() {
-        var executed: Bool = false
-        let myLambda = { (_: Lambda.Context, _: String, callback: @escaping (Result<Void, Error>) -> Void) in
-            DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 0.5) {
-                executed = true
-                callback(.success(()))
+        struct MyLambda: LambdaHandler {
+            typealias In = String
+            typealias Out = String
+
+            init(context: Lambda.InitializationContext) {}
+
+            func handle(event: String, context: Lambda.Context) async throws -> String {
+                try await Task.sleep(nanoseconds: 500 * 1000 * 1000)
+                return event
             }
         }
 
-        XCTAssertNoThrow(try Lambda.test(myLambda, with: UUID().uuidString))
-        XCTAssertTrue(executed)
-    }
-
-    func testConfigValues() {
-        let timeout: TimeInterval = 4
-        let config = Lambda.TestConfig(
-            requestID: UUID().uuidString,
-            traceID: UUID().uuidString,
-            invokedFunctionARN: "arn:\(UUID().uuidString)",
-            timeout: .seconds(4)
-        )
-
-        let myLambda = { (ctx: Lambda.Context, _: String, callback: @escaping (Result<Void, Error>) -> Void) in
-            XCTAssertEqual(ctx.requestID, config.requestID)
-            XCTAssertEqual(ctx.traceID, config.traceID)
-            XCTAssertEqual(ctx.invokedFunctionARN, config.invokedFunctionARN)
-
-            let secondsSinceEpoch = Double(Int64(bitPattern: ctx.deadline.rawValue)) / -1_000_000_000
-            XCTAssertEqual(Date(timeIntervalSince1970: secondsSinceEpoch).timeIntervalSinceNow, timeout, accuracy: 0.1)
-
-            callback(.success(()))
-        }
-
-        XCTAssertNoThrow(try Lambda.test(myLambda, with: UUID().uuidString, using: config))
+        let uuid = UUID().uuidString
+        XCTAssertEqual(try Lambda.test(MyLambda.self, with: uuid), uuid)
     }
 }
+#endif

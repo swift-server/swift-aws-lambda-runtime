@@ -14,14 +14,14 @@
 
 import Dispatch
 import Logging
-import NIO
+import NIOCore
 
 // MARK: - InitializationContext
 
 extension Lambda {
     /// Lambda runtime initialization context.
     /// The Lambda runtime generates and passes the `InitializationContext` to the Lambda factory as an argument.
-    public final class InitializationContext {
+    public struct InitializationContext {
         /// `Logger` to log with
         ///
         /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
@@ -36,10 +36,22 @@ extension Lambda {
         /// `ByteBufferAllocator` to allocate `ByteBuffer`
         public let allocator: ByteBufferAllocator
 
-        internal init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator) {
+        init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator) {
             self.eventLoop = eventLoop
             self.logger = logger
             self.allocator = allocator
+        }
+
+        /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
+        public static func __forTestsOnly(
+            logger: Logger,
+            eventLoop: EventLoop
+        ) -> InitializationContext {
+            InitializationContext(
+                logger: logger,
+                eventLoop: eventLoop,
+                allocator: ByteBufferAllocator()
+            )
         }
     }
 }
@@ -175,6 +187,27 @@ extension Lambda {
 
         public var debugDescription: String {
             "\(Self.self)(requestID: \(self.requestID), traceID: \(self.traceID), invokedFunctionARN: \(self.invokedFunctionARN), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(self.clientContext ?? "nil"), deadline: \(self.deadline))"
+        }
+
+        /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
+        public static func __forTestsOnly(
+            requestID: String,
+            traceID: String,
+            invokedFunctionARN: String,
+            timeout: DispatchTimeInterval,
+            logger: Logger,
+            eventLoop: EventLoop
+        ) -> Context {
+            Context(
+                requestID: requestID,
+                traceID: traceID,
+                invokedFunctionARN: invokedFunctionARN,
+                deadline: .now() + timeout,
+                logger: logger,
+                invocationCount: 0,
+                eventLoop: eventLoop,
+                allocator: ByteBufferAllocator()
+            )
         }
     }
 }

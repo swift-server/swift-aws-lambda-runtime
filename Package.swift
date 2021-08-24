@@ -9,8 +9,6 @@ let package = Package(
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
         // this has all the main functionality for lambda and it does not link Foundation
         .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
-        // common AWS events
-        .library(name: "AWSLambdaEvents", targets: ["AWSLambdaEvents"]),
         // for testing only
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
@@ -22,14 +20,16 @@ let package = Package(
     targets: [
         .target(name: "AWSLambdaRuntime", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
-            .product(name: "NIO", package: "swift-nio"),
+            .product(name: "NIOCore", package: "swift-nio"),
             .product(name: "NIOFoundationCompat", package: "swift-nio"),
         ]),
         .target(name: "AWSLambdaRuntimeCore", dependencies: [
             .product(name: "Logging", package: "swift-log"),
             .product(name: "Backtrace", package: "swift-backtrace"),
             .product(name: "NIOHTTP1", package: "swift-nio"),
-            .product(name: "NIO", package: "swift-nio"),
+            .product(name: "NIOCore", package: "swift-nio"),
+            .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
+            .product(name: "NIOPosix", package: "swift-nio"),
             .product(name: "_NIOConcurrency", package: "swift-nio"),
         ]),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [
@@ -41,8 +41,6 @@ let package = Package(
             .byName(name: "AWSLambdaRuntimeCore"),
             .byName(name: "AWSLambdaRuntime"),
         ]),
-        .target(name: "AWSLambdaEvents", dependencies: []),
-        .testTarget(name: "AWSLambdaEventsTests", dependencies: ["AWSLambdaEvents"]),
         // testing helper
         .target(name: "AWSLambdaTesting", dependencies: [
             .byName(name: "AWSLambdaRuntime"),

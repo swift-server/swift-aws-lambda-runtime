@@ -14,7 +14,8 @@
 
 @testable import AWSLambdaRuntimeCore
 import Logging
-import NIO
+import NIOCore
+import NIOPosix
 import XCTest
 
 func runLambda(behavior: LambdaServerBehavior, handler: Lambda.Handler) throws {
@@ -32,30 +33,6 @@ func runLambda(behavior: LambdaServerBehavior, factory: @escaping Lambda.Handler
 //    try runner.initialize(logger: logger, factory: factory).flatMap { handler in
 //        runner.run(logger: logger, handler: handler)
 //    }.wait()
-}
-
-struct EchoHandler: LambdaHandler {
-    typealias In = String
-    typealias Out = String
-
-    func handle(context: Lambda.Context, event: String, callback: (Result<String, Error>) -> Void) {
-        callback(.success(event))
-    }
-}
-
-struct FailedHandler: LambdaHandler {
-    typealias In = String
-    typealias Out = Void
-
-    private let reason: String
-
-    public init(_ reason: String) {
-        self.reason = reason
-    }
-
-    func handle(context: Lambda.Context, event: String, callback: (Result<Void, Error>) -> Void) {
-        callback(.failure(TestError(self.reason)))
-    }
 }
 
 func assertLambdaLifecycleResult(_ result: Result<Int, Error>, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil, file: StaticString = #file, line: UInt = #line) {

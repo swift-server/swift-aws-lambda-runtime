@@ -14,8 +14,9 @@
 
 @testable import AWSLambdaRuntimeCore
 import Logging
-import NIO
+import NIOCore
 import NIOHTTP1
+import NIOPosix
 import XCTest
 
 class LambdaLifecycleTest: XCTestCase {

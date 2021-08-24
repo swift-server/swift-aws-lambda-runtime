@@ -13,14 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntimeCore
-import Backtrace
-import Logging
-import NIO
-#if os(Linux)
-import Glibc
-#else
-import Darwin.C
-#endif
+import NIOCore
 
 // in this example we are receiving and responding with strings
 struct Handler: EventLoopLambdaHandler {
@@ -29,35 +22,8 @@ struct Handler: EventLoopLambdaHandler {
 
     func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
         // as an example, respond with the event's reversed body
-        context.eventLoop.makeSucceededFuture(event)
+        context.eventLoop.makeSucceededFuture(String(event.reversed()))
     }
 }
 
-func run(factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>) {
-    Backtrace.install()
-    var logger = Logger(label: "Lambda")
-    logger.logLevel = .info
-
-    MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
-        let runtime = Lambda.Runtime(eventLoop: eventLoop, logger: logger, factory: factory)
-
-        runtime.start().whenSuccess { _ in
-            _ = runtime.shutdownFuture.always { _ in
-                eventLoop.shutdownGracefully { _ in
-                }
-            }
-        }
-    }
-
-    logger.info("shutdown completed")
-}
-
-run { $0.eventLoop.makeSucceededFuture(Handler()) }
-
-// MARK: - this can also be expressed as a closure:
-
-/*
- Lambda.run { (_, event: String, callback) in
-   callback(.success(String(event.reversed())))
- }
- */
+Lambda.run { $0.eventLoop.makeSucceededFuture(Handler()) }
