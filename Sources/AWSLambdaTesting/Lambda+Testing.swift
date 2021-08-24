@@ -77,19 +77,19 @@ extension Lambda {
         let eventLoop = eventLoopGroup.next()
 
         let promise = eventLoop.makePromise(of: Handler.self)
-        let initContext = Lambda.InitializationContext(
+        let initContext = Lambda.InitializationContext.__forTestsOnly(
             logger: logger,
-            eventLoop: eventLoop,
-            allocator: ByteBufferAllocator()
+            eventLoop: eventLoop
         )
 
-        let context = Context(requestID: config.requestID,
-                              traceID: config.traceID,
-                              invokedFunctionARN: config.invokedFunctionARN,
-                              deadline: .now() + config.timeout,
-                              logger: logger,
-                              eventLoop: eventLoop,
-                              allocator: ByteBufferAllocator())
+        let context = Lambda.Context.__forTestsOnly(
+            requestID: config.requestID,
+            traceID: config.traceID,
+            invokedFunctionARN: config.invokedFunctionARN,
+            timeout: config.timeout,
+            logger: logger,
+            eventLoop: eventLoop
+        )
 
         promise.completeWithTask {
             try await Handler(context: initContext)
