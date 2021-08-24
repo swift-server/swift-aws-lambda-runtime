@@ -131,7 +131,7 @@ final class RuntimeHandler: ChannelDuplexHandler {
                 invocation: invocation,
                 invocationCount: invocationCount
             )
-            handler.handle(context: lambdaContext, event: bytes).hop(to: context.eventLoop).whenComplete {
+            handler.handle(event: bytes, context: lambdaContext).hop(to: context.eventLoop).whenComplete {
                 let action = self.state.invocationCompleted($0)
                 self.run(action: action, context: context)
             }

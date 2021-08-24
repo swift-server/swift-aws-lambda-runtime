@@ -23,7 +23,7 @@ final class RuntimeHandlerTests: XCTestCase {
         typealias In = String
         typealias Out = String
 
-        func handle(context: Lambda.Context, event: String) -> EventLoopFuture<String> {
+        func handle(event: String, context: Lambda.Context) -> EventLoopFuture<String> {
             context.eventLoop.makeSucceededFuture(event)
         }
     }
