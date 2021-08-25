@@ -19,7 +19,7 @@ struct EchoHandler: EventLoopLambdaHandler {
     typealias In = String
     typealias Out = String
 
-    func handle(event: String, context: Lambda.Context) -> EventLoopFuture<String> {
+    func handle(_ event: String, context: Lambda.Context) -> EventLoopFuture<String> {
         context.eventLoop.makeSucceededFuture(event)
     }
 }
@@ -34,7 +34,7 @@ struct FailedHandler: EventLoopLambdaHandler {
         self.reason = reason
     }
 
-    func handle(event: String, context: Lambda.Context) -> EventLoopFuture<Void> {
+    func handle(_ event: String, context: Lambda.Context) -> EventLoopFuture<Void> {
         context.eventLoop.makeFailedFuture(TestError(self.reason))
     }
 }

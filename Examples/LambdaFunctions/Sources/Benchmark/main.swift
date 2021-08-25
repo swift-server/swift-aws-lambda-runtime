@@ -25,7 +25,7 @@ struct BenchmarkHandler: EventLoopLambdaHandler {
     typealias In = String
     typealias Out = String
 
-    func handle(event: String, context: Lambda.Context) -> EventLoopFuture<String> {
+    func handle(_ event: String, context: Lambda.Context) -> EventLoopFuture<String> {
         context.eventLoop.makeSucceededFuture("hello, world!")
     }
 }

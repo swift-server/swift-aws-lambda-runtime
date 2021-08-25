@@ -35,7 +35,7 @@ struct CurrencyExchangeHandler: LambdaHandler {
         self.calculator = ExchangeRatesCalculator()
     }
 
-    func handle(event: Request, context: Lambda.Context) async throws -> [Exchange] {
+    func handle(_ event: Request, context: Lambda.Context) async throws -> [Exchange] {
         try await withCheckedThrowingContinuation { continuation in
             self.calculator.run(logger: context.logger) { result in
                 switch result {

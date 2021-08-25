@@ -43,7 +43,7 @@ class CodableLambdaTest: XCTestCase {
 
             let expected: Request
 
-            func handle(event: Request, context: Lambda.Context) -> EventLoopFuture<Void> {
+            func handle(_ event: Request, context: Lambda.Context) -> EventLoopFuture<Void> {
                 XCTAssertEqual(event, self.expected)
                 return context.eventLoop.makeSucceededVoidFuture()
             }
@@ -52,7 +52,7 @@ class CodableLambdaTest: XCTestCase {
         let handler = Handler(expected: request)
 
         XCTAssertNoThrow(inputBuffer = try JSONEncoder().encode(request, using: self.allocator))
-        XCTAssertNoThrow(outputBuffer = try handler.handle(event: XCTUnwrap(inputBuffer), context: self.newContext()).wait())
+        XCTAssertNoThrow(outputBuffer = try handler.handle(XCTUnwrap(inputBuffer), context: self.newContext()).wait())
         XCTAssertNil(outputBuffer)
     }
 
@@ -68,7 +68,7 @@ class CodableLambdaTest: XCTestCase {
 
             let expected: Request
 
-            func handle(event: Request, context: Lambda.Context) -> EventLoopFuture<Response> {
+            func handle(_ event: Request, context: Lambda.Context) -> EventLoopFuture<Response> {
                 XCTAssertEqual(event, self.expected)
                 return context.eventLoop.makeSucceededFuture(Response(requestId: event.requestId))
             }
@@ -77,7 +77,7 @@ class CodableLambdaTest: XCTestCase {
         let handler = Handler(expected: request)
 
         XCTAssertNoThrow(inputBuffer = try JSONEncoder().encode(request, using: self.allocator))
-        XCTAssertNoThrow(outputBuffer = try handler.handle(event: XCTUnwrap(inputBuffer), context: self.newContext()).wait())
+        XCTAssertNoThrow(outputBuffer = try handler.handle(XCTUnwrap(inputBuffer), context: self.newContext()).wait())
         XCTAssertNoThrow(response = try JSONDecoder().decode(Response.self, from: XCTUnwrap(outputBuffer)))
         XCTAssertEqual(response?.requestId, request.requestId)
     }
@@ -93,7 +93,7 @@ class CodableLambdaTest: XCTestCase {
 
             init(context: Lambda.InitializationContext) async throws {}
 
-            func handle(event: Request, context: Lambda.Context) async throws {
+            func handle(_ event: Request, context: Lambda.Context) async throws {
                 XCTAssertEqual(event, self.expected)
             }
         }
@@ -107,7 +107,7 @@ class CodableLambdaTest: XCTestCase {
             handler.expected = request
 
             XCTAssertNoThrow(inputBuffer = try JSONEncoder().encode(request, using: self.allocator))
-            XCTAssertNoThrow(outputBuffer = try handler.handle(event: XCTUnwrap(inputBuffer), context: self.newContext()).wait())
+            XCTAssertNoThrow(outputBuffer = try handler.handle(XCTUnwrap(inputBuffer), context: self.newContext()).wait())
             XCTAssertNil(outputBuffer)
         }
     }
@@ -122,7 +122,7 @@ class CodableLambdaTest: XCTestCase {
 
             init(context: Lambda.InitializationContext) async throws {}
 
-            func handle(event: Request, context: Lambda.Context) async throws -> Response {
+            func handle(_ event: Request, context: Lambda.Context) async throws -> Response {
                 XCTAssertEqual(event, self.expected)
                 return Response(requestId: event.requestId)
             }
@@ -138,7 +138,7 @@ class CodableLambdaTest: XCTestCase {
             handler.expected = request
 
             XCTAssertNoThrow(inputBuffer = try JSONEncoder().encode(request, using: self.allocator))
-            XCTAssertNoThrow(outputBuffer = try handler.handle(event: XCTUnwrap(inputBuffer), context: self.newContext()).wait())
+            XCTAssertNoThrow(outputBuffer = try handler.handle(XCTUnwrap(inputBuffer), context: self.newContext()).wait())
             XCTAssertNoThrow(response = try JSONDecoder().decode(Response.self, from: XCTUnwrap(outputBuffer)))
             XCTAssertEqual(response?.requestId, request.requestId)
         }

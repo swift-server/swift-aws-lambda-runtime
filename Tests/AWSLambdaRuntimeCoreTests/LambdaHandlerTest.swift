@@ -39,7 +39,7 @@ class LambdaHandlerTest: XCTestCase {
                 self.initialized = true
             }
 
-            func handle(event: String, context: Lambda.Context) async throws -> String {
+            func handle(_ event: String, context: Lambda.Context) async throws -> String {
                 event
             }
         }
@@ -68,7 +68,7 @@ class LambdaHandlerTest: XCTestCase {
                 throw TestError("kaboom")
             }
 
-            func handle(event: String, context: Lambda.Context) async throws {
+            func handle(_ event: String, context: Lambda.Context) async throws {
                 XCTFail("How can this be called if init failed")
             }
         }
@@ -91,7 +91,7 @@ class LambdaHandlerTest: XCTestCase {
 
             init(context: Lambda.InitializationContext) {}
 
-            func handle(event: String, context: Lambda.Context) async throws -> String {
+            func handle(_ event: String, context: Lambda.Context) async throws -> String {
                 event
             }
         }
@@ -114,7 +114,7 @@ class LambdaHandlerTest: XCTestCase {
 
             init(context: Lambda.InitializationContext) {}
 
-            func handle(event: String, context: Lambda.Context) async throws {}
+            func handle(_ event: String, context: Lambda.Context) async throws {}
         }
 
         let maxTimes = Int.random(in: 1 ... 10)
@@ -136,7 +136,7 @@ class LambdaHandlerTest: XCTestCase {
 
             init(context: Lambda.InitializationContext) {}
 
-            func handle(event: String, context: Lambda.Context) async throws -> String {
+            func handle(_ event: String, context: Lambda.Context) async throws -> String {
                 throw TestError("boom")
             }
         }
@@ -159,7 +159,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias In = String
             typealias Out = String
 
-            func handle(event: String, context: Lambda.Context) -> EventLoopFuture<String> {
+            func handle(_ event: String, context: Lambda.Context) -> EventLoopFuture<String> {
                 context.eventLoop.makeSucceededFuture(event)
             }
         }
@@ -181,7 +181,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias In = String
             typealias Out = Void
 
-            func handle(event: String, context: Lambda.Context) -> EventLoopFuture<Void> {
+            func handle(_ event: String, context: Lambda.Context) -> EventLoopFuture<Void> {
                 context.eventLoop.makeSucceededFuture(())
             }
         }
@@ -203,7 +203,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias In = String
             typealias Out = String
 
-            func handle(event: String, context: Lambda.Context) -> EventLoopFuture<String> {
+            func handle(_ event: String, context: Lambda.Context) -> EventLoopFuture<String> {
                 context.eventLoop.makeFailedFuture(TestError("boom"))
             }
         }

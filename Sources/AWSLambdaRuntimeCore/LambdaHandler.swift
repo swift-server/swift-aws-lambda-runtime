@@ -38,15 +38,15 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
     ///     - context: Runtime `Context`.
     ///
     /// - Returns: A Lambda result ot type `Out`.
-    func handle(event: In, context: Lambda.Context) async throws -> Out
+    func handle(_ event: In, context: Lambda.Context) async throws -> Out
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler {
-    public func handle(event: In, context: Lambda.Context) -> EventLoopFuture<Out> {
+    public func handle(_ event: In, context: Lambda.Context) -> EventLoopFuture<Out> {
         let promise = context.eventLoop.makePromise(of: Out.self)
         promise.completeWithTask {
-            try await self.handle(event: event, context: context)
+            try await self.handle(event, context: context)
         }
         return promise.futureResult
     }
@@ -82,7 +82,7 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
     ///
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     ///            The `EventLoopFuture` should be completed with either a response of type `Out` or an `Error`
-    func handle(event: In, context: Lambda.Context) -> EventLoopFuture<Out>
+    func handle(_ event: In, context: Lambda.Context) -> EventLoopFuture<Out>
 
     /// Encode a response of type `Out` to `ByteBuffer`
     /// Concrete Lambda handlers implement this method to provide coding functionality.
@@ -106,7 +106,7 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
 extension EventLoopLambdaHandler {
     /// Driver for `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding
     @inlinable
-    public func handle(event: ByteBuffer, context: Lambda.Context) -> EventLoopFuture<ByteBuffer?> {
+    public func handle(_ event: ByteBuffer, context: Lambda.Context) -> EventLoopFuture<ByteBuffer?> {
         let input: In
         do {
             input = try self.decode(buffer: event)
@@ -114,7 +114,7 @@ extension EventLoopLambdaHandler {
             return context.eventLoop.makeFailedFuture(CodecError.requestDecoding(error))
         }
 
-        return self.handle(event: input, context: context).flatMapThrowing { output in
+        return self.handle(input, context: context).flatMapThrowing { output in
             do {
                 return try self.encode(allocator: context.allocator, value: output)
             } catch {
@@ -148,7 +148,7 @@ public protocol ByteBufferLambdaHandler {
     ///
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     ///            The `EventLoopFuture` should be completed with either a response encoded as `ByteBuffer` or an `Error`
-    func handle(event: ByteBuffer, context: Lambda.Context) -> EventLoopFuture<ByteBuffer?>
+    func handle(_ event: ByteBuffer, context: Lambda.Context) -> EventLoopFuture<ByteBuffer?>
 
     /// Clean up the Lambda resources asynchronously.
     /// Concrete Lambda handlers implement this method to shutdown resources like `HTTPClient`s and database connections.
