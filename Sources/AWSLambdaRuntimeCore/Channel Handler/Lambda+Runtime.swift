@@ -14,7 +14,6 @@
 
 import Logging
 import NIO
-import NIOHTTP1
 
 extension Lambda {
     public class Runtime {
@@ -70,6 +69,14 @@ extension Lambda {
             }
 
             self.state = .starting
+            
+            let host: String
+            switch configuration.runtimeEngine.port {
+            case 80:
+                host = configuration.runtimeEngine.ip
+            default:
+                host = "\(configuration.runtimeEngine.ip):\(configuration.runtimeEngine.port)"
+            }
 
             let bootstrap = ClientBootstrap(group: self.eventLoop).channelInitializer { channel in
                 do {
@@ -79,7 +86,13 @@ extension Lambda {
                     try channel.pipeline.syncOperations.addHandler(
                         NIOHTTPClientResponseAggregator(maxContentLength: 6 * 1024 * 1024))
                     try channel.pipeline.syncOperations.addHandler(
-                        RuntimeHandler(configuration: self.configuration, logger: self.logger, factory: factory))
+                        RuntimeHandler(
+                            configuration: self.configuration,
+                            logger: self.logger,
+                            writer: HTTPRequestWriter(host: host),
+                            factory: factory
+                        )
+                    )
                     try channel.pipeline.syncOperations.addHandler(
                         RuntimeEventHandler())
 

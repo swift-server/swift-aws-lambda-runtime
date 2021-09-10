@@ -14,12 +14,20 @@
 
 import Logging
 import NIO
-import NIOHTTP1
 
-final class RuntimeHandler: ChannelDuplexHandler {
-    typealias InboundIn = NIOHTTPClientResponseFull
+protocol APIRequestWriter {
+
+    mutating func writeRequest(_ request: APIRequest, context: ChannelHandlerContext)
+    
+    mutating func writerAdded(context: ChannelHandlerContext)
+    
+    mutating func writerRemoved(context: ChannelHandlerContext)
+}
+
+final class RuntimeHandler<Writer: APIRequestWriter>: ChannelDuplexHandler {
+    typealias InboundIn = ByteBuffer
     typealias OutboundIn = Never
-    typealias OutboundOut = HTTPClientRequestPart
+    typealias OutboundOut = ByteBuffer
 
     var state: StateMachine {
         didSet {
@@ -28,35 +36,33 @@ final class RuntimeHandler: ChannelDuplexHandler {
             ])
         }
     }
-
+    
+    private var writer: Writer
     let logger: Logger
-    let headers: HTTPHeaders
 
     init(
         configuration: Lambda.Configuration,
         logger: Logger,
+        writer: Writer,
         factory: @escaping (Lambda.InitializationContext) -> EventLoopFuture<ByteBufferLambdaHandler>
     ) {
         self.logger = logger
         let maxTimes = configuration.lifecycle.maxTimes
+        self.writer = writer
         self.state = StateMachine(maxTimes: maxTimes, factory: factory)
         
-        let host: String
-        switch configuration.runtimeEngine.port {
-        case 80:
-            host = configuration.runtimeEngine.ip
-        default:
-            host = "\(configuration.runtimeEngine.ip):\(configuration.runtimeEngine.port)"
-        }
 
-        self.headers = HTTPHeaders([
-            ("host", "\(host)"),
-            ("user-agent", "Swift-Lambda/Unknown"),
-        ])
+
+        
     }
 
     func handlerAdded(context: ChannelHandlerContext) {
+        self.writer.writerAdded(context: context)
         precondition(!context.channel.isActive, "Channel must not be active when adding handler")
+    }
+    
+    func handlerRemoved(context: ChannelHandlerContext) {
+        self.writer.writerRemoved(context: context)
     }
 
     func connect(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
@@ -121,7 +127,7 @@ final class RuntimeHandler: ChannelDuplexHandler {
             self.run(action: action, context: context)
 
         case .getNextInvocation:
-            self.writeRequest(.next, context: context)
+            self.writer.writeRequest(.next, context: context)
             
         case .invokeHandler(let handler, let invocation, let bytes, let invocationCount):
             let lambdaContext = Lambda.Context(
@@ -139,16 +145,16 @@ final class RuntimeHandler: ChannelDuplexHandler {
         case .reportInvocationResult(requestID: let requestID, let result):
             switch result {
             case .success(let buffer):
-                self.writeRequest(.invocationResponse(requestID, buffer), context: context)
+                self.writer.writeRequest(.invocationResponse(requestID, buffer), context: context)
                 
             case .failure(let error):
                 let response = ErrorResponse(errorType: "Unhandled Error", errorMessage: "\(error)")
-                self.writeRequest(.invocationError(requestID, response), context: context)
+                self.writer.writeRequest(.invocationError(requestID, response), context: context)
             }
             
         case .reportInitializationError(let error):
             let response = ErrorResponse(errorType: "Unhandled Error", errorMessage: "\(error)")
-            self.writeRequest(.initializationError(response), context: context)
+            self.writer.writeRequest(.initializationError(response), context: context)
             
         case .closeConnection:
             context.close(mode: .all, promise: nil)
@@ -238,70 +244,4 @@ final class RuntimeHandler: ChannelDuplexHandler {
             self.run(action: action, context: context)
         }
     }
-
-    func writeRequest(_ request: APIRequest, context: ChannelHandlerContext) {
-        switch request {
-        case .next:
-            let head = HTTPRequestHead(
-                version: .http1_1,
-                method: .GET,
-                uri: "/2018-06-01/runtime/invocation/next",
-                headers: self.headers
-            )
-            context.write(wrapOutboundOut(.head(head)), promise: nil)
-            context.write(wrapOutboundOut(.end(nil)), promise: nil)
-            context.flush()
-
-        case .invocationResponse(let requestID, let payload):
-            var headers = self.headers
-            headers.add(name: "content-length", value: "\(payload?.readableBytes ?? 0)")
-            let head = HTTPRequestHead(
-                version: .http1_1,
-                method: .POST,
-                uri: "/2018-06-01/runtime/invocation/\(requestID)/response",
-                headers: headers
-            )
-            context.write(wrapOutboundOut(.head(head)), promise: nil)
-            if let payload = payload {
-                context.write(wrapOutboundOut(.body(.byteBuffer(payload))), promise: nil)
-            }
-            context.write(wrapOutboundOut(.end(nil)), promise: nil)
-            context.flush()
-
-        case .invocationError(let requestID, let errorMessage):
-            let payload = errorMessage.toJSONBytes()
-            var headers = self.headers
-            headers.add(name: "content-length", value: "\(payload.count)")
-            headers.add(name: "lambda-runtime-function-error-type", value: "Unhandled")
-            let head = HTTPRequestHead(
-                version: .http1_1,
-                method: .POST,
-                uri: "/2018-06-01/runtime/invocation/\(requestID)/error",
-                headers: headers
-            )
-            let buffer = context.channel.allocator.buffer(bytes: payload)
-            context.write(wrapOutboundOut(.head(head)), promise: nil)
-            context.write(wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-            context.write(wrapOutboundOut(.end(nil)), promise: nil)
-            context.flush()
-
-        case .initializationError(let errorMessage):
-            let payload = errorMessage.toJSONBytes()
-            var headers = self.headers
-            headers.add(name: "content-length", value: "\(payload.count)")
-            headers.add(name: "lambda-runtime-function-error-type", value: "Unhandled")
-            let head = HTTPRequestHead(
-                version: .http1_1,
-                method: .POST,
-                uri: "/2018-06-01/runtime/init/error",
-                headers: headers
-            )
-            let buffer = context.channel.allocator.buffer(bytes: payload)
-            context.write(wrapOutboundOut(.head(head)), promise: nil)
-            context.write(wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-            context.write(wrapOutboundOut(.end(nil)), promise: nil)
-            context.flush()
-        }
-    }
 }
-

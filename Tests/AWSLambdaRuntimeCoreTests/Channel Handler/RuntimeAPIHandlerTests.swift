@@ -20,6 +20,14 @@ import NIOHTTP1
 import XCTest
 
 final class RuntimeAPIHandlerTest: XCTestCase {
+    
+    func testStructSize() {
+        print("request : \(MemoryLayout<APIRequest>.size)")
+        print("response: \(MemoryLayout<APIResponse>.size)")
+        print("http1 req: \(MemoryLayout<HTTPClientRequestPart>.size)")
+        print("http1 res: \(MemoryLayout<HTTPClientResponsePart>.size)")
+    }
+    
 //    var configuration: Lambda.Configuration.RuntimeEngine!
 //    var logger: Logger!
 //

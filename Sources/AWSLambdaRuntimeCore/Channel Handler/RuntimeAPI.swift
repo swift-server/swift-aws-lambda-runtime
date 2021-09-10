@@ -13,8 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
-import NIO
-import NIOHTTP1
+import NIOCore
 
 
 /// AWS Lambda HTTP Headers, used to populate the `LambdaContext` object.
