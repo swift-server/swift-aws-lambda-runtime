@@ -22,8 +22,8 @@ import NIO
 Lambda.run { $0.eventLoop.makeSucceededFuture(BenchmarkHandler()) }
 
 struct BenchmarkHandler: EventLoopLambdaHandler {
-    typealias In = String
-    typealias Out = String
+    typealias Event = String
+    typealias Output = String
 
     func handle(_ event: String, context: Lambda.Context) -> EventLoopFuture<String> {
         context.eventLoop.makeSucceededFuture("hello, world!")

@@ -30,8 +30,8 @@ class LambdaTestingTests: XCTestCase {
         }
 
         struct MyLambda: LambdaHandler {
-            typealias In = Request
-            typealias Out = Response
+            typealias Event = Request
+            typealias Output = Response
 
             init(context: Lambda.InitializationContext) {}
 
@@ -54,8 +54,8 @@ class LambdaTestingTests: XCTestCase {
         }
 
         struct MyLambda: LambdaHandler {
-            typealias In = Request
-            typealias Out = Void
+            typealias Event = Request
+            typealias Output = Void
 
             init(context: Lambda.InitializationContext) {}
 
@@ -74,8 +74,8 @@ class LambdaTestingTests: XCTestCase {
         struct MyError: Error {}
 
         struct MyLambda: LambdaHandler {
-            typealias In = String
-            typealias Out = Void
+            typealias Event = String
+            typealias Output = Void
 
             init(context: Lambda.InitializationContext) {}
 
@@ -91,8 +91,8 @@ class LambdaTestingTests: XCTestCase {
 
     func testAsyncLongRunning() {
         struct MyLambda: LambdaHandler {
-            typealias In = String
-            typealias Out = String
+            typealias Event = String
+            typealias Output = String
 
             init(context: Lambda.InitializationContext) {}
 

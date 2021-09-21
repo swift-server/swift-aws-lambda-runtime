@@ -26,8 +26,8 @@ struct Response: Codable {
 // in this example we are receiving and responding with codables. Request and Response above are examples of how to use
 // codables to model your reqeuest and response objects
 struct Handler: EventLoopLambdaHandler {
-    typealias In = Request
-    typealias Out = Response
+    typealias Event = Request
+    typealias Output = Response
 
     func handle(_ event: Request, context: Lambda.Context) -> EventLoopFuture<Response> {
         // as an example, respond with the input event's reversed body

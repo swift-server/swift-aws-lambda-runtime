@@ -25,8 +25,8 @@ import Logging
 
 @main
 struct CurrencyExchangeHandler: LambdaHandler {
-    typealias In = Request
-    typealias Out = [Exchange]
+    typealias Event = Request
+    typealias Output = [Exchange]
 
     let calculator: ExchangeRatesCalculator
 

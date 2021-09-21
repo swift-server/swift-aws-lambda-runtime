@@ -18,8 +18,8 @@ import AWSLambdaRuntime
 
 @main
 struct ErrorsHappenHandler: LambdaHandler {
-    typealias In = Request
-    typealias Out = Response
+    typealias Event = Request
+    typealias Output = Response
 
     init(context: Lambda.InitializationContext) async throws {}
 
