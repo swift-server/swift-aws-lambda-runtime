@@ -17,14 +17,14 @@ import AWSLambdaRuntime
 // introductory example, the obligatory "hello, world!"
 @main
 struct HelloWorldHandler: LambdaHandler {
-    typealias In = String
-    typealias Out = String
+    typealias Event = String
+    typealias Output = String
 
     init(context: Lambda.InitializationContext) async throws {
         // setup your resources that you want to reuse here.
     }
 
-    func handle(event: String, context: Lambda.Context) async throws -> String {
+    func handle(_ event: String, context: Lambda.Context) async throws -> String {
         "hello, world"
     }
 }

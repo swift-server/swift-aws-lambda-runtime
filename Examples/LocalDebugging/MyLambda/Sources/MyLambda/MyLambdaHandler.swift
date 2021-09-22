@@ -19,14 +19,14 @@ import Shared
 // a local server simulator which will allow local debugging
 @main
 struct MyLambdaHandler: LambdaHandler {
-    typealias In = Request
-    typealias Out = Response
+    typealias Event = Request
+    typealias Output = Response
 
     init(context: Lambda.InitializationContext) async throws {
         // setup your resources that you want to reuse for every invocation here.
     }
 
-    func handle(event request: Request, context: Lambda.Context) async throws -> Response {
+    func handle(_ request: Request, context: Lambda.Context) async throws -> Response {
         // TODO: something useful
         Response(message: "Hello, \(request.name)!")
     }

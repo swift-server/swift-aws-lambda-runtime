@@ -62,7 +62,7 @@ extension Lambda {
             self.isGettingNextInvocation = true
             return self.runtimeClient.getNextInvocation(logger: logger).peekError { error in
                 logger.error("could not fetch work from lambda runtime engine: \(error)")
-            }.flatMap { invocation, event in
+            }.flatMap { invocation, bytes in
                 // 2. send invocation to handler
                 self.isGettingNextInvocation = false
                 let context = Context(logger: logger,
@@ -70,7 +70,7 @@ extension Lambda {
                                       allocator: self.allocator,
                                       invocation: invocation)
                 logger.debug("sending invocation to lambda handler \(handler)")
-                return handler.handle(event: event, context: context)
+                return handler.handle(bytes, context: context)
                     // Hopping back to "our" EventLoop is important in case the handler returns a future that
                     // originiated from a foreign EventLoop/EventLoopGroup.
                     // This can happen if the handler uses a library (lets say a DB client) that manages its own threads/loops

@@ -25,8 +25,8 @@ import Logging
 
 @main
 struct CurrencyExchangeHandler: LambdaHandler {
-    typealias In = Request
-    typealias Out = [Exchange]
+    typealias Event = Request
+    typealias Output = [Exchange]
 
     let calculator: ExchangeRatesCalculator
 
@@ -35,7 +35,7 @@ struct CurrencyExchangeHandler: LambdaHandler {
         self.calculator = ExchangeRatesCalculator()
     }
 
-    func handle(event: Request, context: Lambda.Context) async throws -> [Exchange] {
+    func handle(_ event: Request, context: Lambda.Context) async throws -> [Exchange] {
         try await withCheckedThrowingContinuation { continuation in
             self.calculator.run(logger: context.logger) { result in
                 switch result {

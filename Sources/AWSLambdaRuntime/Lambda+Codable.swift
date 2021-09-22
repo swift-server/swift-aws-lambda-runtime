@@ -21,33 +21,33 @@ import NIOFoundationCompat
 
 // MARK: - Codable support
 
-/// Implementation of  a`ByteBuffer` to `In` decoding
-extension EventLoopLambdaHandler where In: Decodable {
+/// Implementation of  a`ByteBuffer` to `Event` decoding
+extension EventLoopLambdaHandler where Event: Decodable {
     @inlinable
-    public func decode(buffer: ByteBuffer) throws -> In {
-        try self.decoder.decode(In.self, from: buffer)
+    public func decode(buffer: ByteBuffer) throws -> Event {
+        try self.decoder.decode(Event.self, from: buffer)
     }
 }
 
-/// Implementation of  `Out` to `ByteBuffer` encoding
-extension EventLoopLambdaHandler where Out: Encodable {
+/// Implementation of  `Output` to `ByteBuffer` encoding
+extension EventLoopLambdaHandler where Output: Encodable {
     @inlinable
-    public func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer? {
+    public func encode(allocator: ByteBufferAllocator, value: Output) throws -> ByteBuffer? {
         try self.encoder.encode(value, using: allocator)
     }
 }
 
-/// Default `ByteBuffer` to `In` decoder using Foundation's JSONDecoder
+/// Default `ByteBuffer` to `Event` decoder using Foundation's JSONDecoder
 /// Advanced users that want to inject their own codec can do it by overriding these functions.
-extension EventLoopLambdaHandler where In: Decodable {
+extension EventLoopLambdaHandler where Event: Decodable {
     public var decoder: LambdaCodableDecoder {
         Lambda.defaultJSONDecoder
     }
 }
 
-/// Default `Out` to `ByteBuffer` encoder using Foundation's JSONEncoder
+/// Default `Output` to `ByteBuffer` encoder using Foundation's JSONEncoder
 /// Advanced users that want to inject their own codec can do it by overriding these functions.
-extension EventLoopLambdaHandler where Out: Encodable {
+extension EventLoopLambdaHandler where Output: Encodable {
     public var encoder: LambdaCodableEncoder {
         Lambda.defaultJSONEncoder
     }

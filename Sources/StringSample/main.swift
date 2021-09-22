@@ -17,10 +17,10 @@ import NIOCore
 
 // in this example we are receiving and responding with strings
 struct Handler: EventLoopLambdaHandler {
-    typealias In = String
-    typealias Out = String
+    typealias Event = String
+    typealias Output = String
 
-    func handle(event: String, context: Lambda.Context) -> EventLoopFuture<String> {
+    func handle(_ event: String, context: Lambda.Context) -> EventLoopFuture<String> {
         // as an example, respond with the event's reversed body
         context.eventLoop.makeSucceededFuture(String(event.reversed()))
     }

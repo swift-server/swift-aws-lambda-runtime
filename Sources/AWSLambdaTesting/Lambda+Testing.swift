@@ -66,9 +66,9 @@ extension Lambda {
 
     public static func test<Handler: LambdaHandler>(
         _ handlerType: Handler.Type,
-        with event: Handler.In,
+        with event: Handler.Event,
         using config: TestConfig = .init()
-    ) throws -> Handler.Out {
+    ) throws -> Handler.Output {
         let logger = Logger(label: "test")
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -97,7 +97,7 @@ extension Lambda {
         let handler = try promise.futureResult.wait()
 
         return try eventLoop.flatSubmit {
-            handler.handle(event: event, context: context)
+            handler.handle(event, context: context)
         }.wait()
     }
 }
