@@ -145,7 +145,7 @@ class CodableLambdaTest: XCTestCase {
     }
     #endif
 
-    // convencience method
+    // convenience method
     func newContext() -> Lambda.Context {
         Lambda.Context(requestID: UUID().uuidString,
                        traceID: "abc123",

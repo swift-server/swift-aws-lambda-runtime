@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2021 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -24,23 +24,19 @@ struct Response: Codable {
 }
 
 // in this example we are receiving and responding with codables. Request and Response above are examples of how to use
-// codables to model your reqeuest and response objects
-struct Handler: EventLoopLambdaHandler {
+// codables to model your request and response objects
+
+@main
+struct MyLambda: LambdaHandler {
     typealias Event = Request
     typealias Output = Response
 
-    func handle(_ event: Request, context: Lambda.Context) -> EventLoopFuture<Response> {
+    init(context: Lambda.InitializationContext) async throws {
+        // setup your resources that you want to reuse for every invocation here.
+    }
+
+    func handle(_ event: Request, context: Lambda.Context) async throws -> Response {
         // as an example, respond with the input event's reversed body
-        context.eventLoop.makeSucceededFuture(Response(body: String(event.body.reversed())))
+        Response(body: String(event.body.reversed()))
     }
 }
-
-Lambda.run { $0.eventLoop.makeSucceededFuture(Handler()) }
-
-// MARK: - this can also be expressed as a closure:
-
-/*
- Lambda.run { (_, request: Request, callback) in
-   callback(.success(Response(body: String(request.body.reversed()))))
- }
- */

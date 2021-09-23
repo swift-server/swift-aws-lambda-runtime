@@ -16,8 +16,8 @@ import AWSLambdaRuntimeCore
 import NIOCore
 
 struct EchoHandler: EventLoopLambdaHandler {
-    typealias In = String
-    typealias Out = String
+    typealias Event = String
+    typealias Output = String
 
     func handle(_ event: String, context: Lambda.Context) -> EventLoopFuture<String> {
         context.eventLoop.makeSucceededFuture(event)
@@ -25,8 +25,8 @@ struct EchoHandler: EventLoopLambdaHandler {
 }
 
 struct FailedHandler: EventLoopLambdaHandler {
-    typealias In = String
-    typealias Out = Void
+    typealias Event = String
+    typealias Output = Void
 
     private let reason: String
 

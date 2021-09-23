@@ -34,8 +34,12 @@ services:
     <<: *common
     command: >-
       /bin/bash -clx "
+      swift build --package-path Examples/Simple/String &&
+      swift build --package-path Examples/Simple/Codable &&
+      swift test --package-path Examples/Simple/Testing &&
       swift build --package-path Examples/LambdaFunctions &&
-      swift build --package-path Examples/LocalDebugging/MyLambda"
+      swift build --package-path Examples/LocalDebugging/MyLambda
+      "
 
   # util
 
