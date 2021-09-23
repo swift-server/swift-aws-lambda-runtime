@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import _NIOConcurrency
 import Dispatch
 import NIOCore
 
