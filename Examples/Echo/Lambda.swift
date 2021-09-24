@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntimeCore
+import AWSLambdaRuntime
 
 // in this example we are receiving and responding with strings
 
@@ -25,8 +25,8 @@ struct MyLambda: LambdaHandler {
         // setup your resources that you want to reuse for every invocation here.
     }
 
-    func handle(_ event: String, context: Lambda.Context) async throws -> String {
-        // as an example, respond with the event's reversed body
-        String(event.reversed())
+    func handle(_ input: String, context: Lambda.Context) async throws -> String {
+        // as an example, respond with the input's reversed
+        String(input.reversed())
     }
 }

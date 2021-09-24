@@ -24,7 +24,7 @@ import Logging
 // MARK: - Run Lambda
 
 @main
-struct CurrencyExchangeHandler: LambdaHandler {
+struct MyLambda: LambdaHandler {
     typealias Event = Request
     typealias Output = [Exchange]
 

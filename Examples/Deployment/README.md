@@ -1,14 +1,14 @@
-# Lambda Functions Examples
+# Deployment Examples
 
 This sample project is a collection of Lambda functions that demonstrates
 how to write a simple Lambda function in Swift, and how to package and deploy it
 to the AWS Lambda platform.
 
-The scripts are prepared to work from the `LambdaFunctions` folder.
+The scripts are prepared to work from the `Deployment` folder.
 
 ```
 git clone https://github.com/swift-server/swift-aws-lambda-runtime.git
-cd swift-aws-lambda-runtime/Examples/LambdaFunctions
+cd swift-aws-lambda-runtime/Examples/Deployment
 ```
 
 Note: The example scripts assume you have [jq](https://stedolan.github.io/jq/download/) command line tool installed.
@@ -27,7 +27,7 @@ Steps to deploy this sample to AWS Lambda using the AWS CLI:
   ./scripts/deploy.sh
   ```
 
-  Notes: 
+  Notes:
   - This script assumes you have AWS CLI installed and credentials setup in `~/.aws/credentials`.
   - The default lambda function name is `SwiftSample`. You can specify a different one updating `lambda_name` in `deploy.sh`
   - Update `s3_bucket=swift-lambda-test` in `deploy.sh` before running (AWS S3 buckets require a unique global name)
@@ -129,7 +129,7 @@ The `serverless-deploy.sh` script passes through any parameters to the Serverles
 
 For the APIGateway sample:
 
-The Serverless template will provide an endpoint which you can use to test the Lambda. 
+The Serverless template will provide an endpoint which you can use to test the Lambda.
 
 Outuput example:
 
@@ -174,4 +174,4 @@ For all other samples use the AWS Lambda console.
   ./scripts/serverless-remove.sh
   ```
 
-The script will ask you which sample Lambda you wish to remove from the previous depolyment.
+The script will ask you which sample Lambda you wish to remove from the previous deployment.

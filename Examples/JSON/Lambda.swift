@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntime
-import NIOCore
 
 struct Request: Codable {
     let body: String

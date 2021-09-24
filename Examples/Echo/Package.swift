@@ -14,13 +14,13 @@ let package = Package(
         // this is the dependency on the swift-aws-lambda-runtime library
         // in real-world projects this would say
         // .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "1.0.0")
-        .package(name: "swift-aws-lambda-runtime", path: "../../.."),
+        .package(name: "swift-aws-lambda-runtime", path: "../.."),
     ],
     targets: [
         .executableTarget(
             name: "MyLambda",
             dependencies: [
-                .product(name: "AWSLambdaRuntimeCore", package: "swift-aws-lambda-runtime"),
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
             ],
             path: "."
         ),

@@ -27,13 +27,13 @@ echo "done"
 echo "-------------------------------------------------------------------------"
 echo "building \"$executable\" lambda"
 echo "-------------------------------------------------------------------------"
-docker run --rm -v "$workspace":/workspace -w /workspace/Examples/LambdaFunctions builder \
+docker run --rm -v "$workspace":/workspace -w /workspace/Examples/Deployment builder \
        bash -cl "swift build --product $executable -c release"
 echo "done"
 
 echo "-------------------------------------------------------------------------"
 echo "packaging \"$executable\" lambda"
 echo "-------------------------------------------------------------------------"
-docker run --rm -v "$workspace":/workspace -w /workspace/Examples/LambdaFunctions builder \
+docker run --rm -v "$workspace":/workspace -w /workspace/Examples/Deployment builder \
        bash -cl "./scripts/package.sh $executable"
 echo "done"

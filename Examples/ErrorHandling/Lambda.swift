@@ -17,7 +17,7 @@ import AWSLambdaRuntime
 // MARK: - Run Lambda
 
 @main
-struct ErrorsHappenHandler: LambdaHandler {
+struct MyLambda: LambdaHandler {
     typealias Event = Request
     typealias Output = Response
 

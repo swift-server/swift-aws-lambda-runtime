@@ -13,9 +13,6 @@ let package = Package(
         // good for benchmarking
         .executable(name: "Benchmark", targets: ["Benchmark"]),
         // demonstrate different types of error handling
-        .executable(name: "ErrorHandling", targets: ["ErrorHandling"]),
-        // fully featured example with domain specific business logic
-        .executable(name: "CurrencyExchange", targets: ["CurrencyExchange"]),
     ],
     dependencies: [
         // this is the dependency on the swift-aws-lambda-runtime library
@@ -28,12 +25,6 @@ let package = Package(
             .product(name: "AWSLambdaRuntimeCore", package: "swift-aws-lambda-runtime"),
         ]),
         .executableTarget(name: "HelloWorld", dependencies: [
-            .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-        ]),
-        .executableTarget(name: "ErrorHandling", dependencies: [
-            .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-        ]),
-        .executableTarget(name: "CurrencyExchange", dependencies: [
             .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
         ]),
     ]
