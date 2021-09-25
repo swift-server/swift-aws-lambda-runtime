@@ -51,7 +51,5 @@ let package = Package(
             .product(name: "NIOHTTP1", package: "swift-nio"),
             .product(name: "NIO", package: "swift-nio"),
         ]),
-        .target(name: "StringSample", dependencies: ["AWSLambdaRuntime"]),
-        .target(name: "CodableSample", dependencies: ["AWSLambdaRuntime"]),
     ]
 )

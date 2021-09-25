@@ -13,18 +13,16 @@
 //===----------------------------------------------------------------------===//
 
 // This functionality is designed to help with Lambda unit testing with XCTest
-// #if filter required for release builds which do not support @testable import
-// @testable is used to access of internal functions
-// For exmaple:
+// For example:
 //
 // func test() {
 //     struct MyLambda: LambdaHandler {
-//         typealias In = String
-//         typealias Out = String
+//         typealias Event = String
+//         typealias Output = String
 //
 //         init(context: Lambda.InitializationContext) {}
 //
-//         func handle(event: String, context: Lambda.Context) async throws -> String {
+//         func handle(_ event: String, context: Lambda.Context) async throws -> String {
 //             "echo" + event
 //         }
 //     }
