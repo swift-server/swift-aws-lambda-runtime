@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2021 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -19,31 +19,40 @@ struct ContentView: View {
     @State var name: String = ""
     @State var password: String = ""
     @State var response: String = ""
+    @State private var isLoading: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             TextField("Username", text: $name)
             SecureField("Password", text: $password)
-            Button(
-                action: {
-                    Task {
-                        await self.register()
-                    }
-                },
-                label: {
-                    Text("Register")
-                        .padding()
-                        .foregroundColor(.white)
-                        .background(Color.black)
-                        .border(Color.black, width: 2)
+            let buttonDisabled = name.isEmpty || password.isEmpty
+            Button {
+                Task {
+                    isLoading = true
+                    response = await register()
+                    isLoading = false
                 }
-            )
+            } label: {
+                Text("Register")
+                    .padding()
+                    .foregroundColor(.white)
+                    .background(.black)
+                    .border(.black, width: 2)
+                    .opacity(isLoading ? 0 : 1)
+                    .overlay {
+                        if isLoading {
+                            ProgressView()
+                        }
+                    }
+            }
+            .disabled(buttonDisabled)
+            .opacity(buttonDisabled ? 0.5 : 1)
             Text(response)
         }.padding(100)
     }
 
-    func register() async {
-        guard let url = URL(string: "http://127.0.0.1:7000/invoke") else {
+    func register() async -> String {
+        guard let url = URL(string: "http://localhost:9001/invoke") else {
             fatalError("invalid url")
         }
         var request = URLRequest(url: url)
@@ -55,25 +64,19 @@ struct ContentView: View {
         request.httpBody = jsonRequest
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, urlResponse) = try await URLSession.shared.data(for: request)
 
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw CommunicationError(reason: "invalid response, expected HTTPURLResponse")
+            guard let httpResponse = urlResponse as? HTTPURLResponse else {
+                return "invalid response, expected HTTPURLResponse"
             }
             guard httpResponse.statusCode == 200 else {
-                throw CommunicationError(reason: "invalid response code: \(httpResponse.statusCode)")
+                return "invalid response code: \(httpResponse.statusCode)"
             }
-            let jsonResponse = try JSONDecoder().decode(Response.self, from: data)
 
-            self.response = jsonResponse.message
+            let response = try JSONDecoder().decode(Response.self, from: data)
+            return response.message
         } catch {
-            self.response = error.localizedDescription
-        }
-    }
-
-    func setResponse(_ text: String) {
-        DispatchQueue.main.async {
-            self.response = text
+            return error.localizedDescription
         }
     }
 }
@@ -82,8 +85,4 @@ struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
     }
-}
-
-struct CommunicationError: Error {
-    let reason: String
 }
