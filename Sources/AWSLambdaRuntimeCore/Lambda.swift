@@ -18,7 +18,6 @@ import Glibc
 import Darwin.C
 #endif
 
-import _NIOConcurrency
 import Backtrace
 import Logging
 import NIOCore

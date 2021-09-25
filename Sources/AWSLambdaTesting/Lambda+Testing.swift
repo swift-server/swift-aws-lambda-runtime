@@ -34,7 +34,6 @@
 // }
 
 #if swift(>=5.5)
-import _NIOConcurrency
 import AWSLambdaRuntime
 import AWSLambdaRuntimeCore
 import Dispatch
