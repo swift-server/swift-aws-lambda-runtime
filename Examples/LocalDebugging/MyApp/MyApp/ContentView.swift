@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2021 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2020-2021 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -29,7 +29,7 @@ struct ContentView: View {
             Button {
                 Task {
                     isLoading = true
-                    response = await register()
+                    response = await self.register()
                     isLoading = false
                 }
             } label: {
@@ -45,14 +45,14 @@ struct ContentView: View {
                         }
                     }
             }
-            .disabled(buttonDisabled)
+            .disabled(buttonDisabled || isLoading)
             .opacity(buttonDisabled ? 0.5 : 1)
             Text(response)
         }.padding(100)
     }
 
     func register() async -> String {
-        guard let url = URL(string: "http://localhost:9001/invoke") else {
+        guard let url = URL(string: "http://127.0.0.1:7000/invoke") else {
             fatalError("invalid url")
         }
         var request = URLRequest(url: url)
@@ -64,17 +64,17 @@ struct ContentView: View {
         request.httpBody = jsonRequest
 
         do {
-            let (data, urlResponse) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await URLSession.shared.data(for: request)
 
-            guard let httpResponse = urlResponse as? HTTPURLResponse else {
+            guard let httpResponse = response as? HTTPURLResponse else {
                 return "invalid response, expected HTTPURLResponse"
             }
             guard httpResponse.statusCode == 200 else {
                 return "invalid response code: \(httpResponse.statusCode)"
             }
 
-            let response = try JSONDecoder().decode(Response.self, from: data)
-            return response.message
+            let jsonResponse = try JSONDecoder().decode(Response.self, from: data)
+            return jsonResponse.message
         } catch {
             return error.localizedDescription
         }
