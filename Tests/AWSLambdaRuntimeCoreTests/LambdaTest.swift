@@ -29,7 +29,7 @@ class LambdaTest: XCTestCase {
         let result = Lambda.run(configuration: configuration, factory: {
             $0.eventLoop.makeSucceededFuture(EchoHandler())
         })
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
 
     func testFailure() {
@@ -42,7 +42,7 @@ class LambdaTest: XCTestCase {
         let result = Lambda.run(configuration: configuration, factory: {
             $0.eventLoop.makeSucceededFuture(FailedHandler("boom"))
         })
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
 
     func testBootstrapFailure() {
@@ -51,7 +51,7 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let result = Lambda.run(factory: { $0.eventLoop.makeFailedFuture(TestError("kaboom")) })
-        assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
+        assertLambdaRuntimeResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
     func testBootstrapFailureAndReportErrorFailure() {
@@ -81,7 +81,7 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let result = Lambda.run(factory: { $0.eventLoop.makeFailedFuture(TestError("kaboom")) })
-        assertLambdaLifecycleResult(result, shouldFailWithError: TestError("kaboom"))
+        assertLambdaRuntimeResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
     func testStartStopInDebugMode() {
@@ -121,7 +121,7 @@ class LambdaTest: XCTestCase {
         let result = Lambda.run(configuration: configuration, factory: {
             $0.eventLoop.makeSucceededFuture(EchoHandler())
         })
-        assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("timeout"))
+        assertLambdaRuntimeResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("timeout"))
     }
 
     func testDisconnect() {
@@ -133,7 +133,7 @@ class LambdaTest: XCTestCase {
         let result = Lambda.run(configuration: configuration, factory: {
             $0.eventLoop.makeSucceededFuture(EchoHandler())
         })
-        assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("connectionResetByPeer"))
+        assertLambdaRuntimeResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("connectionResetByPeer"))
     }
 
     func testBigEvent() {
@@ -146,7 +146,7 @@ class LambdaTest: XCTestCase {
         let result = Lambda.run(configuration: configuration, factory: {
             $0.eventLoop.makeSucceededFuture(EchoHandler())
         })
-        assertLambdaLifecycleResult(result, shoudHaveRun: 1)
+        assertLambdaRuntimeResult(result, shoudHaveRun: 1)
     }
 
     func testKeepAliveServer() {
@@ -159,7 +159,7 @@ class LambdaTest: XCTestCase {
         let result = Lambda.run(configuration: configuration, factory: {
             $0.eventLoop.makeSucceededFuture(EchoHandler())
         })
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
 
     func testNoKeepAliveServer() {
@@ -172,7 +172,7 @@ class LambdaTest: XCTestCase {
         let result = Lambda.run(configuration: configuration, factory: {
             $0.eventLoop.makeSucceededFuture(EchoHandler())
         })
-        assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
+        assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
 
     func testServerFailure() {
@@ -202,7 +202,7 @@ class LambdaTest: XCTestCase {
         let result = Lambda.run(configuration: .init(), factory: {
             $0.eventLoop.makeSucceededFuture(EchoHandler())
         })
-        assertLambdaLifecycleResult(result, shouldFailWithError: Lambda.RuntimeError.badStatusCode(.internalServerError))
+        assertLambdaRuntimeResult(result, shouldFailWithError: Lambda.RuntimeError.badStatusCode(.internalServerError))
     }
 
     func testDeadline() {

@@ -76,16 +76,16 @@ public enum Lambda {
 
             var result: Result<Int, Error>!
             MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
-                let lifecycle = Lifecycle(eventLoop: eventLoop, logger: logger, configuration: configuration, factory: factory)
+                let runtime = LambdaRuntime(eventLoop: eventLoop, logger: logger, configuration: configuration, factory: factory)
                 #if DEBUG
                 let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
                     logger.info("intercepted signal: \(signal)")
-                    lifecycle.shutdown()
+                    runtime.shutdown()
                 }
                 #endif
 
-                lifecycle.start().flatMap {
-                    lifecycle.shutdownFuture
+                runtime.start().flatMap {
+                    runtime.shutdownFuture
                 }.whenComplete { lifecycleResult in
                     #if DEBUG
                     signalSource.cancel()
