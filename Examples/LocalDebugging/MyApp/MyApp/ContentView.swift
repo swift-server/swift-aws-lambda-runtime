@@ -25,11 +25,15 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 20) {
             TextField("Username", text: $name)
             SecureField("Password", text: $password)
-            let buttonDisabled = name.isEmpty || password.isEmpty
+            let inputIncomplete = name.isEmpty || password.isEmpty
             Button {
                 Task {
                     isLoading = true
-                    response = await self.register()
+                    do {
+                        response = try await self.register()
+                    } catch {
+                        response = error.localizedDescription
+                    }
                     isLoading = false
                 }
             } label: {
@@ -45,13 +49,13 @@ struct ContentView: View {
                         }
                     }
             }
-            .disabled(buttonDisabled || isLoading)
-            .opacity(buttonDisabled ? 0.5 : 1)
+            .disabled(inputIncomplete || isLoading)
+            .opacity(inputIncomplete ? 0.5 : 1)
             Text(response)
         }.padding(100)
     }
 
-    func register() async -> String {
+    func register() async throws -> String {
         guard let url = URL(string: "http://127.0.0.1:7000/invoke") else {
             fatalError("invalid url")
         }
@@ -63,26 +67,29 @@ struct ContentView: View {
         }
         request.httpBody = jsonRequest
 
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
 
-            guard let httpResponse = response as? HTTPURLResponse else {
-                return "invalid response, expected HTTPURLResponse"
-            }
-            guard httpResponse.statusCode == 200 else {
-                return "invalid response code: \(httpResponse.statusCode)"
-            }
-
-            let jsonResponse = try JSONDecoder().decode(Response.self, from: data)
-            return jsonResponse.message
-        } catch {
-            return error.localizedDescription
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw CommunicationError(reason: "Invalid response, expected HTTPURLResponse.")
         }
+        guard httpResponse.statusCode == 200 else {
+            throw CommunicationError(reason: "Invalid response code: \(httpResponse.statusCode)")
+        }
+
+        let jsonResponse = try JSONDecoder().decode(Response.self, from: data)
+        return jsonResponse.message
     }
 }
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+    }
+}
+
+struct CommunicationError: LocalizedError {
+    let reason: String
+    var errorDescription: String? {
+        self.reason
     }
 }
