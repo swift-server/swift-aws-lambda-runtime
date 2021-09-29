@@ -24,7 +24,7 @@ import NIOPosix
 // For example:
 //
 // try Lambda.withLocalServer {
-//     Lambda.run { (context: Lambda.Context, event: String, callback: @escaping (Result<String, Error>) -> Void) in
+//     Lambda.run { (context: LambdaContext, event: String, callback: @escaping (Result<String, Error>) -> Void) in
 //         callback(.success("Hello, \(event)!"))
 //     }
 // }

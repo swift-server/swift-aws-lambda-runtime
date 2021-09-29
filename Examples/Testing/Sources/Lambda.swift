@@ -25,7 +25,7 @@ struct MyLambda: LambdaHandler {
         // setup your resources that you want to reuse for every invocation here.
     }
 
-    func handle(_ event: String, context: Lambda.Context) async throws -> String {
+    func handle(_ event: String, context: LambdaContext) async throws -> String {
         // as an example, respond with the event's reversed body
         String(event.reversed())
     }

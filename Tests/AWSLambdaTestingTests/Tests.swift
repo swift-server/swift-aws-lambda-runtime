@@ -35,7 +35,7 @@ class LambdaTestingTests: XCTestCase {
 
             init(context: Lambda.InitializationContext) {}
 
-            func handle(_ event: Request, context: Lambda.Context) async throws -> Response {
+            func handle(_ event: Request, context: LambdaContext) async throws -> Response {
                 Response(message: "echo" + event.name)
             }
         }
@@ -59,7 +59,7 @@ class LambdaTestingTests: XCTestCase {
 
             init(context: Lambda.InitializationContext) {}
 
-            func handle(_ event: Request, context: Lambda.Context) async throws {
+            func handle(_ event: Request, context: LambdaContext) async throws {
                 LambdaTestingTests.VoidLambdaHandlerInvokeCount += 1
             }
         }
@@ -79,7 +79,7 @@ class LambdaTestingTests: XCTestCase {
 
             init(context: Lambda.InitializationContext) {}
 
-            func handle(_ event: String, context: Lambda.Context) async throws {
+            func handle(_ event: String, context: LambdaContext) async throws {
                 throw MyError()
             }
         }
@@ -96,7 +96,7 @@ class LambdaTestingTests: XCTestCase {
 
             init(context: Lambda.InitializationContext) {}
 
-            func handle(_ event: String, context: Lambda.Context) async throws -> String {
+            func handle(_ event: String, context: LambdaContext) async throws -> String {
                 try await Task.sleep(nanoseconds: 500 * 1000 * 1000)
                 return event
             }

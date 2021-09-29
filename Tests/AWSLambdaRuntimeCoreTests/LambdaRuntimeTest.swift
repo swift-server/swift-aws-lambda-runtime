@@ -46,15 +46,15 @@ class LambdaRuntimeTest: XCTestCase {
     }
 
     struct CallbackLambdaHandler: ByteBufferLambdaHandler {
-        let handler: (Lambda.Context, ByteBuffer) -> (EventLoopFuture<ByteBuffer?>)
+        let handler: (LambdaContext, ByteBuffer) -> (EventLoopFuture<ByteBuffer?>)
         let shutdown: (Lambda.ShutdownContext) -> EventLoopFuture<Void>
 
-        init(_ handler: @escaping (Lambda.Context, ByteBuffer) -> (EventLoopFuture<ByteBuffer?>), shutdown: @escaping (Lambda.ShutdownContext) -> EventLoopFuture<Void>) {
+        init(_ handler: @escaping (LambdaContext, ByteBuffer) -> (EventLoopFuture<ByteBuffer?>), shutdown: @escaping (Lambda.ShutdownContext) -> EventLoopFuture<Void>) {
             self.handler = handler
             self.shutdown = shutdown
         }
 
-        func handle(_ event: ByteBuffer, context: Lambda.Context) -> EventLoopFuture<ByteBuffer?> {
+        func handle(_ event: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?> {
             self.handler(context, event)
         }
 
