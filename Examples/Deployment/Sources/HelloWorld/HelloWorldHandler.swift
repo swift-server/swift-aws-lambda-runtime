@@ -24,7 +24,7 @@ struct HelloWorldHandler: LambdaHandler {
         // setup your resources that you want to reuse here.
     }
 
-    func handle(_ event: String, context: Lambda.Context) async throws -> String {
+    func handle(_ event: String, context: LambdaContext) async throws -> String {
         "hello, world"
     }
 }

@@ -65,10 +65,12 @@ extension Lambda {
             }.flatMap { invocation, bytes in
                 // 2. send invocation to handler
                 self.isGettingNextInvocation = false
-                let context = Context(logger: logger,
-                                      eventLoop: self.eventLoop,
-                                      allocator: self.allocator,
-                                      invocation: invocation)
+                let context = LambdaContext(
+                    logger: logger,
+                    eventLoop: self.eventLoop,
+                    allocator: self.allocator,
+                    invocation: invocation
+                )
                 logger.debug("sending invocation to lambda handler \(handler)")
                 return handler.handle(bytes, context: context)
                     // Hopping back to "our" EventLoop is important in case the handler returns a future that
@@ -100,7 +102,7 @@ extension Lambda {
     }
 }
 
-extension Lambda.Context {
+extension LambdaContext {
     init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Lambda.Invocation) {
         self.init(requestID: invocation.requestID,
                   traceID: invocation.traceID,

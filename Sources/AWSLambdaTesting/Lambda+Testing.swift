@@ -22,7 +22,7 @@
 //
 //         init(context: Lambda.InitializationContext) {}
 //
-//         func handle(_ event: String, context: Lambda.Context) async throws -> String {
+//         func handle(_ event: String, context: LambdaContext) async throws -> String {
 //             "echo" + event
 //         }
 //     }
@@ -79,7 +79,7 @@ extension Lambda {
             eventLoop: eventLoop
         )
 
-        let context = Lambda.Context.__forTestsOnly(
+        let context = LambdaContext.__forTestsOnly(
             requestID: config.requestID,
             traceID: config.traceID,
             invokedFunctionARN: config.invokedFunctionARN,

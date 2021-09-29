@@ -224,39 +224,45 @@ class LambdaTest: XCTestCase {
         let past2 = DispatchWallTime(millisSinceEpoch: Date(timeIntervalSinceNow: Double(-delta)).millisSinceEpoch)
         XCTAssertEqual(Double(past1.rawValue), Double(past2.rawValue), accuracy: 2_000_000.0)
 
-        let context = Lambda.Context(requestID: UUID().uuidString,
-                                     traceID: UUID().uuidString,
-                                     invokedFunctionARN: UUID().uuidString,
-                                     deadline: .now() + .seconds(1),
-                                     cognitoIdentity: nil,
-                                     clientContext: nil,
-                                     logger: Logger(label: "test"),
-                                     eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next(),
-                                     allocator: ByteBufferAllocator())
+        let context = LambdaContext(
+            requestID: UUID().uuidString,
+            traceID: UUID().uuidString,
+            invokedFunctionARN: UUID().uuidString,
+            deadline: .now() + .seconds(1),
+            cognitoIdentity: nil,
+            clientContext: nil,
+            logger: Logger(label: "test"),
+            eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next(),
+            allocator: ByteBufferAllocator()
+        )
         XCTAssertGreaterThan(context.deadline, .now())
 
-        let expiredContext = Lambda.Context(requestID: context.requestID,
-                                            traceID: context.traceID,
-                                            invokedFunctionARN: context.invokedFunctionARN,
-                                            deadline: .now() - .seconds(1),
-                                            cognitoIdentity: context.cognitoIdentity,
-                                            clientContext: context.clientContext,
-                                            logger: context.logger,
-                                            eventLoop: context.eventLoop,
-                                            allocator: context.allocator)
+        let expiredContext = LambdaContext(
+            requestID: context.requestID,
+            traceID: context.traceID,
+            invokedFunctionARN: context.invokedFunctionARN,
+            deadline: .now() - .seconds(1),
+            cognitoIdentity: context.cognitoIdentity,
+            clientContext: context.clientContext,
+            logger: context.logger,
+            eventLoop: context.eventLoop,
+            allocator: context.allocator
+        )
         XCTAssertLessThan(expiredContext.deadline, .now())
     }
 
     func testGetRemainingTime() {
-        let context = Lambda.Context(requestID: UUID().uuidString,
-                                     traceID: UUID().uuidString,
-                                     invokedFunctionARN: UUID().uuidString,
-                                     deadline: .now() + .seconds(1),
-                                     cognitoIdentity: nil,
-                                     clientContext: nil,
-                                     logger: Logger(label: "test"),
-                                     eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next(),
-                                     allocator: ByteBufferAllocator())
+        let context = LambdaContext(
+            requestID: UUID().uuidString,
+            traceID: UUID().uuidString,
+            invokedFunctionARN: UUID().uuidString,
+            deadline: .now() + .seconds(1),
+            cognitoIdentity: nil,
+            clientContext: nil,
+            logger: Logger(label: "test"),
+            eventLoop: MultiThreadedEventLoopGroup(numberOfThreads: 1).next(),
+            allocator: ByteBufferAllocator()
+        )
         XCTAssertLessThanOrEqual(context.getRemainingTime(), .seconds(1))
         XCTAssertGreaterThan(context.getRemainingTime(), .milliseconds(800))
     }

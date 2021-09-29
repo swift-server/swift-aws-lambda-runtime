@@ -15,7 +15,7 @@
 import AWSLambdaRuntimeCore
 import struct Foundation.Date
 
-extension Lambda.Context {
+extension LambdaContext {
     var deadlineDate: Date {
         let secondsSinceEpoch = Double(Int64(bitPattern: self.deadline.rawValue)) / -1_000_000_000
         return Date(timeIntervalSince1970: secondsSinceEpoch)
