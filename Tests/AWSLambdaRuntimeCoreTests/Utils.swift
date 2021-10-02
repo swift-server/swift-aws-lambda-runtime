@@ -35,7 +35,7 @@ func runLambda(behavior: LambdaServerBehavior, factory: @escaping Lambda.Handler
     }.wait()
 }
 
-func assertLambdaLifecycleResult(_ result: Result<Int, Error>, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil, file: StaticString = #file, line: UInt = #line) {
+func assertLambdaRuntimeResult(_ result: Result<Int, Error>, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil, file: StaticString = #file, line: UInt = #line) {
     switch result {
     case .success where shouldFailWithError != nil:
         XCTFail("should fail with \(shouldFailWithError!)", file: file, line: line)

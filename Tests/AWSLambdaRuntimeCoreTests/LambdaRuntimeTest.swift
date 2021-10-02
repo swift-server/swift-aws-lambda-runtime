@@ -19,7 +19,7 @@ import NIOHTTP1
 import NIOPosix
 import XCTest
 
-class LambdaLifecycleTest: XCTestCase {
+class LambdaRuntimeTest: XCTestCase {
     func testShutdownFutureIsFulfilledWithStartUpError() {
         let server = MockLambdaServer(behavior: FailedBootstrapBehavior())
         XCTAssertNoThrow(try server.start().wait())
@@ -30,31 +30,31 @@ class LambdaLifecycleTest: XCTestCase {
         let eventLoop = eventLoopGroup.next()
         let logger = Logger(label: "TestLogger")
         let testError = TestError("kaboom")
-        let lifecycle = Lambda.Lifecycle(eventLoop: eventLoop, logger: logger, factory: {
+        let runtime = LambdaRuntime(eventLoop: eventLoop, logger: logger, factory: {
             $0.eventLoop.makeFailedFuture(testError)
         })
 
         // eventLoop.submit in this case returns an EventLoopFuture<EventLoopFuture<ByteBufferHandler>>
         // which is why we need `wait().wait()`
-        XCTAssertThrowsError(_ = try eventLoop.flatSubmit { lifecycle.start() }.wait()) { error in
+        XCTAssertThrowsError(try eventLoop.flatSubmit { runtime.start() }.wait()) { error in
             XCTAssertEqual(testError, error as? TestError)
         }
 
-        XCTAssertThrowsError(_ = try lifecycle.shutdownFuture.wait()) { error in
+        XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) { error in
             XCTAssertEqual(testError, error as? TestError)
         }
     }
 
     struct CallbackLambdaHandler: ByteBufferLambdaHandler {
-        let handler: (Lambda.Context, ByteBuffer) -> (EventLoopFuture<ByteBuffer?>)
+        let handler: (LambdaContext, ByteBuffer) -> (EventLoopFuture<ByteBuffer?>)
         let shutdown: (Lambda.ShutdownContext) -> EventLoopFuture<Void>
 
-        init(_ handler: @escaping (Lambda.Context, ByteBuffer) -> (EventLoopFuture<ByteBuffer?>), shutdown: @escaping (Lambda.ShutdownContext) -> EventLoopFuture<Void>) {
+        init(_ handler: @escaping (LambdaContext, ByteBuffer) -> (EventLoopFuture<ByteBuffer?>), shutdown: @escaping (Lambda.ShutdownContext) -> EventLoopFuture<Void>) {
             self.handler = handler
             self.shutdown = shutdown
         }
 
-        func handle(_ event: ByteBuffer, context: Lambda.Context) -> EventLoopFuture<ByteBuffer?> {
+        func handle(_ event: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?> {
             self.handler(context, event)
         }
 
@@ -78,12 +78,12 @@ class LambdaLifecycleTest: XCTestCase {
 
         let eventLoop = eventLoopGroup.next()
         let logger = Logger(label: "TestLogger")
-        let lifecycle = Lambda.Lifecycle(eventLoop: eventLoop, logger: logger, factory: {
+        let runtime = LambdaRuntime(eventLoop: eventLoop, logger: logger, factory: {
             $0.eventLoop.makeSucceededFuture(handler)
         })
 
-        XCTAssertNoThrow(_ = try eventLoop.flatSubmit { lifecycle.start() }.wait())
-        XCTAssertThrowsError(_ = try lifecycle.shutdownFuture.wait()) { error in
+        XCTAssertNoThrow(_ = try eventLoop.flatSubmit { runtime.start() }.wait())
+        XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) { error in
             XCTAssertEqual(.badStatusCode(HTTPResponseStatus.internalServerError), error as? Lambda.RuntimeError)
         }
         XCTAssertEqual(count, 1)
@@ -104,12 +104,12 @@ class LambdaLifecycleTest: XCTestCase {
 
         let eventLoop = eventLoopGroup.next()
         let logger = Logger(label: "TestLogger")
-        let lifecycle = Lambda.Lifecycle(eventLoop: eventLoop, logger: logger, factory: {
+        let runtime = LambdaRuntime(eventLoop: eventLoop, logger: logger, factory: {
             $0.eventLoop.makeSucceededFuture(handler)
         })
 
-        XCTAssertNoThrow(_ = try eventLoop.flatSubmit { lifecycle.start() }.wait())
-        XCTAssertThrowsError(_ = try lifecycle.shutdownFuture.wait()) { error in
+        XCTAssertNoThrow(_ = try eventLoop.flatSubmit { runtime.start() }.wait())
+        XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) { error in
             guard case Lambda.RuntimeError.shutdownError(let shutdownError, .failure(let runtimeError)) = error else {
                 XCTFail("Unexpected error"); return
             }

@@ -23,7 +23,7 @@ struct MyLambda: LambdaHandler {
 
     init(context: Lambda.InitializationContext) async throws {}
 
-    func handle(_ request: Request, context: Lambda.Context) async throws -> Response {
+    func handle(_ request: Request, context: LambdaContext) async throws -> Response {
         // switch over the error type "requested" by the request, and trigger such error accordingly
         switch request.error {
         // no error here!

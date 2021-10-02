@@ -43,7 +43,7 @@ class CodableLambdaTest: XCTestCase {
 
             let expected: Request
 
-            func handle(_ event: Request, context: Lambda.Context) -> EventLoopFuture<Void> {
+            func handle(_ event: Request, context: LambdaContext) -> EventLoopFuture<Void> {
                 XCTAssertEqual(event, self.expected)
                 return context.eventLoop.makeSucceededVoidFuture()
             }
@@ -68,7 +68,7 @@ class CodableLambdaTest: XCTestCase {
 
             let expected: Request
 
-            func handle(_ event: Request, context: Lambda.Context) -> EventLoopFuture<Response> {
+            func handle(_ event: Request, context: LambdaContext) -> EventLoopFuture<Response> {
                 XCTAssertEqual(event, self.expected)
                 return context.eventLoop.makeSucceededFuture(Response(requestId: event.requestId))
             }
@@ -93,7 +93,7 @@ class CodableLambdaTest: XCTestCase {
 
             init(context: Lambda.InitializationContext) async throws {}
 
-            func handle(_ event: Request, context: Lambda.Context) async throws {
+            func handle(_ event: Request, context: LambdaContext) async throws {
                 XCTAssertEqual(event, self.expected)
             }
         }
@@ -122,7 +122,7 @@ class CodableLambdaTest: XCTestCase {
 
             init(context: Lambda.InitializationContext) async throws {}
 
-            func handle(_ event: Request, context: Lambda.Context) async throws -> Response {
+            func handle(_ event: Request, context: LambdaContext) async throws -> Response {
                 XCTAssertEqual(event, self.expected)
                 return Response(requestId: event.requestId)
             }
@@ -146,22 +146,26 @@ class CodableLambdaTest: XCTestCase {
     #endif
 
     // convenience method
-    func newContext() -> Lambda.Context {
-        Lambda.Context(requestID: UUID().uuidString,
-                       traceID: "abc123",
-                       invokedFunctionARN: "aws:arn:",
-                       deadline: .now() + .seconds(3),
-                       cognitoIdentity: nil,
-                       clientContext: nil,
-                       logger: Logger(label: "test"),
-                       eventLoop: self.eventLoopGroup.next(),
-                       allocator: ByteBufferAllocator())
+    func newContext() -> LambdaContext {
+        LambdaContext(
+            requestID: UUID().uuidString,
+            traceID: "abc123",
+            invokedFunctionARN: "aws:arn:",
+            deadline: .now() + .seconds(3),
+            cognitoIdentity: nil,
+            clientContext: nil,
+            logger: Logger(label: "test"),
+            eventLoop: self.eventLoopGroup.next(),
+            allocator: ByteBufferAllocator()
+        )
     }
 
     func newInitContext() -> Lambda.InitializationContext {
-        Lambda.InitializationContext(logger: Logger(label: "test"),
-                                     eventLoop: self.eventLoopGroup.next(),
-                                     allocator: ByteBufferAllocator())
+        Lambda.InitializationContext(
+            logger: Logger(label: "test"),
+            eventLoop: self.eventLoopGroup.next(),
+            allocator: ByteBufferAllocator()
+        )
     }
 }
 
