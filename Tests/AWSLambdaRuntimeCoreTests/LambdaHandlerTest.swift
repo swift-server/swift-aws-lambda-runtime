@@ -79,7 +79,7 @@ class LambdaHandlerTest: XCTestCase {
         assertLambdaLifecycleResult(result, shoudHaveRun: maxTimes)
     }
 
-    #if compiler(>=5.5)
+    #if compiler(>=5.5) && canImport(_Concurrency)
 
     // MARK: - AsyncLambdaHandler
 
