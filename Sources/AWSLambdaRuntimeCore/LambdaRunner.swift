@@ -103,7 +103,7 @@ extension Lambda {
 }
 
 extension LambdaContext {
-    init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Lambda.Invocation) {
+    init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Invocation) {
         self.init(requestID: invocation.requestID,
                   traceID: invocation.traceID,
                   invokedFunctionARN: invocation.invokedFunctionARN,
