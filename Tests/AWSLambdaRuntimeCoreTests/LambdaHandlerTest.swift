@@ -17,7 +17,7 @@ import NIOCore
 import XCTest
 
 class LambdaHandlerTest: XCTestCase {
-    #if compiler(>=5.5)
+    #if compiler(>=5.5) && canImport(_Concurrency)
 
     // MARK: - LambdaHandler
 
