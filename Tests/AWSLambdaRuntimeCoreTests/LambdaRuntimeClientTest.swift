@@ -260,8 +260,8 @@ class LambdaRuntimeClientTest: XCTestCase {
             (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),
             (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
         ])
-        var inv: Lambda.Invocation?
-        XCTAssertNoThrow(inv = try Lambda.Invocation(headers: header))
+        var inv: Invocation?
+        XCTAssertNoThrow(inv = try Invocation(headers: header))
         guard let invocation = inv else { return }
 
         let result = client.reportResults(logger: logger, invocation: invocation, result: Result.failure(TestError("boom")))
@@ -300,8 +300,8 @@ class LambdaRuntimeClientTest: XCTestCase {
             (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),
             (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
         ])
-        var inv: Lambda.Invocation?
-        XCTAssertNoThrow(inv = try Lambda.Invocation(headers: header))
+        var inv: Invocation?
+        XCTAssertNoThrow(inv = try Invocation(headers: header))
         guard let invocation = inv else { return }
 
         let result = client.reportResults(logger: logger, invocation: invocation, result: Result.success(nil))

@@ -137,62 +137,6 @@ extension Lambda {
     }
 }
 
-internal struct ErrorResponse: Codable {
-    var errorType: String
-    var errorMessage: String
-}
-
-extension ErrorResponse {
-    internal func toJSONBytes() -> [UInt8] {
-        var bytes = [UInt8]()
-        bytes.append(UInt8(ascii: "{"))
-        bytes.append(contentsOf: #""errorType":"#.utf8)
-        self.errorType.encodeAsJSONString(into: &bytes)
-        bytes.append(contentsOf: #","errorMessage":"#.utf8)
-        self.errorMessage.encodeAsJSONString(into: &bytes)
-        bytes.append(UInt8(ascii: "}"))
-        return bytes
-    }
-}
-
-extension Lambda {
-    internal struct Invocation {
-        let requestID: String
-        let deadlineInMillisSinceEpoch: Int64
-        let invokedFunctionARN: String
-        let traceID: String
-        let clientContext: String?
-        let cognitoIdentity: String?
-
-        init(headers: HTTPHeaders) throws {
-            guard let requestID = headers.first(name: AmazonHeaders.requestID), !requestID.isEmpty else {
-                throw RuntimeError.invocationMissingHeader(AmazonHeaders.requestID)
-            }
-
-            guard let deadline = headers.first(name: AmazonHeaders.deadline),
-                  let unixTimeInMilliseconds = Int64(deadline)
-            else {
-                throw RuntimeError.invocationMissingHeader(AmazonHeaders.deadline)
-            }
-
-            guard let invokedFunctionARN = headers.first(name: AmazonHeaders.invokedFunctionARN) else {
-                throw RuntimeError.invocationMissingHeader(AmazonHeaders.invokedFunctionARN)
-            }
-
-            guard let traceID = headers.first(name: AmazonHeaders.traceID) else {
-                throw RuntimeError.invocationMissingHeader(AmazonHeaders.traceID)
-            }
-
-            self.requestID = requestID
-            self.deadlineInMillisSinceEpoch = unixTimeInMilliseconds
-            self.invokedFunctionARN = invokedFunctionARN
-            self.traceID = traceID
-            self.clientContext = headers["Lambda-Runtime-Client-Context"].first
-            self.cognitoIdentity = headers["Lambda-Runtime-Cognito-Identity"].first
-        }
-    }
-}
-
 extension Lambda.RuntimeClient {
     internal static let defaultHeaders = HTTPHeaders([("user-agent", "Swift-Lambda/Unknown")])
 
