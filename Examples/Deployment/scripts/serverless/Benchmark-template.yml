@@ -12,7 +12,7 @@ provider:
               - logs:CreateLogGroup
               - logs:CreateLogStream
               - logs:PutLogEvents
-          Resource: "*"        
+          Resource: "*"
 
 functions:
     benchmarkFunction:
