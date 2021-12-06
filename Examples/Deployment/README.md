@@ -87,7 +87,7 @@ The SAM template will provide an output labelled `LambdaApiGatewayEndpoint` whic
 
   ```
   curl <<LambdaApiGatewayEndpoint>>
-  ```  
+  ```
 
 ***Warning:*** This SAM template is only intended as a sample and creates a publicly accessible HTTP endpoint.
 
@@ -162,7 +162,7 @@ For example:
 
   ```
   curl https://r39lvhfng3.execute-api.us-east-1.amazonaws.com/api
-  ```  
+  ```
 
 ***Warning:*** This Serverless template is only intended as a sample and creates a publicly accessible HTTP endpoint.
 

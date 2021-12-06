@@ -17,7 +17,7 @@ import NIOCore
 
 // MARK: - LambdaHandler
 
-#if compiler(>=5.5)
+#if compiler(>=5.5) && canImport(_Concurrency)
 /// Strongly typed, processing protocol for a Lambda that takes a user defined `Event` and returns a user defined `Output` async.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol LambdaHandler: EventLoopLambdaHandler {

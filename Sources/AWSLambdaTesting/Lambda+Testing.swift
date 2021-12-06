@@ -33,9 +33,8 @@
 //     XCTAssertEqual(result, "echo" + input)
 // }
 
-#if swift(>=5.5)
+#if compiler(>=5.5) && canImport(_Concurrency)
 import AWSLambdaRuntime
-import AWSLambdaRuntimeCore
 import Dispatch
 import Logging
 import NIOCore
