@@ -82,7 +82,7 @@ class CodableLambdaTest: XCTestCase {
         XCTAssertEqual(response?.requestId, request.requestId)
     }
 
-    #if swift(>=5.5)
+    #if compiler(>=5.5) && canImport(_Concurrency)
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testCodableVoidHandler() {
         struct Handler: LambdaHandler {
@@ -183,7 +183,7 @@ private struct Response: Codable, Equatable {
     }
 }
 
-#if swift(>=5.5)
+#if compiler(>=5.5) && canImport(_Concurrency)
 // NOTE: workaround until we have async test support on linux
 //         https://github.com/apple/swift-corelibs-xctest/pull/326
 extension XCTestCase {

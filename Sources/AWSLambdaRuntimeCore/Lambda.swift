@@ -53,7 +53,7 @@ public enum Lambda {
         return String(cString: value)
     }
 
-    #if swift(>=5.5)
+    #if compiler(>=5.5) && canImport(_Concurrency)
     // for testing and internal use
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     internal static func run<Handler: LambdaHandler>(configuration: Configuration = .init(), handlerType: Handler.Type) -> Result<Int, Error> {

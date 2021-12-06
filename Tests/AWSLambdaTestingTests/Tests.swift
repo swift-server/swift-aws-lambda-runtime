@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if swift(>=5.5)
+#if compiler(>=5.5) && canImport(_Concurrency)
 import AWSLambdaRuntime
 import AWSLambdaTesting
 import NIOCore
