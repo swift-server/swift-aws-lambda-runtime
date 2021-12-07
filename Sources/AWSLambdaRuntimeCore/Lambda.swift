@@ -23,6 +23,14 @@ import Logging
 import NIOCore
 import NIOPosix
 
+// Workaround for earlier Swift versions.
+// Remove and replace `LambdaSendable` with `Sendable` once we fully embrace concurrency.
+#if swift(>=5.5) && canImport(_Concurrency)
+public typealias LambdaSendable = Swift.Sendable
+#else
+public typealias LambdaSendable = Any
+#endif
+
 public enum Lambda {
     public typealias Handler = ByteBufferLambdaHandler
 

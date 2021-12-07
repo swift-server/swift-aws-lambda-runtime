@@ -20,7 +20,7 @@ import NIOCore
 #if compiler(>=5.5) && canImport(_Concurrency)
 /// Strongly typed, processing protocol for a Lambda that takes a user defined `Event` and returns a user defined `Output` async.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol LambdaHandler: EventLoopLambdaHandler {
+public protocol LambdaHandler: EventLoopLambdaHandler, Sendable {
     /// The Lambda initialization method
     /// Use this method to initialize resources that will be used in every request.
     ///
@@ -69,7 +69,7 @@ extension LambdaHandler {
 ///         The `EventLoopLambdaHandler` will execute the Lambda on the same `EventLoop` as the core runtime engine, making the processing faster but requires
 ///         more care from the implementation to never block the `EventLoop`.
 public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
-    associatedtype Event
+    associatedtype Event: LambdaSendable
     associatedtype Output
 
     /// The Lambda handling method

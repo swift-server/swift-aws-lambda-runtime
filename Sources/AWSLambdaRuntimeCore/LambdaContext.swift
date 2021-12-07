@@ -21,7 +21,7 @@ import NIOCore
 extension Lambda {
     /// Lambda runtime initialization context.
     /// The Lambda runtime generates and passes the `InitializationContext` to the Lambda factory as an argument.
-    public struct InitializationContext {
+    public struct InitializationContext: LambdaSendable {
         /// `Logger` to log with
         ///
         /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
@@ -60,7 +60,7 @@ extension Lambda {
 
 /// Lambda runtime context.
 /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
-public struct LambdaContext: CustomDebugStringConvertible {
+public struct LambdaContext: CustomDebugStringConvertible, LambdaSendable {
     final class _Storage {
         var requestID: String
         var traceID: String
