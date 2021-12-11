@@ -43,9 +43,9 @@ struct ControlPlaneRequestEncoder: _EmittingChannelHandler {
             self.byteBuffer.writeString(.userAgentHeader)
             self.byteBuffer.writeContentLengthHeader(length: contentLength)
             self.byteBuffer.writeString(.CRLF) // end of head
-            if contentLength > 0 {
+            if let payload = payload, contentLength > 0 {
                 context.write(self.wrapOutboundOut(self.byteBuffer), promise: nil)
-                context.write(self.wrapOutboundOut(payload!), promise: promise)
+                context.write(self.wrapOutboundOut(payload), promise: promise)
             } else {
                 context.write(self.wrapOutboundOut(self.byteBuffer), promise: promise)
             }
