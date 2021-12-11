@@ -33,3 +33,12 @@ This product contains a derivation various scripts from SwiftNIO.
     * https://www.apache.org/licenses/LICENSE-2.0
   * HOMEPAGE:
     * https://github.com/apple/swift-nio
+
+---
+
+This product contains a derivation of the swift-extras' 'swift-extras-uuid'.
+
+  * LICENSE (MIT):
+    * https://github.com/swift-extras/swift-extras-uuid/blob/main/LICENSE
+  * HOMEPAGE:
+    * https://github.com/swift-extras/swift-extras-uuid
