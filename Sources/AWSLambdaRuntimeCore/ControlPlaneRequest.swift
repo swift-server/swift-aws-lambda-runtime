@@ -35,14 +35,13 @@ struct Invocation: Hashable {
     var traceID: String
     var clientContext: String?
     var cognitoIdentity: String?
-    
+
     init(requestID: String,
          deadlineInMillisSinceEpoch: Int64,
          invokedFunctionARN: String,
          traceID: String,
          clientContext: String?,
-         cognitoIdentity: String?
-    ) {
+         cognitoIdentity: String?) {
         self.requestID = requestID
         self.deadlineInMillisSinceEpoch = deadlineInMillisSinceEpoch
         self.invokedFunctionARN = invokedFunctionARN
