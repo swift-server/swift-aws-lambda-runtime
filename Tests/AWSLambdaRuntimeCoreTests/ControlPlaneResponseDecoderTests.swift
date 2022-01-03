@@ -63,6 +63,33 @@ final class ControlPlaneResponseDecoderTests: XCTestCase {
             decoderFactory: { ControlPlaneResponseDecoder() }
         ))
     }
+    
+    func testWhitespaceInHeaderIsRejected() {
+        let nextResponse = ByteBuffer(string: """
+            HTTP/1.1 200 OK\r\n\
+            Content-Type: application/json\r\n\
+            Lambda-Runtime Aws-Request-Id: 9028dc49-a01b-4b44-8ffe-4912e9dabbbd\r\n\
+            Lambda-Runtime-Deadline-Ms: 1638392696671\r\n\
+            Lambda-Runtime-Invoked-Function-Arn: arn:aws:lambda:eu-central-1:079477498937:function:lambda-log-http-HelloWorldLambda-NiDlzMFXtF3x\r\n\
+            Lambda-Runtime-Trace-Id: Root=1-61a7e375-40b3edf95b388fe75d1fa416;Parent=348bb48e251c1254;Sampled=0\r\n\
+            Date: Wed, 01 Dec 2021 21:04:53 GMT\r\n\
+            Content-Length: 49\r\n\
+            \r\n\
+            {"name":"Fabian","key2":"value2","key3":"value3"}
+            """
+        )
+
+        let pairs: [(ByteBuffer, [ControlPlaneResponse])] = [
+            (nextResponse, [])
+        ]
+
+        XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
+            inputOutputPairs: pairs,
+            decoderFactory: { ControlPlaneResponseDecoder() }
+        )) {
+            XCTAssertEqual($0 as? LambdaRuntimeError, .responseHeadHeaderInvalidCharacter)
+        }
+    }
 }
 
 extension ByteBuffer {
