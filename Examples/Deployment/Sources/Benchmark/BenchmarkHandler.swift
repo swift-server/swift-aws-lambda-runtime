@@ -13,20 +13,23 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntimeCore
-import NIOCore
+import NIO
 
 // If you would like to benchmark Swift's Lambda Runtime,
 // use this example which is more performant.
 // `EventLoopLambdaHandler` does not offload the Lambda processing to a separate thread
 // while the closure-based handlers do.
 
-struct MyLambda: EventLoopLambdaHandler {
+@main
+struct BenchmarkHandler: EventLoopLambdaHandler {
     typealias Event = String
     typealias Output = String
+
+    static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Self> {
+        context.eventLoop.makeSucceededFuture(BenchmarkHandler())
+    }
 
     func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<String> {
         context.eventLoop.makeSucceededFuture("hello, world!")
     }
 }
-
-Lambda.run { $0.eventLoop.makeSucceededFuture(MyLambda()) }
