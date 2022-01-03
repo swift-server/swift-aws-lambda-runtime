@@ -269,7 +269,7 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
                 buffer.moveReaderIndex(forwardBy: 1) // move forward for colon
                 try self.decodeOptionalWhiteSpaceBeforeFieldValue(from: &buffer)
                 guard let length = buffer.readIntegerFromHeader() else {
-                    throw LambdaRuntimeError.responseHeadInvalidDeadlineValue
+                    throw LambdaRuntimeError.responseHeadInvalidContentLengthValue
                 }
                 return .contentLength(length)
             }
@@ -334,13 +334,13 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
             // Ensure we received a valid http header:
             break // fallthrough
         }
-        
+
         // We received a header we didn't expect, let's ensure it is valid.
-        let satisfy = buffer.readableBytesView[0..<colonIndex].allSatisfy { char -> Bool in
+        let satisfy = buffer.readableBytesView[0 ..< colonIndex].allSatisfy { char -> Bool in
             switch char {
-            case UInt8(ascii: "a")...UInt8(ascii: "z"),
-                 UInt8(ascii: "A")...UInt8(ascii: "Z"),
-                 UInt8(ascii: "0")...UInt8(ascii: "9"),
+            case UInt8(ascii: "a") ... UInt8(ascii: "z"),
+                 UInt8(ascii: "A") ... UInt8(ascii: "Z"),
+                 UInt8(ascii: "0") ... UInt8(ascii: "9"),
                  UInt8(ascii: "!"),
                  UInt8(ascii: "#"),
                  UInt8(ascii: "$"),
@@ -361,7 +361,7 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
                 return false
             }
         }
-        
+
         guard satisfy else {
             throw LambdaRuntimeError.responseHeadHeaderInvalidCharacter
         }
@@ -493,22 +493,6 @@ extension ByteBuffer {
 
         return value
     }
-
-//    mutating func validateHeaderValue(_ value: String) -> Bool {
-//        func isNotOptionalWhiteSpace(_ val: UInt8) -> Bool {
-//            val != UInt8(ascii: " ") && val != UInt8(ascii: "\t")
-//        }
-//
-//        guard let firstCharacterIndex = self.readableBytesView.firstIndex(where: isNotOptionalWhiteSpace),
-//              let lastCharacterIndex = self.readableBytesView.lastIndex(where: isNotOptionalWhiteSpace)
-//        else {
-//            return false
-//        }
-//
-//        self.com
-//    }
-
-    mutating func readOptionalWhiteSpace() {}
 }
 
 extension Invocation {
