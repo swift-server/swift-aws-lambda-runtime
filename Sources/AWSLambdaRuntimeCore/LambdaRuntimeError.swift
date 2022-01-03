@@ -16,7 +16,7 @@ struct LambdaRuntimeError: Error, Hashable {
     enum Base: Hashable {
         case unsolicitedResponse
         case unexpectedStatusCode
-        
+
         case responseHeadInvalidStatusLine
         case responseHeadMissingContentLengthOrTransferEncodingChunked
         case responseHeadMoreThan256BytesBeforeCRLF
@@ -27,21 +27,21 @@ struct LambdaRuntimeError: Error, Hashable {
         case responseHeadInvalidRequestIDValue
         case responseHeadInvalidTraceIDValue
         case responseHeadInvalidDeadlineValue
-        
+
         case invocationHeadMissingRequestID
         case invocationHeadMissingDeadlineInMillisSinceEpoch
         case invocationHeadMissingFunctionARN
         case invocationHeadMissingTraceID
-        
+
         case controlPlaneErrorResponse(ErrorResponse)
     }
-    
+
     private let base: Base
-    
+
     private init(_ base: Base) {
         self.base = base
     }
-    
+
     static var unsolicitedResponse = LambdaRuntimeError(.unsolicitedResponse)
     static var unexpectedStatusCode = LambdaRuntimeError(.unexpectedStatusCode)
     static var responseHeadInvalidStatusLine = LambdaRuntimeError(.responseHeadInvalidStatusLine)
@@ -59,7 +59,7 @@ struct LambdaRuntimeError: Error, Hashable {
     static var invocationHeadMissingDeadlineInMillisSinceEpoch = LambdaRuntimeError(.invocationHeadMissingDeadlineInMillisSinceEpoch)
     static var invocationHeadMissingFunctionARN = LambdaRuntimeError(.invocationHeadMissingFunctionARN)
     static var invocationHeadMissingTraceID = LambdaRuntimeError(.invocationHeadMissingTraceID)
-    
+
     static func controlPlaneErrorResponse(_ response: ErrorResponse) -> Self {
         LambdaRuntimeError(.controlPlaneErrorResponse(response))
     }

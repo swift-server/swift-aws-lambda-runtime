@@ -14,11 +14,10 @@
 
 @testable import AWSLambdaRuntimeCore
 import NIOCore
-import XCTest
 import NIOTestUtils
+import XCTest
 
 final class ControlPlaneResponseDecoderTests: XCTestCase {
-    
     func testNextAndAcceptedResponse() {
         let nextResponse = ByteBuffer(string: """
             HTTP/1.1 200 OK\r\n\
@@ -35,14 +34,14 @@ final class ControlPlaneResponseDecoderTests: XCTestCase {
         )
         let invocation = Invocation(
             requestID: "9028dc49-a01b-4b44-8ffe-4912e9dabbbd",
-            deadlineInMillisSinceEpoch: 1638392696671,
+            deadlineInMillisSinceEpoch: 1_638_392_696_671,
             invokedFunctionARN: "arn:aws:lambda:eu-central-1:079477498937:function:lambda-log-http-HelloWorldLambda-NiDlzMFXtF3x",
             traceID: "Root=1-61a7e375-40b3edf95b388fe75d1fa416;Parent=348bb48e251c1254;Sampled=0",
             clientContext: nil,
             cognitoIdentity: nil
         )
         let next: ControlPlaneResponse = .next(invocation, ByteBuffer(string: #"{"name":"Fabian","key2":"value2","key3":"value3"}"#))
-        
+
         let acceptedResponse = ByteBuffer(string: """
             HTTP/1.1 202 Accepted\r\n\
             Content-Type: application/json\r\n\
@@ -52,13 +51,13 @@ final class ControlPlaneResponseDecoderTests: XCTestCase {
             {"status":"OK"}\n
             """
         )
-        
+
         let pairs: [(ByteBuffer, [ControlPlaneResponse])] = [
             (nextResponse, [next]),
             (acceptedResponse, [.accepted]),
-            (nextResponse + acceptedResponse, [next, .accepted])
+            (nextResponse + acceptedResponse, [next, .accepted]),
         ]
-        
+
         XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(
             inputOutputPairs: pairs,
             decoderFactory: { ControlPlaneResponseDecoder() }
