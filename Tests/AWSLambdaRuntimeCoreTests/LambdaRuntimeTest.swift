@@ -66,9 +66,28 @@ class LambdaRuntimeTest: XCTestCase {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
 
+        struct ShutdownError: Error {}
+
+        struct ShutdownErrorHandler: EventLoopLambdaHandler {
+            typealias Event = String
+            typealias Output = Void
+
+            static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<ShutdownErrorHandler> {
+                context.eventLoop.makeSucceededFuture(ShutdownErrorHandler())
+            }
+
+            func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<Void> {
+                context.eventLoop.makeSucceededVoidFuture()
+            }
+
+            func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
+                context.eventLoop.makeFailedFuture(ShutdownError())
+            }
+        }
+
         let eventLoop = eventLoopGroup.next()
         let logger = Logger(label: "TestLogger")
-        let runtime = LambdaRuntime<RuntimeErrorHandler>(eventLoop: eventLoop, logger: logger)
+        let runtime = LambdaRuntime<ShutdownErrorHandler>(eventLoop: eventLoop, logger: logger)
 
         XCTAssertNoThrow(try eventLoop.flatSubmit { runtime.start() }.wait())
         XCTAssertThrowsError(try runtime.shutdownFuture.wait()) { error in
@@ -76,7 +95,7 @@ class LambdaRuntimeTest: XCTestCase {
                 XCTFail("Unexpected error: \(error)"); return
             }
 
-            XCTAssertEqual(shutdownError as? TestError, TestError("kaboom"))
+            XCTAssert(shutdownError is ShutdownError)
             XCTAssertEqual(runtimeError as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
         }
     }

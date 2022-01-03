@@ -19,7 +19,7 @@ import XCTest
 struct EchoHandler: EventLoopLambdaHandler {
     typealias Event = String
     typealias Output = String
-    
+
     static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<EchoHandler> {
         context.eventLoop.makeSucceededFuture(EchoHandler())
     }
@@ -34,7 +34,7 @@ struct StartupError: Error {}
 struct StartupErrorHandler: EventLoopLambdaHandler {
     typealias Event = String
     typealias Output = String
-    
+
     static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<StartupErrorHandler> {
         context.eventLoop.makeFailedFuture(StartupError())
     }

@@ -51,11 +51,11 @@ extension LambdaHandler {
     public static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Self> {
         let promise = context.eventLoop.makePromise(of: Self.self)
         promise.completeWithTask {
-            try await Self.init(context: context)
+            try await Self(context: context)
         }
         return promise.futureResult
     }
-    
+
     public func handle(_ event: Event, context: LambdaContext) -> EventLoopFuture<Output> {
         let promise = context.eventLoop.makePromise(of: Output.self)
         promise.completeWithTask {
@@ -84,7 +84,6 @@ extension LambdaHandler {
 ///         implementation to never block the `EventLoop`. Implement this protocol only in performance
 ///         critical situations and implement ``LambdaHandler`` in all other circumstances.
 public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
-    
     /// The lambda functions input. In most cases this should be Codable. If your event originates from an
     /// AWS service, have a look at [AWSLambdaEvents](https://github.com/swift-server/swift-aws-lambda-events),
     /// which provides a number of commonly used AWS Event implementations.
@@ -159,7 +158,6 @@ extension EventLoopLambdaHandler where Output == Void {
 ///         ``LambdaHandler`` based APIs.
 ///         Most users are not expected to use this protocol.
 public protocol ByteBufferLambdaHandler {
-    
     /// Create your Lambda handler for the runtime.
     ///
     /// Use this to initialize all your resources that you want to cache between invocations. This could be database
@@ -167,7 +165,7 @@ public protocol ByteBufferLambdaHandler {
     /// to `EventLoopGroup` when initializing NIO dependencies. This will improve overall performance, as it
     /// minimizes thread hopping.
     static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Self>
-    
+
     /// The Lambda handling method
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
@@ -194,7 +192,6 @@ extension ByteBufferLambdaHandler {
 }
 
 extension ByteBufferLambdaHandler {
-    
     /// Initializes and runs the lambda function.
     ///
     /// If you precede your ``ByteBufferLambdaHandler`` conformer's declaration with the

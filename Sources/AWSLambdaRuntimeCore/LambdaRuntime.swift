@@ -86,7 +86,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
             self.run(promise: finishedPromise)
             return finishedPromise.futureResult.mapResult { (handler, $0) }
         }
-        .flatMap { (handler, runnerResult) -> EventLoopFuture<Int> in
+        .flatMap { handler, runnerResult -> EventLoopFuture<Int> in
             // after the lambda finishPromise has succeeded or failed we need to
             // shutdown the handler
             let shutdownContext = Lambda.ShutdownContext(logger: logger, eventLoop: self.eventLoop)
@@ -95,7 +95,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
                 // the runner result
                 logger.error("Error shutting down handler: \(error)")
                 throw Lambda.RuntimeError.shutdownError(shutdownError: error, runnerResult: runnerResult)
-            }.flatMapResult { (_) -> Result<Int, Error> in
+            }.flatMapResult { _ -> Result<Int, Error> in
                 // we had no error shutting down the lambda. let's return the runner's result
                 runnerResult
             }

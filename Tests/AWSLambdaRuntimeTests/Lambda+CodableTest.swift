@@ -42,7 +42,7 @@ class CodableLambdaTest: XCTestCase {
             typealias Output = Void
 
             var expected: Request?
-            
+
             static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
@@ -71,7 +71,7 @@ class CodableLambdaTest: XCTestCase {
             typealias Output = Response
 
             var expected: Request?
-            
+
             static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }

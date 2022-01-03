@@ -158,7 +158,7 @@ class LambdaHandlerTest: XCTestCase {
         struct Handler: EventLoopLambdaHandler {
             typealias Event = String
             typealias Output = String
-            
+
             static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
@@ -182,7 +182,7 @@ class LambdaHandlerTest: XCTestCase {
         struct Handler: EventLoopLambdaHandler {
             typealias Event = String
             typealias Output = Void
-            
+
             static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
@@ -206,7 +206,7 @@ class LambdaHandlerTest: XCTestCase {
         struct Handler: EventLoopLambdaHandler {
             typealias Event = String
             typealias Output = String
-            
+
             static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
@@ -226,11 +226,11 @@ class LambdaHandlerTest: XCTestCase {
         let server = MockLambdaServer(behavior: FailedBootstrapBehavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
-        
+
         struct Handler: EventLoopLambdaHandler {
             typealias Event = String
             typealias Output = String
-            
+
             static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeFailedFuture(TestError("kaboom"))
             }
@@ -240,7 +240,7 @@ class LambdaHandlerTest: XCTestCase {
                 return context.eventLoop.makeFailedFuture(TestError("boom"))
             }
         }
-        
+
         let result = Lambda.run(configuration: .init(), handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldFailWithError: TestError("kaboom"))
     }
