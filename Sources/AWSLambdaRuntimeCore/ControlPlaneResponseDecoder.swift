@@ -13,11 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-#if canImport(Darwin)
-import Darwin
-#else
-import Glibc
-#endif
 
 struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
     typealias InboundOut = ControlPlaneResponse
@@ -191,12 +186,7 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
             throw LambdaRuntimeError.responseHeadInvalidStatusLine
         }
 
-        let cmp = buffer.readableBytesView.withUnsafeBytes { ptr in
-            memcmp("HTTP/1.1 ", ptr.baseAddress, 8) == 0 ? true : false
-        }
-        buffer.moveReaderIndex(forwardBy: 9)
-
-        guard cmp else {
+        guard buffer.readString("HTTP/1.1 ") else {
             throw LambdaRuntimeError.responseHeadInvalidStatusLine
         }
 
@@ -401,6 +391,28 @@ extension ControlPlaneResponseDecoder {
 }
 
 extension ByteBuffer {
+    fileprivate mutating func readString(_ string: String) -> Bool {
+        let result = self.withUnsafeReadableBytes { inputBuffer in
+            string.utf8.withContiguousStorageIfAvailable { validateBuffer -> Bool in
+                assert(inputBuffer.count >= validateBuffer.count)
+
+                for idx in 0 ..< validateBuffer.count {
+                    if inputBuffer[idx] != validateBuffer[idx] {
+                        return false
+                    }
+                }
+                return true
+            }
+        }!
+
+        if result {
+            self.moveReaderIndex(forwardBy: string.utf8.count)
+            return true
+        }
+
+        return false
+    }
+
     fileprivate mutating func readHeaderName(_ name: String) -> Bool {
         let result = self.withUnsafeReadableBytes { inputBuffer in
             name.utf8.withContiguousStorageIfAvailable { nameBuffer -> Bool in
