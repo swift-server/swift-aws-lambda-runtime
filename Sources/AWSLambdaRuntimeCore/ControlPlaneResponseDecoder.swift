@@ -331,7 +331,39 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
             }
 
         default:
-            return .ignore
+            // Ensure we received a valid http header:
+            break // fallthrough
+        }
+        
+        // We received a header we didn't expect, let's ensure it is valid.
+        let satisfy = buffer.readableBytesView[0..<colonIndex].allSatisfy { char -> Bool in
+            switch char {
+            case UInt8(ascii: "a")...UInt8(ascii: "z"),
+                 UInt8(ascii: "A")...UInt8(ascii: "Z"),
+                 UInt8(ascii: "0")...UInt8(ascii: "9"),
+                 UInt8(ascii: "!"),
+                 UInt8(ascii: "#"),
+                 UInt8(ascii: "$"),
+                 UInt8(ascii: "%"),
+                 UInt8(ascii: "&"),
+                 UInt8(ascii: "'"),
+                 UInt8(ascii: "*"),
+                 UInt8(ascii: "+"),
+                 UInt8(ascii: "-"),
+                 UInt8(ascii: "."),
+                 UInt8(ascii: "^"),
+                 UInt8(ascii: "_"),
+                 UInt8(ascii: "`"),
+                 UInt8(ascii: "|"),
+                 UInt8(ascii: "~"):
+                return true
+            default:
+                return false
+            }
+        }
+        
+        guard satisfy else {
+            throw LambdaRuntimeError.responseHeadHeaderInvalidCharacter
         }
 
         return .ignore

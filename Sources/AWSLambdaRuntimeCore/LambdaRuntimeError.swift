@@ -20,6 +20,7 @@ struct LambdaRuntimeError: Error, Hashable {
         case responseHeadInvalidStatusLine
         case responseHeadMissingContentLengthOrTransferEncodingChunked
         case responseHeadMoreThan256BytesBeforeCRLF
+        case responseHeadHeaderInvalidCharacter
         case responseHeadHeaderMissingColon
         case responseHeadHeaderMissingFieldValue
         case responseHeadInvalidHeader
@@ -48,6 +49,7 @@ struct LambdaRuntimeError: Error, Hashable {
     static var responseHeadMissingContentLengthOrTransferEncodingChunked =
         LambdaRuntimeError(.responseHeadMissingContentLengthOrTransferEncodingChunked)
     static var responseHeadMoreThan256BytesBeforeCRLF = LambdaRuntimeError(.responseHeadMoreThan256BytesBeforeCRLF)
+    static var responseHeadHeaderInvalidCharacter = LambdaRuntimeError(.responseHeadHeaderInvalidCharacter)
     static var responseHeadHeaderMissingColon = LambdaRuntimeError(.responseHeadHeaderMissingColon)
     static var responseHeadHeaderMissingFieldValue = LambdaRuntimeError(.responseHeadHeaderMissingFieldValue)
     static var responseHeadInvalidHeader = LambdaRuntimeError(.responseHeadInvalidHeader)
