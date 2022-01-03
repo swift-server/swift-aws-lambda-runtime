@@ -133,7 +133,7 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
             case .deadlineMS(let deadline):
                 head.deadlineInMillisSinceEpoch = deadline
 
-            case .weDontCare:
+            case .ignore:
                 break // switch
             }
         }
@@ -229,7 +229,7 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
         case functionARN(String)
         case requestID(LambdaRequestID)
 
-        case weDontCare
+        case ignore
         case headerEnd
     }
 
@@ -256,12 +256,12 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
         switch colonIndex {
         case 4:
             if buffer.readHeaderName("date") {
-                return .weDontCare
+                return .ignore
             }
 
         case 12:
             if buffer.readHeaderName("content-type") {
-                return .weDontCare
+                return .ignore
             }
 
         case 14:
@@ -313,12 +313,12 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
                 return .requestID(requestID)
             }
             if buffer.readHeaderName("lambda-runtime-client-context") {
-                return .weDontCare
+                return .ignore
             }
 
         case 31:
             if buffer.readHeaderName("lambda-runtime-cognito-identity") {
-                return .weDontCare
+                return .ignore
             }
 
         case 35:
@@ -331,10 +331,10 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
             }
 
         default:
-            return .weDontCare
+            return .ignore
         }
 
-        return .weDontCare
+        return .ignore
     }
 
     @discardableResult
