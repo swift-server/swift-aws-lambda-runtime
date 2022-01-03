@@ -40,12 +40,11 @@ class LambdaRunnerTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        XCTAssertNoThrow(try runLambda(behavior: Behavior(), handler: EchoHandler()))
+        XCTAssertNoThrow(try runLambda(behavior: Behavior(), handlerType: EchoHandler.self))
     }
 
     func testFailure() {
         struct Behavior: LambdaServerBehavior {
-            static let error = "boom"
             let requestId = UUID().uuidString
             func getInvocation() -> GetInvocationResult {
                 .success((requestId: self.requestId, event: "hello"))
@@ -58,7 +57,7 @@ class LambdaRunnerTest: XCTestCase {
 
             func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
                 XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
-                XCTAssertEqual(Behavior.error, error.errorMessage, "expecting error to match")
+                XCTAssertEqual(String(describing: RuntimeError()), error.errorMessage, "expecting error to match")
                 return .success(())
             }
 
@@ -67,6 +66,6 @@ class LambdaRunnerTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        XCTAssertNoThrow(try runLambda(behavior: Behavior(), handler: FailedHandler(Behavior.error)))
+        XCTAssertNoThrow(try runLambda(behavior: Behavior(), handlerType: RuntimeErrorHandler.self))
     }
 }

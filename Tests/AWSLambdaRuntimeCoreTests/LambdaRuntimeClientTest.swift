@@ -24,20 +24,20 @@ import XCTest
 class LambdaRuntimeClientTest: XCTestCase {
     func testSuccess() {
         let behavior = Behavior()
-        XCTAssertNoThrow(try runLambda(behavior: behavior, handler: EchoHandler()))
+        XCTAssertNoThrow(try runLambda(behavior: behavior, handlerType: EchoHandler.self))
         XCTAssertEqual(behavior.state, 6)
     }
 
     func testFailure() {
         let behavior = Behavior()
-        XCTAssertNoThrow(try runLambda(behavior: behavior, handler: FailedHandler("boom")))
+        XCTAssertNoThrow(try runLambda(behavior: behavior, handlerType: RuntimeErrorHandler.self))
         XCTAssertEqual(behavior.state, 10)
     }
 
-    func testBootstrapFailure() {
+    func testStartupFailure() {
         let behavior = Behavior()
-        XCTAssertThrowsError(try runLambda(behavior: behavior, factory: { $0.eventLoop.makeFailedFuture(TestError("boom")) })) { error in
-            XCTAssertEqual(error as? TestError, TestError("boom"))
+        XCTAssertThrowsError(try runLambda(behavior: behavior, handlerType: StartupErrorHandler.self)) {
+            XCTAssert($0 is StartupError)
         }
         XCTAssertEqual(behavior.state, 1)
     }
@@ -63,8 +63,8 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
-            XCTAssertEqual(error as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerType: EchoHandler.self)) {
+            XCTAssertEqual($0 as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
         }
     }
 
@@ -89,8 +89,8 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
-            XCTAssertEqual(error as? Lambda.RuntimeError, .noBody)
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerType: EchoHandler.self)) {
+            XCTAssertEqual($0 as? Lambda.RuntimeError, .noBody)
         }
     }
 
@@ -116,8 +116,8 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
-            XCTAssertEqual(error as? Lambda.RuntimeError, .invocationMissingHeader(AmazonHeaders.requestID))
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerType: EchoHandler.self)) {
+            XCTAssertEqual($0 as? Lambda.RuntimeError, .invocationMissingHeader(AmazonHeaders.requestID))
         }
     }
 
@@ -141,8 +141,8 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: EchoHandler())) { error in
-            XCTAssertEqual(error as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerType: EchoHandler.self)) {
+            XCTAssertEqual($0 as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
         }
     }
 
@@ -166,8 +166,8 @@ class LambdaRuntimeClientTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handler: FailedHandler("boom"))) { error in
-            XCTAssertEqual(error as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerType: RuntimeErrorHandler.self)) {
+            XCTAssertEqual($0 as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
         }
     }
 
@@ -192,8 +192,8 @@ class LambdaRuntimeClientTest: XCTestCase {
                 .failure(.internalServerError)
             }
         }
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), factory: { $0.eventLoop.makeFailedFuture(TestError("boom")) })) { error in
-            XCTAssertEqual(error as? TestError, TestError("boom"))
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerType: StartupErrorHandler.self)) {
+            XCTAssert($0 is StartupError)
         }
     }
 

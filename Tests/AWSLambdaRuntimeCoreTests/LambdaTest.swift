@@ -26,22 +26,18 @@ class LambdaTest: XCTestCase {
 
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, factory: {
-            $0.eventLoop.makeSucceededFuture(EchoHandler())
-        })
+        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
 
     func testFailure() {
-        let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
+        let server = MockLambdaServer(behavior: Behavior(result: .failure(RuntimeError())))
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, factory: {
-            $0.eventLoop.makeSucceededFuture(FailedHandler("boom"))
-        })
+        let result = Lambda.run(configuration: configuration, handlerType: RuntimeErrorHandler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
 
@@ -50,8 +46,8 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(factory: { $0.eventLoop.makeFailedFuture(TestError("kaboom")) })
-        assertLambdaRuntimeResult(result, shouldFailWithError: TestError("kaboom"))
+        let result = Lambda.run(configuration: .init(), handlerType: StartupErrorHandler.self)
+        assertLambdaRuntimeResult(result, shouldFailWithError: StartupError())
     }
 
     func testBootstrapFailureAndReportErrorFailure() {
@@ -80,8 +76,8 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(factory: { $0.eventLoop.makeFailedFuture(TestError("kaboom")) })
-        assertLambdaRuntimeResult(result, shouldFailWithError: TestError("kaboom"))
+        let result = Lambda.run(configuration: .init(), handlerType: StartupErrorHandler.self)
+        assertLambdaRuntimeResult(result, shouldFailWithError: StartupError())
     }
 
     func testStartStopInDebugMode() {
@@ -99,7 +95,7 @@ class LambdaTest: XCTestCase {
             usleep(100_000)
             kill(getpid(), signal.rawValue)
         }
-        let result = Lambda.run(configuration: configuration, factory: { $0.eventLoop.makeSucceededFuture(EchoHandler()) })
+        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
 
         switch result {
         case .success(let invocationCount):
@@ -118,9 +114,7 @@ class LambdaTest: XCTestCase {
 
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1),
                                                  runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
-        let result = Lambda.run(configuration: configuration, factory: {
-            $0.eventLoop.makeSucceededFuture(EchoHandler())
-        })
+        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
         assertLambdaRuntimeResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("timeout"))
     }
 
@@ -130,9 +124,7 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
-        let result = Lambda.run(configuration: configuration, factory: {
-            $0.eventLoop.makeSucceededFuture(EchoHandler())
-        })
+        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
         assertLambdaRuntimeResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("connectionResetByPeer"))
     }
 
@@ -143,9 +135,7 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
-        let result = Lambda.run(configuration: configuration, factory: {
-            $0.eventLoop.makeSucceededFuture(EchoHandler())
-        })
+        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: 1)
     }
 
@@ -156,9 +146,7 @@ class LambdaTest: XCTestCase {
 
         let maxTimes = 10
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, factory: {
-            $0.eventLoop.makeSucceededFuture(EchoHandler())
-        })
+        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
 
@@ -169,9 +157,7 @@ class LambdaTest: XCTestCase {
 
         let maxTimes = 10
         let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, factory: {
-            $0.eventLoop.makeSucceededFuture(EchoHandler())
-        })
+        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
 
@@ -199,9 +185,7 @@ class LambdaTest: XCTestCase {
             }
         }
 
-        let result = Lambda.run(configuration: .init(), factory: {
-            $0.eventLoop.makeSucceededFuture(EchoHandler())
-        })
+        let result = Lambda.run(configuration: .init(), handlerType: EchoHandler.self)
         assertLambdaRuntimeResult(result, shouldFailWithError: Lambda.RuntimeError.badStatusCode(.internalServerError))
     }
 
@@ -271,9 +255,9 @@ class LambdaTest: XCTestCase {
 private struct Behavior: LambdaServerBehavior {
     let requestId: String
     let event: String
-    let result: Result<String?, TestError>
+    let result: Result<String?, RuntimeError>
 
-    init(requestId: String = UUID().uuidString, event: String = "hello", result: Result<String?, TestError> = .success("hello")) {
+    init(requestId: String = UUID().uuidString, event: String = "hello", result: Result<String?, RuntimeError> = .success("hello")) {
         self.requestId = requestId
         self.event = event
         self.result = result
@@ -302,7 +286,7 @@ private struct Behavior: LambdaServerBehavior {
             XCTFail("unexpected to succeed, but failed with: \(error)")
             return .failure(.internalServerError)
         case .failure(let expected):
-            XCTAssertEqual(expected.description, error.errorMessage, "expecting error to match")
+            XCTAssertEqual(String(describing: expected), error.errorMessage, "expecting error to match")
             return .success(())
         }
     }

@@ -18,7 +18,13 @@ import NIOCore
 // MARK: - LambdaHandler
 
 #if compiler(>=5.5) && canImport(_Concurrency)
-/// Strongly typed, processing protocol for a Lambda that takes a user defined `Event` and returns a user defined `Output` async.
+/// Strongly typed, processing protocol for a Lambda that takes a user defined
+/// ``EventLoopLambdaHandler/Event`` and returns a user defined
+/// ``EventLoopLambdaHandler/Output`` asynchronously.
+///
+/// - note: Most users should implement this protocol instead of the lower
+///         level protocols ``EventLoopLambdaHandler`` and
+///         ``ByteBufferLambdaHandler``.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol LambdaHandler: EventLoopLambdaHandler {
     /// The Lambda initialization method
@@ -42,6 +48,14 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler {
+    public static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Self> {
+        let promise = context.eventLoop.makePromise(of: Self.self)
+        promise.completeWithTask {
+            try await Self.init(context: context)
+        }
+        return promise.futureResult
+    }
+    
     public func handle(_ event: Event, context: LambdaContext) -> EventLoopFuture<Output> {
         let promise = context.eventLoop.makePromise(of: Output.self)
         promise.completeWithTask {
@@ -51,25 +65,31 @@ extension LambdaHandler {
     }
 }
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension LambdaHandler {
-    public static func main() {
-        _ = Lambda.run(handlerType: Self.self)
-    }
-}
 #endif
 
 // MARK: - EventLoopLambdaHandler
 
-/// Strongly typed, `EventLoopFuture` based processing protocol for a Lambda that takes a user defined `Event` and returns a user defined `Output` asynchronously.
-/// `EventLoopLambdaHandler` extends `ByteBufferLambdaHandler`, performing `ByteBuffer` -> `Event` decoding and `Output` -> `ByteBuffer` encoding.
+/// Strongly typed, `EventLoopFuture` based processing protocol for a Lambda that takes a user
+/// defined ``Event`` and returns a user defined ``Output`` asynchronously.
 ///
-/// - note: To implement a Lambda, implement either `LambdaHandler` or the `EventLoopLambdaHandler` protocol.
-///         The `LambdaHandler` will offload the Lambda execution to a `DispatchQueue` making processing safer but slower
-///         The `EventLoopLambdaHandler` will execute the Lambda on the same `EventLoop` as the core runtime engine, making the processing faster but requires
-///         more care from the implementation to never block the `EventLoop`.
+/// ``EventLoopLambdaHandler`` extends ``ByteBufferLambdaHandler``, performing
+/// `ByteBuffer` -> ``Event`` decoding and ``Output`` -> `ByteBuffer` encoding.
+///
+/// - note: To implement a Lambda, implement either ``LambdaHandler`` or the
+///         ``EventLoopLambdaHandler`` protocol. The ``LambdaHandler`` will offload
+///         the Lambda execution to an async Task making processing safer but slower (due to
+///         fewer thread hops).
+///         The ``EventLoopLambdaHandler`` will execute the Lambda on the same `EventLoop`
+///         as the core runtime engine, making the processing faster but requires more care from the
+///         implementation to never block the `EventLoop`. Implement this protocol only in performance
+///         critical situations and implement ``LambdaHandler`` in all other circumstances.
 public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
+    
+    /// The lambda functions input. In most cases this should be Codable. If your event originates from an
+    /// AWS service, have a look at [AWSLambdaEvents](https://github.com/swift-server/swift-aws-lambda-events),
+    /// which provides a number of commonly used AWS Event implementations.
     associatedtype Event
+    /// The lambda functions output. Can be `Void`.
     associatedtype Output
 
     /// The Lambda handling method
@@ -135,9 +155,19 @@ extension EventLoopLambdaHandler where Output == Void {
 
 /// An `EventLoopFuture` based processing protocol for a Lambda that takes a `ByteBuffer` and returns a `ByteBuffer?` asynchronously.
 ///
-/// - note: This is a low level protocol designed to power the higher level `EventLoopLambdaHandler` and `LambdaHandler` based APIs.
+/// - note: This is a low level protocol designed to power the higher level ``EventLoopLambdaHandler`` and
+///         ``LambdaHandler`` based APIs.
 ///         Most users are not expected to use this protocol.
 public protocol ByteBufferLambdaHandler {
+    
+    /// Create your Lambda handler for the runtime.
+    ///
+    /// Use this to initialize all your resources that you want to cache between invocations. This could be database
+    /// connections and HTTP clients for example. It is encouraged to use the given `EventLoop`'s conformance
+    /// to `EventLoopGroup` when initializing NIO dependencies. This will improve overall performance, as it
+    /// minimizes thread hopping.
+    static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Self>
+    
     /// The Lambda handling method
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
@@ -160,6 +190,21 @@ public protocol ByteBufferLambdaHandler {
 extension ByteBufferLambdaHandler {
     public func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
         context.eventLoop.makeSucceededFuture(())
+    }
+}
+
+extension ByteBufferLambdaHandler {
+    
+    /// Initializes and runs the lambda function.
+    ///
+    /// If you precede your ``ByteBufferLambdaHandler`` conformer's declaration with the
+    /// [@main](https://docs.swift.org/swift-book/ReferenceManual/Attributes.html#ID626)
+    /// attribute, the system calls the conformer's `main()` method to launch the lambda function.
+    ///
+    /// The lambda runtime provides a default implementation of the method that manages the launch
+    /// process.
+    public static func main() {
+        _ = Lambda.run(configuration: .init(), handlerType: Self.self)
     }
 }
 
