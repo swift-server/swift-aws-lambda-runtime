@@ -54,7 +54,7 @@ final class ControlPlaneRequestEncoderTests: XCTestCase {
     }
 
     func testPostInvocationSuccessWithoutBody() {
-        let requestID = UUID().uuidString
+        let requestID = LambdaRequestID()
         var request: NIOHTTPServerRequestFull?
         XCTAssertNoThrow(request = try self.sendRequest(.invocationResponse(requestID, nil)))
 
@@ -70,7 +70,7 @@ final class ControlPlaneRequestEncoderTests: XCTestCase {
     }
 
     func testPostInvocationSuccessWithBody() {
-        let requestID = UUID().uuidString
+        let requestID = LambdaRequestID()
         let payload = ByteBuffer(string: "hello swift lambda!")
 
         var request: NIOHTTPServerRequestFull?
@@ -89,7 +89,7 @@ final class ControlPlaneRequestEncoderTests: XCTestCase {
     }
 
     func testPostInvocationErrorWithBody() {
-        let requestID = UUID().uuidString
+        let requestID = LambdaRequestID()
         let error = ErrorResponse(errorType: "SomeError", errorMessage: "An error happened")
         var request: NIOHTTPServerRequestFull?
         XCTAssertNoThrow(request = try self.sendRequest(.invocationError(requestID, error)))
@@ -137,7 +137,7 @@ final class ControlPlaneRequestEncoderTests: XCTestCase {
             XCTAssertEqual(nextRequest?.head.method, .GET)
             XCTAssertEqual(nextRequest?.head.uri, "/2018-06-01/runtime/invocation/next")
 
-            let requestID = UUID().uuidString
+            let requestID = LambdaRequestID()
             let payload = ByteBuffer(string: "hello swift lambda!")
             var successRequest: NIOHTTPServerRequestFull?
             XCTAssertNoThrow(successRequest = try self.sendRequest(.invocationResponse(requestID, payload)))

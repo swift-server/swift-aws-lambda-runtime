@@ -100,15 +100,15 @@ extension String {
 }
 
 extension ByteBuffer {
-    fileprivate mutating func writeInvocationResultRequestLine(_ requestID: String) {
+    fileprivate mutating func writeInvocationResultRequestLine(_ requestID: LambdaRequestID) {
         self.writeString("POST /2018-06-01/runtime/invocation/")
-        self.writeString(requestID)
+        self.writeRequestID(requestID)
         self.writeString("/response HTTP/1.1\r\n")
     }
 
-    fileprivate mutating func writeInvocationErrorRequestLine(_ requestID: String) {
+    fileprivate mutating func writeInvocationErrorRequestLine(_ requestID: LambdaRequestID) {
         self.writeString("POST /2018-06-01/runtime/invocation/")
-        self.writeString(requestID)
+        self.writeRequestID(requestID)
         self.writeString("/error HTTP/1.1\r\n")
     }
 

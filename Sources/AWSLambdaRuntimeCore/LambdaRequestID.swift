@@ -340,12 +340,13 @@ extension ByteBuffer {
 
     @discardableResult
     mutating func setRequestID(_ requestID: LambdaRequestID, at index: Int) -> Int {
-        var localBytes = requestID.toAsciiBytesOnStack(characters: LambdaRequestID.lowercaseLookup)
+        var localBytes = requestID.toAsciiBytesOnStack(characters: LambdaRequestID.uppercaseLookup)
         return withUnsafeBytes(of: &localBytes) {
             self.setBytes($0, at: index)
         }
     }
 
+    @discardableResult
     mutating func writeRequestID(_ requestID: LambdaRequestID) -> Int {
         let length = self.setRequestID(requestID, at: self.writerIndex)
         self.moveWriterIndex(forwardBy: length)

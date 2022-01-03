@@ -17,8 +17,8 @@ import NIOHTTP1
 
 enum ControlPlaneRequest: Hashable {
     case next
-    case invocationResponse(String, ByteBuffer?)
-    case invocationError(String, ErrorResponse)
+    case invocationResponse(LambdaRequestID, ByteBuffer?)
+    case invocationError(LambdaRequestID, ErrorResponse)
     case initializationError(ErrorResponse)
 }
 
