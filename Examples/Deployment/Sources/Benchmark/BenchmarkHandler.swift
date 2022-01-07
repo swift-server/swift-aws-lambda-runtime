@@ -25,7 +25,7 @@ struct BenchmarkHandler: EventLoopLambdaHandler {
     typealias Event = String
     typealias Output = String
 
-    static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Self> {
+    static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Self> {
         context.eventLoop.makeSucceededFuture(BenchmarkHandler())
     }
 
