@@ -48,7 +48,7 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler {
-    public static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Self> {
+    public static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Self> {
         let promise = context.eventLoop.makePromise(of: Self.self)
         promise.completeWithTask {
             try await Self(context: context)
@@ -164,7 +164,7 @@ public protocol ByteBufferLambdaHandler {
     /// connections and HTTP clients for example. It is encouraged to use the given `EventLoop`'s conformance
     /// to `EventLoopGroup` when initializing NIO dependencies. This will improve overall performance, as it
     /// minimizes thread hopping.
-    static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Self>
+    static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Self>
 
     /// The Lambda handling method
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.

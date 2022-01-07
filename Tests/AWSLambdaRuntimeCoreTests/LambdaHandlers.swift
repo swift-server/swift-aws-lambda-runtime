@@ -20,7 +20,7 @@ struct EchoHandler: EventLoopLambdaHandler {
     typealias Event = String
     typealias Output = String
 
-    static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<EchoHandler> {
+    static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<EchoHandler> {
         context.eventLoop.makeSucceededFuture(EchoHandler())
     }
 
@@ -35,7 +35,7 @@ struct StartupErrorHandler: EventLoopLambdaHandler {
     typealias Event = String
     typealias Output = String
 
-    static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<StartupErrorHandler> {
+    static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<StartupErrorHandler> {
         context.eventLoop.makeFailedFuture(StartupError())
     }
 
@@ -51,7 +51,7 @@ struct RuntimeErrorHandler: EventLoopLambdaHandler {
     typealias Event = String
     typealias Output = Void
 
-    static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<RuntimeErrorHandler> {
+    static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<RuntimeErrorHandler> {
         context.eventLoop.makeSucceededFuture(RuntimeErrorHandler())
     }
 

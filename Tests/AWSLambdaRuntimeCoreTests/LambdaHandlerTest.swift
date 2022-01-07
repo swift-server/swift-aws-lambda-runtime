@@ -159,7 +159,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias Event = String
             typealias Output = String
 
-            static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
 
@@ -183,7 +183,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias Event = String
             typealias Output = Void
 
-            static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
 
@@ -207,7 +207,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias Event = String
             typealias Output = String
 
-            static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
 
@@ -231,7 +231,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias Event = String
             typealias Output = String
 
-            static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeFailedFuture(TestError("kaboom"))
             }
 

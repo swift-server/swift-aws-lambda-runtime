@@ -34,13 +34,17 @@ public enum Lambda {
 
     /// Run a Lambda defined by implementing the ``ByteBufferLambdaHandler`` protocol.
     /// The Runtime will manage the Lambdas application lifecycle automatically. It will invoke the
-    /// ``ByteBufferLambdaHandler/factory(context:)`` to create a new Handler.
+    /// ``ByteBufferLambdaHandler/makeHandler(context:)`` to create a new Handler.
     ///
     /// - parameters:
-    ///     - factory: A `ByteBufferLambdaHandler` factory.
+    ///     - configuration: A Lambda runtime configuration object
+    ///     - handlerType: The Handler to create and invoke.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    internal static func run<Handler: ByteBufferLambdaHandler>(configuration: Configuration = .init(), handlerType: Handler.Type) -> Result<Int, Error> {
+    internal static func run<Handler: ByteBufferLambdaHandler>(
+        configuration: Configuration = .init(),
+        handlerType: Handler.Type
+    ) -> Result<Int, Error> {
         let _run = { (configuration: Configuration) -> Result<Int, Error> in
             Backtrace.install()
             var logger = Logger(label: "Lambda")
@@ -89,7 +93,7 @@ public enum Lambda {
             return _run(configuration)
         }
         #else
-        return _run(configuration, factory)
+        return _run(configuration)
         #endif
     }
 }

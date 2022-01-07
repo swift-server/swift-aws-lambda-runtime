@@ -72,7 +72,7 @@ class LambdaRuntimeTest: XCTestCase {
             typealias Event = String
             typealias Output = Void
 
-            static func factory(context: Lambda.InitializationContext) -> EventLoopFuture<ShutdownErrorHandler> {
+            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<ShutdownErrorHandler> {
                 context.eventLoop.makeSucceededFuture(ShutdownErrorHandler())
             }
 

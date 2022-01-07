@@ -37,7 +37,6 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     /// - parameters:
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
-    ///     - factory: A `LambdaHandlerFactory` to create the concrete  Lambda handler.
     public convenience init(eventLoop: EventLoop, logger: Logger) {
         self.init(eventLoop: eventLoop, logger: logger, configuration: .init())
     }
