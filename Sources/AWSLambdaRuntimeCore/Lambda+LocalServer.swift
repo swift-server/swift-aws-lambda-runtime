@@ -131,7 +131,7 @@ private enum LocalLambda {
                 guard let work = request.body else {
                     return self.writeResponse(context: context, response: .init(status: .badRequest))
                 }
-                let requestID = "\(DispatchTime.now().uptimeNanoseconds)" // FIXME:
+                let requestID = LambdaRequestID().lowercased
                 let promise = context.eventLoop.makePromise(of: Response.self)
                 promise.futureResult.whenComplete { result in
                     switch result {

@@ -61,7 +61,8 @@ final class NewLambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>: Cha
     
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         do {
-            try self.decoder.process(buffer: self.unwrapInboundIn(data)) { response in
+            let buffer = self.unwrapInboundIn(data)
+            try self.decoder.process(buffer: buffer) { response in
                 guard self.requestsInFlight.popFirst() != nil else {
                     throw LambdaRuntimeError.unsolicitedResponse
                 }

@@ -18,6 +18,10 @@ import NIOCore
 import NIOPosix
 import Backtrace
 
+#if canImport(Glibc)
+import Glibc
+#endif
+
 /// `LambdaRuntime` manages the Lambda process lifecycle.
 ///
 /// - note: All state changes are dispatched onto the supplied EventLoop.
@@ -134,6 +138,7 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
             }
             
         case .invokeHandler(let handler, let invocation, let event):
+            self.logger.trace("invoking handler")
             let context = LambdaContext(
                 logger: self.logger,
                 eventLoop: self.eventLoop,
@@ -149,15 +154,22 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
             self.shutdownPromise.fail(error)
             
         case .requestNextInvocation(let handler, let startPromise):
+            self.logger.trace("requesting next invocation")
             handler.sendRequest(.next)
             startPromise?.succeed(())
             
         case .reportInvocationResult(let requestID, let result, let pipelineNextInvocationRequest, let handler):
             switch result {
             case .success(let body):
+                self.logger.trace("reporting invocation success", metadata: [
+                    "lambda-request-id": "\(requestID)"
+                ])
                 handler.sendRequest(.invocationResponse(requestID, body))
                 
             case .failure(let error):
+                self.logger.trace("reporting invocation failure", metadata: [
+                    "lambda-request-id": "\(requestID)"
+                ])
                 let errorString = String(describing: error)
                 let errorResponse = ErrorResponse(errorType: errorString, errorMessage: errorString)
                 handler.sendRequest(.invocationError(requestID, errorResponse))
@@ -262,7 +274,14 @@ extension NewLambdaRuntime {
         logger.logLevel = configuration.general.logLevel
 
         MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
-            let runtime = NewLambdaRuntime<Handler>(eventLoop: eventLoop, logger: logger, configuration: configuration, handlerType: Handler.self)
+            let runtime = NewLambdaRuntime(
+                eventLoop: eventLoop,
+                logger: logger,
+                configuration: configuration,
+                handlerType: Handler.self
+            )
+
+            logger.info("lambda runtime starting with \(configuration)")
             
             #if DEBUG
             let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in

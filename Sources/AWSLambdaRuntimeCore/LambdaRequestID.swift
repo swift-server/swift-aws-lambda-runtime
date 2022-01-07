@@ -64,11 +64,6 @@ struct LambdaRequestID {
 
     private let _uuid: uuid_t
 
-    /// Returns a string representation for the `LambdaRequestID`, such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
-    var uuidString: String {
-        self.uppercased
-    }
-
     /// Returns a lowercase string representation for the `LambdaRequestID`, such as "e621e1f8-c36c-495a-93fc-0c247a3e6e5f"
     var lowercased: String {
         var bytes = self.toAsciiBytesOnStack(characters: Self.lowercaseLookup)
@@ -144,13 +139,13 @@ extension LambdaRequestID: Hashable {
 
 extension LambdaRequestID: CustomStringConvertible {
     var description: String {
-        self.uuidString
+        self.lowercased
     }
 }
 
 extension LambdaRequestID: CustomDebugStringConvertible {
     var debugDescription: String {
-        self.uuidString
+        self.lowercased
     }
 }
 
@@ -170,7 +165,7 @@ extension LambdaRequestID: Decodable {
 extension LambdaRequestID: Encodable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
-        try container.encode(self.uuidString)
+        try container.encode(self.lowercased)
     }
 }
 
@@ -340,7 +335,7 @@ extension ByteBuffer {
 
     @discardableResult
     mutating func setRequestID(_ requestID: LambdaRequestID, at index: Int) -> Int {
-        var localBytes = requestID.toAsciiBytesOnStack(characters: LambdaRequestID.uppercaseLookup)
+        var localBytes = requestID.toAsciiBytesOnStack(characters: LambdaRequestID.lowercaseLookup)
         return withUnsafeBytes(of: &localBytes) {
             self.setBytes($0, at: index)
         }

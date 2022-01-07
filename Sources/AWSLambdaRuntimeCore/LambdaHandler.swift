@@ -201,7 +201,27 @@ extension ByteBufferLambdaHandler {
     /// The lambda runtime provides a default implementation of the method that manages the launch
     /// process.
     public static func main() {
+        #if false
         _ = Lambda.run(configuration: .init(), handlerType: Self.self)
+        #else
+
+        #if DEBUG
+        if Lambda.env("LOCAL_LAMBDA_SERVER_ENABLED").flatMap(Bool.init) ?? false {
+            do {
+                return try Lambda.withLocalServer {
+                    NewLambdaRuntime.run(handlerType: Self.self)
+                }
+            } catch {
+                print(error)
+                exit(1)
+            }
+        } else {
+            NewLambdaRuntime.run(handlerType: Self.self)
+        }
+        #else
+        NewLambdaRuntime.run(handlerType: Self.self)
+        #endif
+        #endif
     }
 }
 

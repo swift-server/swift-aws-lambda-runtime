@@ -89,7 +89,7 @@ public enum Lambda {
             return _run(configuration)
         }
         #else
-        return _run(configuration, factory)
+        return _run(configuration)
         #endif
     }
 }
