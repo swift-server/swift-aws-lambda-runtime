@@ -20,7 +20,9 @@ import NIOCore
 
 extension Lambda {
     /// Lambda runtime initialization context.
-    /// The Lambda runtime generates and passes the `InitializationContext` to the Lambda factory as an argument.
+    /// The Lambda runtime generates and passes the `InitializationContext` to the Handlers
+    /// ``ByteBufferLambdaHandler/makeHandler(context:)`` or ``LambdaHandler/init(context:)``
+    /// as an argument.
     public struct InitializationContext {
         /// `Logger` to log with
         ///

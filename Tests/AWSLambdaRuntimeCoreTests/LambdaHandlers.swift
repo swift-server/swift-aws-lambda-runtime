@@ -14,27 +14,48 @@
 
 import AWSLambdaRuntimeCore
 import NIOCore
+import XCTest
 
 struct EchoHandler: EventLoopLambdaHandler {
     typealias Event = String
     typealias Output = String
+
+    static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<EchoHandler> {
+        context.eventLoop.makeSucceededFuture(EchoHandler())
+    }
 
     func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<String> {
         context.eventLoop.makeSucceededFuture(event)
     }
 }
 
-struct FailedHandler: EventLoopLambdaHandler {
+struct StartupError: Error {}
+
+struct StartupErrorHandler: EventLoopLambdaHandler {
+    typealias Event = String
+    typealias Output = String
+
+    static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<StartupErrorHandler> {
+        context.eventLoop.makeFailedFuture(StartupError())
+    }
+
+    func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<String> {
+        XCTFail("Must never be called")
+        return context.eventLoop.makeSucceededFuture(event)
+    }
+}
+
+struct RuntimeError: Error {}
+
+struct RuntimeErrorHandler: EventLoopLambdaHandler {
     typealias Event = String
     typealias Output = Void
 
-    private let reason: String
-
-    init(_ reason: String) {
-        self.reason = reason
+    static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<RuntimeErrorHandler> {
+        context.eventLoop.makeSucceededFuture(RuntimeErrorHandler())
     }
 
     func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<Void> {
-        context.eventLoop.makeFailedFuture(TestError(self.reason))
+        context.eventLoop.makeFailedFuture(RuntimeError())
     }
 }

@@ -41,7 +41,11 @@ class CodableLambdaTest: XCTestCase {
             typealias Event = Request
             typealias Output = Void
 
-            let expected: Request
+            var expected: Request?
+
+            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+                context.eventLoop.makeSucceededFuture(Handler())
+            }
 
             func handle(_ event: Request, context: LambdaContext) -> EventLoopFuture<Void> {
                 XCTAssertEqual(event, self.expected)
@@ -66,7 +70,11 @@ class CodableLambdaTest: XCTestCase {
             typealias Event = Request
             typealias Output = Response
 
-            let expected: Request
+            var expected: Request?
+
+            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+                context.eventLoop.makeSucceededFuture(Handler())
+            }
 
             func handle(_ event: Request, context: LambdaContext) -> EventLoopFuture<Response> {
                 XCTAssertEqual(event, self.expected)

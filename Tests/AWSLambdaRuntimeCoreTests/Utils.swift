@@ -18,11 +18,7 @@ import NIOCore
 import NIOPosix
 import XCTest
 
-func runLambda(behavior: LambdaServerBehavior, handler: Lambda.Handler) throws {
-    try runLambda(behavior: behavior, factory: { $0.eventLoop.makeSucceededFuture(handler) })
-}
-
-func runLambda(behavior: LambdaServerBehavior, factory: @escaping Lambda.HandlerFactory) throws {
+func runLambda<Handler: ByteBufferLambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
     let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
@@ -30,7 +26,7 @@ func runLambda(behavior: LambdaServerBehavior, factory: @escaping Lambda.Handler
     let runner = Lambda.Runner(eventLoop: eventLoopGroup.next(), configuration: configuration)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer { XCTAssertNoThrow(try server.stop().wait()) }
-    try runner.initialize(logger: logger, factory: factory).flatMap { handler in
+    try runner.initialize(logger: logger, handlerType: handlerType).flatMap { handler in
         runner.run(logger: logger, handler: handler)
     }.wait()
 }

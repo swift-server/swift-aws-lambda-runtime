@@ -19,12 +19,11 @@ import NIOCore
 /// `LambdaRuntime` manages the Lambda process lifecycle.
 ///
 /// - note: It is intended to be used within a single `EventLoop`. For this reason this class is not thread safe.
-public final class LambdaRuntime {
+public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     private let eventLoop: EventLoop
     private let shutdownPromise: EventLoopPromise<Int>
     private let logger: Logger
     private let configuration: Lambda.Configuration
-    private let factory: Lambda.HandlerFactory
 
     private var state = State.idle {
         willSet {
@@ -38,17 +37,15 @@ public final class LambdaRuntime {
     /// - parameters:
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
-    ///     - factory: A `LambdaHandlerFactory` to create the concrete  Lambda handler.
-    public convenience init(eventLoop: EventLoop, logger: Logger, factory: @escaping Lambda.HandlerFactory) {
-        self.init(eventLoop: eventLoop, logger: logger, configuration: .init(), factory: factory)
+    public convenience init(eventLoop: EventLoop, logger: Logger) {
+        self.init(eventLoop: eventLoop, logger: logger, configuration: .init())
     }
 
-    init(eventLoop: EventLoop, logger: Logger, configuration: Lambda.Configuration, factory: @escaping Lambda.HandlerFactory) {
+    init(eventLoop: EventLoop, logger: Logger, configuration: Lambda.Configuration) {
         self.eventLoop = eventLoop
         self.shutdownPromise = eventLoop.makePromise(of: Int.self)
         self.logger = logger
         self.configuration = configuration
-        self.factory = factory
     }
 
     deinit {
@@ -79,8 +76,8 @@ public final class LambdaRuntime {
         logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
         let runner = Lambda.Runner(eventLoop: self.eventLoop, configuration: self.configuration)
 
-        let startupFuture = runner.initialize(logger: logger, factory: self.factory)
-        startupFuture.flatMap { handler -> EventLoopFuture<(ByteBufferLambdaHandler, Result<Int, Error>)> in
+        let startupFuture = runner.initialize(logger: logger, handlerType: Handler.self)
+        startupFuture.flatMap { handler -> EventLoopFuture<(Handler, Result<Int, Error>)> in
             // after the startup future has succeeded, we have a handler that we can use
             // to `run` the lambda.
             let finishedPromise = self.eventLoop.makePromise(of: Int.self)
@@ -88,7 +85,7 @@ public final class LambdaRuntime {
             self.run(promise: finishedPromise)
             return finishedPromise.futureResult.mapResult { (handler, $0) }
         }
-        .flatMap { (handler, runnerResult) -> EventLoopFuture<Int> in
+        .flatMap { handler, runnerResult -> EventLoopFuture<Int> in
             // after the lambda finishPromise has succeeded or failed we need to
             // shutdown the handler
             let shutdownContext = Lambda.ShutdownContext(logger: logger, eventLoop: self.eventLoop)
@@ -97,7 +94,7 @@ public final class LambdaRuntime {
                 // the runner result
                 logger.error("Error shutting down handler: \(error)")
                 throw Lambda.RuntimeError.shutdownError(shutdownError: error, runnerResult: runnerResult)
-            }.flatMapResult { (_) -> Result<Int, Error> in
+            }.flatMapResult { _ -> Result<Int, Error> in
                 // we had no error shutting down the lambda. let's return the runner's result
                 runnerResult
             }
@@ -173,7 +170,7 @@ public final class LambdaRuntime {
     private enum State {
         case idle
         case initializing
-        case active(Lambda.Runner, Lambda.Handler)
+        case active(Lambda.Runner, Handler)
         case shuttingdown
         case shutdown
 

@@ -29,37 +29,16 @@ class LambdaRuntimeTest: XCTestCase {
 
         let eventLoop = eventLoopGroup.next()
         let logger = Logger(label: "TestLogger")
-        let testError = TestError("kaboom")
-        let runtime = LambdaRuntime(eventLoop: eventLoop, logger: logger, factory: {
-            $0.eventLoop.makeFailedFuture(testError)
-        })
+        let runtime = LambdaRuntime<StartupErrorHandler>(eventLoop: eventLoop, logger: logger)
 
         // eventLoop.submit in this case returns an EventLoopFuture<EventLoopFuture<ByteBufferHandler>>
         // which is why we need `wait().wait()`
-        XCTAssertThrowsError(try eventLoop.flatSubmit { runtime.start() }.wait()) { error in
-            XCTAssertEqual(testError, error as? TestError)
+        XCTAssertThrowsError(try eventLoop.flatSubmit { runtime.start() }.wait()) {
+            XCTAssert($0 is StartupError)
         }
 
-        XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) { error in
-            XCTAssertEqual(testError, error as? TestError)
-        }
-    }
-
-    struct CallbackLambdaHandler: ByteBufferLambdaHandler {
-        let handler: (LambdaContext, ByteBuffer) -> (EventLoopFuture<ByteBuffer?>)
-        let shutdown: (Lambda.ShutdownContext) -> EventLoopFuture<Void>
-
-        init(_ handler: @escaping (LambdaContext, ByteBuffer) -> (EventLoopFuture<ByteBuffer?>), shutdown: @escaping (Lambda.ShutdownContext) -> EventLoopFuture<Void>) {
-            self.handler = handler
-            self.shutdown = shutdown
-        }
-
-        func handle(_ event: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?> {
-            self.handler(context, event)
-        }
-
-        func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
-            self.shutdown(context)
+        XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) {
+            XCTAssert($0 is StartupError)
         }
     }
 
@@ -70,23 +49,14 @@ class LambdaRuntimeTest: XCTestCase {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
 
-        var count = 0
-        let handler = CallbackLambdaHandler({ XCTFail("Should not be reached"); return $0.eventLoop.makeSucceededFuture($1) }) { context in
-            count += 1
-            return context.eventLoop.makeSucceededFuture(())
-        }
-
         let eventLoop = eventLoopGroup.next()
         let logger = Logger(label: "TestLogger")
-        let runtime = LambdaRuntime(eventLoop: eventLoop, logger: logger, factory: {
-            $0.eventLoop.makeSucceededFuture(handler)
-        })
+        let runtime = LambdaRuntime<EchoHandler>(eventLoop: eventLoop, logger: logger)
 
         XCTAssertNoThrow(_ = try eventLoop.flatSubmit { runtime.start() }.wait())
-        XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) { error in
-            XCTAssertEqual(.badStatusCode(HTTPResponseStatus.internalServerError), error as? Lambda.RuntimeError)
+        XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) {
+            XCTAssertEqual(.badStatusCode(HTTPResponseStatus.internalServerError), $0 as? Lambda.RuntimeError)
         }
-        XCTAssertEqual(count, 1)
     }
 
     func testLambdaResultIfShutsdownIsUnclean() {
@@ -96,28 +66,38 @@ class LambdaRuntimeTest: XCTestCase {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
 
-        var count = 0
-        let handler = CallbackLambdaHandler({ XCTFail("Should not be reached"); return $0.eventLoop.makeSucceededFuture($1) }) { context in
-            count += 1
-            return context.eventLoop.makeFailedFuture(TestError("kaboom"))
+        struct ShutdownError: Error {}
+
+        struct ShutdownErrorHandler: EventLoopLambdaHandler {
+            typealias Event = String
+            typealias Output = Void
+
+            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<ShutdownErrorHandler> {
+                context.eventLoop.makeSucceededFuture(ShutdownErrorHandler())
+            }
+
+            func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<Void> {
+                context.eventLoop.makeSucceededVoidFuture()
+            }
+
+            func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
+                context.eventLoop.makeFailedFuture(ShutdownError())
+            }
         }
 
         let eventLoop = eventLoopGroup.next()
         let logger = Logger(label: "TestLogger")
-        let runtime = LambdaRuntime(eventLoop: eventLoop, logger: logger, factory: {
-            $0.eventLoop.makeSucceededFuture(handler)
-        })
+        let runtime = LambdaRuntime<ShutdownErrorHandler>(eventLoop: eventLoop, logger: logger)
 
-        XCTAssertNoThrow(_ = try eventLoop.flatSubmit { runtime.start() }.wait())
-        XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) { error in
+        XCTAssertNoThrow(try eventLoop.flatSubmit { runtime.start() }.wait())
+        XCTAssertThrowsError(try runtime.shutdownFuture.wait()) { error in
             guard case Lambda.RuntimeError.shutdownError(let shutdownError, .failure(let runtimeError)) = error else {
-                XCTFail("Unexpected error"); return
+                XCTFail("Unexpected error: \(error)"); return
             }
 
-            XCTAssertEqual(shutdownError as? TestError, TestError("kaboom"))
+            XCTAssert(shutdownError is ShutdownError)
             XCTAssertEqual(runtimeError as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
         }
-        XCTAssertEqual(count, 1)
     }
 }
 
