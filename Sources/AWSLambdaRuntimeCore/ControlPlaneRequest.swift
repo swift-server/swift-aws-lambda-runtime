@@ -51,14 +51,10 @@ struct Invocation: Hashable {
             throw Lambda.RuntimeError.invocationMissingHeader(AmazonHeaders.invokedFunctionARN)
         }
 
-        guard let traceID = headers.first(name: AmazonHeaders.traceID) else {
-            throw Lambda.RuntimeError.invocationMissingHeader(AmazonHeaders.traceID)
-        }
-
         self.requestID = requestID
         self.deadlineInMillisSinceEpoch = unixTimeInMilliseconds
         self.invokedFunctionARN = invokedFunctionARN
-        self.traceID = traceID
+        self.traceID = headers.first(name: AmazonHeaders.traceID) ?? ""
         self.clientContext = headers["Lambda-Runtime-Client-Context"].first
         self.cognitoIdentity = headers["Lambda-Runtime-Cognito-Identity"].first
     }
