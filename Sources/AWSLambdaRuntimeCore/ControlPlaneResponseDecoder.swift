@@ -113,7 +113,7 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
                 return .decoded(head)
 
             case .contentLength(let length):
-                head.contentLength = length // TODO: This can crash
+                head.contentLength = length
 
             case .contentType:
                 break // switch
@@ -145,6 +145,8 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
         case none
     }
 
+    static let sixMegaBytes = 6 * 1024 * 1024
+
     private mutating func decodeBody(from buffer: inout ByteBuffer) throws -> DecodeResult<ByteBuffer?> {
         switch self.state {
         case .waitingForBody(let partialHead):
@@ -152,7 +154,8 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
             case .none:
                 return .decoded(nil)
             case .some(let length):
-                if let slice = buffer.readSlice(length: length) {
+                precondition(length <= Self.sixMegaBytes)
+                if let slice = buffer.readSlice(length: Int(length)) {
                     self.state = .waitingForNewResponse
                     return .decoded(slice)
                 }
@@ -168,13 +171,15 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
         switch head.statusCode {
         case 200:
             guard let body = body else {
-                preconditionFailure("TODO: implement")
+                throw LambdaRuntimeError.invocationMissingPayload
             }
             return .next(try Invocation(head: head), body)
+
         case 202:
             return .accepted
-        case 400 ..< 600:
-            preconditionFailure("TODO: implement")
+
+        case 400, 403:
+            throw LambdaRuntimeError.controlPlaneErrorResponse(<#T##response: ErrorResponse##ErrorResponse#>)
 
         default:
             throw LambdaRuntimeError.unexpectedStatusCode
@@ -223,9 +228,9 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
     private enum HeaderLineContent: Equatable {
         case traceID(String)
         case contentType
-        case contentLength(Int)
+        case contentLength(UInt64)
         case cognitoIdentity(String)
-        case deadlineMS(Int)
+        case deadlineMS(UInt64)
         case functionARN(String)
         case requestID(LambdaRequestID)
 
@@ -268,20 +273,21 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
             if buffer.readHeaderName("content-length") {
                 buffer.moveReaderIndex(forwardBy: 1) // move forward for colon
                 try self.decodeOptionalWhiteSpaceBeforeFieldValue(from: &buffer)
-                guard let length = buffer.readIntegerFromHeader() else {
+                guard let length = buffer.readUInt64FromHeader() else {
                     throw LambdaRuntimeError.responseHeadInvalidContentLengthValue
                 }
+                guard length < 6 * 1024 * 1024 else {
+                    // A lambda must not have a body larger than 6MB:
+                    //     https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
+                    throw LambdaRuntimeError.responseHeadInvalidContentLengthValue
+                }
+
                 return .contentLength(length)
             }
 
         case 17:
             if buffer.readHeaderName("transfer-encoding") {
-                buffer.moveReaderIndex(forwardBy: 1) // move forward for colon
-                try self.decodeOptionalWhiteSpaceBeforeFieldValue(from: &buffer)
-                guard let length = buffer.readIntegerFromHeader() else {
-                    throw LambdaRuntimeError.responseHeadInvalidDeadlineValue
-                }
-                return .contentLength(length)
+                throw LambdaRuntimeError.responseHeadTransferEncodingChunkedNotSupported
             }
 
         case 23:
@@ -297,8 +303,8 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
             if buffer.readHeaderName("lambda-runtime-deadline-ms") {
                 buffer.moveReaderIndex(forwardBy: 1) // move forward for colon
                 try self.decodeOptionalWhiteSpaceBeforeFieldValue(from: &buffer)
-                guard let deadline = buffer.readIntegerFromHeader() else {
-                    throw LambdaRuntimeError.responseHeadInvalidContentLengthValue
+                guard let deadline = buffer.readUInt64FromHeader() else {
+                    throw LambdaRuntimeError.responseHeadInvalidDeadlineValue
                 }
                 return .deadlineMS(deadline)
             }
@@ -399,10 +405,10 @@ struct ControlPlaneResponseDecoder: NIOSingleStepByteToMessageDecoder {
 extension ControlPlaneResponseDecoder {
     fileprivate struct PartialHead {
         var statusCode: Int
-        var contentLength: Int?
+        var contentLength: UInt64?
 
         var requestID: LambdaRequestID?
-        var deadlineInMillisSinceEpoch: Int?
+        var deadlineInMillisSinceEpoch: UInt64?
         var invokedFunctionARN: String?
         var traceID: String?
         var clientContext: String?
@@ -468,16 +474,22 @@ extension ByteBuffer {
         return false
     }
 
-    mutating func readIntegerFromHeader() -> Int? {
+    // We must ensure that we can multiply our current value by ten and add at least 9.
+    private static let maxIncreasableUInt64 = UInt64.max / 100
+
+    mutating func readUInt64FromHeader() -> UInt64? {
         guard let ascii = self.readInteger(as: UInt8.self), UInt8(ascii: "0") <= ascii && ascii <= UInt8(ascii: "9") else {
             return nil
         }
-        var value = Int(ascii - UInt8(ascii: "0"))
+        var value = UInt64(ascii - UInt8(ascii: "0"))
         loop: while let ascii = self.readInteger(as: UInt8.self) {
             switch ascii {
             case UInt8(ascii: "0") ... UInt8(ascii: "9"):
+                if value > Self.maxIncreasableUInt64 {
+                    return nil
+                }
                 value = value * 10
-                value += Int(ascii - UInt8(ascii: "0"))
+                value += UInt64(ascii - UInt8(ascii: "0"))
 
             case UInt8(ascii: " "), UInt8(ascii: "\t"):
                 // verify that all following characters are also whitespace
@@ -515,7 +527,7 @@ extension Invocation {
 
         self = Invocation(
             requestID: requestID.lowercased,
-            deadlineInMillisSinceEpoch: Int64(deadlineInMillisSinceEpoch),
+            deadlineInMillisSinceEpoch: deadlineInMillisSinceEpoch,
             invokedFunctionARN: invokedFunctionARN,
             traceID: traceID,
             clientContext: head.clientContext,

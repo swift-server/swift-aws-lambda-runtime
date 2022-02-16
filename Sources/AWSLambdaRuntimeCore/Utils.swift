@@ -59,8 +59,8 @@ internal enum Signal: Int32 {
 }
 
 extension DispatchWallTime {
-    internal init(millisSinceEpoch: Int64) {
-        let nanoSinceEpoch = UInt64(millisSinceEpoch) * 1_000_000
+    internal init(millisSinceEpoch: UInt64) {
+        let nanoSinceEpoch = millisSinceEpoch * 1_000_000
         let seconds = UInt64(nanoSinceEpoch / 1_000_000_000)
         let nanoseconds = nanoSinceEpoch - (seconds * 1_000_000_000)
         self.init(timespec: timespec(tv_sec: Int(seconds), tv_nsec: Int(nanoseconds)))

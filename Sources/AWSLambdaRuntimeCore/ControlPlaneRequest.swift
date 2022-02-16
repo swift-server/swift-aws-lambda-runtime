@@ -30,14 +30,14 @@ enum ControlPlaneResponse: Hashable {
 
 struct Invocation: Hashable {
     var requestID: String
-    var deadlineInMillisSinceEpoch: Int64
+    var deadlineInMillisSinceEpoch: UInt64
     var invokedFunctionARN: String
     var traceID: String
     var clientContext: String?
     var cognitoIdentity: String?
 
     init(requestID: String,
-         deadlineInMillisSinceEpoch: Int64,
+         deadlineInMillisSinceEpoch: UInt64,
          invokedFunctionARN: String,
          traceID: String,
          clientContext: String?,
@@ -56,7 +56,7 @@ struct Invocation: Hashable {
         }
 
         guard let deadline = headers.first(name: AmazonHeaders.deadline),
-              let unixTimeInMilliseconds = Int64(deadline)
+              let unixTimeInMilliseconds = UInt64(deadline)
         else {
             throw Lambda.RuntimeError.invocationMissingHeader(AmazonHeaders.deadline)
         }

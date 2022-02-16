@@ -16,8 +16,12 @@ struct LambdaRuntimeError: Error, Hashable {
     enum Base: Hashable {
         case unsolicitedResponse
         case unexpectedStatusCode
+        case statusCodeBadRequest
+        case statusCodeForbidden
+        case containerError
 
         case responseHeadInvalidStatusLine
+        case responseHeadTransferEncodingChunkedNotSupported
         case responseHeadMissingContentLengthOrTransferEncodingChunked
         case responseHeadMoreThan256BytesBeforeCRLF
         case responseHeadHeaderInvalidCharacter
@@ -34,6 +38,7 @@ struct LambdaRuntimeError: Error, Hashable {
         case invocationHeadMissingFunctionARN
         case invocationHeadMissingTraceID
 
+        case invocationMissingPayload
         case controlPlaneErrorResponse(ErrorResponse)
     }
 
@@ -43,25 +48,33 @@ struct LambdaRuntimeError: Error, Hashable {
         self.base = base
     }
 
-    static var unsolicitedResponse = LambdaRuntimeError(.unsolicitedResponse)
-    static var unexpectedStatusCode = LambdaRuntimeError(.unexpectedStatusCode)
-    static var responseHeadInvalidStatusLine = LambdaRuntimeError(.responseHeadInvalidStatusLine)
-    static var responseHeadMissingContentLengthOrTransferEncodingChunked =
-        LambdaRuntimeError(.responseHeadMissingContentLengthOrTransferEncodingChunked)
-    static var responseHeadMoreThan256BytesBeforeCRLF = LambdaRuntimeError(.responseHeadMoreThan256BytesBeforeCRLF)
-    static var responseHeadHeaderInvalidCharacter = LambdaRuntimeError(.responseHeadHeaderInvalidCharacter)
-    static var responseHeadHeaderMissingColon = LambdaRuntimeError(.responseHeadHeaderMissingColon)
-    static var responseHeadHeaderMissingFieldValue = LambdaRuntimeError(.responseHeadHeaderMissingFieldValue)
-    static var responseHeadInvalidHeader = LambdaRuntimeError(.responseHeadInvalidHeader)
-    static var responseHeadInvalidContentLengthValue = LambdaRuntimeError(.responseHeadInvalidContentLengthValue)
-    static var responseHeadInvalidRequestIDValue = LambdaRuntimeError(.responseHeadInvalidRequestIDValue)
-    static var responseHeadInvalidTraceIDValue = LambdaRuntimeError(.responseHeadInvalidTraceIDValue)
-    static var responseHeadInvalidDeadlineValue = LambdaRuntimeError(.responseHeadInvalidDeadlineValue)
+    static let unsolicitedResponse = LambdaRuntimeError(.unsolicitedResponse)
+    static let unexpectedStatusCode = LambdaRuntimeError(.unexpectedStatusCode)
+    static let statusCodeBadRequest = LambdaRuntimeError(.statusCodeBadRequest)
+    static let statusCodeForbidden = LambdaRuntimeError(.statusCodeForbidden)
+    static let containerError = LambdaRuntimeError(.containerError)
 
-    static var invocationHeadMissingRequestID = LambdaRuntimeError(.invocationHeadMissingRequestID)
-    static var invocationHeadMissingDeadlineInMillisSinceEpoch = LambdaRuntimeError(.invocationHeadMissingDeadlineInMillisSinceEpoch)
-    static var invocationHeadMissingFunctionARN = LambdaRuntimeError(.invocationHeadMissingFunctionARN)
-    static var invocationHeadMissingTraceID = LambdaRuntimeError(.invocationHeadMissingTraceID)
+    static let responseHeadInvalidStatusLine = LambdaRuntimeError(.responseHeadInvalidStatusLine)
+    static let responseHeadTransferEncodingChunkedNotSupported =
+        LambdaRuntimeError(.responseHeadTransferEncodingChunkedNotSupported)
+    static let responseHeadMissingContentLengthOrTransferEncodingChunked =
+        LambdaRuntimeError(.responseHeadMissingContentLengthOrTransferEncodingChunked)
+    static let responseHeadMoreThan256BytesBeforeCRLF = LambdaRuntimeError(.responseHeadMoreThan256BytesBeforeCRLF)
+    static let responseHeadHeaderInvalidCharacter = LambdaRuntimeError(.responseHeadHeaderInvalidCharacter)
+    static let responseHeadHeaderMissingColon = LambdaRuntimeError(.responseHeadHeaderMissingColon)
+    static let responseHeadHeaderMissingFieldValue = LambdaRuntimeError(.responseHeadHeaderMissingFieldValue)
+    static let responseHeadInvalidHeader = LambdaRuntimeError(.responseHeadInvalidHeader)
+    static let responseHeadInvalidContentLengthValue = LambdaRuntimeError(.responseHeadInvalidContentLengthValue)
+    static let responseHeadInvalidRequestIDValue = LambdaRuntimeError(.responseHeadInvalidRequestIDValue)
+    static let responseHeadInvalidTraceIDValue = LambdaRuntimeError(.responseHeadInvalidTraceIDValue)
+    static let responseHeadInvalidDeadlineValue = LambdaRuntimeError(.responseHeadInvalidDeadlineValue)
+
+    static let invocationHeadMissingRequestID = LambdaRuntimeError(.invocationHeadMissingRequestID)
+    static let invocationHeadMissingDeadlineInMillisSinceEpoch = LambdaRuntimeError(.invocationHeadMissingDeadlineInMillisSinceEpoch)
+    static let invocationHeadMissingFunctionARN = LambdaRuntimeError(.invocationHeadMissingFunctionARN)
+    static let invocationHeadMissingTraceID = LambdaRuntimeError(.invocationHeadMissingTraceID)
+
+    static let invocationMissingPayload = LambdaRuntimeError(.invocationMissingPayload)
 
     static func controlPlaneErrorResponse(_ response: ErrorResponse) -> Self {
         LambdaRuntimeError(.controlPlaneErrorResponse(response))

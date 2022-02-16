@@ -331,6 +331,63 @@ final class ControlPlaneResponseDecoderTests: XCTestCase {
             XCTAssertEqual($0 as? LambdaRuntimeError, .responseHeadInvalidHeader)
         }
     }
+
+    func testResponseHeadWithToLargeContentLengthHeaderValue() {
+        let nextResponse = ByteBuffer(string: """
+            HTTP/1.1 200 OK\r\n\
+            Content-Type: \r\n\
+            Content-Length: 18446744073709551615\r\n\
+            Date: Wed, 01 Dec 2021 21:04:53 GMT\r\n\
+            \r\n\
+            {"name":"Fabian","key2":"value2","key3":"value3"}
+            """
+        )
+
+        XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
+            inputOutputPairs: [(nextResponse, [])],
+            decoderFactory: { ControlPlaneResponseDecoder() }
+        )) {
+            XCTAssertEqual($0 as? LambdaRuntimeError, .responseHeadInvalidContentLengthValue)
+        }
+    }
+
+    func testResponseHeadWithDeadlineThatIsToLArgeForUInt64() {
+        let nextResponse = ByteBuffer(string: """
+            HTTP/1.1 200 OK\r\n\
+            Content-Type: \r\n\
+            Lambda-Runtime-Deadline-Ms: 18446744073709551615\r\n\
+            Date: Wed, 01 Dec 2021 21:04:53 GMT\r\n\
+            \r\n\
+            {"name":"Fabian","key2":"value2","key3":"value3"}
+            """
+        )
+
+        XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
+            inputOutputPairs: [(nextResponse, [])],
+            decoderFactory: { ControlPlaneResponseDecoder() }
+        )) {
+            XCTAssertEqual($0 as? LambdaRuntimeError, .responseHeadInvalidDeadlineValue)
+        }
+    }
+
+    func testResponseHeadWithContentLengthLargerThan6MB() {
+        let nextResponse = ByteBuffer(string: """
+            HTTP/1.1 200 OK\r\n\
+            Content-Type: \r\n\
+            Content-Length: \(6 * 1024 * 1024 + 1)\r\n\
+            Date: Wed, 01 Dec 2021 21:04:53 GMT\r\n\
+            \r\n\
+            {"name":"Fabian","key2":"value2","key3":"value3"}
+            """
+        )
+
+        XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(
+            inputOutputPairs: [(nextResponse, [])],
+            decoderFactory: { ControlPlaneResponseDecoder() }
+        )) {
+            XCTAssertEqual($0 as? LambdaRuntimeError, .responseHeadInvalidContentLengthValue)
+        }
+    }
 }
 
 extension ByteBuffer {
