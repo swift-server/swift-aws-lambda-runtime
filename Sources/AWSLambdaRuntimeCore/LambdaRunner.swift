@@ -41,7 +41,7 @@ extension Lambda {
             let context = InitializationContext(logger: logger,
                                                 eventLoop: self.eventLoop,
                                                 allocator: self.allocator)
-            return Handler.factory(context: context)
+            return Handler.makeHandler(context: context)
                 // Hopping back to "our" EventLoop is important in case the factory returns a future
                 // that originated from a foreign EventLoop/EventLoopGroup.
                 // This can happen if the factory uses a library (let's say a database client) that manages its own threads/loops

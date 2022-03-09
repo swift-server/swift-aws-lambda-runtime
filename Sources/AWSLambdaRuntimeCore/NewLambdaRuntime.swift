@@ -213,7 +213,7 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
             allocator: ByteBufferAllocator()
         )
         
-        Handler.factory(context: context).hop(to: self.eventLoop).whenComplete { result in
+        Handler.makeHandler(context: context).hop(to: self.eventLoop).whenComplete { result in
             let action: StateMachine.Action
             switch result {
             case .success(let handler):
