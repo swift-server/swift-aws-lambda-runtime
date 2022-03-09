@@ -30,7 +30,7 @@ final class LambdaRequestIDTest: XCTestCase {
 
     func testInitFromLowercaseStringSuccess() {
         let string = "E621E1F8-C36C-495A-93FC-0C247A3E6E5F".lowercased()
-        var originalBuffer = ByteBuffer(string: string)
+        var originalBuffer = ByteBuffer(string: string.uppercased())
 
         let requestID = originalBuffer.readRequestID()
         XCTAssertEqual(originalBuffer.readerIndex, 36)

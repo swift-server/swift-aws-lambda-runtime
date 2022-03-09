@@ -29,7 +29,7 @@ final class NewLambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>: Cha
     typealias OutboundOut = ByteBuffer
     
     private let delegate: Delegate
-    private let requestsInFlight: CircularBuffer<ControlPlaneRequest>
+    private var requestsInFlight: CircularBuffer<ControlPlaneRequest>
     
     private var context: ChannelHandlerContext!
     
@@ -45,6 +45,7 @@ final class NewLambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>: Cha
     }
     
     func sendRequest(_ request: ControlPlaneRequest) {
+        self.requestsInFlight.append(request)
         self.encoder.writeRequest(request, context: self.context, promise: nil)
     }
     
@@ -61,12 +62,14 @@ final class NewLambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>: Cha
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         do {
             try self.decoder.process(buffer: self.unwrapInboundIn(data)) { response in
-                // TODO: The response matches the request
+                guard self.requestsInFlight.popFirst() != nil else {
+                    throw LambdaRuntimeError.unsolicitedResponse
+                }
                 
                 self.delegate.responseReceived(response)
             }
         } catch {
-            
+            self.delegate.errorCaught(error)
         }
     }
     
