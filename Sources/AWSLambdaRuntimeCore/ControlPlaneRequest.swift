@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2021-2022 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -29,12 +29,27 @@ enum ControlPlaneResponse: Hashable {
 }
 
 struct Invocation: Hashable {
-    let requestID: String
-    let deadlineInMillisSinceEpoch: Int64
-    let invokedFunctionARN: String
-    let traceID: String
-    let clientContext: String?
-    let cognitoIdentity: String?
+    var requestID: String
+    var deadlineInMillisSinceEpoch: Int64
+    var invokedFunctionARN: String
+    var traceID: String
+    var clientContext: String?
+    var cognitoIdentity: String?
+    
+    init(requestID: String,
+         deadlineInMillisSinceEpoch: Int64,
+         invokedFunctionARN: String,
+         traceID: String,
+         clientContext: String?,
+         cognitoIdentity: String?
+    ) {
+        self.requestID = requestID
+        self.deadlineInMillisSinceEpoch = deadlineInMillisSinceEpoch
+        self.invokedFunctionARN = invokedFunctionARN
+        self.traceID = traceID
+        self.clientContext = clientContext
+        self.cognitoIdentity = cognitoIdentity
+    }
 
     init(headers: HTTPHeaders) throws {
         guard let requestID = headers.first(name: AmazonHeaders.requestID), !requestID.isEmpty else {
@@ -51,12 +66,16 @@ struct Invocation: Hashable {
             throw Lambda.RuntimeError.invocationMissingHeader(AmazonHeaders.invokedFunctionARN)
         }
 
-        self.requestID = requestID
-        self.deadlineInMillisSinceEpoch = unixTimeInMilliseconds
-        self.invokedFunctionARN = invokedFunctionARN
-        self.traceID = headers.first(name: AmazonHeaders.traceID) ?? "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=0"
-        self.clientContext = headers["Lambda-Runtime-Client-Context"].first
-        self.cognitoIdentity = headers["Lambda-Runtime-Cognito-Identity"].first
+        let traceID = headers.first(name: AmazonHeaders.traceID) ?? "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=0"
+
+        self.init(
+            requestID: requestID,
+            deadlineInMillisSinceEpoch: unixTimeInMilliseconds,
+            invokedFunctionARN: invokedFunctionARN,
+            traceID: traceID,
+            clientContext: headers["Lambda-Runtime-Client-Context"].first,
+            cognitoIdentity: headers["Lambda-Runtime-Cognito-Identity"].first
+        )
     }
 }
 
