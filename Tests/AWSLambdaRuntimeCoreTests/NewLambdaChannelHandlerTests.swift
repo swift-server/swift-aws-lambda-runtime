@@ -87,7 +87,7 @@ final class NewLambdaChannelHandlerTests: XCTestCase {
         
         var responseRequest: NIOHTTPServerRequestFull?
         XCTAssertNoThrow(responseRequest = try self.server.readInbound(as: NIOHTTPServerRequestFull.self))
-        XCTAssertEqual(responseRequest?.head.uri, "/2018-06-01/runtime/invocation/\(requestID.uppercased)/response")
+        XCTAssertEqual(responseRequest?.head.uri, "/2018-06-01/runtime/invocation/\(requestID.lowercased)/response")
         XCTAssertEqual(responseRequest?.head.method, .POST)
         XCTAssertEqual(responseRequest?.body, responseBody)
     }

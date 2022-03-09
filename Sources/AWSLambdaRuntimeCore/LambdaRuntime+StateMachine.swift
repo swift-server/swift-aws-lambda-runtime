@@ -32,7 +32,7 @@ extension NewLambdaRuntime {
             
             case invokeHandler(Handler, Invocation, ByteBuffer)
             
-            case failRuntime(Error)
+            case failRuntime(Error, startPomise: EventLoopPromise<Void>?)
         }
         
         private enum State {
@@ -169,17 +169,17 @@ extension NewLambdaRuntime {
                  .reportingStartupError:
                 preconditionFailure("Invalid state: \(self.state)")
             
-            case .starting:
+            case .starting(let promise):
                 self.state = .failed(error)
-                return .failRuntime(error)
+                return .failRuntime(error, startPomise: promise)
                 
-            case .handlerCreated(let handler, let promise):
+            case .handlerCreated(_, let promise):
                 self.state = .failed(error)
-                return .failRuntime(error)
+                return .failRuntime(error, startPomise: promise)
                 
             case .handlerCreationFailed(let error, let promise):
                 self.state = .failed(error)
-                return .failRuntime(error)
+                return .failRuntime(error, startPomise: promise)
                 
             case .failed:
                 return .none
@@ -222,7 +222,7 @@ extension NewLambdaRuntime {
                 
             case .reportingStartupError(_, let error, let promise):
                 self.state = .failed(error)
-                return .failRuntime(error)
+                return .failRuntime(error, startPomise: promise)
                 
             case .reportingInvocationResult(let connection, let handler, true):
                 self.state = .waitingForInvocation(connection, handler)
@@ -250,17 +250,16 @@ extension NewLambdaRuntime {
             case .waitingForInvocation:
                 let error = LambdaRuntimeError.controlPlaneErrorResponse(errorResponse)
                 self.state = .failed(error)
-                return .failRuntime(error)
+                return .failRuntime(error, startPomise: nil)
                 
             case .reportingStartupError(_, let error, let promise):
-                let error = LambdaRuntimeError.controlPlaneErrorResponse(errorResponse)
                 self.state = .failed(error)
-                return .failRuntime(error)
+                return .failRuntime(error, startPomise: promise)
                 
-            case .reportingInvocationResult(let connection, let handler, _):
+            case .reportingInvocationResult:
                 let error = LambdaRuntimeError.controlPlaneErrorResponse(errorResponse)
                 self.state = .failed(error)
-                return .failRuntime(error)
+                return .failRuntime(error, startPomise: nil)
                 
             case .failed:
                 return .none

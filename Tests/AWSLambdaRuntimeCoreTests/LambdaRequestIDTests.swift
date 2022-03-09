@@ -24,18 +24,18 @@ final class LambdaRequestIDTest: XCTestCase {
         let requestID = buffer.readRequestID()
         XCTAssertEqual(buffer.readerIndex, 36)
         XCTAssertEqual(buffer.readableBytes, 0)
-        XCTAssertEqual(requestID?.uuidString, UUID(uuidString: string)?.uuidString)
+        XCTAssertEqual(requestID?.uppercased, UUID(uuidString: string)?.uuidString)
         XCTAssertEqual(requestID?.uppercased, string)
     }
 
     func testInitFromLowercaseStringSuccess() {
         let string = "E621E1F8-C36C-495A-93FC-0C247A3E6E5F".lowercased()
-        var originalBuffer = ByteBuffer(string: string.uppercased())
+        var originalBuffer = ByteBuffer(string: string)
 
         let requestID = originalBuffer.readRequestID()
         XCTAssertEqual(originalBuffer.readerIndex, 36)
         XCTAssertEqual(originalBuffer.readableBytes, 0)
-        XCTAssertEqual(requestID?.uuidString, UUID(uuidString: string)?.uuidString)
+        XCTAssertEqual(requestID?.uppercased, UUID(uuidString: string)?.uuidString)
         XCTAssertEqual(requestID?.lowercased, string)
 
         var newBuffer = ByteBuffer()
@@ -109,7 +109,7 @@ final class LambdaRequestIDTest: XCTestCase {
         //       achieve this though at the moment
         // XCTAssertFalse((nsString as String).isContiguousUTF8)
         let requestID = LambdaRequestID(uuidString: nsString as String)
-        XCTAssertEqual(requestID?.uuidString, LambdaRequestID(uuidString: nsString as String)?.uuidString)
+        XCTAssertEqual(requestID?.lowercased, LambdaRequestID(uuidString: nsString as String)?.lowercased)
         XCTAssertEqual(requestID?.uppercased, nsString as String)
     }
 
@@ -121,10 +121,10 @@ final class LambdaRequestIDTest: XCTestCase {
 
     func testDescription() {
         let requestID = LambdaRequestID()
-        let fduuid = UUID(uuid: requestID.uuid)
+        let uuid = UUID(uuid: requestID.uuid)
 
-        XCTAssertEqual(fduuid.description, requestID.description)
-        XCTAssertEqual(fduuid.debugDescription, requestID.debugDescription)
+        XCTAssertEqual(uuid.description.lowercased(), requestID.description)
+        XCTAssertEqual(uuid.debugDescription.lowercased(), requestID.debugDescription)
     }
 
     func testFoundationInteropFromFoundation() {
@@ -190,7 +190,7 @@ final class LambdaRequestIDTest: XCTestCase {
 
         var data: Data?
         XCTAssertNoThrow(data = try JSONEncoder().encode(test))
-        XCTAssertEqual(try String(decoding: XCTUnwrap(data), as: Unicode.UTF8.self), #"{"requestID":"\#(requestID.uuidString)"}"#)
+        XCTAssertEqual(try String(decoding: XCTUnwrap(data), as: Unicode.UTF8.self), #"{"requestID":"\#(requestID.lowercased)"}"#)
     }
 
     func testDecodingSuccess() {
@@ -198,7 +198,7 @@ final class LambdaRequestIDTest: XCTestCase {
             let requestID: LambdaRequestID
         }
         let requestID = LambdaRequestID()
-        let data = #"{"requestID":"\#(requestID.uuidString)"}"#.data(using: .utf8)
+        let data = #"{"requestID":"\#(requestID.lowercased)"}"#.data(using: .utf8)
 
         var result: Test?
         XCTAssertNoThrow(result = try JSONDecoder().decode(Test.self, from: XCTUnwrap(data)))
@@ -210,7 +210,7 @@ final class LambdaRequestIDTest: XCTestCase {
             let requestID: LambdaRequestID
         }
         let requestID = LambdaRequestID()
-        var requestIDString = requestID.uuidString
+        var requestIDString = requestID.lowercased
         _ = requestIDString.removeLast()
         let data = #"{"requestID":"\#(requestIDString)"}"#.data(using: .utf8)
 

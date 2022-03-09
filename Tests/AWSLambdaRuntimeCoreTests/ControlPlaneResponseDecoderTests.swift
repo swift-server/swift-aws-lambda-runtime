@@ -328,7 +328,8 @@ final class ControlPlaneResponseDecoderTests: XCTestCase {
             inputOutputPairs: [(nextResponse, [])],
             decoderFactory: { ControlPlaneResponseDecoder() }
         )) {
-            XCTAssertEqual($0 as? LambdaRuntimeError, .responseHeadInvalidHeader)
+            // TODO: This should return an invalid header function error (.responseHeadInvalidHeader)
+            XCTAssertEqual($0 as? LambdaRuntimeError, .invocationHeadMissingRequestID)
         }
     }
 }

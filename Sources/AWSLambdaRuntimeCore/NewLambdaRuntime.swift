@@ -55,16 +55,18 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
     public var shutdownFuture: EventLoopFuture<Void> {
         self.shutdownPromise.futureResult
     }
-    
+
+    /// Start the `LambdaRuntime`.
+    ///
+    /// - Returns: An `EventLoopFuture` that is fulfilled after the Lambda hander has been created
+    ///            and initiliazed, and a first run has been scheduled.
     public func start() -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
         self.start(promise: promise)
         return promise.futureResult
     }
 
-    /// Start the `LambdaRuntime`.
-    ///
-    /// - Returns: An `EventLoopFuture` that is fulfilled after the Lambda hander has been created and initiliazed, and a first run has been scheduled.
+
     public func start(promise: EventLoopPromise<Void>?) {
         if self.eventLoop.inEventLoop {
             self.start0(promise: promise)
@@ -150,7 +152,8 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
                 self.run(action)
             }
             
-        case .failRuntime(let error):
+        case .failRuntime(let error, let startPromise):
+            startPromise?.fail(error)
             self.shutdownPromise.fail(error)
             
         case .requestNextInvocation(let handler, let startPromise):
