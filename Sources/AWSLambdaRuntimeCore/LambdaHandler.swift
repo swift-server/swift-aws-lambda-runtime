@@ -14,6 +14,11 @@
 
 import Dispatch
 import NIOCore
+#if canImport(Darwin)
+import Darwin
+#else
+import Glibc
+#endif
 
 // MARK: - LambdaHandler
 

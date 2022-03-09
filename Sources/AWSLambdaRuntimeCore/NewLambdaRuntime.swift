@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Backtrace
 import Logging
 import NIOConcurrencyHelpers
 import NIOCore
 import NIOPosix
-import Backtrace
 
 #if canImport(Glibc)
 import Glibc
@@ -36,8 +36,7 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
     init(eventLoop: EventLoop,
          logger: Logger,
          configuration: Lambda.Configuration,
-         handlerType: Handler.Type
-    ) {
+         handlerType: Handler.Type) {
         self.state = StateMachine()
         self.eventLoop = eventLoop
         self.shutdownPromise = eventLoop.makePromise(of: Void.self)
@@ -66,7 +65,6 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
         return promise.futureResult
     }
 
-
     public func start(promise: EventLoopPromise<Void>?) {
         if self.eventLoop.inEventLoop {
             self.start0(promise: promise)
@@ -76,7 +74,7 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
             }
         }
     }
-    
+
     public func __testOnly_start(channel: Channel, promise: EventLoopPromise<Void>?) {
         precondition(channel.eventLoop === self.eventLoop, "Channel must be created on the supplied EventLoop.")
         if self.eventLoop.inEventLoop {
@@ -87,7 +85,7 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
             }
         }
     }
-    
+
     /// Begin the `LambdaRuntime` shutdown. Only needed for debugging purposes, hence behind a `DEBUG` flag.
     public func shutdown(promise: EventLoopPromise<Void>?) {
         if self.eventLoop.inEventLoop {
@@ -98,30 +96,28 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
             }
         }
     }
-    
+
     // MARK: -  Private -
-    
+
     private func start0(promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
 
         // when starting we want to do thing in parallel:
         //  1. start the connection to the control plane
         //  2. create the lambda handler
-        
+
         self.logger.debug("initializing lambda")
-        
+
         let action = self.state.start(connection: nil, promise: promise)
         self.run(action)
     }
-    
-    private func shutdown0(promise: EventLoopPromise<Void>?) {
-        
-    }
-    
+
+    private func shutdown0(promise: EventLoopPromise<Void>?) {}
+
     private func __testOnly_start0(channel: Channel, promise: EventLoopPromise<Void>?) {
         channel.eventLoop.preconditionInEventLoop()
         assert(channel.isActive)
-        
+
         do {
             let connection = try self.setupConnection(channel: channel)
             let action = self.state.start(connection: connection, promise: promise)
@@ -130,7 +126,7 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
             promise?.fail(error)
         }
     }
-    
+
     private func run(_ action: StateMachine.Action) {
         switch action {
         case .createHandler(andConnection: let andConnection):
@@ -138,7 +134,7 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
             if andConnection {
                 self.createConnection()
             }
-            
+
         case .invokeHandler(let handler, let invocation, let event):
             self.logger.trace("invoking handler")
             let context = LambdaContext(
@@ -151,47 +147,46 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
                 let action = self.state.invocationFinished(result)
                 self.run(action)
             }
-            
+
         case .failRuntime(let error, let startPromise):
             startPromise?.fail(error)
             self.shutdownPromise.fail(error)
-            
+
         case .requestNextInvocation(let handler, let startPromise):
             self.logger.trace("requesting next invocation")
             handler.sendRequest(.next)
             startPromise?.succeed(())
-            
+
         case .reportInvocationResult(let requestID, let result, let pipelineNextInvocationRequest, let handler):
             switch result {
             case .success(let body):
                 self.logger.trace("reporting invocation success", metadata: [
-                    "lambda-request-id": "\(requestID)"
+                    "lambda-request-id": "\(requestID)",
                 ])
                 handler.sendRequest(.invocationResponse(requestID, body))
-                
+
             case .failure(let error):
                 self.logger.trace("reporting invocation failure", metadata: [
-                    "lambda-request-id": "\(requestID)"
+                    "lambda-request-id": "\(requestID)",
                 ])
                 let errorString = String(describing: error)
                 let errorResponse = ErrorResponse(errorType: errorString, errorMessage: errorString)
                 handler.sendRequest(.invocationError(requestID, errorResponse))
             }
-            
+
             if pipelineNextInvocationRequest {
                 handler.sendRequest(.next)
             }
-            
+
         case .reportStartupError(let error, let handler):
             let errorString = String(describing: error)
             handler.sendRequest(.initializationError(.init(errorType: errorString, errorMessage: errorString)))
-            
+
         case .none:
             break
-        
         }
     }
-    
+
     private func createConnection() {
         let connectFuture = ClientBootstrap(group: self.eventLoop).connect(
             host: self.configuration.runtimeEngine.ip,
@@ -214,20 +209,20 @@ public final class NewLambdaRuntime<Handler: ByteBufferLambdaHandler> {
             self.run(action)
         }
     }
-    
+
     private func setupConnection(channel: Channel) throws -> Connection {
         let handler = NewLambdaChannelHandler(delegate: self, host: self.configuration.runtimeEngine.ip)
         try channel.pipeline.syncOperations.addHandler(handler)
         return Connection(channel: channel, handler: handler)
     }
-    
+
     private func createHandler() {
         let context = Lambda.InitializationContext(
             logger: self.logger,
             eventLoop: self.eventLoop,
             allocator: ByteBufferAllocator()
         )
-        
+
         Handler.makeHandler(context: context).hop(to: self.eventLoop).whenComplete { result in
             let action: StateMachine.Action
             switch result {
@@ -254,24 +249,23 @@ extension NewLambdaRuntime: LambdaChannelHandlerDelegate {
         case .error(let errorResponse):
             action = self.state.errorResponseReceived(errorResponse)
         }
-        
+
         self.run(action)
     }
-    
+
     func errorCaught(_ error: Error) {
         self.state.handlerError(error)
     }
-    
+
     func channelInactive() {
         self.state.channelInactive()
     }
 }
 
 extension NewLambdaRuntime {
-    
     static func run(handlerType: Handler.Type) {
         Backtrace.install()
-        
+
         let configuration = Lambda.Configuration()
         var logger = Logger(label: "Lambda")
         logger.logLevel = configuration.general.logLevel
@@ -285,17 +279,17 @@ extension NewLambdaRuntime {
             )
 
             logger.info("lambda runtime starting with \(configuration)")
-            
+
             #if DEBUG
             let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
                 logger.info("intercepted signal: \(signal)")
                 runtime.shutdown(promise: nil)
             }
             #endif
-            
+
             runtime.start().flatMap {
                 runtime.shutdownFuture
-            }.whenComplete { lifecycleResult in
+            }.whenComplete { _ in
                 #if DEBUG
                 signalSource.cancel()
                 #endif
