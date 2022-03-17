@@ -34,13 +34,16 @@ extension Lambda {
         /// Run the user provided initializer. This *must* only be called once.
         ///
         /// - Returns: An `EventLoopFuture<LambdaHandler>` fulfilled with the outcome of the initialization.
-        func initialize<Handler: ByteBufferLambdaHandler>(logger: Logger, handlerType: Handler.Type) -> EventLoopFuture<Handler> {
+        func initialize<Handler: ByteBufferLambdaHandler>(logger: Logger, terminator: Terminator, handlerType: Handler.Type) -> EventLoopFuture<Handler> {
             logger.debug("initializing lambda")
             // 1. create the handler from the factory
-            // 2. report initialization error if one occured
-            let context = InitializationContext(logger: logger,
-                                                eventLoop: self.eventLoop,
-                                                allocator: self.allocator)
+            // 2. report initialization error if one occurred
+            let context = InitializationContext(
+                logger: logger,
+                eventLoop: self.eventLoop,
+                allocator: self.allocator,
+                terminator: terminator
+            )
             return Handler.makeHandler(context: context)
                 // Hopping back to "our" EventLoop is important in case the factory returns a future
                 // that originated from a foreign EventLoop/EventLoopGroup.

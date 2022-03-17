@@ -51,8 +51,7 @@ extension Lambda {
         public init(requestID: String = "\(DispatchTime.now().uptimeNanoseconds)",
                     traceID: String = "Root=\(DispatchTime.now().uptimeNanoseconds);Parent=\(DispatchTime.now().uptimeNanoseconds);Sampled=1",
                     invokedFunctionARN: String = "arn:aws:lambda:us-west-1:\(DispatchTime.now().uptimeNanoseconds):function:custom-runtime",
-                    timeout: DispatchTimeInterval = .seconds(5))
-        {
+                    timeout: DispatchTimeInterval = .seconds(5)) {
             self.requestID = requestID
             self.traceID = traceID
             self.invokedFunctionARN = invokedFunctionARN
