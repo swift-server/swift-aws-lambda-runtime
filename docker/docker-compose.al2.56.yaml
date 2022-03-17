@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: swift-aws-lambda:al2-5.6
+    build:
+      args:
+        swift_version: "5.6"
+
+  test:
+    image: swift-aws-lambda:al2-5.6
+
+  test-samples:
+    image: swift-aws-lambda:al2-5.6
+
+  shell:
+    image: swift-aws-lambda:al2-5.6
