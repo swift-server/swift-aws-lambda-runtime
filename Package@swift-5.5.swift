@@ -1,1 +1,1 @@
-Package@swift-5.2.swift
+Package@swift-5.4.swift

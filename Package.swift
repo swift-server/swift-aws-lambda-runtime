@@ -9,7 +9,7 @@ let package = Package(
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
         // this has all the main functionality for lambda and it does not link Foundation
         .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
-        // plugin to package the lambda, preparing an archive that can be uploaded to AWS. requires docker.
+        // plugin to package the lambda, creating an archive that can be uploaded to AWS
         .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
         // for testing only
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
@@ -35,7 +35,7 @@ let package = Package(
         ]),
         .plugin(
             name: "AWSLambdaPackager",
-            capability: .command(intent: .custom(verb: "archive", description: "Archive Lambda binary and prepare it for uploading to AWS"))
+            capability: .command(intent: .custom(verb: "archive", description: "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS."))
         ),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),

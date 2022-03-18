@@ -28,27 +28,29 @@ struct AWSLambdaPackager: CommandPlugin {
             throw Errors.unknownProduct("no appropriate products found to package")
         }
 
-        #if os(macOS)
-        let builtProducts = try self.buildInDocker(
-            packageIdentity: context.package.id,
-            packageDirectory: context.package.directory,
-            products: configuration.products,
-            toolsProvider: { name in try context.tool(named: name).path },
-            outputDirectory: configuration.outputDirectory,
-            baseImage: configuration.baseImage,
-            buildConfiguration: configuration.buildConfiguration,
-            verboseLogging: configuration.verboseLogging
-        )
-        #elseif os(Linux)
-        let builtProducts = try self.build(
-            products: configuration.products,
-            buildConfiguration: configuration.buildConfiguration,
-            verboseLogging: configuration.verboseLogging
-        )
-        #else
-        throw Errors.unsupportedPlatform("only macOS and Linux are supported")
-        #endif
+        let builtProducts: [LambdaProduct: Path]
+        if self.isAmazonLinux2() {
+            // build directly on the machine
+            builtProducts = try self.build(
+                products: configuration.products,
+                buildConfiguration: configuration.buildConfiguration,
+                verboseLogging: configuration.verboseLogging
+            )
+        } else {
+            // build with docker
+            builtProducts = try self.buildInDocker(
+                packageIdentity: context.package.id,
+                packageDirectory: context.package.directory,
+                products: configuration.products,
+                toolsProvider: { name in try context.tool(named: name).path },
+                outputDirectory: configuration.outputDirectory,
+                baseImage: configuration.baseImage,
+                buildConfiguration: configuration.buildConfiguration,
+                verboseLogging: configuration.verboseLogging
+            )
+        }
 
+        // create the archive
         let archives = try self.package(
             products: builtProducts,
             toolsProvider: { name in try context.tool(named: name).path },
@@ -56,13 +58,9 @@ struct AWSLambdaPackager: CommandPlugin {
             verboseLogging: configuration.verboseLogging
         )
 
-        if !archives.isEmpty {
-            print("\(archives.count) archives created:")
-            for (product, archivePath) in archives {
-                print("  * \(product.name) at \(archivePath.string)")
-            }
-        } else {
-            print("no archives created")
+        print("\(archives.count > 0 ? archives.count.description : "no") archive\(archives.count != 1 ? "s" : "") created")
+        for (product, archivePath) in archives {
+            print("  * \(product.name) at \(archivePath.string)")
         }
     }
 
@@ -115,7 +113,7 @@ struct AWSLambdaPackager: CommandPlugin {
                 arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", builderImageName, "bash", "-cl", buildCommand],
                 verboseLogging: verboseLogging
             )
-            #warning("this knows too much about the underlying implementation")
+            // TODO: this knows too much about the underlying implementation
             builtProducts[.init(product)] = packageDirectory.appending([".build", buildConfiguration.rawValue, product.name])
         }
         return builtProducts
@@ -142,10 +140,7 @@ struct AWSLambdaPackager: CommandPlugin {
                 .product(product.name),
                 parameters: parameters
             )
-            guard result.builtArtifacts.count <= 1 else {
-                throw Errors.unknownExecutable("too many executable artifacts found for \(product.name)")
-            }
-            guard let artifact = result.builtArtifacts.first else {
+            guard let artifact = result.executableArtifact(for: product) else {
                 throw Errors.unknownExecutable("no executable artifacts found for \(product.name)")
             }
             results[.init(product)] = artifact.path
@@ -170,14 +165,21 @@ struct AWSLambdaPackager: CommandPlugin {
             }
 
             // prep zipfile location
-            let zipfilePath = outputDirectory.appending(product.name, "\(product.name).zip")
-            if FileManager.default.fileExists(atPath: zipfilePath.string) {
-                try FileManager.default.removeItem(atPath: zipfilePath.string)
+            let workingDirectory = outputDirectory.appending(product.name)
+            let zipfilePath = workingDirectory.appending("\(product.name).zip")
+            if FileManager.default.fileExists(atPath: workingDirectory.string) {
+                try FileManager.default.removeItem(atPath: workingDirectory.string)
             }
-            try FileManager.default.createDirectory(atPath: zipfilePath.removingLastComponent().string, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(atPath: workingDirectory.string, withIntermediateDirectories: true)
+
+            // rename artifact to "bootstrap"
+            let relocatedArtifactPath = workingDirectory.appending(artifactPath.lastComponent)
+            let symbolicLinkPath = workingDirectory.appending("bootstrap")
+            try FileManager.default.copyItem(atPath: artifactPath.string, toPath: relocatedArtifactPath.string)
+            try FileManager.default.createSymbolicLink(atPath: symbolicLinkPath.string, withDestinationPath: relocatedArtifactPath.lastComponent)
 
             #if os(macOS) || os(Linux)
-            let arguments = ["--junk-paths", zipfilePath.string, artifactPath.string]
+            let arguments = ["--junk-paths", "--symlinks", zipfilePath.string, relocatedArtifactPath.string, symbolicLinkPath.string]
             #else
             throw Error.unsupportedPlatform("can't or don't know how to create a zipfile on this platform")
             #endif
@@ -190,22 +192,6 @@ struct AWSLambdaPackager: CommandPlugin {
             )
 
             archives[product] = zipfilePath
-
-            /*
-
-             target=".build/lambda/$executable"
-             rm -rf "$target"
-             mkdir -p "$target"
-             cp ".build/release/$executable" "$target/"
-             # add the target deps based on ldd
-             ldd ".build/release/$executable" | grep swift | awk '{print $3}' | xargs cp -Lv -t "$target"
-             cd "$target"
-             ln -s "$executable" "bootstrap"
-             zip --symlinks lambda.zip *
-
-             */
-            // docker run --rm -v "$workspace":/workspace -w /workspace/Examples/Deployment builder \
-            //               bash -cl "./scripts/package.sh $executable"
         }
         return archives
     }
@@ -223,25 +209,25 @@ struct AWSLambdaPackager: CommandPlugin {
 
         let sync = DispatchGroup()
         var output = ""
-        let outputLock = NSLock()
-        let outputHandler = { (fileHandle: FileHandle) in
+        let outputQueue = DispatchQueue(label: "AWSLambdaPackager.output")
+        let outputHandler = { (data: Data?) in
+            dispatchPrecondition(condition: .onQueue(outputQueue))
+            guard let _output = data.flatMap({ String(data: $0, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(["\n"])) }), !_output.isEmpty else {
+                return
+            }
             sync.enter()
             defer { sync.leave() }
-            if !fileHandle.availableData.isEmpty, let _output = String(data: fileHandle.availableData, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(["\n"])) {
-                if verboseLogging {
-                    print(_output)
-                    fflush(stdout)
-                }
-                outputLock.lock()
-                output += _output
-                outputLock.unlock()
+            if verboseLogging {
+                print(_output)
+                fflush(stdout)
             }
+            output += _output
         }
 
         let stdoutPipe = Pipe()
-        stdoutPipe.fileHandleForReading.readabilityHandler = outputHandler
+        stdoutPipe.fileHandleForReading.readabilityHandler = { fileHandle in outputQueue.async { outputHandler(fileHandle.availableData) } }
         let stderrPipe = Pipe()
-        stderrPipe.fileHandleForReading.readabilityHandler = outputHandler
+        stderrPipe.fileHandleForReading.readabilityHandler = { fileHandle in outputQueue.async { outputHandler(fileHandle.availableData) } }
 
         let process = Process()
         process.standardOutput = stdoutPipe
@@ -252,10 +238,10 @@ struct AWSLambdaPackager: CommandPlugin {
             process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory.string)
         }
         process.terminationHandler = { _ in
-            // Read and pass on any remaining free-form text output from the plugin.
-            stderrPipe.fileHandleForReading.readabilityHandler?(stderrPipe.fileHandleForReading)
-            // Read and pass on any remaining messages from the plugin.
-            stdoutPipe.fileHandleForReading.readabilityHandler?(stdoutPipe.fileHandleForReading)
+            outputQueue.async {
+                outputHandler(try? stdoutPipe.fileHandleForReading.readToEnd())
+                outputHandler(try? stderrPipe.fileHandleForReading.readToEnd())
+            }
         }
 
         try process.run()
@@ -270,13 +256,20 @@ struct AWSLambdaPackager: CommandPlugin {
 
         return output
     }
+
+    private func isAmazonLinux2() -> Bool {
+        if let data = FileManager.default.contents(atPath: "/etc/system-release"), let release = String(data: data, encoding: .utf8) {
+            return release.hasPrefix("Amazon Linux release 2")
+        } else {
+            return false
+        }
+    }
 }
 
 private struct Configuration {
     public let outputDirectory: Path
     public let products: [Product]
     public let buildConfiguration: PackageManager.BuildConfiguration
-    public let staticallyLinkRuntime: Bool
     public let verboseLogging: Bool
     public let baseImage: String
     public let version: String
@@ -286,11 +279,6 @@ private struct Configuration {
         self.outputDirectory = context.pluginWorkDirectory.appending(subpath: "\(AWSLambdaPackager.self)") // FIXME: read argument
         self.products = context.package.products.filter { $0 is ExecutableProduct } // FIXME: read argument, filter is ugly
         self.buildConfiguration = .release // FIXME: read argument
-        #if os(Linux)
-        self.staticallyLinkRuntime = true // FIXME: read argument
-        #else
-        self.staticallyLinkRuntime = false // FIXME: read argument, warn if set to true
-        #endif
         self.verboseLogging = true // FIXME: read argument
         let swiftVersion = "5.6" // FIXME: read dynamically current version
         self.baseImage = "swift:\(swiftVersion)-amazonlinux2" // FIXME: read argument
@@ -311,7 +299,7 @@ private enum Errors: Error {
 
 extension PackageManager.BuildResult {
     // find the executable produced by the build
-    func executableArtifact(for product: Product) throws -> PackageManager.BuildResult.BuiltArtifact? {
+    func executableArtifact(for product: Product) -> PackageManager.BuildResult.BuiltArtifact? {
         let executables = self.builtArtifacts.filter { $0.kind == .executable && $0.path.lastComponent == product.name }
         guard !executables.isEmpty else {
             return nil
