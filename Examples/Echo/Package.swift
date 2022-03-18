@@ -1,6 +1,15 @@
 // swift-tools-version:5.5
 
+import Foundation
 import PackageDescription
+
+// this is the dependency on the swift-aws-lambda-runtime library
+var dependencies = [Package.Dependency]()
+if FileManager.default.fileExists(atPath: "../../Package.swift") {
+    dependencies.append(Package.Dependency.package(name: "swift-aws-lambda-runtime", path: "../.."))
+} else {
+    dependencies.append(Package.Dependency.package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"))
+}
 
 let package = Package(
     name: "swift-aws-lambda-runtime-example",
@@ -10,12 +19,7 @@ let package = Package(
     products: [
         .executable(name: "MyLambda", targets: ["MyLambda"]),
     ],
-    dependencies: [
-        // this is the dependency on the swift-aws-lambda-runtime library
-        // in real-world projects this would say
-        // .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "1.0.0")
-        .package(name: "swift-aws-lambda-runtime", path: "../.."),
-    ],
+    dependencies: dependencies,
     targets: [
         .executableTarget(
             name: "MyLambda",
