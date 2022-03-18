@@ -26,7 +26,7 @@ import NIOCore
 ///         level protocols ``EventLoopLambdaHandler`` and
 ///         ``ByteBufferLambdaHandler``.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol LambdaHandler: EventLoopLambdaHandler {
+public protocol LambdaHandler: EventLoopLambdaHandler where Event: _AWSLambdaSendable {
     /// The Lambda initialization method
     /// Use this method to initialize resources that will be used in every request.
     ///
@@ -157,7 +157,7 @@ extension EventLoopLambdaHandler where Output == Void {
 /// - note: This is a low level protocol designed to power the higher level ``EventLoopLambdaHandler`` and
 ///         ``LambdaHandler`` based APIs.
 ///         Most users are not expected to use this protocol.
-public protocol ByteBufferLambdaHandler {
+public protocol ByteBufferLambdaHandler: _ByteBufferLambdaHandlerSendable {
     /// Create your Lambda handler for the runtime.
     ///
     /// Use this to initialize all your resources that you want to cache between invocations. This could be database

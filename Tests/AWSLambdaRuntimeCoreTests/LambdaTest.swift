@@ -13,9 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 @testable import AWSLambdaRuntimeCore
+#if compiler(>=5.6)
+@preconcurrency import Logging
+@preconcurrency import NIOPosix
+#else
 import Logging
-import NIOCore
 import NIOPosix
+#endif
+import NIOCore
 import XCTest
 
 class LambdaTest: XCTestCase {
@@ -250,6 +255,47 @@ class LambdaTest: XCTestCase {
         XCTAssertLessThanOrEqual(context.getRemainingTime(), .seconds(1))
         XCTAssertGreaterThan(context.getRemainingTime(), .milliseconds(800))
     }
+
+    #if compiler(>=5.6)
+    func testSendable() async throws {
+        struct Handler: EventLoopLambdaHandler {
+            typealias Event = String
+            typealias Output = String
+
+            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+                context.eventLoop.makeSucceededFuture(Handler())
+            }
+
+            func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<String> {
+                context.eventLoop.makeSucceededFuture("hello")
+            }
+        }
+
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
+
+        let server = try MockLambdaServer(behavior: Behavior()).start().wait()
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        let logger = Logger(label: "TestLogger")
+        let configuration = Lambda.Configuration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
+
+        let handler1 = Handler()
+        let task = Task.detached {
+            print(configuration.description)
+            logger.info("hello")
+            let runner = Lambda.Runner(eventLoop: eventLoopGroup.next(), configuration: configuration)
+
+            try runner.run(logger: logger, handler: handler1).wait()
+
+            try runner.initialize(logger: logger, terminator: LambdaTerminator(), handlerType: Handler.self).flatMap { handler2 in
+                runner.run(logger: logger, handler: handler2)
+            }.wait()
+        }
+
+        try await task.value
+    }
+    #endif
 }
 
 private struct Behavior: LambdaServerBehavior {
