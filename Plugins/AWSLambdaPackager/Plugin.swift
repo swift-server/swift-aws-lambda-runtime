@@ -23,7 +23,7 @@ import Glibc
 @main
 struct AWSLambdaPackager: CommandPlugin {
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
-        let configuration = Configuration(context: context, arguments: arguments)
+        let configuration = try Configuration(context: context, arguments: arguments)
         guard !configuration.products.isEmpty else {
             throw Errors.unknownProduct("no appropriate products found to package")
         }
@@ -44,7 +44,7 @@ struct AWSLambdaPackager: CommandPlugin {
                 products: configuration.products,
                 toolsProvider: { name in try context.tool(named: name).path },
                 outputDirectory: configuration.outputDirectory,
-                baseImage: configuration.baseImage,
+                baseImage: configuration.baseDockerImage,
                 buildConfiguration: configuration.buildConfiguration,
                 verboseLogging: configuration.verboseLogging
             )
@@ -101,11 +101,9 @@ struct AWSLambdaPackager: CommandPlugin {
 
         var builtProducts = [LambdaProduct: Path]()
         for product in products {
-            if verboseLogging {
-                print("-------------------------------------------------------------------------")
-                print("building \"\(product.name)\" in docker")
-                print("-------------------------------------------------------------------------")
-            }
+            print("-------------------------------------------------------------------------")
+            print("building \"\(product.name)\" in docker")
+            print("-------------------------------------------------------------------------")
             //
             let buildCommand = "swift build --product \(product.name) -c \(buildConfiguration.rawValue) --static-swift-stdlib"
             try self.execute(
@@ -126,11 +124,9 @@ struct AWSLambdaPackager: CommandPlugin {
     ) throws -> [LambdaProduct: Path] {
         var results = [LambdaProduct: Path]()
         for product in products {
-            if verboseLogging {
-                print("-------------------------------------------------------------------------")
-                print("building \"\(product.name)\"")
-                print("-------------------------------------------------------------------------")
-            }
+            print("-------------------------------------------------------------------------")
+            print("building \"\(product.name)\"")
+            print("-------------------------------------------------------------------------")
             var parameters = PackageManager.BuildParameters()
             parameters.configuration = buildConfiguration
             parameters.otherSwiftcFlags = ["-static-stdlib"]
@@ -148,6 +144,7 @@ struct AWSLambdaPackager: CommandPlugin {
         return results
     }
 
+    #warning("FIXME: use zlib")
     private func package(
         products: [LambdaProduct: Path],
         toolsProvider: (String) throws -> Path,
@@ -158,11 +155,9 @@ struct AWSLambdaPackager: CommandPlugin {
 
         var archives = [LambdaProduct: Path]()
         for (product, artifactPath) in products {
-            if verboseLogging {
-                print("-------------------------------------------------------------------------")
-                print("archiving \"\(product.name)\"")
-                print("-------------------------------------------------------------------------")
-            }
+            print("-------------------------------------------------------------------------")
+            print("archiving \"\(product.name)\"")
+            print("-------------------------------------------------------------------------")
 
             // prep zipfile location
             let workingDirectory = outputDirectory.appending(product.name)
@@ -217,10 +212,8 @@ struct AWSLambdaPackager: CommandPlugin {
             }
             sync.enter()
             defer { sync.leave() }
-            if verboseLogging {
-                print(_output)
-                fflush(stdout)
-            }
+            print(_output)
+            fflush(stdout)
             output += _output
         }
 
@@ -266,28 +259,93 @@ struct AWSLambdaPackager: CommandPlugin {
     }
 }
 
-private struct Configuration {
+private struct Configuration: CustomStringConvertible {
     public let outputDirectory: Path
     public let products: [Product]
     public let buildConfiguration: PackageManager.BuildConfiguration
     public let verboseLogging: Bool
-    public let baseImage: String
-    public let version: String
-    public let applicationRoot: String
+    public let baseDockerImage: String
 
-    public init(context: PluginContext, arguments: [String]) {
-        self.outputDirectory = context.pluginWorkDirectory.appending(subpath: "\(AWSLambdaPackager.self)") // FIXME: read argument
-        self.products = context.package.products.filter { $0 is ExecutableProduct } // FIXME: read argument, filter is ugly
-        self.buildConfiguration = .release // FIXME: read argument
-        self.verboseLogging = true // FIXME: read argument
-        let swiftVersion = "5.6" // FIXME: read dynamically current version
-        self.baseImage = "swift:\(swiftVersion)-amazonlinux2" // FIXME: read argument
-        self.version = "1.0.0" // FIXME: where can we get this from? argument?
-        self.applicationRoot = "/app" // FIXME: read argument
+    public init(
+        context: PluginContext,
+        arguments: [String]
+    ) throws {
+        var argumentExtractor = ArgumentExtractor(arguments)
+        let verboseArgument = argumentExtractor.extractFlag(named: "verbose") > 0
+        let outputPathArgument = argumentExtractor.extractOption(named: "output-path")
+        let productsArgument = argumentExtractor.extractOption(named: "products")
+        let configurationArgument = argumentExtractor.extractOption(named: "configuration")
+        let swiftVersionArgument = argumentExtractor.extractOption(named: "swift-version")
+        let baseDockerImageArgument = argumentExtractor.extractOption(named: "base-docker-image")
+
+        self.verboseLogging = verboseArgument
+
+        if let outputPath = outputPathArgument.first {
+            var isDirectory: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: outputPath, isDirectory: &isDirectory), isDirectory.boolValue else {
+                throw Errors.invalidArgument("invalid output directory \(outputPath)")
+            }
+            self.outputDirectory = Path(outputPath)
+        } else {
+            self.outputDirectory = context.pluginWorkDirectory.appending(subpath: "\(AWSLambdaPackager.self)")
+        }
+
+        if !productsArgument.isEmpty {
+            let products = try context.package.products(named: productsArgument)
+            for product in products {
+                guard product is ExecutableProduct else {
+                    throw Errors.invalidArgument("product named \(product.name) is not an executable product")
+                }
+            }
+            self.products = products
+
+        } else {
+            self.products = context.package.products.filter { $0 is ExecutableProduct }
+        }
+
+        if let buildConfigurationName = configurationArgument.first {
+            guard let buildConfiguration = PackageManager.BuildConfiguration(rawValue: buildConfigurationName) else {
+                throw Errors.invalidArgument("invalid build configuration named \(buildConfigurationName)")
+            }
+            self.buildConfiguration = buildConfiguration
+        } else {
+            self.buildConfiguration = .release
+        }
+
+        guard !(!swiftVersionArgument.isEmpty && !baseDockerImageArgument.isEmpty) else {
+            throw Errors.invalidArgument("--swift-version and --base-docker-image are mutually exclusive")
+        }
+
+        let swiftVersion = swiftVersionArgument.first ?? Self.getSwiftVersion()
+        self.baseDockerImage = baseDockerImageArgument.first ?? "swift:\(swiftVersion)-amazonlinux2"
+
+        if self.verboseLogging {
+            print("-------------------------------------------------------------------------")
+            print("configuration")
+            print("-------------------------------------------------------------------------")
+            print(self)
+        }
+    }
+
+    var description: String {
+        """
+        {
+          outputDirectory: \(self.outputDirectory)
+          products: \(self.products.map(\.name))
+          buildConfiguration: \(self.buildConfiguration)
+          baseDockerImage: \(self.baseDockerImage)
+        }
+        """
+    }
+
+    #warning("FIXME: read this programmatically")
+    private static func getSwiftVersion() -> String {
+        "5.6"
     }
 }
 
 private enum Errors: Error {
+    case invalidArgument(String)
     case unsupportedPlatform(String)
     case unknownProduct(String)
     case unknownExecutable(String)
