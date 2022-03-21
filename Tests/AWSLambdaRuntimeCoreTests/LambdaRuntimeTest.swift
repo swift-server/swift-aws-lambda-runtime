@@ -85,10 +85,10 @@ class LambdaRuntimeTest: XCTestCase {
                 context.terminator.register(name: "test 3", handler: { eventLoop in
                     eventLoop.makeFailedFuture(ShutdownError(description: "error 2"))
                 })
-                context.terminator.register(name: "test 3", handler: { eventLoop in
+                context.terminator.register(name: "test 4", handler: { eventLoop in
                     eventLoop.makeSucceededVoidFuture()
                 })
-                context.terminator.register(name: "test 4", handler: { eventLoop in
+                context.terminator.register(name: "test 5", handler: { eventLoop in
                     eventLoop.makeFailedFuture(ShutdownError(description: "error 3"))
                 })
                 return context.eventLoop.makeSucceededFuture(ShutdownErrorHandler())
