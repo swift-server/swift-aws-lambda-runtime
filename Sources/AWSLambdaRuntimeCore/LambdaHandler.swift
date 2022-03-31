@@ -44,6 +44,13 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
     ///
     /// - Returns: A Lambda result ot type `Output`.
     func handle(_ event: Event, context: LambdaContext) async throws -> Output
+
+    /// Clean up the Lambda resources asynchronously.
+    /// Concrete Lambda handlers implement this method to shutdown resources like `HTTPClient`s and database connections.
+    ///
+    /// - Note: In case your Lambda fails while creating your LambdaHandler in the `HandlerFactory`, this method
+    ///         **is not invoked**. In this case you must cleanup the created resources immediately in the `HandlerFactory`.
+    func shutdown(context: Lambda.ShutdownContext) async throws
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -62,6 +69,17 @@ extension LambdaHandler {
             try await self.handle(event, context: context)
         }
         return promise.futureResult
+    }
+
+    public func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
+        let promise = context.eventLoop.makePromise(of: Void.self)
+        promise.completeWithTask {
+            try await self.shutdown(context: context)
+        }
+        return promise.futureResult
+    }
+
+    public func shutdown(context: Lambda.ShutdownContext) async throws {
     }
 }
 
