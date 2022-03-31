@@ -79,8 +79,7 @@ extension LambdaHandler {
         return promise.futureResult
     }
 
-    public func shutdown(context: Lambda.ShutdownContext) async throws {
-    }
+    public func shutdown(context: Lambda.ShutdownContext) async throws {}
 }
 
 #endif
