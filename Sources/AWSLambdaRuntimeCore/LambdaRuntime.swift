@@ -74,7 +74,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
 
         var logger = self.logger
         logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
-        let terminator = Lambda.Terminator()
+        let terminator = LambdaTerminator()
         let runner = Lambda.Runner(eventLoop: self.eventLoop, configuration: self.configuration)
 
         let startupFuture = runner.initialize(logger: logger, terminator: terminator, handlerType: Handler.self)

@@ -39,9 +39,9 @@ extension Lambda {
         public let allocator: ByteBufferAllocator
 
         /// `Terminator` to register shutdown operations
-        public let terminator: Terminator
+        public let terminator: LambdaTerminator
 
-        init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, terminator: Terminator) {
+        init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, terminator: LambdaTerminator) {
             self.eventLoop = eventLoop
             self.logger = logger
             self.allocator = allocator
@@ -57,7 +57,7 @@ extension Lambda {
                 logger: logger,
                 eventLoop: eventLoop,
                 allocator: ByteBufferAllocator(),
-                terminator: Lambda.Terminator()
+                terminator: LambdaTerminator()
             )
         }
     }

@@ -109,7 +109,7 @@ class LambdaRuntimeTest: XCTestCase {
                 XCTFail("Unexpected error: \(error)"); return
             }
 
-            XCTAssertEqual(shutdownError as? Lambda.TerminationError, Lambda.TerminationError(underlying: [
+            XCTAssertEqual(shutdownError as? LambdaTerminator.TerminationError, LambdaTerminator.TerminationError(underlying: [
                 ShutdownError(description: "error 3"),
                 ShutdownError(description: "error 2"),
                 ShutdownError(description: "error 1"),

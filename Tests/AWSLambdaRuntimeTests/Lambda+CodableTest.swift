@@ -173,7 +173,7 @@ class CodableLambdaTest: XCTestCase {
             logger: Logger(label: "test"),
             eventLoop: self.eventLoopGroup.next(),
             allocator: ByteBufferAllocator(),
-            terminator: Lambda.Terminator()
+            terminator: LambdaTerminator()
         )
     }
 }
