@@ -138,7 +138,8 @@ extension LambdaTerminator {
     }
 }
 
-// TODO: ideally this would not be @unchecked Sendable, but Sendable checks do not understand locks
+// Ideally this would not be @unchecked Sendable, but Sendable checks do not understand locks
+// We can transition this to an actor once we drop support for older Swift versions
 #if compiler(>=5.5) && canImport(_Concurrency)
 extension LambdaTerminator: @unchecked Sendable {}
 extension LambdaTerminator.Storage: @unchecked Sendable {}

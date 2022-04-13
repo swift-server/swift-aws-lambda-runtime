@@ -189,8 +189,3 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
         }
     }
 }
-
-// TODO: ideally this would not be @unchecked Sendable, but Sendable checks do not understand locks
-#if compiler(>=5.5) && canImport(_Concurrency)
-extension LambdaRuntime: @unchecked Sendable {}
-#endif

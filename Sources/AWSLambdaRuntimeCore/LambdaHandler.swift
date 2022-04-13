@@ -26,7 +26,7 @@ import NIOCore
 ///         level protocols ``EventLoopLambdaHandler`` and
 ///         ``ByteBufferLambdaHandler``.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-public protocol LambdaHandler: EventLoopLambdaHandler where Event: _AWSLambdaSendable {
+public protocol LambdaHandler: EventLoopLambdaHandler {
     /// The Lambda initialization method
     /// Use this method to initialize resources that will be used in every request.
     ///
@@ -69,15 +69,16 @@ extension LambdaHandler {
 }
 
 /// unchecked sendable wrapper for the handler
+/// this is safe since lambda runtime is designed to calls the handler serially
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-fileprivate struct UncheckedSendableHandler<Underlying: LambdaHandler>: @unchecked Sendable {
+fileprivate struct UncheckedSendableHandler<Underlying: LambdaHandler, Event, Output>: @unchecked Sendable where Event == Underlying.Event, Output == Underlying.Output {
     let underlying: Underlying
 
     init(underlying: Underlying) {
         self.underlying = underlying
     }
 
-    func handle(_ event: Underlying.Event, context: LambdaContext) async throws -> Underlying.Output {
+    func handle(_ event: Event, context: LambdaContext) async throws -> Output {
         try await self.underlying.handle(event, context: context)
     }
 }
