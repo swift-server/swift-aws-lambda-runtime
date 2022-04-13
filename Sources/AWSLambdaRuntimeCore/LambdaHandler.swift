@@ -58,13 +58,29 @@ extension LambdaHandler {
 
     public func handle(_ event: Event, context: LambdaContext) -> EventLoopFuture<Output> {
         let promise = context.eventLoop.makePromise(of: Output.self)
+        // using an unchecked sendable wrapper for the handler
+        // this is safe since lambda runtime is designed to calls the handler serially
+        let handler = UncheckedSendableHandler(underlying: self)
         promise.completeWithTask {
-            try await self.handle(event, context: context)
+            try await handler.handle(event, context: context)
         }
         return promise.futureResult
     }
 }
 
+/// unchecked sendable wrapper for the handler
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+fileprivate struct UncheckedSendableHandler<Underlying: LambdaHandler>: @unchecked Sendable {
+    let underlying: Underlying
+
+    init(underlying: Underlying) {
+        self.underlying = underlying
+    }
+
+    func handle(_ event: Underlying.Event, context: LambdaContext) async throws -> Underlying.Output {
+        try await self.underlying.handle(event, context: context)
+    }
+}
 #endif
 
 // MARK: - EventLoopLambdaHandler
@@ -157,7 +173,7 @@ extension EventLoopLambdaHandler where Output == Void {
 /// - note: This is a low level protocol designed to power the higher level ``EventLoopLambdaHandler`` and
 ///         ``LambdaHandler`` based APIs.
 ///         Most users are not expected to use this protocol.
-public protocol ByteBufferLambdaHandler: _ByteBufferLambdaHandlerSendable {
+public protocol ByteBufferLambdaHandler {
     /// Create your Lambda handler for the runtime.
     ///
     /// Use this to initialize all your resources that you want to cache between invocations. This could be database

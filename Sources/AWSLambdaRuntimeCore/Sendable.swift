@@ -15,12 +15,6 @@
 // Sendable bridging types
 
 #if compiler(>=5.6)
-@preconcurrency public protocol _ByteBufferLambdaHandlerSendable: Sendable {}
-#else
-public protocol _ByteBufferLambdaHandlerSendable {}
-#endif
-
-#if compiler(>=5.6)
 public typealias _AWSLambdaSendable = Sendable
 #else
 public typealias _AWSLambdaSendable = Any
