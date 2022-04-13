@@ -38,10 +38,14 @@ extension Lambda {
         /// `ByteBufferAllocator` to allocate `ByteBuffer`
         public let allocator: ByteBufferAllocator
 
-        init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator) {
+        /// `Terminator` to register shutdown operations
+        public let terminator: LambdaTerminator
+
+        init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, terminator: LambdaTerminator) {
             self.eventLoop = eventLoop
             self.logger = logger
             self.allocator = allocator
+            self.terminator = terminator
         }
 
         /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
@@ -52,7 +56,8 @@ extension Lambda {
             InitializationContext(
                 logger: logger,
                 eventLoop: eventLoop,
-                allocator: ByteBufferAllocator()
+                allocator: ByteBufferAllocator(),
+                terminator: LambdaTerminator()
             )
         }
     }
@@ -203,29 +208,5 @@ public struct LambdaContext: CustomDebugStringConvertible {
             eventLoop: eventLoop,
             allocator: ByteBufferAllocator()
         )
-    }
-}
-
-// MARK: - ShutdownContext
-
-extension Lambda {
-    /// Lambda runtime shutdown context.
-    /// The Lambda runtime generates and passes the `ShutdownContext` to the Lambda handler as an argument.
-    public final class ShutdownContext {
-        /// `Logger` to log with
-        ///
-        /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
-        public let logger: Logger
-
-        /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
-        ///
-        /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
-        ///         Most importantly the `EventLoop` must never be blocked.
-        public let eventLoop: EventLoop
-
-        internal init(logger: Logger, eventLoop: EventLoop) {
-            self.eventLoop = eventLoop
-            self.logger = logger
-        }
     }
 }

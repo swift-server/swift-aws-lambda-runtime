@@ -66,22 +66,36 @@ class LambdaRuntimeTest: XCTestCase {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
 
-        struct ShutdownError: Error {}
+        struct ShutdownError: Error {
+            let description: String
+        }
 
         struct ShutdownErrorHandler: EventLoopLambdaHandler {
             typealias Event = String
             typealias Output = Void
 
             static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<ShutdownErrorHandler> {
-                context.eventLoop.makeSucceededFuture(ShutdownErrorHandler())
+                // register shutdown operation
+                context.terminator.register(name: "test 1", handler: { eventLoop in
+                    eventLoop.makeFailedFuture(ShutdownError(description: "error 1"))
+                })
+                context.terminator.register(name: "test 2", handler: { eventLoop in
+                    eventLoop.makeSucceededVoidFuture()
+                })
+                context.terminator.register(name: "test 3", handler: { eventLoop in
+                    eventLoop.makeFailedFuture(ShutdownError(description: "error 2"))
+                })
+                context.terminator.register(name: "test 4", handler: { eventLoop in
+                    eventLoop.makeSucceededVoidFuture()
+                })
+                context.terminator.register(name: "test 5", handler: { eventLoop in
+                    eventLoop.makeFailedFuture(ShutdownError(description: "error 3"))
+                })
+                return context.eventLoop.makeSucceededFuture(ShutdownErrorHandler())
             }
 
             func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<Void> {
                 context.eventLoop.makeSucceededVoidFuture()
-            }
-
-            func shutdown(context: Lambda.ShutdownContext) -> EventLoopFuture<Void> {
-                context.eventLoop.makeFailedFuture(ShutdownError())
             }
         }
 
@@ -95,7 +109,11 @@ class LambdaRuntimeTest: XCTestCase {
                 XCTFail("Unexpected error: \(error)"); return
             }
 
-            XCTAssert(shutdownError is ShutdownError)
+            XCTAssertEqual(shutdownError as? LambdaTerminator.TerminationError, LambdaTerminator.TerminationError(underlying: [
+                ShutdownError(description: "error 3"),
+                ShutdownError(description: "error 2"),
+                ShutdownError(description: "error 1"),
+            ]))
             XCTAssertEqual(runtimeError as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
         }
     }

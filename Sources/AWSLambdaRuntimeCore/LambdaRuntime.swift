@@ -74,23 +74,22 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
 
         var logger = self.logger
         logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
+        let terminator = LambdaTerminator()
         let runner = Lambda.Runner(eventLoop: self.eventLoop, configuration: self.configuration)
 
-        let startupFuture = runner.initialize(logger: logger, handlerType: Handler.self)
-        startupFuture.flatMap { handler -> EventLoopFuture<(Handler, Result<Int, Error>)> in
+        let startupFuture = runner.initialize(logger: logger, terminator: terminator, handlerType: Handler.self)
+        startupFuture.flatMap { handler -> EventLoopFuture<Result<Int, Error>> in
             // after the startup future has succeeded, we have a handler that we can use
             // to `run` the lambda.
             let finishedPromise = self.eventLoop.makePromise(of: Int.self)
             self.state = .active(runner, handler)
             self.run(promise: finishedPromise)
-            return finishedPromise.futureResult.mapResult { (handler, $0) }
-        }
-        .flatMap { handler, runnerResult -> EventLoopFuture<Int> in
+            return finishedPromise.futureResult.mapResult { $0 }
+        }.flatMap { runnerResult -> EventLoopFuture<Int> in
             // after the lambda finishPromise has succeeded or failed we need to
             // shutdown the handler
-            let shutdownContext = Lambda.ShutdownContext(logger: logger, eventLoop: self.eventLoop)
-            return handler.shutdown(context: shutdownContext).flatMapErrorThrowing { error in
-                // if, we had an error shuting down the lambda, we want to concatenate it with
+            terminator.terminate(eventLoop: self.eventLoop).flatMapErrorThrowing { error in
+                // if, we had an error shutting down the handler, we want to concatenate it with
                 // the runner result
                 logger.error("Error shutting down handler: \(error)")
                 throw Lambda.RuntimeError.shutdownError(shutdownError: error, runnerResult: runnerResult)
