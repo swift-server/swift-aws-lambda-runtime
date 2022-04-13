@@ -32,6 +32,7 @@ struct AWSLambdaPackager: CommandPlugin {
         if self.isAmazonLinux2() {
             // build directly on the machine
             builtProducts = try self.build(
+                packageIdentity: context.package.id,
                 products: configuration.products,
                 buildConfiguration: configuration.buildConfiguration,
                 verboseLogging: configuration.verboseLogging
@@ -76,57 +77,51 @@ struct AWSLambdaPackager: CommandPlugin {
     ) throws -> [LambdaProduct: Path] {
         let dockerToolPath = try toolsProvider("docker")
 
-        /*
-         if verboseLogging {
-             print("-------------------------------------------------------------------------")
-             print("preparing docker build image")
-             print("-------------------------------------------------------------------------")
-         }
-         let packageDockerFilePath = packageDirectory.appending("Dockerfile")
-         let tempDockerFilePath = outputDirectory.appending("Dockerfile")
-         try FileManager.default.createDirectory(atPath: tempDockerFilePath.removingLastComponent().string, withIntermediateDirectories: true)
-         if FileManager.default.fileExists(atPath: packageDockerFilePath.string) {
-             try FileManager.default.copyItem(atPath: packageDockerFilePath.string, toPath: tempDockerFilePath.string)
-         } else {
-             FileManager.default.createFile(atPath: tempDockerFilePath.string, contents: "FROM \(baseImage)".data(using: .utf8))
-         }
-         try self.execute(
-             executable: dockerToolPath,
-             arguments: ["build", "-f", tempDockerFilePath.string, packageDirectory.string , "-t", "\(builderImageName)"],
-             verboseLogging: verboseLogging
-         )
-         */
+        print("-------------------------------------------------------------------------")
+        print("building \"\(packageIdentity)\" in docker")
+        print("-------------------------------------------------------------------------")
 
-        let builderImageName = baseImage
+        // get the build output path
+        let buildOutputPathCommand = "swift build -c \(buildConfiguration.rawValue) --show-bin-path"
+        let dockerBuildOutputPath = try self.execute(
+            executable: dockerToolPath,
+            arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildOutputPathCommand],
+            logLevel: verboseLogging ? .debug : .silent
+        )
+        let buildOutputPath = Path(dockerBuildOutputPath.replacingOccurrences(of: "/workspace", with: packageDirectory.string))
 
+        // build the products
         var builtProducts = [LambdaProduct: Path]()
         for product in products {
-            print("-------------------------------------------------------------------------")
-            print("building \"\(product.name)\" in docker")
-            print("-------------------------------------------------------------------------")
-            //
-            let buildCommand = "swift build --product \(product.name) -c \(buildConfiguration.rawValue) --static-swift-stdlib"
+            print("building \"\(product.name)\"")
+            let buildCommand = "swift build -c \(buildConfiguration.rawValue) --product \(product.name) --static-swift-stdlib"
             try self.execute(
                 executable: dockerToolPath,
-                arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", builderImageName, "bash", "-cl", buildCommand],
-                verboseLogging: verboseLogging
+                arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildCommand],
+                logLevel: verboseLogging ? .debug : .output
             )
-            // TODO: this knows too much about the underlying implementation
-            builtProducts[.init(product)] = packageDirectory.appending([".build", buildConfiguration.rawValue, product.name])
+            let productPath = buildOutputPath.appending(product.name)
+            guard FileManager.default.fileExists(atPath: productPath.string) else {
+                throw Errors.productExecutableNotFound("could not find executable for '\(product.name)', expected at '\(productPath)'")
+            }
+            builtProducts[.init(product)] = productPath
         }
         return builtProducts
     }
 
     private func build(
+        packageIdentity: Package.ID,
         products: [Product],
         buildConfiguration: PackageManager.BuildConfiguration,
         verboseLogging: Bool
     ) throws -> [LambdaProduct: Path] {
+        print("-------------------------------------------------------------------------")
+        print("building \"\(packageIdentity)\"")
+        print("-------------------------------------------------------------------------")
+
         var results = [LambdaProduct: Path]()
         for product in products {
-            print("-------------------------------------------------------------------------")
             print("building \"\(product.name)\"")
-            print("-------------------------------------------------------------------------")
             var parameters = PackageManager.BuildParameters()
             parameters.configuration = buildConfiguration
             parameters.otherSwiftcFlags = ["-static-stdlib"]
@@ -183,7 +178,7 @@ struct AWSLambdaPackager: CommandPlugin {
             try self.execute(
                 executable: zipToolPath,
                 arguments: arguments,
-                verboseLogging: verboseLogging
+                logLevel: verboseLogging ? .debug : .silent
             )
 
             archives[product] = zipfilePath
@@ -196,9 +191,9 @@ struct AWSLambdaPackager: CommandPlugin {
         executable: Path,
         arguments: [String],
         customWorkingDirectory: Path? = .none,
-        verboseLogging: Bool
+        logLevel: ProcessLogLevel
     ) throws -> String {
-        if verboseLogging {
+        if logLevel >= .debug {
             print("\(executable.string) \(arguments.joined(separator: " "))")
         }
 
@@ -207,13 +202,17 @@ struct AWSLambdaPackager: CommandPlugin {
         let outputQueue = DispatchQueue(label: "AWSLambdaPackager.output")
         let outputHandler = { (data: Data?) in
             dispatchPrecondition(condition: .onQueue(outputQueue))
+
+            sync.enter()
+            defer { sync.leave() }
+
             guard let _output = data.flatMap({ String(data: $0, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(["\n"])) }), !_output.isEmpty else {
                 return
             }
-            sync.enter()
-            defer { sync.leave() }
-            print(_output)
-            fflush(stdout)
+            if logLevel >= .output {
+                print(_output)
+                fflush(stdout)
+            }
             output += _output
         }
 
@@ -350,9 +349,20 @@ private enum Errors: Error {
     case unknownProduct(String)
     case unknownExecutable(String)
     case buildError(String)
+    case productExecutableNotFound(String)
     case failedWritingDockerfile
     case processFailed(Int32)
     case invalidProcessOutput
+}
+
+private enum ProcessLogLevel: Int, Comparable {
+    case silent = 0
+    case output = 1
+    case debug = 2
+
+    static func < (lhs: ProcessLogLevel, rhs: ProcessLogLevel) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
 }
 
 extension PackageManager.BuildResult {
