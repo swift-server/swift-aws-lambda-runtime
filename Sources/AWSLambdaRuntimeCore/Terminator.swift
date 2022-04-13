@@ -104,7 +104,7 @@ extension LambdaTerminator {
         private var index: [RegistrationKey]
         private var map: [RegistrationKey: (name: String, handler: Handler)]
 
-        public init() {
+        init() {
             self.lock = .init()
             self.index = []
             self.map = [:]
