@@ -197,7 +197,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     }
 }
 
-/// This is safe since lambda runtime is intended to be used within a single `EventLoop`
+/// This is safe since lambda runtime synchronizes by dispatching all methods to a single `EventLoop`
 #if compiler(>=5.5) && canImport(_Concurrency)
 extension LambdaRuntime: @unchecked Sendable {}
 #endif
