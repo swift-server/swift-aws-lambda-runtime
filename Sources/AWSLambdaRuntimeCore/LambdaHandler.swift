@@ -58,13 +58,30 @@ extension LambdaHandler {
 
     public func handle(_ event: Event, context: LambdaContext) -> EventLoopFuture<Output> {
         let promise = context.eventLoop.makePromise(of: Output.self)
+        // using an unchecked sendable wrapper for the handler
+        // this is safe since lambda runtime is designed to calls the handler serially
+        let handler = UncheckedSendableHandler(underlying: self)
         promise.completeWithTask {
-            try await self.handle(event, context: context)
+            try await handler.handle(event, context: context)
         }
         return promise.futureResult
     }
 }
 
+/// unchecked sendable wrapper for the handler
+/// this is safe since lambda runtime is designed to calls the handler serially
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+fileprivate struct UncheckedSendableHandler<Underlying: LambdaHandler, Event, Output>: @unchecked Sendable where Event == Underlying.Event, Output == Underlying.Output {
+    let underlying: Underlying
+
+    init(underlying: Underlying) {
+        self.underlying = underlying
+    }
+
+    func handle(_ event: Event, context: LambdaContext) async throws -> Output {
+        try await self.underlying.handle(event, context: context)
+    }
+}
 #endif
 
 // MARK: - EventLoopLambdaHandler

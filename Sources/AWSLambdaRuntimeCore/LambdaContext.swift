@@ -12,9 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if compiler(>=5.6)
+@preconcurrency import Dispatch
+@preconcurrency import Logging
+@preconcurrency import NIOCore
+#else
 import Dispatch
 import Logging
 import NIOCore
+#endif
 
 // MARK: - InitializationContext
 
@@ -23,7 +29,7 @@ extension Lambda {
     /// The Lambda runtime generates and passes the `InitializationContext` to the Handlers
     /// ``ByteBufferLambdaHandler/makeHandler(context:)`` or ``LambdaHandler/init(context:)``
     /// as an argument.
-    public struct InitializationContext {
+    public struct InitializationContext: _AWSLambdaSendable {
         /// `Logger` to log with
         ///
         /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
@@ -67,17 +73,17 @@ extension Lambda {
 
 /// Lambda runtime context.
 /// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
-public struct LambdaContext: CustomDebugStringConvertible {
-    final class _Storage {
-        var requestID: String
-        var traceID: String
-        var invokedFunctionARN: String
-        var deadline: DispatchWallTime
-        var cognitoIdentity: String?
-        var clientContext: String?
-        var logger: Logger
-        var eventLoop: EventLoop
-        var allocator: ByteBufferAllocator
+public struct LambdaContext: CustomDebugStringConvertible, _AWSLambdaSendable {
+    final class _Storage: _AWSLambdaSendable {
+        let requestID: String
+        let traceID: String
+        let invokedFunctionARN: String
+        let deadline: DispatchWallTime
+        let cognitoIdentity: String?
+        let clientContext: String?
+        let logger: Logger
+        let eventLoop: EventLoop
+        let allocator: ByteBufferAllocator
 
         init(
             requestID: String,

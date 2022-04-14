@@ -18,7 +18,7 @@ import NIOCore
 /// Lambda terminator.
 /// Utility to manage the lambda shutdown sequence.
 public final class LambdaTerminator {
-    private typealias Handler = (EventLoop) -> EventLoopFuture<Void>
+    fileprivate typealias Handler = (EventLoop) -> EventLoopFuture<Void>
 
     private var storage: Storage
 
@@ -99,7 +99,7 @@ extension LambdaTerminator {
 }
 
 extension LambdaTerminator {
-    private final class Storage {
+    fileprivate final class Storage {
         private let lock: Lock
         private var index: [RegistrationKey]
         private var map: [RegistrationKey: (name: String, handler: Handler)]
@@ -137,3 +137,10 @@ extension LambdaTerminator {
         let underlying: [Error]
     }
 }
+
+// Ideally this would not be @unchecked Sendable, but Sendable checks do not understand locks
+// We can transition this to an actor once we drop support for older Swift versions
+#if compiler(>=5.5) && canImport(_Concurrency)
+extension LambdaTerminator: @unchecked Sendable {}
+extension LambdaTerminator.Storage: @unchecked Sendable {}
+#endif
