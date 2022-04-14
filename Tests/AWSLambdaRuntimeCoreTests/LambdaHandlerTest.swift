@@ -33,7 +33,7 @@ class LambdaHandlerTest: XCTestCase {
 
             var initialized = false
 
-            init(context: Lambda.InitializationContext) async throws {
+            init(context: LambdaInitializationContext) async throws {
                 XCTAssertFalse(self.initialized)
                 try await Task.sleep(nanoseconds: 100 * 1000 * 1000) // 0.1 seconds
                 self.initialized = true
@@ -45,7 +45,7 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 10 ... 20)
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
@@ -62,7 +62,7 @@ class LambdaHandlerTest: XCTestCase {
 
             var initialized = false
 
-            init(context: Lambda.InitializationContext) async throws {
+            init(context: LambdaInitializationContext) async throws {
                 XCTAssertFalse(self.initialized)
                 try await Task.sleep(nanoseconds: 100 * 1000 * 1000) // 0.1 seconds
                 throw TestError("kaboom")
@@ -74,7 +74,7 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 10 ... 20)
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
         assertLambdaRuntimeResult(result, shouldFailWithError: TestError("kaboom"))
     }
@@ -89,7 +89,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias Event = String
             typealias Output = String
 
-            init(context: Lambda.InitializationContext) {}
+            init(context: LambdaInitializationContext) {}
 
             func handle(_ event: String, context: LambdaContext) async throws -> String {
                 event
@@ -97,7 +97,7 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1 ... 10)
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
@@ -112,13 +112,13 @@ class LambdaHandlerTest: XCTestCase {
             typealias Event = String
             typealias Output = Void
 
-            init(context: Lambda.InitializationContext) {}
+            init(context: LambdaInitializationContext) {}
 
             func handle(_ event: String, context: LambdaContext) async throws {}
         }
 
         let maxTimes = Int.random(in: 1 ... 10)
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
 
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
@@ -134,7 +134,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias Event = String
             typealias Output = String
 
-            init(context: Lambda.InitializationContext) {}
+            init(context: LambdaInitializationContext) {}
 
             func handle(_ event: String, context: LambdaContext) async throws -> String {
                 throw TestError("boom")
@@ -142,7 +142,7 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1 ... 10)
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
@@ -159,7 +159,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias Event = String
             typealias Output = String
 
-            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+            static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
 
@@ -169,7 +169,7 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1 ... 10)
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
@@ -183,7 +183,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias Event = String
             typealias Output = Void
 
-            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+            static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
 
@@ -193,7 +193,7 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1 ... 10)
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
@@ -207,7 +207,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias Event = String
             typealias Output = String
 
-            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+            static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
 
@@ -217,7 +217,7 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1 ... 10)
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
@@ -231,7 +231,7 @@ class LambdaHandlerTest: XCTestCase {
             typealias Event = String
             typealias Output = String
 
-            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+            static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeFailedFuture(TestError("kaboom"))
             }
 

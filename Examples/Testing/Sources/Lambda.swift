@@ -21,7 +21,7 @@ struct MyLambda: LambdaHandler {
     typealias Event = String
     typealias Output = String
 
-    init(context: Lambda.InitializationContext) async throws {
+    init(context: LambdaInitializationContext) async throws {
         // setup your resources that you want to reuse for every invocation here.
     }
 

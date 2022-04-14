@@ -64,7 +64,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerType: EchoHandler.self)) {
-            XCTAssertEqual($0 as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
+            XCTAssertEqual($0 as? LambdaRuntimeError, .badStatusCode(.internalServerError))
         }
     }
 
@@ -90,7 +90,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerType: EchoHandler.self)) {
-            XCTAssertEqual($0 as? Lambda.RuntimeError, .noBody)
+            XCTAssertEqual($0 as? LambdaRuntimeError, .noBody)
         }
     }
 
@@ -117,7 +117,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerType: EchoHandler.self)) {
-            XCTAssertEqual($0 as? Lambda.RuntimeError, .invocationMissingHeader(AmazonHeaders.requestID))
+            XCTAssertEqual($0 as? LambdaRuntimeError, .invocationMissingHeader(AmazonHeaders.requestID))
         }
     }
 
@@ -142,7 +142,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerType: EchoHandler.self)) {
-            XCTAssertEqual($0 as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
+            XCTAssertEqual($0 as? LambdaRuntimeError, .badStatusCode(.internalServerError))
         }
     }
 
@@ -167,7 +167,7 @@ class LambdaRuntimeClientTest: XCTestCase {
             }
         }
         XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerType: RuntimeErrorHandler.self)) {
-            XCTAssertEqual($0 as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
+            XCTAssertEqual($0 as? LambdaRuntimeError, .badStatusCode(.internalServerError))
         }
     }
 
@@ -223,7 +223,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop()) }
 
         let logger = Logger(label: "TestLogger")
-        let client = Lambda.RuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(address: "127.0.0.1:\(server.serverPort)"))
+        let client = LambdaRuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(address: "127.0.0.1:\(server.serverPort)"))
         let result = client.reportInitializationError(logger: logger, error: TestError("boom"))
 
         var inboundHeader: HTTPServerRequestPart?
@@ -252,7 +252,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop()) }
 
         let logger = Logger(label: "TestLogger")
-        let client = Lambda.RuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(address: "127.0.0.1:\(server.serverPort)"))
+        let client = LambdaRuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(address: "127.0.0.1:\(server.serverPort)"))
 
         let header = HTTPHeaders([
             (AmazonHeaders.requestID, "test"),
@@ -292,7 +292,7 @@ class LambdaRuntimeClientTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop()) }
 
         let logger = Logger(label: "TestLogger")
-        let client = Lambda.RuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(address: "127.0.0.1:\(server.serverPort)"))
+        let client = LambdaRuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(address: "127.0.0.1:\(server.serverPort)"))
 
         let header = HTTPHeaders([
             (AmazonHeaders.requestID, "test"),

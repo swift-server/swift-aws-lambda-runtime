@@ -55,7 +55,7 @@ class LambdaRuntimeTest: XCTestCase {
 
         XCTAssertNoThrow(_ = try eventLoop.flatSubmit { runtime.start() }.wait())
         XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) {
-            XCTAssertEqual(.badStatusCode(HTTPResponseStatus.internalServerError), $0 as? Lambda.RuntimeError)
+            XCTAssertEqual(.badStatusCode(HTTPResponseStatus.internalServerError), $0 as? LambdaRuntimeError)
         }
     }
 
@@ -74,7 +74,7 @@ class LambdaRuntimeTest: XCTestCase {
             typealias Event = String
             typealias Output = Void
 
-            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<ShutdownErrorHandler> {
+            static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<ShutdownErrorHandler> {
                 // register shutdown operation
                 context.terminator.register(name: "test 1", handler: { eventLoop in
                     eventLoop.makeFailedFuture(ShutdownError(description: "error 1"))
@@ -105,7 +105,7 @@ class LambdaRuntimeTest: XCTestCase {
 
         XCTAssertNoThrow(try eventLoop.flatSubmit { runtime.start() }.wait())
         XCTAssertThrowsError(try runtime.shutdownFuture.wait()) { error in
-            guard case Lambda.RuntimeError.shutdownError(let shutdownError, .failure(let runtimeError)) = error else {
+            guard case LambdaRuntimeError.shutdownError(let shutdownError, .failure(let runtimeError)) = error else {
                 XCTFail("Unexpected error: \(error)"); return
             }
 
@@ -114,7 +114,7 @@ class LambdaRuntimeTest: XCTestCase {
                 ShutdownError(description: "error 2"),
                 ShutdownError(description: "error 1"),
             ]))
-            XCTAssertEqual(runtimeError as? Lambda.RuntimeError, .badStatusCode(.internalServerError))
+            XCTAssertEqual(runtimeError as? LambdaRuntimeError, .badStatusCode(.internalServerError))
         }
     }
 }

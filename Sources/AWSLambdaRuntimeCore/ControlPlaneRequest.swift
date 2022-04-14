@@ -38,17 +38,17 @@ struct Invocation: Hashable {
 
     init(headers: HTTPHeaders) throws {
         guard let requestID = headers.first(name: AmazonHeaders.requestID), !requestID.isEmpty else {
-            throw Lambda.RuntimeError.invocationMissingHeader(AmazonHeaders.requestID)
+            throw LambdaRuntimeError.invocationMissingHeader(AmazonHeaders.requestID)
         }
 
         guard let deadline = headers.first(name: AmazonHeaders.deadline),
               let unixTimeInMilliseconds = Int64(deadline)
         else {
-            throw Lambda.RuntimeError.invocationMissingHeader(AmazonHeaders.deadline)
+            throw LambdaRuntimeError.invocationMissingHeader(AmazonHeaders.deadline)
         }
 
         guard let invokedFunctionARN = headers.first(name: AmazonHeaders.invokedFunctionARN) else {
-            throw Lambda.RuntimeError.invocationMissingHeader(AmazonHeaders.invokedFunctionARN)
+            throw LambdaRuntimeError.invocationMissingHeader(AmazonHeaders.invokedFunctionARN)
         }
 
         self.requestID = requestID
