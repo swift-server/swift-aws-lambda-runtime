@@ -63,10 +63,17 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
 
     /// Start the `LambdaRuntime`.
     ///
-    /// - Returns: An `EventLoopFuture` that is fulfilled after the Lambda hander has been created and initiliazed, and a first run has been scheduled.
-    ///
-    /// - note: This method must be called  on the `EventLoop` the `LambdaRuntime` has been initialized with.
+    /// - Returns: An `EventLoopFuture` that is fulfilled after the Lambda hander has been created and initialized, and a first run has been scheduled.
     public func start() -> EventLoopFuture<Void> {
+        if self.eventLoop.inEventLoop {
+            return self._start()
+        } else {
+            return self.eventLoop.flatSubmit { self._start() }
+        }
+    }
+
+    private func _start() -> EventLoopFuture<Void> {
+        // This method must be called on the `EventLoop` the `LambdaRuntime` has been initialized with.
         self.eventLoop.assertInEventLoop()
 
         logger.info("lambda runtime starting with \(self.configuration)")
@@ -189,3 +196,8 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
         }
     }
 }
+
+/// This is safe since lambda runtime is intended to be used within a single `EventLoop`
+#if compiler(>=5.5) && canImport(_Concurrency)
+extension LambdaRuntime: @unchecked Sendable {}
+#endif
