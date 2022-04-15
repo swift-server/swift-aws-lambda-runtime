@@ -84,6 +84,31 @@ fileprivate struct UncheckedSendableHandler<Underlying: LambdaHandler, Event, Ou
 }
 #endif
 
+// MARK: - SimpleLambdaHandler
+
+#if compiler(>=5.5) && canImport(_Concurrency)
+/// Strongly typed, processing protocol for a Lambda that takes a user defined
+/// ``EventLoopLambdaHandler/Event`` and returns a user defined
+/// ``EventLoopLambdaHandler/Output`` asynchronously.
+///
+/// - note: Simpler use cases that do not special initialization should implement this protocol instead of the lower
+///         level protocols ``LambdaHandler``,
+///         ``EventLoopLambdaHandler`` and
+///         ``ByteBufferLambdaHandler``.
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+public protocol SimpleLambdaHandler: LambdaHandler {
+    init()
+}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension SimpleLambdaHandler {
+    init(context: LambdaInitializationContext) async throws {
+        // no-op initialization, which simple LambdaHandler that do not need initialization
+        self.init()
+    }
+}
+#endif
+
 // MARK: - EventLoopLambdaHandler
 
 /// Strongly typed, `EventLoopFuture` based processing protocol for a Lambda that takes a user

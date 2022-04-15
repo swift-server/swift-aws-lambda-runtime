@@ -146,6 +146,27 @@ class LambdaHandlerTest: XCTestCase {
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
+
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    func testSimpleLambdaHandler() {
+        let server = MockLambdaServer(behavior: Behavior())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        struct Handler: SimpleLambdaHandler {
+            typealias Event = String
+            typealias Output = String
+
+            func handle(_ event: String, context: LambdaContext) async throws -> String {
+                event
+            }
+        }
+
+        let maxTimes = Int.random(in: 1 ... 10)
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
+        assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
+    }
     #endif
 
     // MARK: - EventLoopLambdaHandler
