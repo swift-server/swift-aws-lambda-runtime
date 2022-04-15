@@ -53,7 +53,7 @@ let package = Package(
         ]),
         .testTarget(name: "AWSLambdaTestingTests", dependencies: ["AWSLambdaTesting"]),
         // for perf testing
-        .target(name: "MockServer", dependencies: [
+        .executableTarget(name: "MockServer", dependencies: [
             .product(name: "NIOHTTP1", package: "swift-nio"),
             .product(name: "NIO", package: "swift-nio"),
         ]),

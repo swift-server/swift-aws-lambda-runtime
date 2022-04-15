@@ -139,7 +139,7 @@ struct AWSLambdaPackager: CommandPlugin {
         return results
     }
 
-    #warning("FIXME: use zlib")
+    // TODO: explore using ziplib or similar instead of shelling out
     private func package(
         products: [LambdaProduct: Path],
         toolsProvider: (String) throws -> Path,
