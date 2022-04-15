@@ -72,7 +72,7 @@ extension Lambda {
         let eventLoop = eventLoopGroup.next()
 
         let promise = eventLoop.makePromise(of: Handler.self)
-        let initContext = Lambda.InitializationContext.__forTestsOnly(
+        let initContext = LambdaInitializationContext.__forTestsOnly(
             logger: logger,
             eventLoop: eventLoop
         )

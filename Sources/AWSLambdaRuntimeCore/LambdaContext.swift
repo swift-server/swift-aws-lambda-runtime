@@ -24,48 +24,46 @@ import NIOCore
 
 // MARK: - InitializationContext
 
-extension Lambda {
-    /// Lambda runtime initialization context.
-    /// The Lambda runtime generates and passes the `InitializationContext` to the Handlers
-    /// ``ByteBufferLambdaHandler/makeHandler(context:)`` or ``LambdaHandler/init(context:)``
-    /// as an argument.
-    public struct InitializationContext: _AWSLambdaSendable {
-        /// `Logger` to log with
-        ///
-        /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
-        public let logger: Logger
+/// Lambda runtime initialization context.
+/// The Lambda runtime generates and passes the `LambdaInitializationContext` to the Handlers
+/// ``ByteBufferLambdaHandler/makeHandler(context:)`` or ``LambdaHandler/init(context:)``
+/// as an argument.
+public struct LambdaInitializationContext: _AWSLambdaSendable {
+    /// `Logger` to log with
+    ///
+    /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
+    public let logger: Logger
 
-        /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
-        ///
-        /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
-        ///         Most importantly the `EventLoop` must never be blocked.
-        public let eventLoop: EventLoop
+    /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
+    ///
+    /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
+    ///         Most importantly the `EventLoop` must never be blocked.
+    public let eventLoop: EventLoop
 
-        /// `ByteBufferAllocator` to allocate `ByteBuffer`
-        public let allocator: ByteBufferAllocator
+    /// `ByteBufferAllocator` to allocate `ByteBuffer`
+    public let allocator: ByteBufferAllocator
 
-        /// `Terminator` to register shutdown operations
-        public let terminator: LambdaTerminator
+    /// `Terminator` to register shutdown operations
+    public let terminator: LambdaTerminator
 
-        init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, terminator: LambdaTerminator) {
-            self.eventLoop = eventLoop
-            self.logger = logger
-            self.allocator = allocator
-            self.terminator = terminator
-        }
+    init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, terminator: LambdaTerminator) {
+        self.eventLoop = eventLoop
+        self.logger = logger
+        self.allocator = allocator
+        self.terminator = terminator
+    }
 
-        /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
-        public static func __forTestsOnly(
-            logger: Logger,
-            eventLoop: EventLoop
-        ) -> InitializationContext {
-            InitializationContext(
-                logger: logger,
-                eventLoop: eventLoop,
-                allocator: ByteBufferAllocator(),
-                terminator: LambdaTerminator()
-            )
-        }
+    /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
+    public static func __forTestsOnly(
+        logger: Logger,
+        eventLoop: EventLoop
+    ) -> LambdaInitializationContext {
+        LambdaInitializationContext(
+            logger: logger,
+            eventLoop: eventLoop,
+            allocator: ByteBufferAllocator(),
+            terminator: LambdaTerminator()
+        )
     }
 }
 

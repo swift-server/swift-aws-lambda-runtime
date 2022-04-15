@@ -22,9 +22,9 @@ func runLambda<Handler: ByteBufferLambdaHandler>(behavior: LambdaServerBehavior,
     let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
-    let configuration = Lambda.Configuration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
+    let configuration = LambdaConfiguration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
     let terminator = LambdaTerminator()
-    let runner = Lambda.Runner(eventLoop: eventLoopGroup.next(), configuration: configuration)
+    let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer { XCTAssertNoThrow(try server.stop().wait()) }
     try runner.initialize(logger: logger, terminator: terminator, handlerType: handlerType).flatMap { handler in
@@ -61,8 +61,8 @@ extension Date {
     }
 }
 
-extension Lambda.RuntimeError: Equatable {
-    public static func == (lhs: Lambda.RuntimeError, rhs: Lambda.RuntimeError) -> Bool {
+extension LambdaRuntimeError: Equatable {
+    public static func == (lhs: Self, rhs: Self) -> Bool {
         // technically incorrect, but good enough for our tests
         String(describing: lhs) == String(describing: rhs)
     }

@@ -30,7 +30,7 @@ struct MyLambda: LambdaHandler {
     typealias Event = Request
     typealias Output = Response
 
-    init(context: Lambda.InitializationContext) async throws {
+    init(context: LambdaInitializationContext) async throws {
         // setup your resources that you want to reuse for every invocation here.
     }
 

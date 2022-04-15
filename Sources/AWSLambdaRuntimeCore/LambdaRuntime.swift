@@ -23,7 +23,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     private let eventLoop: EventLoop
     private let shutdownPromise: EventLoopPromise<Int>
     private let logger: Logger
-    private let configuration: Lambda.Configuration
+    private let configuration: LambdaConfiguration
 
     private var state = State.idle {
         willSet {
@@ -41,7 +41,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
         self.init(eventLoop: eventLoop, logger: logger, configuration: .init())
     }
 
-    init(eventLoop: EventLoop, logger: Logger, configuration: Lambda.Configuration) {
+    init(eventLoop: EventLoop, logger: Logger, configuration: LambdaConfiguration) {
         self.eventLoop = eventLoop
         self.shutdownPromise = eventLoop.makePromise(of: Int.self)
         self.logger = logger
@@ -82,7 +82,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
         var logger = self.logger
         logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
         let terminator = LambdaTerminator()
-        let runner = Lambda.Runner(eventLoop: self.eventLoop, configuration: self.configuration)
+        let runner = LambdaRunner(eventLoop: self.eventLoop, configuration: self.configuration)
 
         let startupFuture = runner.initialize(logger: logger, terminator: terminator, handlerType: Handler.self)
         startupFuture.flatMap { handler -> EventLoopFuture<Result<Int, Error>> in
@@ -99,7 +99,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
                 // if, we had an error shutting down the handler, we want to concatenate it with
                 // the runner result
                 logger.error("Error shutting down handler: \(error)")
-                throw Lambda.RuntimeError.shutdownError(shutdownError: error, runnerResult: runnerResult)
+                throw LambdaRuntimeError.shutdownError(shutdownError: error, runnerResult: runnerResult)
             }.flatMapResult { _ -> Result<Int, Error> in
                 // we had no error shutting down the lambda. let's return the runner's result
                 runnerResult
@@ -176,7 +176,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     private enum State {
         case idle
         case initializing
-        case active(Lambda.Runner, Handler)
+        case active(LambdaRunner, Handler)
         case shuttingdown
         case shutdown
 

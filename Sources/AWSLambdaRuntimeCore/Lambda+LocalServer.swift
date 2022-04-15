@@ -35,7 +35,7 @@ extension Lambda {
     ///     - invocationEndpoint: The endpoint  to post events to.
     ///     - body: Code to run within the context of the mock server. Typically this would be a Lambda.run function call.
     ///
-    /// - note: This API is designed stricly for local testing and is behind a DEBUG flag
+    /// - note: This API is designed strictly for local testing and is behind a DEBUG flag
     internal static func withLocalServer<Value>(invocationEndpoint: String? = nil, _ body: @escaping () -> Value) throws -> Value {
         let server = LocalLambda.Server(invocationEndpoint: invocationEndpoint)
         try server.start().wait()
@@ -55,7 +55,7 @@ private enum LocalLambda {
         private let invocationEndpoint: String
 
         public init(invocationEndpoint: String?) {
-            let configuration = Lambda.Configuration()
+            let configuration = LambdaConfiguration()
             var logger = Logger(label: "LocalLambdaServer")
             logger.logLevel = configuration.general.logLevel
             self.logger = logger
@@ -299,5 +299,4 @@ private enum LocalLambda {
         case cantBind
     }
 }
-
 #endif

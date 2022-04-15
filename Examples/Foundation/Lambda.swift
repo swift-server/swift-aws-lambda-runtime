@@ -30,7 +30,7 @@ struct MyLambda: LambdaHandler {
 
     let calculator: ExchangeRatesCalculator
 
-    init(context: Lambda.InitializationContext) async throws {
+    init(context: LambdaInitializationContext) async throws {
         // the ExchangeRatesCalculator() can be reused over and over
         self.calculator = ExchangeRatesCalculator()
     }
