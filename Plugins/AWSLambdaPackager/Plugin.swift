@@ -315,8 +315,8 @@ private struct Configuration: CustomStringConvertible {
             throw Errors.invalidArgument("--swift-version and --base-docker-image are mutually exclusive")
         }
 
-        let swiftVersion = swiftVersionArgument.first ?? Self.getSwiftVersion()
-        self.baseDockerImage = baseDockerImageArgument.first ?? "swift:\(swiftVersion)-amazonlinux2"
+        let swiftVersion = swiftVersionArgument.first ?? .none // undefined version will yield the latest docker image
+        self.baseDockerImage = baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2"
 
         if self.verboseLogging {
             print("-------------------------------------------------------------------------")
@@ -335,11 +335,6 @@ private struct Configuration: CustomStringConvertible {
           baseDockerImage: \(self.baseDockerImage)
         }
         """
-    }
-
-    #warning("FIXME: read this programmatically")
-    private static func getSwiftVersion() -> String {
-        "5.6"
     }
 }
 
