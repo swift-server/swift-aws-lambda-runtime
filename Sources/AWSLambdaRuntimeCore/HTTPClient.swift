@@ -22,13 +22,13 @@ import NIOPosix
 /// This means we can avoid locks and other concurrency concern we would otherwise need to build into the client
 internal final class HTTPClient {
     private let eventLoop: EventLoop
-    private let configuration: Lambda.Configuration.RuntimeEngine
+    private let configuration: LambdaConfiguration.RuntimeEngine
     private let targetHost: String
 
     private var state = State.disconnected
     private var executing = false
 
-    init(eventLoop: EventLoop, configuration: Lambda.Configuration.RuntimeEngine) {
+    init(eventLoop: EventLoop, configuration: LambdaConfiguration.RuntimeEngine) {
         self.eventLoop = eventLoop
         self.configuration = configuration
         self.targetHost = "\(self.configuration.ip):\(self.configuration.port)"

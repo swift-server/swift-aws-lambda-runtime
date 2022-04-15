@@ -30,7 +30,7 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let maxTimes = Int.random(in: 10 ... 20)
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
@@ -41,7 +41,7 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let maxTimes = Int.random(in: 10 ... 20)
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: RuntimeErrorHandler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
@@ -92,7 +92,7 @@ class LambdaTest: XCTestCase {
 
         let signal = Signal.ALRM
         let maxTimes = 1000
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes, stopSignal: signal))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes, stopSignal: signal))
 
         DispatchQueue(label: "test").async {
             // we need to schedule the signal before we start the long running `Lambda.run`, since
@@ -117,10 +117,10 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1),
-                                                 runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: 1),
+                                                runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("timeout"))
+        assertLambdaRuntimeResult(result, shouldFailWithError: LambdaRuntimeError.upstreamError("timeout"))
     }
 
     func testDisconnect() {
@@ -128,9 +128,9 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: 1))
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shouldFailWithError: Lambda.RuntimeError.upstreamError("connectionResetByPeer"))
+        assertLambdaRuntimeResult(result, shouldFailWithError: LambdaRuntimeError.upstreamError("connectionResetByPeer"))
     }
 
     func testBigEvent() {
@@ -139,7 +139,7 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: 1))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: 1))
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: 1)
     }
@@ -150,7 +150,7 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let maxTimes = 10
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
@@ -161,7 +161,7 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let maxTimes = 10
-        let configuration = Lambda.Configuration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
         assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
     }
@@ -191,7 +191,7 @@ class LambdaTest: XCTestCase {
         }
 
         let result = Lambda.run(configuration: .init(), handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shouldFailWithError: Lambda.RuntimeError.badStatusCode(.internalServerError))
+        assertLambdaRuntimeResult(result, shouldFailWithError: LambdaRuntimeError.badStatusCode(.internalServerError))
     }
 
     func testDeadline() {
@@ -262,7 +262,7 @@ class LambdaTest: XCTestCase {
             typealias Event = String
             typealias Output = String
 
-            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+            static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
 
@@ -278,13 +278,13 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let logger = Logger(label: "TestLogger")
-        let configuration = Lambda.Configuration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
+        let configuration = LambdaConfiguration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
 
         let handler1 = Handler()
         let task = Task.detached {
             print(configuration.description)
             logger.info("hello")
-            let runner = Lambda.Runner(eventLoop: eventLoopGroup.next(), configuration: configuration)
+            let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration)
 
             try runner.run(logger: logger, handler: handler1).wait()
 

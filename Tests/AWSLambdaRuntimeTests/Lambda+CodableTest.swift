@@ -43,7 +43,7 @@ class CodableLambdaTest: XCTestCase {
 
             var expected: Request?
 
-            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+            static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
 
@@ -72,7 +72,7 @@ class CodableLambdaTest: XCTestCase {
 
             var expected: Request?
 
-            static func makeHandler(context: Lambda.InitializationContext) -> EventLoopFuture<Handler> {
+            static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
 
@@ -99,7 +99,7 @@ class CodableLambdaTest: XCTestCase {
 
             var expected: Request?
 
-            init(context: Lambda.InitializationContext) async throws {}
+            init(context: LambdaInitializationContext) async throws {}
 
             func handle(_ event: Request, context: LambdaContext) async throws {
                 XCTAssertEqual(event, self.expected)
@@ -128,7 +128,7 @@ class CodableLambdaTest: XCTestCase {
 
             var expected: Request?
 
-            init(context: Lambda.InitializationContext) async throws {}
+            init(context: LambdaInitializationContext) async throws {}
 
             func handle(_ event: Request, context: LambdaContext) async throws -> Response {
                 XCTAssertEqual(event, self.expected)
@@ -168,8 +168,8 @@ class CodableLambdaTest: XCTestCase {
         )
     }
 
-    func newInitContext() -> Lambda.InitializationContext {
-        Lambda.InitializationContext(
+    func newInitContext() -> LambdaInitializationContext {
+        LambdaInitializationContext(
             logger: Logger(label: "test"),
             eventLoop: self.eventLoopGroup.next(),
             allocator: ByteBufferAllocator(),

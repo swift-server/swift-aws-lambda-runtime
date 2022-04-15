@@ -24,14 +24,6 @@ import NIOCore
 import NIOPosix
 
 public enum Lambda {
-    /// Utility to access/read environment variables
-    public static func env(_ name: String) -> String? {
-        guard let value = getenv(name) else {
-            return nil
-        }
-        return String(cString: value)
-    }
-
     /// Run a Lambda defined by implementing the ``ByteBufferLambdaHandler`` protocol.
     /// The Runtime will manage the Lambdas application lifecycle automatically. It will invoke the
     /// ``ByteBufferLambdaHandler/makeHandler(context:)`` to create a new Handler.
@@ -42,10 +34,10 @@ public enum Lambda {
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     internal static func run<Handler: ByteBufferLambdaHandler>(
-        configuration: Configuration = .init(),
+        configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        let _run = { (configuration: Configuration) -> Result<Int, Error> in
+        let _run = { (configuration: LambdaConfiguration) -> Result<Int, Error> in
             Backtrace.install()
             var logger = Logger(label: "Lambda")
             logger.logLevel = configuration.general.logLevel
@@ -95,5 +87,17 @@ public enum Lambda {
         #else
         return _run(configuration)
         #endif
+    }
+}
+
+// MARK: - Public API
+
+extension Lambda {
+    /// Utility to access/read environment variables
+    public static func env(_ name: String) -> String? {
+        guard let value = getenv(name) else {
+            return nil
+        }
+        return String(cString: value)
     }
 }
