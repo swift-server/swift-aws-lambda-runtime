@@ -18,7 +18,7 @@ import NIOCore
 
 /// `LambdaRuntime` manages the Lambda process lifecycle.
 ///
-/// - note: It is intended to be used within a single `EventLoop`. For this reason this class is not thread safe.
+/// Use this API, if you build a higher level web framework which shall be able to run inside the Lambda environment.
 public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     private let eventLoop: EventLoop
     private let shutdownPromise: EventLoopPromise<Int>
@@ -35,9 +35,10 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     /// Create a new `LambdaRuntime`.
     ///
     /// - parameters:
+    ///     - handlerType: The ``ByteBufferLambdaHandler`` type the `LambdaRuntime` shall create and manage
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
-    public convenience init(eventLoop: EventLoop, logger: Logger) {
+    public convenience init(_ handlerType: Handler.Type, eventLoop: EventLoop, logger: Logger) {
         self.init(eventLoop: eventLoop, logger: logger, configuration: .init())
     }
 
@@ -114,8 +115,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
 
     // MARK: -  Private
 
-    #if DEBUG
-    /// Begin the `LambdaRuntime` shutdown. Only needed for debugging purposes, hence behind a `DEBUG` flag.
+    /// Begin the `LambdaRuntime` shutdown.
     public func shutdown() {
         // make this method thread safe by dispatching onto the eventloop
         self.eventLoop.execute {
@@ -126,7 +126,6 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
             }
         }
     }
-    #endif
 
     private func markShutdown() {
         self.state = .shutdown
