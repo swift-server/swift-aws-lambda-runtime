@@ -102,7 +102,7 @@ struct AWSLambdaPackager: CommandPlugin {
             )
             let productPath = buildOutputPath.appending(product.name)
             guard FileManager.default.fileExists(atPath: productPath.string) else {
-                throw Errors.productExecutableNotFound("could not find executable for '\(product.name)', expected at '\(productPath)'")
+                throw Errors.productExecutableNotFound(product.name)
             }
             builtProducts[.init(product)] = productPath
         }
@@ -132,7 +132,7 @@ struct AWSLambdaPackager: CommandPlugin {
                 parameters: parameters
             )
             guard let artifact = result.executableArtifact(for: product) else {
-                throw Errors.unknownExecutable("no executable artifacts found for \(product.name)")
+                throw Errors.productExecutableNotFound(product.name)
             }
             results[.init(product)] = artifact.path
         }
@@ -197,14 +197,14 @@ struct AWSLambdaPackager: CommandPlugin {
             print("\(executable.string) \(arguments.joined(separator: " "))")
         }
 
-        let sync = DispatchGroup()
         var output = ""
+        let outputSync = DispatchGroup()
         let outputQueue = DispatchQueue(label: "AWSLambdaPackager.output")
         let outputHandler = { (data: Data?) in
             dispatchPrecondition(condition: .onQueue(outputQueue))
 
-            sync.enter()
-            defer { sync.leave() }
+            outputSync.enter()
+            defer { outputSync.leave() }
 
             guard let _output = data.flatMap({ String(data: $0, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(["\n"])) }), !_output.isEmpty else {
                 return
@@ -216,14 +216,12 @@ struct AWSLambdaPackager: CommandPlugin {
             output += _output
         }
 
-        let stdoutPipe = Pipe()
-        stdoutPipe.fileHandleForReading.readabilityHandler = { fileHandle in outputQueue.async { outputHandler(fileHandle.availableData) } }
-        let stderrPipe = Pipe()
-        stderrPipe.fileHandleForReading.readabilityHandler = { fileHandle in outputQueue.async { outputHandler(fileHandle.availableData) } }
+        let pipe = Pipe()
+        pipe.fileHandleForReading.readabilityHandler = { fileHandle in outputQueue.async { outputHandler(fileHandle.availableData) } }
 
         let process = Process()
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
+        process.standardOutput = pipe
+        process.standardError = pipe
         process.executableURL = URL(fileURLWithPath: executable.string)
         process.arguments = arguments
         if let workingDirectory = customWorkingDirectory {
@@ -231,8 +229,7 @@ struct AWSLambdaPackager: CommandPlugin {
         }
         process.terminationHandler = { _ in
             outputQueue.async {
-                outputHandler(try? stdoutPipe.fileHandleForReading.readToEnd())
-                outputHandler(try? stderrPipe.fileHandleForReading.readToEnd())
+                outputHandler(try? pipe.fileHandleForReading.readToEnd())
             }
         }
 
@@ -240,10 +237,15 @@ struct AWSLambdaPackager: CommandPlugin {
         process.waitUntilExit()
 
         // wait for output to be full processed
-        sync.wait()
+        outputSync.wait()
 
         if process.terminationStatus != 0 {
-            throw Errors.processFailed(process.terminationStatus)
+            // print output on failure and if not already printed
+            if logLevel < .output {
+                print(output)
+                fflush(stdout)
+            }
+            throw Errors.processFailed([executable.string] + arguments, process.terminationStatus)
         }
 
         return output
@@ -282,7 +284,7 @@ private struct Configuration: CustomStringConvertible {
         if let outputPath = outputPathArgument.first {
             var isDirectory: ObjCBool = false
             guard FileManager.default.fileExists(atPath: outputPath, isDirectory: &isDirectory), isDirectory.boolValue else {
-                throw Errors.invalidArgument("invalid output directory \(outputPath)")
+                throw Errors.invalidArgument("invalid output directory '\(outputPath)'")
             }
             self.outputDirectory = Path(outputPath)
         } else {
@@ -293,7 +295,7 @@ private struct Configuration: CustomStringConvertible {
             let products = try context.package.products(named: productsArgument)
             for product in products {
                 guard product is ExecutableProduct else {
-                    throw Errors.invalidArgument("product named \(product.name) is not an executable product")
+                    throw Errors.invalidArgument("product named '\(product.name)' is not an executable product")
                 }
             }
             self.products = products
@@ -304,7 +306,7 @@ private struct Configuration: CustomStringConvertible {
 
         if let buildConfigurationName = configurationArgument.first {
             guard let buildConfiguration = PackageManager.BuildConfiguration(rawValue: buildConfigurationName) else {
-                throw Errors.invalidArgument("invalid build configuration named \(buildConfigurationName)")
+                throw Errors.invalidArgument("invalid build configuration named '\(buildConfigurationName)'")
             }
             self.buildConfiguration = buildConfiguration
         } else {
@@ -338,18 +340,6 @@ private struct Configuration: CustomStringConvertible {
     }
 }
 
-private enum Errors: Error {
-    case invalidArgument(String)
-    case unsupportedPlatform(String)
-    case unknownProduct(String)
-    case unknownExecutable(String)
-    case buildError(String)
-    case productExecutableNotFound(String)
-    case failedWritingDockerfile
-    case processFailed(Int32)
-    case invalidProcessOutput
-}
-
 private enum ProcessLogLevel: Int, Comparable {
     case silent = 0
     case output = 1
@@ -360,21 +350,33 @@ private enum ProcessLogLevel: Int, Comparable {
     }
 }
 
-extension PackageManager.BuildResult {
-    // find the executable produced by the build
-    func executableArtifact(for product: Product) -> PackageManager.BuildResult.BuiltArtifact? {
-        let executables = self.builtArtifacts.filter { $0.kind == .executable && $0.path.lastComponent == product.name }
-        guard !executables.isEmpty else {
-            return nil
+private enum Errors: Error, CustomStringConvertible {
+    case invalidArgument(String)
+    case unsupportedPlatform(String)
+    case unknownProduct(String)
+    case productExecutableNotFound(String)
+    case failedWritingDockerfile
+    case processFailed([String], Int32)
+
+    var description: String {
+        switch self {
+        case .invalidArgument(let description):
+            return description
+        case .unsupportedPlatform(let description):
+            return description
+        case .unknownProduct(let description):
+            return description
+        case .productExecutableNotFound(let product):
+            return "product executable not found '\(product)'"
+        case .failedWritingDockerfile:
+            return "failed writing dockerfile"
+        case .processFailed(let arguments, let code):
+            return "\(arguments.joined(separator: " ")) failed with code \(code)"
         }
-        guard executables.count == 1, let executable = executables.first else {
-            return nil
-        }
-        return executable
     }
 }
 
-struct LambdaProduct: Hashable {
+private struct LambdaProduct: Hashable {
     let underlying: Product
 
     init(_ underlying: Product) {
@@ -391,5 +393,19 @@ struct LambdaProduct: Hashable {
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.underlying.id == rhs.underlying.id
+    }
+}
+
+extension PackageManager.BuildResult {
+    // find the executable produced by the build
+    func executableArtifact(for product: Product) -> PackageManager.BuildResult.BuiltArtifact? {
+        let executables = self.builtArtifacts.filter { $0.kind == .executable && $0.path.lastComponent == product.name }
+        guard !executables.isEmpty else {
+            return nil
+        }
+        guard executables.count == 1, let executable = executables.first else {
+            return nil
+        }
+        return executable
     }
 }
