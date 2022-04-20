@@ -17,7 +17,7 @@ If you have never used AWS Lambda or Docker before, check out this [getting star
 First, create a SwiftPM project and pull Swift AWS Lambda Runtime as dependency into your project
 
  ```swift
- // swift-tools-version:5.2
+ // swift-tools-version:5.6
 
  import PackageDescription
 
@@ -80,7 +80,7 @@ Next, create a `main.swift` and implement your Lambda.
 First, add a dependency on the event packages:
 
  ```swift
- // swift-tools-version:5.2
+ // swift-tools-version:5.6
 
  import PackageDescription
 
