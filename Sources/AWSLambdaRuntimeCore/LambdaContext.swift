@@ -43,7 +43,7 @@ public struct LambdaInitializationContext: _AWSLambdaSendable {
     /// `ByteBufferAllocator` to allocate `ByteBuffer`
     public let allocator: ByteBufferAllocator
 
-    /// `Terminator` to register shutdown operations
+    /// ``LambdaTerminator`` to register shutdown operations
     public let terminator: LambdaTerminator
 
     init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, terminator: LambdaTerminator) {

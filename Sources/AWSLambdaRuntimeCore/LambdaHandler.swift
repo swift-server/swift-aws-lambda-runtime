@@ -119,7 +119,7 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
     ///            The `EventLoopFuture` should be completed with either a response of type `Output` or an `Error`
     func handle(_ event: Event, context: LambdaContext) -> EventLoopFuture<Output>
 
-    /// Encode a response of type `Output` to `ByteBuffer`
+    /// Encode a response of type ``Output`` to `ByteBuffer`
     /// Concrete Lambda handlers implement this method to provide coding functionality.
     /// - parameters:
     ///     - allocator: A `ByteBufferAllocator` to help allocate the `ByteBuffer`.
@@ -128,7 +128,7 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
     /// - Returns: A `ByteBuffer` with the encoded version of the `value`.
     func encode(allocator: ByteBufferAllocator, value: Output) throws -> ByteBuffer?
 
-    /// Decode a`ByteBuffer` to a request or event of type `Event`
+    /// Decode a `ByteBuffer` to a request or event of type ``Event``
     /// Concrete Lambda handlers implement this method to provide coding functionality.
     ///
     /// - parameters:
@@ -139,7 +139,7 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
 }
 
 extension EventLoopLambdaHandler {
-    /// Driver for `ByteBuffer` -> `Event` decoding and `Output` -> `ByteBuffer` encoding
+    /// Driver for `ByteBuffer` -> ``Event`` decoding and ``Output`` -> `ByteBuffer` encoding
     @inlinable
     public func handle(_ event: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?> {
         let input: Event
@@ -169,7 +169,8 @@ extension EventLoopLambdaHandler where Output == Void {
 
 // MARK: - ByteBufferLambdaHandler
 
-/// An `EventLoopFuture` based processing protocol for a Lambda that takes a `ByteBuffer` and returns a `ByteBuffer?` asynchronously.
+/// An `EventLoopFuture` based processing protocol for a Lambda that takes a `ByteBuffer` and returns
+/// an optional `ByteBuffer` asynchronously.
 ///
 /// - note: This is a low level protocol designed to power the higher level ``EventLoopLambdaHandler`` and
 ///         ``LambdaHandler`` based APIs.
