@@ -1,4 +1,4 @@
-// swift-tools-version:5.6
+// swift-tools-version:5.4
 
 import PackageDescription
 
@@ -9,8 +9,6 @@ let package = Package(
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
         // this has all the main functionality for lambda and it does not link Foundation
         .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
-        // plugin to package the lambda, creating an archive that can be uploaded to AWS
-        .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
         // for testing only
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
@@ -53,7 +51,7 @@ let package = Package(
         ]),
         .testTarget(name: "AWSLambdaTestingTests", dependencies: ["AWSLambdaTesting"]),
         // for perf testing
-        .executableTarget(name: "MockServer", dependencies: [
+        .target(name: "MockServer", dependencies: [
             .product(name: "NIOHTTP1", package: "swift-nio"),
             .product(name: "NIO", package: "swift-nio"),
         ]),
