@@ -31,10 +31,6 @@ let package = Package(
             .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
             .product(name: "NIOPosix", package: "swift-nio"),
         ]),
-        .plugin(
-            name: "AWSLambdaPackager",
-            capability: .command(intent: .custom(verb: "archive", description: "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS."))
-        ),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
             .product(name: "NIOTestUtils", package: "swift-nio"),
