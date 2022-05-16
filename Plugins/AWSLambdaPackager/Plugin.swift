@@ -107,6 +107,7 @@ struct AWSLambdaPackager: CommandPlugin {
             )
             let productPath = buildOutputPath.appending(product.name)
             guard FileManager.default.fileExists(atPath: productPath.string) else {
+                print("expected '\(product.name)' binary at \"\(productPath.string)\"")
                 throw Errors.productExecutableNotFound(product.name)
             }
             builtProducts[.init(product)] = productPath
