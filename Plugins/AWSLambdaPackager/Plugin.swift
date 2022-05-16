@@ -28,6 +28,11 @@ struct AWSLambdaPackager: CommandPlugin {
             throw Errors.unknownProduct("no appropriate products found to package")
         }
 
+        if configuration.products.count > 1 && !configuration.explicitProducts {
+            let productNames = configuration.products.map(\.name)
+            print("No explicit products named, building all executable products: '\(productNames.joined(separator: "', '"))'")
+        }
+
         let builtProducts: [LambdaProduct: Path]
         if self.isAmazonLinux2() {
             // build directly on the machine
@@ -85,7 +90,7 @@ struct AWSLambdaPackager: CommandPlugin {
         let buildOutputPathCommand = "swift build -c \(buildConfiguration.rawValue) --show-bin-path"
         let dockerBuildOutputPath = try self.execute(
             executable: dockerToolPath,
-            arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildOutputPathCommand],
+            arguments: ["run", "--rm", "--pull", "always", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildOutputPathCommand],
             logLevel: verboseLogging ? .debug : .silent
         )
         let buildOutputPath = Path(dockerBuildOutputPath.replacingOccurrences(of: "/workspace", with: packageDirectory.string))
@@ -263,6 +268,7 @@ struct AWSLambdaPackager: CommandPlugin {
 private struct Configuration: CustomStringConvertible {
     public let outputDirectory: Path
     public let products: [Product]
+    public let explicitProducts: Bool
     public let buildConfiguration: PackageManager.BuildConfiguration
     public let verboseLogging: Bool
     public let baseDockerImage: String
@@ -291,7 +297,8 @@ private struct Configuration: CustomStringConvertible {
             self.outputDirectory = context.pluginWorkDirectory.appending(subpath: "\(AWSLambdaPackager.self)")
         }
 
-        if !productsArgument.isEmpty {
+        self.explicitProducts = !productsArgument.isEmpty
+        if self.explicitProducts {
             let products = try context.package.products(named: productsArgument)
             for product in products {
                 guard product is ExecutableProduct else {
