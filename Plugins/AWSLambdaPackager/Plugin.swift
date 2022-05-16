@@ -93,7 +93,10 @@ struct AWSLambdaPackager: CommandPlugin {
             arguments: ["run", "--rm", "--pull", "always", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildOutputPathCommand],
             logLevel: verboseLogging ? .debug : .silent
         )
-        let buildOutputPath = Path(dockerBuildOutputPath.replacingOccurrences(of: "/workspace", with: packageDirectory.string))
+        guard let buildPathOutput = dockerBuildOutputPath.split(separator: "\n").last else {
+            throw Errors.failedParsingDockerOutput(dockerBuildOutputPath)
+        }
+        let buildOutputPath = Path(buildPathOutput.replacingOccurrences(of: "/workspace", with: packageDirectory.string))
 
         // build the products
         var builtProducts = [LambdaProduct: Path]()
@@ -107,7 +110,7 @@ struct AWSLambdaPackager: CommandPlugin {
             )
             let productPath = buildOutputPath.appending(product.name)
             guard FileManager.default.fileExists(atPath: productPath.string) else {
-                print("expected '\(product.name)' binary at \"\(productPath.string)\"")
+                Diagnostics.error("expected '\(product.name)' binary at \"\(productPath.string)\"")
                 throw Errors.productExecutableNotFound(product.name)
             }
             builtProducts[.init(product)] = productPath
@@ -219,7 +222,7 @@ struct AWSLambdaPackager: CommandPlugin {
                 print(_output)
                 fflush(stdout)
             }
-            output += _output
+            output += _output + "\n"
         }
 
         let pipe = Pipe()
@@ -364,6 +367,7 @@ private enum Errors: Error, CustomStringConvertible {
     case unknownProduct(String)
     case productExecutableNotFound(String)
     case failedWritingDockerfile
+    case failedParsingDockerOutput(String)
     case processFailed([String], Int32)
 
     var description: String {
@@ -378,6 +382,8 @@ private enum Errors: Error, CustomStringConvertible {
             return "product executable not found '\(product)'"
         case .failedWritingDockerfile:
             return "failed writing dockerfile"
+        case .failedParsingDockerOutput(let output):
+            return "failed parsing docker output: '\(output)'"
         case .processFailed(let arguments, let code):
             return "\(arguments.joined(separator: " ")) failed with code \(code)"
         }
