@@ -38,7 +38,7 @@ let package = Package(
             capability: .command(
                 intent: .custom(
                     verb: "archive",
-                    description: "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS."
+                    description: "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS or non Amazonlinux 2 distributions."
                 )
             )
         ),
