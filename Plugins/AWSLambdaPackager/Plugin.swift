@@ -226,11 +226,17 @@ struct AWSLambdaPackager: CommandPlugin {
             guard let _output = data.flatMap({ String(data: $0, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(["\n"])) }), !_output.isEmpty else {
                 return
             }
-            if logLevel >= .output {
+
+            output += _output + "\n"
+
+            switch logLevel {
+            case .silent:
+                break
+            case .debug(let outputIndent), .output(let outputIndent):
+                print(String(repeating: " ", count: outputIndent), terminator: "")
                 print(_output)
                 fflush(stdout)
             }
-            output += _output + "\n"
         }
 
         let pipe = Pipe()
@@ -359,13 +365,32 @@ private struct Configuration: CustomStringConvertible {
     }
 }
 
-private enum ProcessLogLevel: Int, Comparable {
-    case silent = 0
-    case output = 1
-    case debug = 2
+private enum ProcessLogLevel: Comparable {
+    case silent
+    case output(outputIndent: Int)
+    case debug(outputIndent: Int)
+
+    var naturalOrder: Int {
+        switch self {
+        case .silent:
+            return 0
+        case .output:
+            return 1
+        case .debug:
+            return 2
+        }
+    }
+
+    static var output: Self {
+        .output(outputIndent: 2)
+    }
+
+    static var debug: Self {
+        .debug(outputIndent: 2)
+    }
 
     static func < (lhs: ProcessLogLevel, rhs: ProcessLogLevel) -> Bool {
-        lhs.rawValue < rhs.rawValue
+        lhs.naturalOrder < rhs.naturalOrder
     }
 }
 
