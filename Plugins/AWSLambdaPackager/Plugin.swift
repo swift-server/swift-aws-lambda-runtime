@@ -86,11 +86,19 @@ struct AWSLambdaPackager: CommandPlugin {
         print("building \"\(packageIdentity)\" in docker")
         print("-------------------------------------------------------------------------")
 
+        // update the underlying docker image, if necessary
+        print("updating \"\(baseImage)\" docker image")
+        try self.execute(
+            executable: dockerToolPath,
+            arguments: ["pull", baseImage],
+            logLevel: .output
+        )
+
         // get the build output path
         let buildOutputPathCommand = "swift build -c \(buildConfiguration.rawValue) --show-bin-path"
         let dockerBuildOutputPath = try self.execute(
             executable: dockerToolPath,
-            arguments: ["run", "--rm", "--pull", "always", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildOutputPathCommand],
+            arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildOutputPathCommand],
             logLevel: verboseLogging ? .debug : .silent
         )
         guard let buildPathOutput = dockerBuildOutputPath.split(separator: "\n").last else {
