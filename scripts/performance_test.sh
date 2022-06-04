@@ -3,7 +3,7 @@
 ##
 ## This source file is part of the SwiftAWSLambdaRuntime open source project
 ##
-## Copyright (c) 2017-2018 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+## Copyright (c) 2017-2022 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -27,6 +27,8 @@ if [[ $(uname -s) == "Linux" ]]; then
 fi
 
 swift build -c release -Xswiftc -g
+swift build --package-path Examples/Echo -c release -Xswiftc -g
+swift build --package-path Examples/JSON -c release -Xswiftc -g
 
 cleanup() {
   kill -9 $server_pid
@@ -58,7 +60,7 @@ cold=()
 export MAX_REQUESTS=1
 for (( i=0; i<$cold_iterations; i++ )); do
   start=$(gdate +%s%N)
-  ./.build/release/StringSample
+  ./Examples/Echo/.build/release/MyLambda
   end=$(gdate +%s%N)
   cold+=( $(($end-$start)) )
 done
@@ -70,7 +72,7 @@ results+=( "$MODE, cold: $avg_cold (ns)" )
 echo "running $MODE mode warm test"
 export MAX_REQUESTS=$warm_iterations
 start=$(gdate +%s%N)
-./.build/release/StringSample
+./Examples/Echo/.build/release/MyLambda
 end=$(gdate +%s%N)
 sum_warm=$(($end-$start-$avg_cold)) # substract by avg cold since the first call is cold
 avg_warm=$(($sum_warm/($warm_iterations-1))) # substract since the first call is cold
@@ -96,7 +98,7 @@ cold=()
 export MAX_REQUESTS=1
 for (( i=0; i<$cold_iterations; i++ )); do
   start=$(gdate +%s%N)
-  ./.build/release/CodableSample
+  ./Examples/JSON/.build/release/MyLambda
   end=$(gdate +%s%N)
   cold+=( $(($end-$start)) )
 done
@@ -108,7 +110,7 @@ results+=( "$MODE, cold: $avg_cold (ns)" )
 echo "running $MODE mode warm test"
 export MAX_REQUESTS=$warm_iterations
 start=$(gdate +%s%N)
-./.build/release/CodableSample
+./Examples/JSON/.build/release/MyLambda
 end=$(gdate +%s%N)
 sum_warm=$(($end-$start-$avg_cold)) # substract by avg cold since the first call is cold
 avg_warm=$(($sum_warm/($warm_iterations-1))) # substract since the first call is cold
