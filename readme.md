@@ -77,7 +77,7 @@ Next, create a `main.swift` and implement your Lambda.
 
  Since most Lambda functions are triggered by events originating in the AWS platform like `SNS`, `SQS` or `APIGateway`, the [Swift AWS Lambda Events](http://github.com/swift-server/swift-aws-lambda-events) package includes a `AWSLambdaEvents` module that provides implementations for most common AWS event types further simplifying writing Lambda functions. For example, handling an `SQS` message:
 
-First, add a dependency on the event packages:
+First, add a target dependency on the `AWSLambdaEvents`:
 
  ```swift
  // swift-tools-version:5.6
@@ -91,12 +91,11 @@ First, add a dependency on the event packages:
      ],
      dependencies: [
          .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "0.1.0"),
-         .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", from: "0.1.0"),
      ],
      targets: [
          .target(name: "MyLambda", dependencies: [
            .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-           .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
+           .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-runtime"),
          ]),
      ]
  )
