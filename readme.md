@@ -27,7 +27,7 @@ First, create a SwiftPM project and pull Swift AWS Lambda Runtime as dependency 
          .executable(name: "MyLambda", targets: ["MyLambda"]),
      ],
      dependencies: [
-         .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "0.1.0"),
+         .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "0.5.2"),
      ],
      targets: [
          .target(name: "MyLambda", dependencies: [
@@ -90,8 +90,7 @@ First, add a dependency on the event packages:
          .executable(name: "MyLambda", targets: ["MyLambda"]),
      ],
      dependencies: [
-         .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "0.1.0"),
-         .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", from: "0.1.0"),
+         .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "0.5.2"),
      ],
      targets: [
          .target(name: "MyLambda", dependencies: [
