@@ -91,7 +91,9 @@ First, add a dependency on the event packages:
      ],
      dependencies: [
          .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "0.1.0"),
-         .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", from: "0.1.0"),
+//        Uncomment and replace with the line below when tag "0.1.0" is published, until then use `branch` parameter.
+//         .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", from: "0.1.0"),
+         .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", branch: "main"),
      ],
      targets: [
          .executableTarget(name: "MyLambda", dependencies: [
