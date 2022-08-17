@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2017-2022 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -27,20 +27,20 @@ import NIOCore
 ///         ``ByteBufferLambdaHandler``.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol LambdaHandler: EventLoopLambdaHandler {
-    /// The Lambda initialization method
+    /// The Lambda initialization method.
     /// Use this method to initialize resources that will be used in every request.
     ///
     /// Examples for this can be HTTP or database clients.
     /// - parameters:
-    ///     - context: Runtime `InitializationContext`.
+    ///     - context: Runtime ``LambdaInitializationContext``.
     init(context: LambdaInitializationContext) async throws
 
-    /// The Lambda handling method
+    /// The Lambda handling method.
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
     ///     - event: Event of type `Event` representing the event or request.
-    ///     - context: Runtime `Context`.
+    ///     - context: Runtime ``LambdaContext``.
     ///
     /// - Returns: A Lambda result ot type `Output`.
     func handle(_ event: Event, context: LambdaContext) async throws -> Output
@@ -101,40 +101,40 @@ fileprivate struct UncheckedSendableHandler<Underlying: LambdaHandler, Event, Ou
 ///         implementation to never block the `EventLoop`. Implement this protocol only in performance
 ///         critical situations and implement ``LambdaHandler`` in all other circumstances.
 public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
-    /// The lambda functions input. In most cases this should be Codable. If your event originates from an
+    /// The lambda functions input. In most cases this should be `Codable`. If your event originates from an
     /// AWS service, have a look at [AWSLambdaEvents](https://github.com/swift-server/swift-aws-lambda-events),
     /// which provides a number of commonly used AWS Event implementations.
     associatedtype Event
     /// The lambda functions output. Can be `Void`.
     associatedtype Output
 
-    /// The Lambda handling method
+    /// The Lambda handling method.
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
-    ///     - context: Runtime `Context`.
+    ///     - context: Runtime ``LambdaContext``.
     ///     - event: Event of type `Event` representing the event or request.
     ///
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
-    ///            The `EventLoopFuture` should be completed with either a response of type `Output` or an `Error`
+    ///            The `EventLoopFuture` should be completed with either a response of type ``Output`` or an `Error`.
     func handle(_ event: Event, context: LambdaContext) -> EventLoopFuture<Output>
 
-    /// Encode a response of type ``Output`` to `ByteBuffer`
+    /// Encode a response of type ``Output`` to `ByteBuffer`.
     /// Concrete Lambda handlers implement this method to provide coding functionality.
     /// - parameters:
     ///     - allocator: A `ByteBufferAllocator` to help allocate the `ByteBuffer`.
-    ///     - value: Response of type `Output`.
+    ///     - value: Response of type ``Output``.
     ///
     /// - Returns: A `ByteBuffer` with the encoded version of the `value`.
     func encode(allocator: ByteBufferAllocator, value: Output) throws -> ByteBuffer?
 
-    /// Decode a `ByteBuffer` to a request or event of type ``Event``
+    /// Decode a `ByteBuffer` to a request or event of type ``Event``.
     /// Concrete Lambda handlers implement this method to provide coding functionality.
     ///
     /// - parameters:
     ///     - buffer: The `ByteBuffer` to decode.
     ///
-    /// - Returns: A request or event of type `Event`.
+    /// - Returns: A request or event of type ``Event``.
     func decode(buffer: ByteBuffer) throws -> Event
 }
 
@@ -159,7 +159,7 @@ extension EventLoopLambdaHandler {
     }
 }
 
-/// Implementation of  `ByteBuffer` to `Void` decoding
+/// Implementation of  `ByteBuffer` to `Void` decoding.
 extension EventLoopLambdaHandler where Output == Void {
     @inlinable
     public func encode(allocator: ByteBufferAllocator, value: Void) throws -> ByteBuffer? {
@@ -184,20 +184,20 @@ public protocol ByteBufferLambdaHandler {
     /// minimizes thread hopping.
     static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Self>
 
-    /// The Lambda handling method
+    /// The Lambda handling method.
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
-    ///     - context: Runtime `Context`.
+    ///     - context: Runtime ``LambdaContext``.
     ///     - event: The event or input payload encoded as `ByteBuffer`.
     ///
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
-    ///            The `EventLoopFuture` should be completed with either a response encoded as `ByteBuffer` or an `Error`
+    ///            The `EventLoopFuture` should be completed with either a response encoded as `ByteBuffer` or an `Error`.
     func handle(_ event: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?>
 }
 
 extension ByteBufferLambdaHandler {
-    /// Initializes and runs the lambda function.
+    /// Initializes and runs the Lambda function.
     ///
     /// If you precede your ``ByteBufferLambdaHandler`` conformer's declaration with the
     /// [@main](https://docs.swift.org/swift-book/ReferenceManual/Attributes.html#ID626)

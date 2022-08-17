@@ -26,14 +26,14 @@ public final class LambdaTerminator {
         self.storage = Storage()
     }
 
-    /// Register a shutdown handler with the terminator
+    /// Register a shutdown handler with the terminator.
     ///
     /// - parameters:
-    ///     - name: Display name for logging purposes
+    ///     - name: Display name for logging purposes.
     ///     - handler: The shutdown handler to call when terminating the Lambda.
     ///             Shutdown handlers are called in the reverse order of being registered.
     ///
-    /// - Returns: A `RegistrationKey` that can be used to de-register the handler when its no longer needed.
+    /// - Returns: A ``RegistrationKey`` that can be used to de-register the handler when its no longer needed.
     @discardableResult
     public func register(name: String, handler: @escaping (EventLoop) -> EventLoopFuture<Void>) -> RegistrationKey {
         let key = RegistrationKey()
@@ -41,15 +41,15 @@ public final class LambdaTerminator {
         return key
     }
 
-    /// De-register a shutdown handler with the terminator
+    /// De-register a shutdown handler with the terminator.
     ///
     /// - parameters:
-    ///     - key: A `RegistrationKey` obtained from calling the register API.
+    ///     - key: A ``RegistrationKey`` obtained from calling the register API.
     public func deregister(_ key: RegistrationKey) {
         self.storage.remove(key)
     }
 
-    /// Begin the termination cycle
+    /// Begin the termination cycle.
     /// Shutdown handlers are called in the reverse order of being registered.
     ///
     /// - parameters:

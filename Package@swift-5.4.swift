@@ -1,4 +1,4 @@
-// swift-tools-version:5.6
+// swift-tools-version:5.4
 
 import PackageDescription
 
@@ -9,8 +9,6 @@ let package = Package(
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
         // this has all the main functionality for lambda and it does not link Foundation
         .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
-        // plugin to package the lambda, creating an archive that can be uploaded to AWS
-        .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
         // for testing only
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
@@ -33,15 +31,6 @@ let package = Package(
             .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
             .product(name: "NIOPosix", package: "swift-nio"),
         ]),
-        .plugin(
-            name: "AWSLambdaPackager",
-            capability: .command(
-                intent: .custom(
-                    verb: "archive",
-                    description: "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS or non Amazonlinux 2 distributions."
-                )
-            )
-        ),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
             .product(name: "NIOTestUtils", package: "swift-nio"),
@@ -58,7 +47,7 @@ let package = Package(
         ]),
         .testTarget(name: "AWSLambdaTestingTests", dependencies: ["AWSLambdaTesting"]),
         // for perf testing
-        .executableTarget(name: "MockServer", dependencies: [
+        .target(name: "MockServer", dependencies: [
             .product(name: "NIOHTTP1", package: "swift-nio"),
             .product(name: "NIO", package: "swift-nio"),
         ]),

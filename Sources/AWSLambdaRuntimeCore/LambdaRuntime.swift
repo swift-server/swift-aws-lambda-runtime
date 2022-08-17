@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2017-2022 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -35,7 +35,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     /// Create a new `LambdaRuntime`.
     ///
     /// - parameters:
-    ///     - handlerType: The ``ByteBufferLambdaHandler`` type the `LambdaRuntime` shall create and manage
+    ///     - handlerType: The ``ByteBufferLambdaHandler`` type the `LambdaRuntime` shall create and manage.
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
     public convenience init(_ handlerType: Handler.Type, eventLoop: EventLoop, logger: Logger) {

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2017-2022 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -21,7 +21,7 @@ import NIOFoundationCompat
 
 // MARK: - Codable support
 
-/// Implementation of  a`ByteBuffer` to `Event` decoding
+/// Implementation of  a`ByteBuffer` to `Event` decoding.
 extension EventLoopLambdaHandler where Event: Decodable {
     @inlinable
     public func decode(buffer: ByteBuffer) throws -> Event {
@@ -29,7 +29,7 @@ extension EventLoopLambdaHandler where Event: Decodable {
     }
 }
 
-/// Implementation of  `Output` to `ByteBuffer` encoding
+/// Implementation of  `Output` to `ByteBuffer` encoding.
 extension EventLoopLambdaHandler where Output: Encodable {
     @inlinable
     public func encode(allocator: ByteBufferAllocator, value: Output) throws -> ByteBuffer? {
@@ -37,7 +37,7 @@ extension EventLoopLambdaHandler where Output: Encodable {
     }
 }
 
-/// Default `ByteBuffer` to `Event` decoder using Foundation's JSONDecoder
+/// Default `ByteBuffer` to `Event` decoder using Foundation's `JSONDecoder`.
 /// Advanced users that want to inject their own codec can do it by overriding these functions.
 extension EventLoopLambdaHandler where Event: Decodable {
     public var decoder: LambdaCodableDecoder {
@@ -45,7 +45,7 @@ extension EventLoopLambdaHandler where Event: Decodable {
     }
 }
 
-/// Default `Output` to `ByteBuffer` encoder using Foundation's JSONEncoder
+/// Default `Output` to `ByteBuffer` encoder using Foundation's `JSONEncoder`.
 /// Advanced users that want to inject their own codec can do it by overriding these functions.
 extension EventLoopLambdaHandler where Output: Encodable {
     public var encoder: LambdaCodableEncoder {
