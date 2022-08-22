@@ -1,4 +1,8 @@
-# Swift AWS Lambda Runtime
+# ``AWSLambdaRuntime``
+
+An implementation of the AWS Lambda Runtime API in Swift.
+
+## Overview
 
 Many modern systems have client components like iOS, macOS or watchOS applications as well as server components that those clients interact with. Serverless functions are often the easiest and most efficient way for client application developers to extend their applications into the cloud.
 
@@ -141,17 +145,15 @@ First, add a dependency on the event packages:
  Lambda.run(Handler())
  ```
 
- Beyond the small cognitive complexity of using the `EventLoopFuture` based APIs, note these APIs should be used with extra care. An `EventLoopLambdaHandler` will execute the user code on the same `EventLoop` (thread) as the library, making processing faster but requiring the user code to never call blocking APIs as it might prevent the underlying process from functioning.
+ Beyond the small cognitive complexity of using the `EventLoopFuture` based APIs, note these APIs should be used with extra care. An [`EventLoopLambdaHandler`][ellh] will execute the user code on the same `EventLoop` (thread) as the library, making processing faster but requiring the user code to never call blocking APIs as it might prevent the underlying process from functioning.
 
 ## Deploying to AWS Lambda
 
 To deploy Lambda functions to AWS Lambda, you need to compile the code for Amazon Linux which is the OS used on AWS Lambda microVMs, package it as a Zip file, and upload to AWS.
 
-AWS offers several tools to interact and deploy Lambda functions to AWS Lambda including [SAM](https://aws.amazon.com/serverless/sam/) and the [AWS CLI](https://aws.amazon.com/cli/). The [Examples Directory](/Examples) includes complete sample build and deployment scripts that utilize these tools.
+AWS offers several tools to interact and deploy Lambda functions to AWS Lambda including [SAM](https://aws.amazon.com/serverless/sam/) and the [AWS CLI](https://aws.amazon.com/cli/).
 
-Note the examples mentioned above use dynamic linking, therefore bundle the required Swift libraries in the Zip package along side the executable. You may choose to link the Lambda function statically (using `-static-stdlib`) which could improve performance but requires additional linker flags.
-
-To build the Lambda function for Amazon Linux, use the Docker image published by Swift.org on [Swift toolchains and Docker images for Amazon Linux 2](https://swift.org/download/), as demonstrated in the examples.
+To build the Lambda function for Amazon Linux, use the Docker image published by Swift.org on [Swift toolchains and Docker images for Amazon Linux 2](https://swift.org/download/).
 
 ## Architecture
 
@@ -161,7 +163,7 @@ The library defines three protocols for the implementation of a Lambda Handler. 
 
 An `EventLoopFuture` based processing protocol for a Lambda that takes a `ByteBuffer` and returns a `ByteBuffer?` asynchronously.
 
-`ByteBufferLambdaHandler` is the lowest level protocol designed to power the higher level `EventLoopLambdaHandler` and `LambdaHandler` based APIs. Users are not expected to use this protocol, though some performance sensitive applications that operate at the `ByteBuffer` level or have special serialization needs may choose to do so.
+[`ByteBufferLambdaHandler`][bblh] is the lowest level protocol designed to power the higher level [`EventLoopLambdaHandler`][ellh] and [`LambdaHandler`][lh] based APIs. Users are not expected to use this protocol, though some performance sensitive applications that operate at the `ByteBuffer` level or have special serialization needs may choose to do so.
 
 ```swift
 public protocol ByteBufferLambdaHandler {
@@ -180,11 +182,11 @@ public protocol ByteBufferLambdaHandler {
 
 ### EventLoopLambdaHandler
 
-`EventLoopLambdaHandler` is a strongly typed, `EventLoopFuture` based asynchronous processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out`.
+[`EventLoopLambdaHandler`][ellh] is a strongly typed, `EventLoopFuture` based asynchronous processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out`.
 
-`EventLoopLambdaHandler` extends `ByteBufferLambdaHandler`, providing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer?` encoding for `Codable` and `String`.
+[`EventLoopLambdaHandler`][ellh] extends [`ByteBufferLambdaHandler`][bblh], providing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer?` encoding for `Codable` and `String`.
 
-`EventLoopLambdaHandler` executes the user provided Lambda on the same `EventLoop` as the core runtime engine, making the processing fast but requires more care from the implementation to never block the `EventLoop`. It it designed for performance sensitive applications that use `Codable` or `String` based Lambda functions.
+[`EventLoopLambdaHandler`][ellh] executes the user provided Lambda on the same `EventLoop` as the core runtime engine, making the processing fast but requires more care from the implementation to never block the `EventLoop`. It is designed for performance sensitive applications that use `Codable` or `String` based Lambda functions.
 
 ```swift
 public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
@@ -224,11 +226,11 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
 
 ### LambdaHandler
 
-`LambdaHandler` is a strongly typed, completion handler based asynchronous processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out`.
+[`LambdaHandler`][lh] is a strongly typed, completion handler based asynchronous processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out`.
 
-`LambdaHandler` extends `ByteBufferLambdaHandler`, performing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding for `Codable` and `String`.
+[`LambdaHandler`][lh] extends [`ByteBufferLambdaHandler`][bblh], performing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding for `Codable` and `String`.
 
-`LambdaHandler` offloads the user provided Lambda execution to a `DispatchQueue` making processing safer but slower.
+[`LambdaHandler`][lh] offloads the user provided Lambda execution to a `DispatchQueue` making processing safer but slower.
 
 ```swift
 public protocol LambdaHandler: EventLoopLambdaHandler {
@@ -249,7 +251,7 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
 
 ### Closures
 
-In addition to protocol-based Lambda, the library provides support for Closure-based ones, as demonstrated in the overview section above. Closure-based Lambdas are based on the `LambdaHandler` protocol which mean they are safer. For most use cases, Closure-based Lambda is a great fit and users are encouraged to use them.
+In addition to protocol-based Lambda, the library provides support for Closure-based ones, as demonstrated in the overview section above. Closure-based Lambdas are based on the [`LambdaHandler`][lh] protocol which mean they are safer. For most use cases, Closure-based Lambda is a great fit and users are encouraged to use them.
 
 The library includes implementations for `Codable` and `String` based Lambda. Since AWS Lambda is primarily JSON based, this covers the most common use cases.
 
@@ -328,7 +330,7 @@ A single Lambda execution workflow is made of the following steps:
 1. The library calls AWS Lambda Runtime Engine `/next` endpoint to retrieve the next invocation request.
 2. The library parses the response HTTP headers and populate the `Context` object.
 3. The library reads the `/next` response body and attempt to decode it. Typically it decodes to user provided `In` type which extends `Decodable`, but users may choose to write Lambda functions that receive the input as `String` or `ByteBuffer` which require less, or no decoding.
-4. The library hands off the `Context` and `In` event to the user provided handler. In the case of `LambdaHandler` based handler this is done on a dedicated `DispatchQueue`, providing isolation between user's and the library's code.
+4. The library hands off the `Context` and `In` event to the user provided handler. In the case of [`LambdaHandler`][lh] based handler this is done on a dedicated `DispatchQueue`, providing isolation between user's and the library's code.
 5. User provided handler processes the request asynchronously, invoking a callback or returning a future upon completion, which returns a `Result` type with the `Out` or `Error` populated.
 6. In case of error, the library posts to AWS Lambda Runtime Engine `/error` endpoint to provide the error details, which will show up on AWS Lambda logs.
 7. In case of success, the library will attempt to encode the response. Typically it encodes from user provided `Out` type which extends `Encodable`, but users may choose to write Lambda functions that return a `String` or `ByteBuffer`, which require less, or no encoding. The library then posts the response to AWS Lambda Runtime Engine `/response` endpoint to provide the response to the callee.
@@ -347,7 +349,7 @@ By default, the library also registers a Signal handler that traps `INT` and `TE
 
 ### Integration with AWS Platform Events
 
-AWS Lambda functions can be invoked directly from the AWS Lambda console UI, AWS Lambda API, AWS SDKs, AWS CLI, and AWS toolkits. More commonly, they are invoked as a reaction to an events coming from the AWS platform. To make it easier to integrate with AWS platform events, [Swift AWS Lambda Runtime Events](http://github.com/swift-server/swift-aws-lambda-events) library is available, designed to work together with this runtime library. [Swift AWS Lambda Runtime Events](http://github.com/swift-server/swift-aws-lambda-events) includes an `AWSLambdaEvents` target which provides abstractions for many commonly used events.
+AWS Lambda functions can be invoked directly from the AWS Lambda console UI, AWS Lambda API, AWS SDKs, AWS CLI, and AWS toolkits. More commonly, they are invoked as a reaction to an event coming from the AWS platform. To make it easier to integrate with AWS platform events, [Swift AWS Lambda Runtime Events](http://github.com/swift-server/swift-aws-lambda-events) library is available, designed to work together with this runtime library. [Swift AWS Lambda Runtime Events](http://github.com/swift-server/swift-aws-lambda-events) includes an `AWSLambdaEvents` target which provides abstractions for many commonly used events.
 
 ## Performance
 
@@ -361,16 +363,8 @@ Larger packages size (Zip file uploaded to AWS Lambda) negatively impact the col
 
 Swift provides great Unicode support via [ICU](http://site.icu-project.org/home). Therefore, Swift-based Lambda functions include the ICU libraries which tend to be large. This impacts the download time mentioned above and an area for further optimization. Some of the alternatives worth exploring are using the system ICU that comes with Amazon Linux (albeit older than the one Swift ships with) or working to remove the ICU dependency altogether. We welcome ideas and contributions to this end.
 
-## Security
+<!-- links -->
 
-Please see [SECURITY.md](SECURITY.md) for details on the security process.
-
-## Project status
-
-This is a community-driven open-source project actively seeking contributions.
-While the core API is considered stable, the API may still evolve as we get closer to a `1.0` version.
-There are several areas which need additional attention, including but not limited to:
-
-* Further performance tuning
-* Additional documentation and best practices
-* Additional examples
+[lh]: ./AWSLambdaRuntimeCore/Protocols/LambdaHandler.html
+[ellh]: ./AWSLambdaRuntimeCore/Protocols/EventLoopLambdaHandler.html
+[bblh]: ./AWSLambdaRuntimeCore/Protocols/ByteBufferLambdaHandler.html

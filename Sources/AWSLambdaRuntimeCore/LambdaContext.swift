@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2017-2022 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -29,7 +29,7 @@ import NIOCore
 /// ``ByteBufferLambdaHandler/makeHandler(context:)`` or ``LambdaHandler/init(context:)``
 /// as an argument.
 public struct LambdaInitializationContext: _AWSLambdaSendable {
-    /// `Logger` to log with
+    /// `Logger` to log with.
     ///
     /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
     public let logger: Logger
@@ -40,10 +40,10 @@ public struct LambdaInitializationContext: _AWSLambdaSendable {
     ///         Most importantly the `EventLoop` must never be blocked.
     public let eventLoop: EventLoop
 
-    /// `ByteBufferAllocator` to allocate `ByteBuffer`
+    /// `ByteBufferAllocator` to allocate `ByteBuffer`.
     public let allocator: ByteBufferAllocator
 
-    /// ``LambdaTerminator`` to register shutdown operations
+    /// ``LambdaTerminator`` to register shutdown operations.
     public let terminator: LambdaTerminator
 
     init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, terminator: LambdaTerminator) {
@@ -70,7 +70,7 @@ public struct LambdaInitializationContext: _AWSLambdaSendable {
 // MARK: - Context
 
 /// Lambda runtime context.
-/// The Lambda runtime generates and passes the `Context` to the Lambda handler as an argument.
+/// The Lambda runtime generates and passes the `LambdaContext` to the Lambda handler as an argument.
 public struct LambdaContext: CustomDebugStringConvertible, _AWSLambdaSendable {
     final class _Storage: _AWSLambdaSendable {
         let requestID: String
@@ -123,7 +123,7 @@ public struct LambdaContext: CustomDebugStringConvertible, _AWSLambdaSendable {
         self.storage.invokedFunctionARN
     }
 
-    /// The timestamp that the function times out
+    /// The timestamp that the function times out.
     public var deadline: DispatchWallTime {
         self.storage.deadline
     }
@@ -138,7 +138,7 @@ public struct LambdaContext: CustomDebugStringConvertible, _AWSLambdaSendable {
         self.storage.clientContext
     }
 
-    /// `Logger` to log with
+    /// `Logger` to log with.
     ///
     /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
     public var logger: Logger {
@@ -146,7 +146,7 @@ public struct LambdaContext: CustomDebugStringConvertible, _AWSLambdaSendable {
     }
 
     /// The `EventLoop` the Lambda is executed on. Use this to schedule work with.
-    /// This is useful when implementing the `EventLoopLambdaHandler` protocol.
+    /// This is useful when implementing the ``EventLoopLambdaHandler`` protocol.
     ///
     /// - note: The `EventLoop` is shared with the Lambda runtime engine and should be handled with extra care.
     ///         Most importantly the `EventLoop` must never be blocked.
@@ -154,8 +154,8 @@ public struct LambdaContext: CustomDebugStringConvertible, _AWSLambdaSendable {
         self.storage.eventLoop
     }
 
-    /// `ByteBufferAllocator` to allocate `ByteBuffer`
-    /// This is useful when implementing `EventLoopLambdaHandler`
+    /// `ByteBufferAllocator` to allocate `ByteBuffer`.
+    /// This is useful when implementing ``EventLoopLambdaHandler``.
     public var allocator: ByteBufferAllocator {
         self.storage.allocator
     }
