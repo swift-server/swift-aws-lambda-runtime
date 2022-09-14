@@ -47,34 +47,6 @@ public struct LambdaInitializationContext: _AWSLambdaSendable {
     public let terminator: LambdaTerminator
     
     #if DEBUG
-    /// A flag that determines if the Lambda should run as a local server.
-    ///
-    /// This flag defaults to the value of the `LOCAL_LAMBDA_SERVER_ENABLED` environment variable.
-    /// This property serves as an override point for types conforming to ``LambdaHandler``:
-    ///
-    /// ```swift
-    /// import AWSLambdaRuntime
-    /// import Foundation
-    ///
-    /// @main
-    /// struct EntryHandler: LambdaHandler {
-    ///     typealias Event = <#YourCodableEventType#>
-    ///     typealias Output = <#YourCodableResponseType#>
-    ///
-    ///     init(context: LambdaInitializationContext) async throws {
-    ///         // You can specify this Lambda as a local server here
-    ///         context.isLocalServer = true
-    ///     }
-    ///
-    ///     func handle(_ event: Event, context: LambdaContext) async throws -> Output {
-    ///         try await yourClient.getResponse(for: event)
-    ///     }
-    /// }
-    /// ```
-    ///
-    /// - note: This flag is a no-op on non-`DEBUG` builds. If your code conditionally compiles
-    /// using the `#if DEBUG` compilation flag, then this flag can be used to inform the Lambda to
-    /// run as a local server.
     public var isLocalServer: Bool {
         get { Lambda.isLocalServer }
         set { Lambda.isLocalServer = newValue }
@@ -88,6 +60,45 @@ public struct LambdaInitializationContext: _AWSLambdaSendable {
         self.logger = logger
         self.allocator = allocator
         self.terminator = terminator
+    }
+    
+    /// Informs the Lambda whether or not it should run as a local server.
+    ///
+    /// This function is akin to setting the `LOCAL_LAMBDA_SERVER_ENABLED` environment variable
+    /// without having to edit a scheme in Xcode or your shell process and serves as an override
+    /// point for types that are initialized with a ``LambdaInitializationContext``. This is an
+    /// example of a simple LambdaHandler that uses Codable types for its associated `Event` and
+    /// `Output` types:
+    ///
+    /// ```swift
+    /// import AWSLambdaRuntime
+    /// import Foundation
+    ///
+    /// @main
+    /// struct EntryHandler: LambdaHandler {
+    ///     typealias Event = <#YourCodableEventType#>
+    ///     typealias Output = <#YourCodableResponseType#>
+    ///
+    ///     init(context: LambdaInitializationContext) async throws {
+    ///         // You can specify this Lambda as a local server here
+    ///         context.enableLocalServer()
+    ///     }
+    ///
+    ///     func handle(_ event: Event, context: LambdaContext) async throws -> Output {
+    ///         try await client.processResponse(for: event)
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// - parameters:
+    ///  - enabled: A `Bool` that overrides the process' `LOCAL_LAMBDA_SERVER_ENABLED` environment
+    ///  variable to the passed-in value. Defaults to `true`.
+    ///
+    /// - note: This function is a no-op on non-`DEBUG` builds. If your project conditionally
+    /// compiles using the `#if DEBUG` compilation flag, then this flag can be used to inform the
+    /// Lambda to run as a local server.
+    public func enableLocalServer(_ enabled: Bool = true) {
+        Lambda.isLocalServer = enabled
     }
 
     /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
