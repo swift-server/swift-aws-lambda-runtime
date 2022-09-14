@@ -45,6 +45,43 @@ public struct LambdaInitializationContext: _AWSLambdaSendable {
 
     /// ``LambdaTerminator`` to register shutdown operations.
     public let terminator: LambdaTerminator
+    
+    #if DEBUG
+    /// A flag that determines if the Lambda should run as a local server.
+    ///
+    /// This flag defaults to the value of the `LOCAL_LAMBDA_SERVER_ENABLED` environment variable.
+    /// This property serves as an override point for types conforming to ``LambdaHandler``:
+    ///
+    /// ```swift
+    /// import AWSLambdaRuntime
+    /// import Foundation
+    ///
+    /// @main
+    /// struct EntryHandler: LambdaHandler {
+    ///     typealias Event = <#YourCodableEventType#>
+    ///     typealias Output = <#YourCodableResponseType#>
+    ///
+    ///     init(context: LambdaInitializationContext) async throws {
+    ///         // You can specify this Lambda as a local server here
+    ///         context.isLocalServer = true
+    ///     }
+    ///
+    ///     func handle(_ event: Event, context: LambdaContext) async throws -> Output {
+    ///         try await yourClient.getResponse(for: event)
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// - note: This flag is a no-op on non-`DEBUG` builds. If your code conditionally compiles
+    /// using the `#if DEBUG` compilation flag, then this flag can be used to inform the Lambda to
+    /// run as a local server.
+    public var isLocalServer: Bool {
+        get { Lambda.isLocalServer }
+        set { Lambda.isLocalServer = newValue }
+    }
+    #else
+    public let isLocalServer = false
+    #endif
 
     init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, terminator: LambdaTerminator) {
         self.eventLoop = eventLoop

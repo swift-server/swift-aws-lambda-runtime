@@ -73,7 +73,7 @@ public enum Lambda {
 
         // start local server for debugging in DEBUG mode only
         #if DEBUG
-        if Lambda.env("LOCAL_LAMBDA_SERVER_ENABLED").flatMap(Bool.init) ?? false {
+        if Lambda.isLocalServer {
             do {
                 return try Lambda.withLocalServer {
                     _run(configuration)
@@ -93,6 +93,13 @@ public enum Lambda {
 // MARK: - Public API
 
 extension Lambda {
+    #if DEBUG
+    static var isLocalServer: Bool {
+        get { env("LOCAL_LAMBDA_SERVER_ENABLED").flatMap(Bool.init) ?? false }
+        set { setenv("LOCAL_LAMBDA_SERVER_ENABLED", String(newValue), 1) }
+    }
+    #endif
+    
     /// Utility to access/read environment variables
     public static func env(_ name: String) -> String? {
         guard let value = getenv(name) else {
