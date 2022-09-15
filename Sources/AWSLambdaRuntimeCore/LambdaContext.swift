@@ -46,15 +46,6 @@ public struct LambdaInitializationContext: _AWSLambdaSendable {
     /// ``LambdaTerminator`` to register shutdown operations.
     public let terminator: LambdaTerminator
     
-    #if DEBUG
-    public var isLocalServer: Bool {
-        get { Lambda.isLocalServer }
-        set { Lambda.isLocalServer = newValue }
-    }
-    #else
-    public let isLocalServer = false
-    #endif
-
     init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, terminator: LambdaTerminator) {
         self.eventLoop = eventLoop
         self.logger = logger
@@ -62,45 +53,6 @@ public struct LambdaInitializationContext: _AWSLambdaSendable {
         self.terminator = terminator
     }
     
-    /// Informs the Lambda whether or not it should run as a local server.
-    ///
-    /// This function is akin to setting the `LOCAL_LAMBDA_SERVER_ENABLED` environment variable
-    /// without having to edit a scheme in Xcode or your shell process and serves as an override
-    /// point for types that are initialized with a ``LambdaInitializationContext``. This is an
-    /// example of a simple LambdaHandler that uses Codable types for its associated `Event` and
-    /// `Output` types:
-    ///
-    /// ```swift
-    /// import AWSLambdaRuntime
-    /// import Foundation
-    ///
-    /// @main
-    /// struct EntryHandler: LambdaHandler {
-    ///     typealias Event = <#YourCodableEventType#>
-    ///     typealias Output = <#YourCodableResponseType#>
-    ///
-    ///     init(context: LambdaInitializationContext) async throws {
-    ///         // You can specify this Lambda as a local server here
-    ///         context.enableLocalServer()
-    ///     }
-    ///
-    ///     func handle(_ event: Event, context: LambdaContext) async throws -> Output {
-    ///         try await client.processResponse(for: event)
-    ///     }
-    /// }
-    /// ```
-    ///
-    /// - parameters:
-    ///  - enabled: A `Bool` that overrides the process' `LOCAL_LAMBDA_SERVER_ENABLED` environment
-    ///  variable to the passed-in value. Defaults to `true`.
-    ///
-    /// - note: This function is a no-op on non-`DEBUG` builds. If your project conditionally
-    /// compiles using the `#if DEBUG` compilation flag, then this flag can be used to inform the
-    /// Lambda to run as a local server.
-    public func enableLocalServer(_ enabled: Bool = true) {
-        Lambda.isLocalServer = enabled
-    }
-
     /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
     public static func __forTestsOnly(
         logger: Logger,

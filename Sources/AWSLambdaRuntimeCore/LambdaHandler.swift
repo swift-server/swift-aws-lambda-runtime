@@ -27,8 +27,15 @@ import NIOCore
 ///         ``ByteBufferLambdaHandler``.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol LambdaHandler: EventLoopLambdaHandler {
-    /// The Lambda initialization method.
+    /// The empty Lambda initialization method.
     /// Use this method to initialize resources that will be used in every request.
+    ///
+    /// Examples for this can be HTTP or database clients.
+    init()
+    
+    /// The Lambda initialization method.
+    /// Use this method to initialize resources that will be used in every request. Defaults to
+    /// calling ``LambdaHandler/init()``
     ///
     /// Examples for this can be HTTP or database clients.
     /// - parameters:
@@ -48,6 +55,10 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler {
+    public init(context: LambdaInitializationContext) async throws {
+        self.init()
+    }
+    
     public static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Self> {
         let promise = context.eventLoop.makePromise(of: Self.self)
         promise.completeWithTask {
@@ -176,6 +187,37 @@ extension EventLoopLambdaHandler where Output == Void {
 ///         ``LambdaHandler`` based APIs.
 ///         Most users are not expected to use this protocol.
 public protocol ByteBufferLambdaHandler {
+    /// Informs the Lambda whether or not it should run as a local server. Defaults to `false`.
+    ///
+    /// This variable is akin to setting the `LOCAL_LAMBDA_SERVER_ENABLED` environment variable
+    /// without having to edit a scheme in Xcode or your shell process. This variable serves as an
+    /// override point for types conforming to ``EventLoopLambdaHandler``.
+    ///
+    /// This value is meant to be a debugging tool and nothing more. For this reason,
+    /// `isLocalServer` is a no-op that returns `false` for builds that compile using any flag that
+    /// isn't the `#DEBUG` conditional compilation flag.
+    ///
+    /// The following is an example of this variable within a simple ``LambdaHandler`` that uses
+    /// `Codable` types for its associated `Event` and `Output` types:
+    ///
+    /// ```swift
+    /// import AWSLambdaRuntime
+    /// import Foundation
+    ///
+    /// @main
+    /// struct EntryHandler: LambdaHandler {
+    ///     typealias Event = <#YourCodableEventType#>
+    ///     typealias Output = <#YourCodableResponseType#>
+    ///
+    ///     static let isLocalServer = true
+    ///
+    ///     func handle(_ event: Event, context: LambdaContext) async throws -> Output {
+    ///         try await client.processResponse(for: event)
+    ///     }
+    /// }
+    /// ```
+    static var isLocalServer: Bool { get }
+    
     /// Create your Lambda handler for the runtime.
     ///
     /// Use this to initialize all your resources that you want to cache between invocations. This could be database
@@ -197,6 +239,10 @@ public protocol ByteBufferLambdaHandler {
 }
 
 extension ByteBufferLambdaHandler {
+    /// Default implementation that returns `false` for the
+    /// ``ByteBufferLambdaHandler/isLocalServer-9s211`` flag.
+    public static var isLocalServer: Bool { false }
+    
     /// Initializes and runs the Lambda function.
     ///
     /// If you precede your ``ByteBufferLambdaHandler`` conformer's declaration with the
@@ -205,8 +251,8 @@ extension ByteBufferLambdaHandler {
     ///
     /// The lambda runtime provides a default implementation of the method that manages the launch
     /// process.
-    public static func main() {
-        _ = Lambda.run(configuration: .init(), handlerType: Self.self)
+    public static func main() throws {
+        try Lambda.run(configuration: .init(), handlerType: Self.self)
     }
 }
 

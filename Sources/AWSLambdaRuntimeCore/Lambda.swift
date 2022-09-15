@@ -36,70 +36,60 @@ public enum Lambda {
     internal static func run<Handler: ByteBufferLambdaHandler>(
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
-    ) -> Result<Int, Error> {
-        let _run = { (configuration: LambdaConfiguration) -> Result<Int, Error> in
-            Backtrace.install()
-            var logger = Logger(label: "Lambda")
-            logger.logLevel = configuration.general.logLevel
-
-            var result: Result<Int, Error>!
-            MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
-                let runtime = LambdaRuntime<Handler>(eventLoop: eventLoop, logger: logger, configuration: configuration)
-                #if DEBUG
-                let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
-                    logger.info("intercepted signal: \(signal)")
-                    runtime.shutdown()
-                }
-                #endif
-
-                runtime.start().flatMap {
-                    runtime.shutdownFuture
-                }.whenComplete { lifecycleResult in
-                    #if DEBUG
-                    signalSource.cancel()
-                    #endif
-                    eventLoop.shutdownGracefully { error in
-                        if let error = error {
-                            preconditionFailure("Failed to shutdown eventloop: \(error)")
-                        }
-                    }
-                    result = lifecycleResult
-                }
-            }
-
-            logger.info("shutdown completed")
-            return result
-        }
-
+    ) throws {
+        var result: Result<Int, Error>?
+        
         // start local server for debugging in DEBUG mode only
         #if DEBUG
-        if Lambda.isLocalServer {
-            do {
-                return try Lambda.withLocalServer {
-                    _run(configuration)
-                }
-            } catch {
-                return .failure(error)
-            }
-        } else {
-            return _run(configuration)
+        var localServer: LocalLambda.Server? = nil
+        if Handler.isLocalServer || env("LOCAL_LAMBDA_SERVER_ENABLED").flatMap(Bool.init) ?? false {
+            localServer = try Lambda.startLocalServer()
         }
-        #else
-        return _run(configuration)
         #endif
+
+        Backtrace.install()
+        var logger = Logger(label: "Lambda")
+        logger.logLevel = configuration.general.logLevel
+
+        MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
+            let runtime = LambdaRuntime<Handler>(eventLoop: eventLoop, logger: logger, configuration: configuration)
+            #if DEBUG
+            let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
+                logger.info("intercepted signal: \(signal)")
+                runtime.shutdown()
+            }
+            #endif
+
+            runtime.start().flatMap {
+                runtime.shutdownFuture
+            }.whenComplete { lifecycleResult in
+                #if DEBUG
+                signalSource.cancel()
+                #endif
+                result = lifecycleResult
+                eventLoop.shutdownGracefully { error in
+                    if let error = error {
+                        preconditionFailure("Failed to shutdown eventloop: \(error)")
+                    }
+                }
+            }
+        }
+
+        logger.info("shutdown completed")
+        
+        #if DEBUG
+        try localServer?.stop()
+        #endif
+        
+        if case .failure(let error) = result {
+            throw error
+        }
     }
 }
 
 // MARK: - Public API
 
 extension Lambda {
-    #if DEBUG
-    static var isLocalServer: Bool {
-        get { env("LOCAL_LAMBDA_SERVER_ENABLED").flatMap(Bool.init) ?? false }
-        set { setenv("LOCAL_LAMBDA_SERVER_ENABLED", String(newValue), 1) }
-    }
-    #endif
-    
     /// Utility to access/read environment variables
     public static func env(_ name: String) -> String? {
         guard let value = getenv(name) else {
