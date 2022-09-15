@@ -14,13 +14,12 @@
 
 #if compiler(>=5.6)
 @preconcurrency import Dispatch
-@preconcurrency import Logging
-@preconcurrency import NIOCore
 #else
 import Dispatch
+#endif
+
 import Logging
 import NIOCore
-#endif
 
 // MARK: - InitializationContext
 

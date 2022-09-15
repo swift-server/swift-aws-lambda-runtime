@@ -13,13 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 @testable import AWSLambdaRuntimeCore
-#if compiler(>=5.6)
-@preconcurrency import Logging
-@preconcurrency import NIOPosix
-#else
 import Logging
 import NIOPosix
-#endif
 import NIOCore
 import XCTest
 
@@ -108,7 +103,7 @@ class LambdaTest: XCTestCase {
             usleep(100_000)
             kill(getpid(), signal.rawValue)
         }
-        let result = try try Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
+        let result = try Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
         XCTAssertGreaterThan(result, 0, "should have stopped before any request made")
         XCTAssertLessThan(result, maxTimes, "should have stopped before \(maxTimes)")
     }
