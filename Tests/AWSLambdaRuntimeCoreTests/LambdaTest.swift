@@ -24,38 +24,44 @@ import NIOCore
 import XCTest
 
 class LambdaTest: XCTestCase {
-    func testSuccess() {
+    func testSuccess() throws {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
+        assertLambdaRuntimeResult(
+            try Lambda.run(configuration: configuration, handlerType: EchoHandler.self),
+            shouldHaveRun: maxTimes
+        )
     }
 
-    func testFailure() {
+    func testFailure() throws {
         let server = MockLambdaServer(behavior: Behavior(result: .failure(RuntimeError())))
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handlerType: RuntimeErrorHandler.self)
-        assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
+        assertLambdaRuntimeResult(
+            try Lambda.run(configuration: configuration, handlerType: RuntimeErrorHandler.self),
+            shouldHaveRun: maxTimes
+        )
     }
 
-    func testBootstrapFailure() {
+    func testBootstrapFailure() throws {
         let server = MockLambdaServer(behavior: FailedBootstrapBehavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(configuration: .init(), handlerType: StartupErrorHandler.self)
-        assertLambdaRuntimeResult(result, shouldFailWithError: StartupError())
+        assertLambdaRuntimeResult(
+            try Lambda.run(configuration: .init(), handlerType: StartupErrorHandler.self),
+            shouldFailWithError: StartupError()
+        )
     }
 
-    func testBootstrapFailureAndReportErrorFailure() {
+    func testBootstrapFailureAndReportErrorFailure() throws {
         struct Behavior: LambdaServerBehavior {
             func getInvocation() -> GetInvocationResult {
                 XCTFail("should not get invocation")
@@ -81,11 +87,13 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let result = Lambda.run(configuration: .init(), handlerType: StartupErrorHandler.self)
-        assertLambdaRuntimeResult(result, shouldFailWithError: StartupError())
+        assertLambdaRuntimeResult(
+            try Lambda.run(configuration: .init(), handlerType: StartupErrorHandler.self),
+            shouldFailWithError: StartupError()
+        )
     }
 
-    func testStartStopInDebugMode() {
+    func testStartStopInDebugMode() throws {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
@@ -100,15 +108,9 @@ class LambdaTest: XCTestCase {
             usleep(100_000)
             kill(getpid(), signal.rawValue)
         }
-        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-
-        switch result {
-        case .success(let invocationCount):
-            XCTAssertGreaterThan(invocationCount, 0, "should have stopped before any request made")
-            XCTAssertLessThan(invocationCount, maxTimes, "should have stopped before \(maxTimes)")
-        case .failure(let error):
-            XCTFail("Unexpected error: \(error)")
-        }
+        let result = try try Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
+        XCTAssertGreaterThan(result, 0, "should have stopped before any request made")
+        XCTAssertLessThan(result, maxTimes, "should have stopped before \(maxTimes)")
     }
 
     func testTimeout() {
@@ -119,8 +121,10 @@ class LambdaTest: XCTestCase {
 
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: 1),
                                                 runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
-        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shouldFailWithError: LambdaRuntimeError.upstreamError("timeout"))
+        assertLambdaRuntimeResult(
+            try Lambda.run(configuration: configuration, handlerType: EchoHandler.self),
+            shouldFailWithError: LambdaRuntimeError.upstreamError("timeout")
+        )
     }
 
     func testDisconnect() {
@@ -129,8 +133,10 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: 1))
-        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shouldFailWithError: LambdaRuntimeError.upstreamError("connectionResetByPeer"))
+        assertLambdaRuntimeResult(
+            try Lambda.run(configuration: configuration, handlerType: EchoHandler.self),
+            shouldFailWithError: LambdaRuntimeError.upstreamError("connectionResetByPeer")
+        )
     }
 
     func testBigEvent() {
@@ -140,8 +146,10 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: 1))
-        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shoudHaveRun: 1)
+        assertLambdaRuntimeResult(
+            try Lambda.run(configuration: configuration, handlerType: EchoHandler.self),
+            shouldHaveRun: 1
+        )
     }
 
     func testKeepAliveServer() {
@@ -151,8 +159,10 @@ class LambdaTest: XCTestCase {
 
         let maxTimes = 10
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
+        assertLambdaRuntimeResult(
+            try Lambda.run(configuration: configuration, handlerType: EchoHandler.self),
+            shouldHaveRun: maxTimes
+        )
     }
 
     func testNoKeepAliveServer() {
@@ -162,8 +172,10 @@ class LambdaTest: XCTestCase {
 
         let maxTimes = 10
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
+        assertLambdaRuntimeResult(
+            try Lambda.run(configuration: configuration, handlerType: EchoHandler.self),
+            shouldHaveRun: maxTimes
+        )
     }
 
     func testServerFailure() {
@@ -190,8 +202,10 @@ class LambdaTest: XCTestCase {
             }
         }
 
-        let result = Lambda.run(configuration: .init(), handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shouldFailWithError: LambdaRuntimeError.badStatusCode(.internalServerError))
+        assertLambdaRuntimeResult(
+            try Lambda.run(configuration: .init(), handlerType: EchoHandler.self),
+            shouldFailWithError: LambdaRuntimeError.badStatusCode(.internalServerError)
+        )
     }
 
     func testDeadline() {

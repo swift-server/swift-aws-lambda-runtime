@@ -94,12 +94,7 @@ class CodableLambdaTest: XCTestCase {
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testCodableVoidHandler() {
         struct Handler: LambdaHandler {
-            typealias Event = Request
-            typealias Output = Void
-
             var expected: Request?
-
-            init(context: LambdaInitializationContext) async throws {}
 
             func handle(_ event: Request, context: LambdaContext) async throws {
                 XCTAssertEqual(event, self.expected)
@@ -123,12 +118,7 @@ class CodableLambdaTest: XCTestCase {
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testCodableHandler() {
         struct Handler: LambdaHandler {
-            typealias Event = Request
-            typealias Output = Response
-
             var expected: Request?
-
-            init(context: LambdaInitializationContext) async throws {}
 
             func handle(_ event: Request, context: LambdaContext) async throws -> Response {
                 XCTAssertEqual(event, self.expected)

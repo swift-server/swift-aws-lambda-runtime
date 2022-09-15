@@ -30,11 +30,6 @@ class LambdaTestingTests: XCTestCase {
         }
 
         struct MyLambda: LambdaHandler {
-            typealias Event = Request
-            typealias Output = Response
-
-            init(context: LambdaInitializationContext) {}
-
             func handle(_ event: Request, context: LambdaContext) async throws -> Response {
                 Response(message: "echo" + event.name)
             }
@@ -54,11 +49,6 @@ class LambdaTestingTests: XCTestCase {
         }
 
         struct MyLambda: LambdaHandler {
-            typealias Event = Request
-            typealias Output = Void
-
-            init(context: LambdaInitializationContext) {}
-
             func handle(_ event: Request, context: LambdaContext) async throws {
                 LambdaTestingTests.VoidLambdaHandlerInvokeCount += 1
             }
@@ -74,11 +64,6 @@ class LambdaTestingTests: XCTestCase {
         struct MyError: Error {}
 
         struct MyLambda: LambdaHandler {
-            typealias Event = String
-            typealias Output = Void
-
-            init(context: LambdaInitializationContext) {}
-
             func handle(_ event: String, context: LambdaContext) async throws {
                 throw MyError()
             }
@@ -91,11 +76,6 @@ class LambdaTestingTests: XCTestCase {
 
     func testAsyncLongRunning() {
         struct MyLambda: LambdaHandler {
-            typealias Event = String
-            typealias Output = String
-
-            init(context: LambdaInitializationContext) {}
-
             func handle(_ event: String, context: LambdaContext) async throws -> String {
                 try await Task.sleep(nanoseconds: 500 * 1000 * 1000)
                 return event

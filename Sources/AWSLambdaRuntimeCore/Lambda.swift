@@ -33,11 +33,12 @@ public enum Lambda {
     ///     - handlerType: The Handler to create and invoke.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
+    @discardableResult
     internal static func run<Handler: ByteBufferLambdaHandler>(
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
-    ) throws {
-        var result: Result<Int, Error>?
+    ) throws -> Int {
+        var result: Result<Int, Error> = .success(0)
         
         // start local server for debugging in DEBUG mode only
         #if DEBUG
@@ -66,12 +67,12 @@ public enum Lambda {
                 #if DEBUG
                 signalSource.cancel()
                 #endif
-                result = lifecycleResult
                 eventLoop.shutdownGracefully { error in
                     if let error = error {
                         preconditionFailure("Failed to shutdown eventloop: \(error)")
                     }
                 }
+                result = lifecycleResult
             }
         }
 
@@ -81,7 +82,10 @@ public enum Lambda {
         try localServer?.stop()
         #endif
         
-        if case .failure(let error) = result {
+        switch result {
+        case .success(let count):
+            return count
+        case .failure(let error):
             throw error
         }
     }

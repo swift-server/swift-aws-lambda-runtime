@@ -32,18 +32,20 @@ func runLambda<Handler: ByteBufferLambdaHandler>(behavior: LambdaServerBehavior,
     }.wait()
 }
 
-func assertLambdaRuntimeResult(_ result: Result<Int, Error>, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil, file: StaticString = #file, line: UInt = #line) {
-    switch result {
-    case .success where shouldFailWithError != nil:
-        XCTFail("should fail with \(shouldFailWithError!)", file: file, line: line)
-    case .success(let count) where shouldFailWithError == nil:
-        XCTAssertEqual(shoudHaveRun, count, "should have run \(shoudHaveRun) times", file: file, line: line)
-    case .failure(let error) where shouldFailWithError == nil:
-        XCTFail("should succeed, but failed with \(error)", file: file, line: line)
-    case .failure(let error) where shouldFailWithError != nil:
-        XCTAssertEqual(String(describing: shouldFailWithError!), String(describing: error), "expected error to mactch", file: file, line: line)
-    default:
-        XCTFail("invalid state")
+func assertLambdaRuntimeResult(_ result: @autoclosure () throws -> Int, shouldHaveRun: Int = 0, shouldFailWithError: Error? = nil, file: StaticString = #file, line: UInt = #line) {
+    do {
+        let count = try result()
+        if let shouldFailWithError = shouldFailWithError {
+            XCTFail("should fail with \(shouldFailWithError)", file: file, line: line)
+        } else {
+            XCTAssertEqual(shouldHaveRun, count, "should have run \(shouldHaveRun) times", file: file, line: line)
+        }
+    } catch {
+        if let shouldFailWithError = shouldFailWithError {
+            XCTAssertEqual(String(describing: shouldFailWithError), String(describing: error), "expected error to mactch", file: file, line: line)
+        } else {
+            XCTFail("should succeed, but failed with \(error)", file: file, line: line)
+        }
     }
 }
 
