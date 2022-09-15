@@ -27,6 +27,13 @@ import NIOCore
 ///         ``ByteBufferLambdaHandler``.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol LambdaHandler: EventLoopLambdaHandler {
+    /// The lambda functions input. In most cases this should be `Codable`. If your event originates from an
+    /// AWS service, have a look at [AWSLambdaEvents](https://github.com/swift-server/swift-aws-lambda-events),
+    /// which provides a number of commonly used AWS Event implementations.
+    associatedtype Event = Self.Event where Event == Self.Event
+    /// The lambda functions output. Can be `Void`.
+    associatedtype Output = Self.Output where Output == Self.Output
+    
     /// The empty Lambda initialization method.
     /// Use this method to initialize resources that will be used in every request.
     ///
