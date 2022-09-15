@@ -30,7 +30,6 @@ class LambdaHandlerTest: XCTestCase {
         struct TestBootstrapHandler: LambdaHandler {
             var initialized = false
 
-            init() {}
             init(context: LambdaInitializationContext) async throws {
                 XCTAssertFalse(self.initialized)
                 try await Task.sleep(nanoseconds: 100 * 1000 * 1000) // 0.1 seconds

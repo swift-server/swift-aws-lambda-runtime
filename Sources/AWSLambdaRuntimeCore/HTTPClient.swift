@@ -172,8 +172,6 @@ private final class LambdaChannelHandler: ChannelDuplexHandler {
     private var state: State = .idle
     private var lastError: Error?
 
-    init() {}
-
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         guard case .idle = self.state else {
             preconditionFailure("invalid state, outstanding request")

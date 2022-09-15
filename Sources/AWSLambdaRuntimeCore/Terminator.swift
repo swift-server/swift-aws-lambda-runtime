@@ -20,11 +20,7 @@ import NIOCore
 public final class LambdaTerminator {
     fileprivate typealias Handler = (EventLoop) -> EventLoopFuture<Void>
 
-    private var storage: Storage
-
-    init() {
-        self.storage = Storage()
-    }
+    private var storage: Storage = Storage()
 
     /// Register a shutdown handler with the terminator.
     ///

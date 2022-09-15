@@ -38,7 +38,7 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
     /// Use this method to initialize resources that will be used in every request.
     ///
     /// Examples for this can be HTTP or database clients.
-    init()
+    init() async throws
     
     /// The Lambda initialization method.
     /// Use this method to initialize resources that will be used in every request. Defaults to
@@ -62,8 +62,12 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler {
+    public init() async throws {
+        throw LambdaRuntimeError.upstreamError("You should not indirectly initialize LambdaHandlers")
+    }
+    
     public init(context: LambdaInitializationContext) async throws {
-        self.init()
+        try await self.init()
     }
     
     public static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Self> {

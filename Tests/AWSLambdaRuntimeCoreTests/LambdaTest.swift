@@ -95,7 +95,7 @@ class LambdaTest: XCTestCase {
 
         let signal = Signal.ALRM
         let maxTimes = 1000
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes, stopSignal: signal))
+        let configuration = LambdaConfiguration(lifecycle: .init(stopSignal: signal, maxTimes: maxTimes))
 
         DispatchQueue(label: "test").async {
             // we need to schedule the signal before we start the long running `Lambda.run`, since

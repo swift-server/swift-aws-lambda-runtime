@@ -17,26 +17,12 @@ import Logging
 import NIOCore
 
 internal struct LambdaConfiguration: CustomStringConvertible {
-    let general: General
-    let lifecycle: Lifecycle
-    let runtimeEngine: RuntimeEngine
-
-    init() {
-        self.init(general: .init(), lifecycle: .init(), runtimeEngine: .init())
-    }
-
-    init(general: General? = nil, lifecycle: Lifecycle? = nil, runtimeEngine: RuntimeEngine? = nil) {
-        self.general = general ?? General()
-        self.lifecycle = lifecycle ?? Lifecycle()
-        self.runtimeEngine = runtimeEngine ?? RuntimeEngine()
-    }
+    var general: General = .init()
+    var lifecycle: Lifecycle = .init()
+    var runtimeEngine: RuntimeEngine = .init()
 
     struct General: CustomStringConvertible {
-        let logLevel: Logger.Level
-
-        init(logLevel: Logger.Level? = nil) {
-            self.logLevel = logLevel ?? Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
-        }
+        var logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
 
         var description: String {
             "\(General.self)(logLevel: \(self.logLevel))"
@@ -44,15 +30,10 @@ internal struct LambdaConfiguration: CustomStringConvertible {
     }
 
     struct Lifecycle: CustomStringConvertible {
-        let id: String
-        let maxTimes: Int
-        let stopSignal: Signal
-
-        init(id: String? = nil, maxTimes: Int? = nil, stopSignal: Signal? = nil) {
-            self.id = id ?? "\(DispatchTime.now().uptimeNanoseconds)"
-            self.maxTimes = maxTimes ?? Lambda.env("MAX_REQUESTS").flatMap(Int.init) ?? 0
-            self.stopSignal = stopSignal ?? Lambda.env("STOP_SIGNAL").flatMap(Int32.init).flatMap(Signal.init) ?? Signal.TERM
-            precondition(self.maxTimes >= 0, "maxTimes must be equal or larger than 0")
+        var id: String = "\(DispatchTime.now().uptimeNanoseconds)"
+        var stopSignal: Signal = Lambda.env("STOP_SIGNAL").flatMap(Int32.init).flatMap(Signal.init) ?? Signal.TERM
+        var maxTimes: Int = Lambda.env("MAX_REQUESTS").flatMap(Int.init) ?? 0 {
+            didSet { precondition(self.maxTimes >= 0, "maxTimes must be equal or larger than 0") }
         }
 
         var description: String {
