@@ -14,107 +14,121 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 
 If you have never used AWS Lambda or Docker before, check out this [getting started guide](https://fabianfett.de/getting-started-with-swift-aws-lambda-runtime) which helps you with every step from zero to a running Lambda.
 
-First, create a SwiftPM project and pull Swift AWS Lambda Runtime as dependency into your project
+First, create a SwiftPM project with an executable target and pull Swift AWS Lambda Runtime as dependency into your project:
 
- ```swift
- // swift-tools-version:5.6
+```swift
+// swift-tools-version:5.6
+import PackageDescription
+let package = Package(
+    name: "my-lambda",
+    products: [
+        .executable(name: "MyLambda", targets: ["MyLambda"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "0.1.0"),
+    ],
+    targets: [
+        .executableTarget(name: "MyLambda", dependencies: [
+          .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+        ]),
+    ]
+)
+```
 
- import PackageDescription
+Now you can start implementing your Lambda!
 
- let package = Package(
-     name: "my-lambda",
-     products: [
-         .executable(name: "MyLambda", targets: ["MyLambda"]),
-     ],
-     dependencies: [
-         .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "0.1.0"),
-     ],
-     targets: [
-         .executableTarget(name: "MyLambda", dependencies: [
-           .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-         ]),
-     ]
- )
- ```
+### Creating an Entry Point for your Lambda 
 
-Next, create a `main.swift` and implement your Lambda.
+The simplest way to use `AWSLambdaRuntime` is to create a type conforming to the `LambdaHandler`
+protocol:
 
- ### Using Closures
+```swift
+// Import the module
+import AWSLambdaRuntime
 
- The simplest way to use `AWSLambdaRuntime` is to pass in a closure, for example:
+@main
+struct Handler: LambdaHandler {
+    // in this example we are receiving and responding with strings
+    func handle(request: String) -> String {
+        return "Hello, \(request)!"
+    }
+}
+```
 
- ```swift
- // Import the module
- import AWSLambdaRuntime
+> Using the `@main` attribute provides a signal to `AWSLambdaRuntime` that this is your application's entry point. The framework will handle everything else from there. This means that you don't have to create a main.swift file. 
 
- // in this example we are receiving and responding with strings
- Lambda.run { (context, name: String, callback: @escaping (Result<String, Error>) -> Void) in
-   callback(.success("Hello, \(name)"))
- }
- ```
+### Using JSON as your Lambda's Input/Output
 
- More commonly, the event would be a JSON, which is modeled using `Codable`, for example:
+More commonly, events coming into your Lambda will most likely be JSON objects, which is modeled using `Codable`, for example:
 
- ```swift
- // Import the module
- import AWSLambdaRuntime
+```swift
+// Import the module
+import AWSLambdaRuntime
+import Foundation
 
- // Request, uses Codable for transparent JSON encoding
- private struct Request: Codable {
-   let name: String
- }
+// Request, uses `Decodable` for transparent JSON encoding
+private struct Request: Decodable {
+    let name: String
+}
 
- // Response, uses Codable for transparent JSON encoding
- private struct Response: Codable {
-   let message: String
- }
+// Response, uses `Encodable` for transparent JSON encoding
+private struct Response: Encodable {
+    let message: String
+}
 
- // In this example we are receiving and responding with `Codable`.
- Lambda.run { (context, request: Request, callback: @escaping (Result<Response, Error>) -> Void) in
-   callback(.success(Response(message: "Hello, \(request.name)")))
- }
- ```
+@main
+struct Handler: LambdaHandler {
+    // In this example we are receiving a Decodable and responding with an `Encodable`.
+    func handle(request: Request) -> Response {
+        return "Hello, \(request)!"
+    }
+}
+```
 
- Since most Lambda functions are triggered by events originating in the AWS platform like `SNS`, `SQS` or `APIGateway`, the [Swift AWS Lambda Events](http://github.com/swift-server/swift-aws-lambda-events) package includes an `AWSLambdaEvents` module that provides implementations for most common AWS event types further simplifying writing Lambda functions. For example, handling an `SQS` message:
+### Using Popular AWS Events
 
-First, add a dependency on the event packages:
+Since most Lambda functions are triggered by events originating in the AWS platform like `SNS`, `SQS` or `APIGateway`, the [Swift AWS Lambda Events](http://github.com/swift-server/swift-aws-lambda-events) package includes an `AWSLambdaEvents` module that provides implementations for most common AWS event types further simplifying writing Lambda functions. For example, handling an `SQS` message:
 
- ```swift
- // swift-tools-version:5.6
+First, add a dependency on the event package:
 
- import PackageDescription
+```swift
+// swift-tools-version:5.6
 
- let package = Package(
-     name: "my-lambda",
-     products: [
-         .executable(name: "MyLambda", targets: ["MyLambda"]),
-     ],
-     dependencies: [
-         .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "0.1.0"),
-     ],
-     targets: [
-         .executableTarget(name: "MyLambda", dependencies: [
-           .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-           .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-runtime"),
-         ]),
-     ]
- )
- ```
+import PackageDescription
+
+let package = Package(
+    name: "my-lambda",
+    products: [
+        .executable(name: "MyLambda", targets: ["MyLambda"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "0.1.0"),
+    ],
+    targets: [
+        .executableTarget(name: "MyLambda", dependencies: [
+          .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+          .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-runtime"),
+        ]),
+    ]
+)
+```
 
 
- ```swift
- // Import the modules
- import AWSLambdaRuntime
- import AWSLambdaEvents
+```swift
+// Import the modules
+import AWSLambdaRuntime
+import AWSLambdaEvents
 
- // In this example we are receiving an SQS Event, with no response (Void).
- Lambda.run { (context, message: SQS.Event, callback: @escaping (Result<Void, Error>) -> Void) in
-   ...
-   callback(.success(Void()))
- }
- ```
+@main
+struct Handler: LambdaHandler {
+    // In this example we are receiving a Decodable and responding with an `Encodable`.
+    func handle(request: SQS.Event) {
+        ...
+    }
+}
+```
 
- Modeling Lambda functions as Closures is both simple and safe. Swift AWS Lambda Runtime will ensure that the user-provided code is offloaded from the network processing thread such that even if the code becomes slow to respond or gets hang, the underlying process can continue to function. This safety comes at a small performance penalty from context switching between threads. In many cases, the simplicity and safety of using the Closure based API is often preferred over the complexity of the performance-oriented API.
+Modeling Lambda functions as Closures is both simple and safe. Swift AWS Lambda Runtime will ensure that the user-provided code is offloaded from the network processing thread such that even if the code becomes slow to respond or gets hang, the underlying process can continue to function. This safety comes at a small performance penalty from context switching between threads. In many cases, the simplicity and safety of using the Closure based API is often preferred over the complexity of the performance-oriented API.
 
 ### Using EventLoopLambdaHandler
 

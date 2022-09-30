@@ -53,7 +53,17 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
-    ///     - event: Event of type `Event` representing the event or request.
+    ///     - request: Event of type `Event` representing the event or request.
+    ///     - context: Runtime ``LambdaContext``.
+    ///
+    /// - Returns: A Lambda result ot type `Output`.
+    func handle(request: Request) async throws -> Response
+    
+    /// The Lambda handling method.
+    /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
+    ///
+    /// - parameters:
+    ///     - request: Event of type `Event` representing the event or request.
     ///     - context: Runtime ``LambdaContext``.
     ///
     /// - Returns: A Lambda result ot type `Output`.
@@ -76,6 +86,10 @@ extension LambdaHandler {
             try await Self(context: context)
         }
         return promise.futureResult
+    }
+    
+    public func handle(request: Request, context: LambdaContext) async throws -> Response {
+        try await handle(request: request)
     }
 }
 
@@ -139,8 +153,8 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
-    ///     - context: Runtime ``LambdaContext``.
     ///     - event: Event of type `Event` representing the event or request.
+    ///     - context: Runtime ``LambdaContext``.
     ///
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     ///            The `EventLoopFuture` should be completed with either a response of type ``Output`` or an `Error`.
