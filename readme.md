@@ -50,7 +50,7 @@ import AWSLambdaRuntime
 struct Handler: LambdaHandler {
     // in this example we are receiving and responding with strings
     func handle(request: String) -> String {
-        return "Hello, \(request)!"
+        "Hello, \(request)!"
     }
 }
 ```
@@ -78,9 +78,9 @@ private struct Response: Encodable {
 
 @main
 struct Handler: LambdaHandler {
-    // In this example we are receiving a Decodable and responding with an `Encodable`.
+    // In this example we are receiving a `Decodable` and responding with an `Encodable`.
     func handle(request: Request) -> Response {
-        return "Hello, \(request)!"
+        Response(message: Hello, \(request.name)!")
     }
 }
 ```
@@ -121,38 +121,35 @@ import AWSLambdaEvents
 
 @main
 struct Handler: LambdaHandler {
-    // In this example we are receiving a Decodable and responding with an `Encodable`.
+    // In this example we are receiving a Decodable, with no response (Void).
     func handle(request: SQS.Event) {
         ...
     }
 }
 ```
 
-Modeling Lambda functions as Closures is both simple and safe. Swift AWS Lambda Runtime will ensure that the user-provided code is offloaded from the network processing thread such that even if the code becomes slow to respond or gets hang, the underlying process can continue to function. This safety comes at a small performance penalty from context switching between threads. In many cases, the simplicity and safety of using the Closure based API is often preferred over the complexity of the performance-oriented API.
-
 ### Using EventLoopLambdaHandler
 
- Performance sensitive Lambda functions may choose to use a more complex API which allows user code to run on the same thread as the networking handlers. Swift AWS Lambda Runtime uses [SwiftNIO](https://github.com/apple/swift-nio) as its underlying networking engine which means the APIs are based on [SwiftNIO](https://github.com/apple/swift-nio) concurrency primitives like the `EventLoop` and `EventLoopFuture`. For example:
+Performance sensitive Lambda functions may choose to use a more complex API which allows user code to run on the same thread as the networking handlers. Swift AWS Lambda Runtime uses [SwiftNIO](https://github.com/apple/swift-nio) as its underlying networking engine which means the APIs are based on [SwiftNIO](https://github.com/apple/swift-nio) concurrency primitives like the `EventLoop` and `EventLoopFuture`. For example:
 
- ```swift
- // Import the modules
- import AWSLambdaRuntime
- import AWSLambdaEvents
- import NIO
+```swift
+// Import the modules
+import AWSLambdaRuntime
+import AWSLambdaEvents
+import NIO
 
- // Our Lambda handler, conforms to EventLoopLambdaHandler
- struct Handler: EventLoopLambdaHandler {
-     // In this example we are receiving an SNS Message, with no response (Void).
-     func handle(event: SNS.Message, context: LambdaContext) -> EventLoopFuture<Void> {
-         ...
-         context.eventLoop.makeSucceededFuture(Void())
-     }
- }
+// Our Lambda handler which conforms to `EventLoopLambdaHandler`
+@main
+struct Handler: EventLoopLambdaHandler {
+    // In this example we are receiving an SNS Message, with no response (Void).
+    func handle(event: SNS.Message, context: LambdaContext) -> EventLoopFuture<Void> {
+        ...
+        context.eventLoop.makeSucceededFuture(Void())
+    }
+}
+```
 
- Lambda.run(Handler())
- ```
-
- Beyond the small cognitive complexity of using the `EventLoopFuture` based APIs, note these APIs should be used with extra care. An `EventLoopLambdaHandler` will execute the user code on the same `EventLoop` (thread) as the library, making processing faster but requiring the user code to never call blocking APIs as it might prevent the underlying process from functioning.
+Beyond the small cognitive complexity of using the `EventLoopFuture` based APIs, note these APIs should be used with extra care. An `EventLoopLambdaHandler` will execute the user code on the same `EventLoop` (thread) as the library, making processing faster but requiring the user code to never call blocking APIs as it might prevent the underlying process from functioning.
 
 ## Deploying to AWS Lambda
 
@@ -180,99 +177,78 @@ public protocol ByteBufferLambdaHandler {
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
+    ///  - buffer: The event or request payload encoded as a `ByteBuffer`.
     ///  - context: Runtime `Context`.
-    ///  - event: The event or request payload encoded as `ByteBuffer`.
     ///
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     /// The `EventLoopFuture` should be completed with either a response encoded as `ByteBuffer` or an `Error`
-    func handle(context: Lambda.Context, event: ByteBuffer) -> EventLoopFuture<ByteBuffer?>
+    func handle(buffer: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?>
 }
 ```
 
 ### EventLoopLambdaHandler
 
-`EventLoopLambdaHandler` is a strongly typed, `EventLoopFuture` based asynchronous processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out`.
+`EventLoopLambdaHandler` is a strongly typed, `EventLoopFuture` based asynchronous processing protocol for a Lambda that takes a user defined `Event` type and returns a user defined `Output` type.
 
-`EventLoopLambdaHandler` extends `ByteBufferLambdaHandler`, providing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer?` encoding for `Codable` and `String`.
+`EventLoopLambdaHandler` extends `ByteBufferLambdaHandler`, providing `ByteBuffer` -> `Event` decoding and `Output` -> `ByteBuffer?` encoding for `Codable` and `String`.
 
-`EventLoopLambdaHandler` executes the user provided Lambda on the same `EventLoop` as the core runtime engine, making the processing fast but requires more care from the implementation to never block the `EventLoop`. It it designed for performance sensitive applications that use `Codable` or `String` based Lambda functions.
+`EventLoopLambdaHandler` executes the user provided Lambda on the same `EventLoop` as the core runtime engine, making the processing fast but requires more care from the implementation to never block the `EventLoop`. It is designed for performance sensitive applications that use `Codable` or `String` based Lambda functions.
 
 ```swift
 public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
-    associatedtype In
-    associatedtype Out
+    associatedtype Event
+    associatedtype Output
 
     /// The Lambda handling method
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
+    ///  - event: Event of type `Event` representing the event or request.
     ///  - context: Runtime `Context`.
-    ///  - event: Event of type `In` representing the event or request.
     ///
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
-    /// The `EventLoopFuture` should be completed with either a response of type `Out` or an `Error`
-    func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out>
+    /// The `EventLoopFuture` should be completed with either a response of type `Output` or an `Error`
+    func handle(event: Event, context: LambdaContext) -> EventLoopFuture<Output>
 
-    /// Encode a response of type `Out` to `ByteBuffer`
+    /// Encode a response of type `Output` to `ByteBuffer`
     /// Concrete Lambda handlers implement this method to provide coding functionality.
     /// - parameters:
     ///  - allocator: A `ByteBufferAllocator` to help allocate the `ByteBuffer`.
-    ///  - value: Response of type `Out`.
+    ///  - value: Response of type `Output`.
     ///
     /// - Returns: A `ByteBuffer` with the encoded version of the `value`.
-    func encode(allocator: ByteBufferAllocator, value: Out) throws -> ByteBuffer?
+    func encode(allocator: ByteBufferAllocator, value: Output) throws -> ByteBuffer?
 
-    /// Decode a`ByteBuffer` to a request or event of type `In`
+    /// Decode a `ByteBuffer` to a request or event of type `Event`
     /// Concrete Lambda handlers implement this method to provide coding functionality.
     ///
     /// - parameters:
     ///  - buffer: The `ByteBuffer` to decode.
     ///
-    /// - Returns: A request or event of type `In`.
-    func decode(buffer: ByteBuffer) throws -> In
+    /// - Returns: A request or event of type `Event`.
+    func decode(buffer: ByteBuffer) throws -> Event
 }
 ```
 
 ### LambdaHandler
 
-`LambdaHandler` is a strongly typed, completion handler based asynchronous processing protocol for a Lambda that takes a user defined `In` and returns a user defined `Out`.
+`LambdaHandler` is a strongly-typed processing protocol that uses Swift concurrency primitives for a Lambda that takes a user defined `Request` and returns a user defined `Response`.
 
-`LambdaHandler` extends `ByteBufferLambdaHandler`, performing `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding for `Codable` and `String`.
-
-`LambdaHandler` offloads the user provided Lambda execution to a `DispatchQueue` making processing safer but slower.
+`LambdaHandler` extends `EventLoopLambdaHandler`, allowing the user to write Swift async logic in the body of their `handle(request:context:)` function.
 
 ```swift
 public protocol LambdaHandler: EventLoopLambdaHandler {
-    /// Defines to which `DispatchQueue` the Lambda execution is offloaded to.
-    var offloadQueue: DispatchQueue { get }
-
-    /// The Lambda handling method
+    /// The Lambda handling method.
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
-    ///  - context: Runtime `Context`.
-    ///  - event: Event of type `In` representing the event or request.
-    ///  - callback: Completion handler to report the result of the Lambda back to the runtime engine.
-    ///  The completion handler expects a `Result` with either a response of type `Out` or an `Error`
-    func handle(context: Lambda.Context, event: In, callback: @escaping (Result<Out, Error>) -> Void)
+    ///     - request: Event of type `Request` representing the event or request.
+    ///     - context: Runtime ``LambdaContext``.
+    ///
+    /// - Returns: A Lambda result ot type `Output`.
+    func handle(request: Request, context: LambdaContext) async throws -> Response
 }
 ```
-
-### Closures
-
-In addition to protocol-based Lambda, the library provides support for Closure-based ones, as demonstrated in the overview section above. Closure-based Lambdas are based on the `LambdaHandler` protocol which mean they are safer. For most use cases, Closure-based Lambda is a great fit and users are encouraged to use them.
-
-The library includes implementations for `Codable` and `String` based Lambda. Since AWS Lambda is primarily JSON based, this covers the most common use cases.
-
-```swift
-public typealias CodableClosure<In: Decodable, Out: Encodable> = (Lambda.Context, In, @escaping (Result<Out, Error>) -> Void) -> Void
-```
-
-```swift
-public typealias StringClosure = (Lambda.Context, String, @escaping (Result<String, Error>) -> Void) -> Void
-```
-
-This design allows for additional event types as well, and such Lambda implementation can extend one of the above protocols and provided their own `ByteBuffer` -> `In` decoding and `Out` -> `ByteBuffer` encoding.
 
 ### Context
 
@@ -318,7 +294,7 @@ public final class Context {
 
 ### Configuration
 
-The library’s behavior can be fine tuned using environment variables based configuration. The library supported the following environment variables:
+This library’s behavior can be fine tuned using environment variables based configuration. This library supports the following environment variables:
 
 * `LOG_LEVEL`: Define the logging level as defined by [SwiftLog](https://github.com/apple/swift-log). Set to INFO by default.
 * `MAX_REQUESTS`: Max cycles the library should handle before exiting. Set to none by default.
@@ -338,11 +314,11 @@ A single Lambda execution workflow is made of the following steps:
 
 1. The library calls AWS Lambda Runtime Engine `/next` endpoint to retrieve the next invocation request.
 2. The library parses the response HTTP headers and populate the `Context` object.
-3. The library reads the `/next` response body and attempt to decode it. Typically it decodes to user provided `In` type which extends `Decodable`, but users may choose to write Lambda functions that receive the input as `String` or `ByteBuffer` which require less, or no decoding.
-4. The library hands off the `Context` and `In` event to the user provided handler. In the case of `LambdaHandler` based handler this is done on a dedicated `DispatchQueue`, providing isolation between user's and the library's code.
-5. User provided handler processes the request asynchronously, invoking a callback or returning a future upon completion, which returns a `Result` type with the `Out` or `Error` populated.
+3. The library reads the `/next` response body and attempt to decode it. Typically it decodes to user provided `Event` type which extends `Decodable`, but users may choose to write Lambda functions that receive the input as `String` or `ByteBuffer` which require less, or no decoding.
+4. The library hands off the `Context` and `Event` event to the user provided handler.
+5. The user-provided handler processes the request asynchronously, returning a future or the result itself upon completion, which returns a `Result` type with the `Output` or `Error` populated.
 6. In case of error, the library posts to AWS Lambda Runtime Engine `/error` endpoint to provide the error details, which will show up on AWS Lambda logs.
-7. In case of success, the library will attempt to encode the response. Typically it encodes from user provided `Out` type which extends `Encodable`, but users may choose to write Lambda functions that return a `String` or `ByteBuffer`, which require less, or no encoding. The library then posts the response to AWS Lambda Runtime Engine `/response` endpoint to provide the response to the callee.
+7. In case of success, the library will attempt to encode the response. Typically it encodes from user provided `Output` type which extends `Encodable`, but users may choose to write Lambda functions that return a `String` or `ByteBuffer`, which require less, or no encoding. The library then posts the response to AWS Lambda Runtime Engine `/response` endpoint to provide the response to the callee.
 
 The library encapsulates the workflow via the internal `LambdaRuntimeClient` and `LambdaRunner` structs respectively.
 
