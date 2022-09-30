@@ -128,11 +128,8 @@ First, add a dependency on the event packages:
 
  // Our Lambda handler, conforms to EventLoopLambdaHandler
  struct Handler: EventLoopLambdaHandler {
-     typealias In = SNS.Message // Request type
-     typealias Out = Void // Response type
-
      // In this example we are receiving an SNS Message, with no response (Void).
-     func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
+     func handle(event: SNS.Message, context: LambdaContext) -> EventLoopFuture<Void> {
          ...
          context.eventLoop.makeSucceededFuture(Void())
      }
