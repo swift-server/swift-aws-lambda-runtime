@@ -71,9 +71,6 @@ class LambdaRuntimeTest: XCTestCase {
         }
 
         struct ShutdownErrorHandler: EventLoopLambdaHandler {
-            typealias Event = String
-            typealias Output = Void
-
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<ShutdownErrorHandler> {
                 // register shutdown operation
                 context.terminator.register(name: "test 1", handler: { eventLoop in
@@ -94,7 +91,7 @@ class LambdaRuntimeTest: XCTestCase {
                 return context.eventLoop.makeSucceededFuture(ShutdownErrorHandler())
             }
 
-            func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<Void> {
+            func handle(event: String, context: LambdaContext) -> EventLoopFuture<Void> {
                 context.eventLoop.makeSucceededVoidFuture()
             }
         }

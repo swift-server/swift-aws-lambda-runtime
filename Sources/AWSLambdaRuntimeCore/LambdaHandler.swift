@@ -30,9 +30,9 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
     /// The lambda functions input. In most cases this should be `Codable`. If your event originates from an
     /// AWS service, have a look at [AWSLambdaEvents](https://github.com/swift-server/swift-aws-lambda-events),
     /// which provides a number of commonly used AWS Event implementations.
-    associatedtype Event = Self.Event where Event == Self.Event
+    associatedtype Request = Event
     /// The lambda functions output. Can be `Void`.
-    associatedtype Output = Self.Output where Output == Self.Output
+    associatedtype Response = Output
     
     /// The empty Lambda initialization method.
     /// Use this method to initialize resources that will be used in every request.
@@ -57,7 +57,7 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
     ///     - context: Runtime ``LambdaContext``.
     ///
     /// - Returns: A Lambda result ot type `Output`.
-    func handle(_ event: Event, context: LambdaContext) async throws -> Output
+    func handle(request: Request, context: LambdaContext) async throws -> Response
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -65,7 +65,7 @@ extension LambdaHandler {
     public init() async throws {
         throw LambdaRuntimeError.upstreamError("You should not indirectly initialize LambdaHandler as an explicit type")
     }
-
+    
     public init(context: LambdaInitializationContext) async throws {
         try await self.init()
     }
@@ -77,31 +77,36 @@ extension LambdaHandler {
         }
         return promise.futureResult
     }
+}
 
-    public func handle(_ event: Event, context: LambdaContext) -> EventLoopFuture<Output> {
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension LambdaHandler where Request == Event, Response == Output {
+    public func handle(event: Event, context: LambdaContext) -> EventLoopFuture<Output> {
         let promise = context.eventLoop.makePromise(of: Output.self)
         // using an unchecked sendable wrapper for the handler
         // this is safe since lambda runtime is designed to calls the handler serially
         let handler = UncheckedSendableHandler(underlying: self)
         promise.completeWithTask {
-            try await handler.handle(event, context: context)
+            try await handler.handle(request: event, context: context)
         }
         return promise.futureResult
     }
 }
 
+
+
 /// unchecked sendable wrapper for the handler
 /// this is safe since lambda runtime is designed to calls the handler serially
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-fileprivate struct UncheckedSendableHandler<Underlying: LambdaHandler, Event, Output>: @unchecked Sendable where Event == Underlying.Event, Output == Underlying.Output {
+fileprivate struct UncheckedSendableHandler<Underlying: LambdaHandler, Request, Response>: @unchecked Sendable where Request == Underlying.Request, Response == Underlying.Response {
     let underlying: Underlying
 
     init(underlying: Underlying) {
         self.underlying = underlying
     }
 
-    func handle(_ event: Event, context: LambdaContext) async throws -> Output {
-        try await self.underlying.handle(event, context: context)
+    func handle(request: Request, context: LambdaContext) async throws -> Response {
+        try await self.underlying.handle(request: request, context: context)
     }
 }
 #endif
@@ -128,7 +133,7 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
     /// which provides a number of commonly used AWS Event implementations.
     associatedtype Event
     /// The lambda functions output. Can be `Void`.
-    associatedtype Output
+    associatedtype Output = Void
 
     /// The Lambda handling method.
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
@@ -139,7 +144,7 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
     ///
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     ///            The `EventLoopFuture` should be completed with either a response of type ``Output`` or an `Error`.
-    func handle(_ event: Event, context: LambdaContext) -> EventLoopFuture<Output>
+    func handle(event: Event, context: LambdaContext) -> EventLoopFuture<Output>
 
     /// Encode a response of type ``Output`` to `ByteBuffer`.
     /// Concrete Lambda handlers implement this method to provide coding functionality.
@@ -163,15 +168,15 @@ public protocol EventLoopLambdaHandler: ByteBufferLambdaHandler {
 extension EventLoopLambdaHandler {
     /// Driver for `ByteBuffer` -> ``Event`` decoding and ``Output`` -> `ByteBuffer` encoding
     @inlinable
-    public func handle(_ event: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?> {
+    public func handle(buffer: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?> {
         let input: Event
         do {
-            input = try self.decode(buffer: event)
+            input = try self.decode(buffer: buffer)
         } catch {
             return context.eventLoop.makeFailedFuture(CodecError.requestDecoding(error))
         }
 
-        return self.handle(input, context: context).flatMapThrowing { output in
+        return self.handle(event: input, context: context).flatMapThrowing { output in
             do {
                 return try self.encode(allocator: context.allocator, value: output)
             } catch {
@@ -184,7 +189,7 @@ extension EventLoopLambdaHandler {
 /// Implementation of  `ByteBuffer` to `Void` decoding.
 extension EventLoopLambdaHandler where Output == Void {
     @inlinable
-    public func encode(allocator: ByteBufferAllocator, value: Void) throws -> ByteBuffer? {
+    public func encode(allocator: ByteBufferAllocator, value: Output) throws -> ByteBuffer? {
         nil
     }
 }
@@ -241,12 +246,12 @@ public protocol ByteBufferLambdaHandler {
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
+    ///     - buffer: The event or input payload encoded as `ByteBuffer`.
     ///     - context: Runtime ``LambdaContext``.
-    ///     - event: The event or input payload encoded as `ByteBuffer`.
     ///
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     ///            The `EventLoopFuture` should be completed with either a response encoded as `ByteBuffer` or an `Error`.
-    func handle(_ event: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?>
+    func handle(buffer: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?>
 }
 
 extension ByteBufferLambdaHandler {

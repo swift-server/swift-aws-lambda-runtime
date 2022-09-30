@@ -90,7 +90,7 @@ extension Lambda {
         let handler = try promise.futureResult.wait()
 
         return try eventLoop.flatSubmit {
-            handler.handle(event, context: context)
+            handler.handle(event: event, context: context)
         }.wait()
     }
 }

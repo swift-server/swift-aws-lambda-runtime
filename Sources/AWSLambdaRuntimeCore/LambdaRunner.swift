@@ -74,7 +74,7 @@ internal final class LambdaRunner {
                 invocation: invocation
             )
             logger.debug("sending invocation to lambda handler \(handler)")
-            return handler.handle(bytes, context: context)
+            return handler.handle(buffer: bytes, context: context)
                 // Hopping back to "our" EventLoop is important in case the handler returns a future that
                 // originiated from a foreign EventLoop/EventLoopGroup.
                 // This can happen if the handler uses a library (lets say a DB client) that manages its own threads/loops

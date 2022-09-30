@@ -16,7 +16,7 @@ import NIOCore
 extension EventLoopLambdaHandler where Event == String {
     /// Implementation of a `ByteBuffer` to `String` decoding.
     @inlinable
-    public func decode(buffer: ByteBuffer) throws -> String {
+    public func decode(buffer: ByteBuffer) throws -> Event {
         var buffer = buffer
         guard let string = buffer.readString(length: buffer.readableBytes) else {
             fatalError("buffer.readString(length: buffer.readableBytes) failed")
@@ -28,7 +28,7 @@ extension EventLoopLambdaHandler where Event == String {
 extension EventLoopLambdaHandler where Output == String {
     /// Implementation of `String` to `ByteBuffer` encoding.
     @inlinable
-    public func encode(allocator: ByteBufferAllocator, value: String) throws -> ByteBuffer? {
+    public func encode(allocator: ByteBufferAllocator, value: Output) throws -> ByteBuffer? {
         // FIXME: reusable buffer
         var buffer = allocator.buffer(capacity: value.utf8.count)
         buffer.writeString(value)

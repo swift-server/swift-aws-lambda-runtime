@@ -17,14 +17,11 @@ import NIOCore
 import XCTest
 
 struct EchoHandler: EventLoopLambdaHandler {
-    typealias Event = String
-    typealias Output = String
-
     static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<EchoHandler> {
         context.eventLoop.makeSucceededFuture(EchoHandler())
     }
 
-    func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<String> {
+    func handle(event: String, context: LambdaContext) -> EventLoopFuture<String> {
         context.eventLoop.makeSucceededFuture(event)
     }
 }
@@ -32,14 +29,11 @@ struct EchoHandler: EventLoopLambdaHandler {
 struct StartupError: Error {}
 
 struct StartupErrorHandler: EventLoopLambdaHandler {
-    typealias Event = String
-    typealias Output = String
-
     static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<StartupErrorHandler> {
         context.eventLoop.makeFailedFuture(StartupError())
     }
 
-    func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<String> {
+    func handle(event: String, context: LambdaContext) -> EventLoopFuture<String> {
         XCTFail("Must never be called")
         return context.eventLoop.makeSucceededFuture(event)
     }
@@ -48,14 +42,11 @@ struct StartupErrorHandler: EventLoopLambdaHandler {
 struct RuntimeError: Error {}
 
 struct RuntimeErrorHandler: EventLoopLambdaHandler {
-    typealias Event = String
-    typealias Output = Void
-
     static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<RuntimeErrorHandler> {
         context.eventLoop.makeSucceededFuture(RuntimeErrorHandler())
     }
 
-    func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<Void> {
+    func handle(event: String, context: LambdaContext) -> EventLoopFuture<Void> {
         context.eventLoop.makeFailedFuture(RuntimeError())
     }
 }

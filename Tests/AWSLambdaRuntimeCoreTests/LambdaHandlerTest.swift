@@ -41,8 +41,8 @@ class LambdaHandlerTest: XCTestCase {
                 self.initialized = true
             }
 
-            func handle(_ event: String, context: LambdaContext) async throws -> String {
-                event
+            func handle(request: String, context: LambdaContext) async throws -> String {
+                request
             }
         }
 
@@ -69,7 +69,7 @@ class LambdaHandlerTest: XCTestCase {
                 throw TestError("kaboom")
             }
 
-            func handle(_ event: String, context: LambdaContext) async throws {
+            func handle(request: String, context: LambdaContext) async throws {
                 XCTFail("How can this be called if init failed")
             }
         }
@@ -90,8 +90,8 @@ class LambdaHandlerTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: LambdaHandler {
-            func handle(_ event: String, context: LambdaContext) async throws -> String {
-                event
+            func handle(request: String, context: LambdaContext) async throws -> String {
+                request
             }
         }
 
@@ -110,7 +110,7 @@ class LambdaHandlerTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: LambdaHandler {
-            func handle(_ event: String, context: LambdaContext) async throws {}
+            func handle(request: String, context: LambdaContext) async throws {}
         }
 
         let maxTimes = Int.random(in: 1 ... 10)
@@ -129,7 +129,7 @@ class LambdaHandlerTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: LambdaHandler {
-            func handle(_ event: String, context: LambdaContext) async throws -> String {
+            func handle(request: String, context: LambdaContext) async throws -> String {
                 throw TestError("boom")
             }
         }
@@ -155,7 +155,7 @@ class LambdaHandlerTest: XCTestCase {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
 
-            func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<String> {
+            func handle(event: String, context: LambdaContext) -> EventLoopFuture<String> {
                 context.eventLoop.makeSucceededFuture(event)
             }
         }
@@ -178,7 +178,7 @@ class LambdaHandlerTest: XCTestCase {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
 
-            func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<Void> {
+            func handle(event: String, context: LambdaContext) -> EventLoopFuture<Void> {
                 context.eventLoop.makeSucceededFuture(())
             }
         }
@@ -201,7 +201,7 @@ class LambdaHandlerTest: XCTestCase {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
 
-            func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<String> {
+            func handle(event: String, context: LambdaContext) -> EventLoopFuture<String> {
                 context.eventLoop.makeFailedFuture(TestError("boom"))
             }
         }
@@ -224,7 +224,7 @@ class LambdaHandlerTest: XCTestCase {
                 context.eventLoop.makeFailedFuture(TestError("kaboom"))
             }
 
-            func handle(_ event: String, context: LambdaContext) -> EventLoopFuture<String> {
+            func handle(event: String, context: LambdaContext) -> EventLoopFuture<String> {
                 XCTFail("Must never be called")
                 return context.eventLoop.makeFailedFuture(TestError("boom"))
             }
