@@ -49,7 +49,7 @@ import AWSLambdaRuntime
 @main
 struct Handler: LambdaHandler {
     // in this example we are receiving and responding with strings
-    func handle(request: String) -> String {
+    func handle(request: String, context: LambdaContext) -> String {
         "Hello, \(request)!"
     }
 }
@@ -79,7 +79,7 @@ private struct Response: Encodable {
 @main
 struct Handler: LambdaHandler {
     // In this example we are receiving a `Decodable` and responding with an `Encodable`.
-    func handle(request: Request) -> Response {
+    func handle(request: Request, context: LambdaContext) -> Response {
         Response(message: Hello, \(request.name)!")
     }
 }
@@ -122,7 +122,7 @@ import AWSLambdaEvents
 @main
 struct Handler: LambdaHandler {
     // In this example we are receiving a Decodable, with no response (Void).
-    func handle(request: SQS.Event) {
+    func handle(request: SQS.Event, context: LambdaContext) {
         ...
     }
 }
