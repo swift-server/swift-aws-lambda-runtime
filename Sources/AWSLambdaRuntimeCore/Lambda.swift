@@ -43,7 +43,7 @@ public enum Lambda {
         // start local server for debugging in DEBUG mode only
         #if DEBUG
         var localServer: LocalLambda.Server? = nil
-        if Handler.isLocalServer || env("LOCAL_LAMBDA_SERVER_ENABLED").flatMap(Bool.init) ?? false {
+        if Handler.isLocalServer {
             localServer = try Lambda.startLocalServer()
         }
         #endif

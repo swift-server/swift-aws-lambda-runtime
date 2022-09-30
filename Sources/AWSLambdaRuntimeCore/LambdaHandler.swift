@@ -62,10 +62,6 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler {
-    public init() async throws {
-        throw LambdaRuntimeError.upstreamError("You should not indirectly initialize LambdaHandlers")
-    }
-    
     public init(context: LambdaInitializationContext) async throws {
         try await self.init()
     }
@@ -198,15 +194,16 @@ extension EventLoopLambdaHandler where Output == Void {
 ///         ``LambdaHandler`` based APIs.
 ///         Most users are not expected to use this protocol.
 public protocol ByteBufferLambdaHandler {
-    /// Informs the Lambda whether or not it should run as a local server. Defaults to `false`.
+    #if DEBUG
+    /// Informs the Lambda whether or not it should run as a local server.
     ///
-    /// This variable is akin to setting the `LOCAL_LAMBDA_SERVER_ENABLED` environment variable
-    /// without having to edit a scheme in Xcode or your shell process. This variable serves as an
-    /// override point for types conforming to ``EventLoopLambdaHandler``.
+    /// If not implemented, this variable has a default value that follows this priority:
     ///
-    /// This value is meant to be a debugging tool and nothing more. For this reason,
-    /// `isLocalServer` is a no-op that returns `false` for builds that compile using any flag that
-    /// isn't the `#DEBUG` conditional compilation flag.
+    /// 1. The value of the `LOCAL_LAMBDA_SERVER_ENABLED` environment variable.
+    /// 2. If the env variable isn't found, defaults to `true` if running directly in Xcode.
+    /// 3. If not running in Xcode and the env variable is missing, defaults to `false`.
+    /// 4. No-op on `RELEASE` (production) builds. The AWSLambdaRuntime framework will not compile
+    /// any logic accessing this property.
     ///
     /// The following is an example of this variable within a simple ``LambdaHandler`` that uses
     /// `Codable` types for its associated `Event` and `Output` types:
@@ -217,9 +214,6 @@ public protocol ByteBufferLambdaHandler {
     ///
     /// @main
     /// struct EntryHandler: LambdaHandler {
-    ///     typealias Event = <#YourCodableEventType#>
-    ///     typealias Output = <#YourCodableResponseType#>
-    ///
     ///     static let isLocalServer = true
     ///
     ///     func handle(_ event: Event, context: LambdaContext) async throws -> Output {
@@ -228,6 +222,7 @@ public protocol ByteBufferLambdaHandler {
     /// }
     /// ```
     static var isLocalServer: Bool { get }
+    #endif
     
     /// Create your Lambda handler for the runtime.
     ///
@@ -250,9 +245,22 @@ public protocol ByteBufferLambdaHandler {
 }
 
 extension ByteBufferLambdaHandler {
-    /// Default implementation that returns `false` for the
-    /// ``ByteBufferLambdaHandler/isLocalServer-9s211`` flag.
-    public static var isLocalServer: Bool { false }
+    #if DEBUG
+    /// If running this Lambda in Xcode, this value defaults to `true` if the presence of the
+    /// `LOCAL_LAMBDA_SERVER_ENABLED` environment variable cannot be found. Otherwise, this value
+    /// defaults to `false`.
+    public static var isLocalServer: Bool {
+        var enabled = Lambda.env("LOCAL_LAMBDA_SERVER_ENABLED").flatMap(Bool.init)
+        
+        #if Xcode
+        if enabled == nil {
+            enabled = true
+        }
+        #endif
+        
+        return enabled ?? false
+    }
+    #endif
     
     /// Initializes and runs the Lambda function.
     ///
