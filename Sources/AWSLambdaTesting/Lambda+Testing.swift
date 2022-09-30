@@ -17,11 +17,6 @@
 //
 // func test() {
 //     struct MyLambda: LambdaHandler {
-//         typealias Event = String
-//         typealias Output = String
-//
-//         init(context: Lambda.InitializationContext) {}
-//
 //         func handle(_ event: String, context: LambdaContext) async throws -> String {
 //             "echo" + event
 //         }
@@ -39,6 +34,8 @@ import Dispatch
 import Logging
 import NIOCore
 import NIOPosix
+
+@testable import AWSLambdaRuntimeCore
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension Lambda {
@@ -77,13 +74,14 @@ extension Lambda {
             eventLoop: eventLoop
         )
 
-        let context = LambdaContext.__forTestsOnly(
+        let context = LambdaContext(
             requestID: config.requestID,
             traceID: config.traceID,
             invokedFunctionARN: config.invokedFunctionARN,
-            timeout: config.timeout,
+            deadline: .now() + config.timeout,
             logger: logger,
-            eventLoop: eventLoop
+            eventLoop: eventLoop,
+            allocator: ByteBufferAllocator()
         )
 
         promise.completeWithTask {

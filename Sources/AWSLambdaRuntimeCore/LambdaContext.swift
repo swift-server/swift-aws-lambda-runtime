@@ -192,24 +192,4 @@ public struct LambdaContext: CustomDebugStringConvertible, _AWSLambdaSendable {
     public var debugDescription: String {
         "\(Self.self)(requestID: \(self.requestID), traceID: \(self.traceID), invokedFunctionARN: \(self.invokedFunctionARN), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(self.clientContext ?? "nil"), deadline: \(self.deadline))"
     }
-
-    /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
-    public static func __forTestsOnly(
-        requestID: String,
-        traceID: String,
-        invokedFunctionARN: String,
-        timeout: DispatchTimeInterval,
-        logger: Logger,
-        eventLoop: EventLoop
-    ) -> LambdaContext {
-        LambdaContext(
-            requestID: requestID,
-            traceID: traceID,
-            invokedFunctionARN: invokedFunctionARN,
-            deadline: .now() + timeout,
-            logger: logger,
-            eventLoop: eventLoop,
-            allocator: ByteBufferAllocator()
-        )
-    }
 }

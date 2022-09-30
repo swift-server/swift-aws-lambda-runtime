@@ -42,7 +42,7 @@ func assertLambdaRuntimeResult(_ result: @autoclosure () throws -> Int, shouldHa
         }
     } catch {
         if let shouldFailWithError = shouldFailWithError {
-            XCTAssertEqual(String(describing: shouldFailWithError), String(describing: error), "expected error to mactch", file: file, line: line)
+            XCTAssertEqual(String(describing: shouldFailWithError), String(describing: error), "expected error to match", file: file, line: line)
         } else {
             XCTFail("should succeed, but failed with \(error)", file: file, line: line)
         }

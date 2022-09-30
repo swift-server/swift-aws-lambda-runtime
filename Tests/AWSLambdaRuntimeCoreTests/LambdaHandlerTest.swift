@@ -18,6 +18,11 @@ import XCTest
 
 class LambdaHandlerTest: XCTestCase {
     #if compiler(>=5.5) && canImport(_Concurrency)
+    
+    override func setUp() {
+        super.setUp()
+        setenv("LOCAL_LAMBDA_SERVER_ENABLED", "false", 1)
+    }
 
     // MARK: - LambdaHandler
 
@@ -58,7 +63,6 @@ class LambdaHandlerTest: XCTestCase {
         struct TestBootstrapHandler: LambdaHandler {
             var initialized = false
 
-            init() {}
             init(context: LambdaInitializationContext) async throws {
                 XCTAssertFalse(self.initialized)
                 try await Task.sleep(nanoseconds: 100 * 1000 * 1000) // 0.1 seconds
@@ -72,6 +76,7 @@ class LambdaHandlerTest: XCTestCase {
 
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        
         assertLambdaRuntimeResult(
             try Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self),
             shouldFailWithError: TestError("kaboom")
@@ -146,9 +151,6 @@ class LambdaHandlerTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: EventLoopLambdaHandler {
-            typealias Event = String
-            typealias Output = String
-
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
@@ -172,9 +174,6 @@ class LambdaHandlerTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: EventLoopLambdaHandler {
-            typealias Event = String
-            typealias Output = Void
-
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
@@ -198,9 +197,6 @@ class LambdaHandlerTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: EventLoopLambdaHandler {
-            typealias Event = String
-            typealias Output = String
-
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
@@ -224,9 +220,6 @@ class LambdaHandlerTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: EventLoopLambdaHandler {
-            typealias Event = String
-            typealias Output = String
-
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeFailedFuture(TestError("kaboom"))
             }

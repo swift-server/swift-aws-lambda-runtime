@@ -62,6 +62,10 @@ public protocol LambdaHandler: EventLoopLambdaHandler {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler {
+    public init() async throws {
+        throw LambdaRuntimeError.upstreamError("You should not indirectly initialize LambdaHandler as an explicit type")
+    }
+
     public init(context: LambdaInitializationContext) async throws {
         try await self.init()
     }
@@ -200,7 +204,8 @@ public protocol ByteBufferLambdaHandler {
     /// If not implemented, this variable has a default value that follows this priority:
     ///
     /// 1. The value of the `LOCAL_LAMBDA_SERVER_ENABLED` environment variable.
-    /// 2. If the env variable isn't found, defaults to `true` if running directly in Xcode.
+    /// 2. If the env variable isn't found, defaults to `true` if running directly in Xcode. If
+    /// running tests in Xcode, this defaults to `false`, instead.
     /// 3. If not running in Xcode and the env variable is missing, defaults to `false`.
     /// 4. No-op on `RELEASE` (production) builds. The AWSLambdaRuntime framework will not compile
     /// any logic accessing this property.
