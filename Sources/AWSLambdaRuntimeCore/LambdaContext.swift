@@ -12,15 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.6)
 @preconcurrency import Dispatch
-@preconcurrency import Logging
-@preconcurrency import NIOCore
-#else
-import Dispatch
 import Logging
 import NIOCore
-#endif
 
 // MARK: - InitializationContext
 
@@ -28,7 +22,7 @@ import NIOCore
 /// The Lambda runtime generates and passes the `LambdaInitializationContext` to the Handlers
 /// ``ByteBufferLambdaHandler/makeHandler(context:)`` or ``LambdaHandler/init(context:)``
 /// as an argument.
-public struct LambdaInitializationContext: _AWSLambdaSendable {
+public struct LambdaInitializationContext: Sendable {
     /// `Logger` to log with.
     ///
     /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
@@ -71,8 +65,8 @@ public struct LambdaInitializationContext: _AWSLambdaSendable {
 
 /// Lambda runtime context.
 /// The Lambda runtime generates and passes the `LambdaContext` to the Lambda handler as an argument.
-public struct LambdaContext: CustomDebugStringConvertible, _AWSLambdaSendable {
-    final class _Storage: _AWSLambdaSendable {
+public struct LambdaContext: CustomDebugStringConvertible, Sendable {
+    final class _Storage: Sendable {
         let requestID: String
         let traceID: String
         let invokedFunctionARN: String

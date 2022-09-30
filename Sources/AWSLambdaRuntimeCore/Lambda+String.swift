@@ -13,25 +13,46 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
-extension EventLoopLambdaHandler where Event == String {
+// MARK: - LambdaHandler String support
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension LambdaHandler where Event == String {
     /// Implementation of a `ByteBuffer` to `String` decoding.
     @inlinable
     public func decode(buffer: ByteBuffer) throws -> String {
-        var buffer = buffer
-        guard let string = buffer.readString(length: buffer.readableBytes) else {
-            fatalError("buffer.readString(length: buffer.readableBytes) failed")
+        guard let value = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
+            throw CodecError.invalidString
         }
-        return string
+        return value
+    }
+}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension LambdaHandler where Output == String {
+    /// Implementation of `String` to `ByteBuffer` encoding.
+    @inlinable
+    public func encode(value: String, into buffer: inout ByteBuffer) throws {
+        buffer.writeString(value)
+    }
+}
+
+// MARK: - EventLoopLambdaHandler String support
+
+extension EventLoopLambdaHandler where Event == String {
+    /// Implementation of `String` to `ByteBuffer` encoding.
+    @inlinable
+    public func decode(buffer: ByteBuffer) throws -> String {
+        guard let value = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
+            throw CodecError.invalidString
+        }
+        return value
     }
 }
 
 extension EventLoopLambdaHandler where Output == String {
-    /// Implementation of `String` to `ByteBuffer` encoding.
+    /// Implementation of a `ByteBuffer` to `String` decoding.
     @inlinable
-    public func encode(allocator: ByteBufferAllocator, value: String) throws -> ByteBuffer? {
-        // FIXME: reusable buffer
-        var buffer = allocator.buffer(capacity: value.utf8.count)
+    public func encode(value: String, into buffer: inout ByteBuffer) throws {
         buffer.writeString(value)
-        return buffer
     }
 }

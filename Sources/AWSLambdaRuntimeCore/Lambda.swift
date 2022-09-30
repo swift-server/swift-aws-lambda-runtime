@@ -33,9 +33,25 @@ public enum Lambda {
     ///     - handlerType: The Handler to create and invoke.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    internal static func run<Handler: ByteBufferLambdaHandler>(
+
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    internal static func run<Handler: LambdaHandler>(
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
+    ) -> Result<Int, Error> {
+        Self.run(configuration: configuration, handlerType: CodableLambdaHandler<Handler>.self)
+    }
+
+    internal static func run<Handler: EventLoopLambdaHandler>(
+        configuration: LambdaConfiguration = .init(),
+        handlerType: Handler.Type
+    ) -> Result<Int, Error> {
+        Self.run(configuration: configuration, handlerType: CodableEventLoopLambdaHandler<Handler>.self)
+    }
+
+    internal static func run(
+        configuration: LambdaConfiguration = .init(),
+        handlerType: (some ByteBufferLambdaHandler).Type
     ) -> Result<Int, Error> {
         let _run = { (configuration: LambdaConfiguration) -> Result<Int, Error> in
             Backtrace.install()
@@ -44,7 +60,7 @@ public enum Lambda {
 
             var result: Result<Int, Error>!
             MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
-                let runtime = LambdaRuntime<Handler>(eventLoop: eventLoop, logger: logger, configuration: configuration)
+                let runtime = LambdaRuntime(handlerType, eventLoop: eventLoop, logger: logger, configuration: configuration)
                 #if DEBUG
                 let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
                     logger.info("intercepted signal: \(signal)")
@@ -66,7 +82,6 @@ public enum Lambda {
                     result = lifecycleResult
                 }
             }
-
             logger.info("shutdown completed")
             return result
         }

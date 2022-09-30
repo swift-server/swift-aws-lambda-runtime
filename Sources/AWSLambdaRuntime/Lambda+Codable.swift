@@ -19,7 +19,45 @@ import class Foundation.JSONEncoder
 import NIOCore
 import NIOFoundationCompat
 
-// MARK: - Codable support
+// MARK: - LambdaHandler Codable support
+
+/// Implementation of  a`ByteBuffer` to `Event` decoding.
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension LambdaHandler where Event: Decodable {
+    @inlinable
+    public func decode(buffer: ByteBuffer) throws -> Event {
+        try self.decoder.decode(Event.self, from: buffer)
+    }
+}
+
+/// Implementation of  `Output` to `ByteBuffer` encoding.
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension LambdaHandler where Output: Encodable {
+    @inlinable
+    public func encode(value: Output, into buffer: inout ByteBuffer) throws {
+        try self.encoder.encode(value, into: &buffer)
+    }
+}
+
+/// Default `ByteBuffer` to `Event` decoder using Foundation's `JSONDecoder`.
+/// Advanced users that want to inject their own codec can do it by overriding these functions.
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension LambdaHandler where Event: Decodable {
+    public var decoder: LambdaCodableDecoder {
+        Lambda.defaultJSONDecoder
+    }
+}
+
+/// Default `Output` to `ByteBuffer` encoder using Foundation's `JSONEncoder`.
+/// Advanced users that want to inject their own codec can do it by overriding these functions.
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension LambdaHandler where Output: Encodable {
+    public var encoder: LambdaCodableEncoder {
+        Lambda.defaultJSONEncoder
+    }
+}
+
+// MARK: - EventLoopLambdaHandler Codable support
 
 /// Implementation of  a`ByteBuffer` to `Event` decoding.
 extension EventLoopLambdaHandler where Event: Decodable {
@@ -32,8 +70,8 @@ extension EventLoopLambdaHandler where Event: Decodable {
 /// Implementation of  `Output` to `ByteBuffer` encoding.
 extension EventLoopLambdaHandler where Output: Encodable {
     @inlinable
-    public func encode(allocator: ByteBufferAllocator, value: Output) throws -> ByteBuffer? {
-        try self.encoder.encode(value, using: allocator)
+    public func encode(value: Output, into buffer: inout ByteBuffer) throws {
+        try self.encoder.encode(value, into: &buffer)
     }
 }
 
@@ -58,7 +96,7 @@ public protocol LambdaCodableDecoder {
 }
 
 public protocol LambdaCodableEncoder {
-    func encode<T: Encodable>(_ value: T, using allocator: ByteBufferAllocator) throws -> ByteBuffer
+    func encode<T: Encodable>(_ value: T, into buffer: inout ByteBuffer) throws
 }
 
 extension Lambda {
@@ -68,11 +106,4 @@ extension Lambda {
 
 extension JSONDecoder: LambdaCodableDecoder {}
 
-extension JSONEncoder: LambdaCodableEncoder {
-    public func encode<T>(_ value: T, using allocator: ByteBufferAllocator) throws -> ByteBuffer where T: Encodable {
-        // nio will resize the buffer if necessary
-        var buffer = allocator.buffer(capacity: 1024)
-        try self.encode(value, into: &buffer)
-        return buffer
-    }
-}
+extension JSONEncoder: LambdaCodableEncoder {}

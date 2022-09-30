@@ -13,13 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
-#if compiler(>=5.6)
-@preconcurrency import NIOCore
-@preconcurrency import NIOHTTP1
-#else
 import NIOCore
 import NIOHTTP1
-#endif
 
 /// An HTTP based client for AWS Runtime Engine. This encapsulates the RESTful methods exposed by the Runtime Engine:
 /// * /runtime/invocation/next

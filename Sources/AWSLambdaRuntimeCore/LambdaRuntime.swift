@@ -19,11 +19,13 @@ import NIOCore
 /// `LambdaRuntime` manages the Lambda process lifecycle.
 ///
 /// Use this API, if you build a higher level web framework which shall be able to run inside the Lambda environment.
-public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
+public final class LambdaRuntime {
     private let eventLoop: EventLoop
     private let shutdownPromise: EventLoopPromise<Int>
     private let logger: Logger
     private let configuration: LambdaConfiguration
+
+    private let handlerType: any ByteBufferLambdaHandler.Type
 
     private var state = State.idle {
         willSet {
@@ -35,18 +37,40 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     /// Create a new `LambdaRuntime`.
     ///
     /// - parameters:
+    ///     - handlerType: The ``LambdaHandler`` type the `LambdaRuntime` shall create and manage.
+    ///     - eventLoop: An `EventLoop` to run the Lambda on.
+    ///     - logger: A `Logger` to log the Lambda events.
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    public convenience init<Handler: LambdaHandler>(_ handlerType: Handler.Type, eventLoop: EventLoop, logger: Logger) {
+        self.init(CodableLambdaHandler<Handler>.self, eventLoop: eventLoop, logger: logger)
+    }
+
+    /// Create a new `LambdaRuntime`.
+    ///
+    /// - parameters:
+    ///     - handlerType: The ``EventLoopLambdaHandler`` type the `LambdaRuntime` shall create and manage.
+    ///     - eventLoop: An `EventLoop` to run the Lambda on.
+    ///     - logger: A `Logger` to log the Lambda events.
+    public convenience init<Handler: EventLoopLambdaHandler>(_ handlerType: Handler.Type, eventLoop: EventLoop, logger: Logger) {
+        self.init(CodableEventLoopLambdaHandler<Handler>.self, eventLoop: eventLoop, logger: logger)
+    }
+
+    /// Create a new `LambdaRuntime`.
+    ///
+    /// - parameters:
     ///     - handlerType: The ``ByteBufferLambdaHandler`` type the `LambdaRuntime` shall create and manage.
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
-    public convenience init(_ handlerType: Handler.Type, eventLoop: EventLoop, logger: Logger) {
-        self.init(eventLoop: eventLoop, logger: logger, configuration: .init())
+    public convenience init(_ handlerType: (some ByteBufferLambdaHandler).Type, eventLoop: EventLoop, logger: Logger) {
+        self.init(handlerType, eventLoop: eventLoop, logger: logger, configuration: .init())
     }
 
-    init(eventLoop: EventLoop, logger: Logger, configuration: LambdaConfiguration) {
+    init(_ handlerType: (some ByteBufferLambdaHandler).Type, eventLoop: EventLoop, logger: Logger, configuration: LambdaConfiguration) {
         self.eventLoop = eventLoop
         self.shutdownPromise = eventLoop.makePromise(of: Int.self)
         self.logger = logger
         self.configuration = configuration
+        self.handlerType = handlerType
     }
 
     deinit {
@@ -85,7 +109,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
         let terminator = LambdaTerminator()
         let runner = LambdaRunner(eventLoop: self.eventLoop, configuration: self.configuration)
 
-        let startupFuture = runner.initialize(logger: logger, terminator: terminator, handlerType: Handler.self)
+        let startupFuture = runner.initialize(handlerType: self.handlerType, logger: logger, terminator: terminator)
         startupFuture.flatMap { handler -> EventLoopFuture<Result<Int, Error>> in
             // after the startup future has succeeded, we have a handler that we can use
             // to `run` the lambda.
@@ -175,7 +199,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     private enum State {
         case idle
         case initializing
-        case active(LambdaRunner, Handler)
+        case active(LambdaRunner, any ByteBufferLambdaHandler)
         case shuttingdown
         case shutdown
 
@@ -197,6 +221,4 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
 }
 
 /// This is safe since lambda runtime synchronizes by dispatching all methods to a single `EventLoop`
-#if compiler(>=5.5) && canImport(_Concurrency)
 extension LambdaRuntime: @unchecked Sendable {}
-#endif

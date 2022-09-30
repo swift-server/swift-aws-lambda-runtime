@@ -33,8 +33,7 @@
 //     XCTAssertEqual(result, "echo" + input)
 // }
 
-#if compiler(>=5.5) && canImport(_Concurrency)
-import AWSLambdaRuntime
+@testable import AWSLambdaRuntime
 import Dispatch
 import Logging
 import NIOCore
@@ -63,15 +62,15 @@ extension Lambda {
         _ handlerType: Handler.Type,
         with event: Handler.Event,
         using config: TestConfig = .init()
-    ) throws -> Handler.Output {
+    ) async throws -> Handler.Output {
         let logger = Logger(label: "test")
+
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             try! eventLoopGroup.syncShutdownGracefully()
         }
         let eventLoop = eventLoopGroup.next()
 
-        let promise = eventLoop.makePromise(of: Handler.self)
         let initContext = LambdaInitializationContext.__forTestsOnly(
             logger: logger,
             eventLoop: eventLoop
@@ -86,14 +85,7 @@ extension Lambda {
             eventLoop: eventLoop
         )
 
-        promise.completeWithTask {
-            try await Handler(context: initContext)
-        }
-        let handler = try promise.futureResult.wait()
-
-        return try eventLoop.flatSubmit {
-            handler.handle(event, context: context)
-        }.wait()
+        let handler = try await Handler(context: initContext)
+        return try await handler.handle(event, context: context)
     }
 }
-#endif

@@ -1,4 +1,4 @@
-ARG swift_version=5.4
+ARG swift_version=5.7
 ARG base_image=swift:$swift_version-amazonlinux2
 FROM $base_image
 # needed to do again after FROM due to docker limitation
@@ -14,7 +14,7 @@ RUN echo 'export PATH="$HOME/.tools:$PATH"' >> $HOME/.profile
 
 # swiftformat (until part of the toolchain)
 
-ARG swiftformat_version=0.47.3
+ARG swiftformat_version=0.50.1
 RUN git clone --branch $swiftformat_version --depth 1 https://github.com/nicklockwood/SwiftFormat $HOME/.tools/swift-format
 RUN cd $HOME/.tools/swift-format && swift build -c release
 RUN ln -s $HOME/.tools/swift-format/.build/release/swiftformat $HOME/.tools/swiftformat
