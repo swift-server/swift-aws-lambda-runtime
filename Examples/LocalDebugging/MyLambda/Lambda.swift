@@ -23,10 +23,6 @@ struct MyLambda: LambdaHandler {
     typealias Event = Request
     typealias Output = Response
 
-    init(context: LambdaInitializationContext) async throws {
-        // setup your resources that you want to reuse for every invocation here.
-    }
-
     func handle(_ request: Request, context: LambdaContext) async throws -> Response {
         // TODO: something useful
         Response(message: "Hello, \(request.name)!")

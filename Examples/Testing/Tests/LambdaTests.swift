@@ -18,9 +18,9 @@ import AWSLambdaTesting
 import XCTest
 
 class LambdaTest: XCTestCase {
-    func testIt() throws {
+    func testIt() async throws {
         let input = UUID().uuidString
-        let result = try Lambda.test(MyLambda.self, with: input)
+        let result = try await Lambda.test(MyLambda.self, with: input)
         XCTAssertEqual(result, String(input.reversed()))
     }
 }
