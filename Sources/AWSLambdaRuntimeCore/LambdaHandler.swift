@@ -26,11 +26,11 @@ import NIOCore
 ///         ``ByteBufferLambdaHandler``.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol LambdaHandler {
-    /// The lambda functions input. In most cases this should be `Codable`. If your event originates from an
+    /// The lambda function's input. In most cases this should be `Codable`. If your event originates from an
     /// AWS service, have a look at [AWSLambdaEvents](https://github.com/swift-server/swift-aws-lambda-events),
     /// which provides a number of commonly used AWS Event implementations.
     associatedtype Event
-    /// The lambda functions output. Can be `Void`.
+    /// The lambda function's output. Can be `Void`.
     associatedtype Output
 
     init()
@@ -129,7 +129,7 @@ final class CodableLambdaHandler<Underlying: LambdaHandler>: ByteBufferLambdaHan
     }
 }
 
-/// Implementation of  `ByteBuffer` to `Void` decoding.
+/// Implementation of `ByteBuffer` to `Void` decoding.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler where Output == Void {
     @inlinable
@@ -232,7 +232,7 @@ public protocol EventLoopLambdaHandler {
     func decode(buffer: ByteBuffer) throws -> Event
 }
 
-/// Implementation of  `ByteBuffer` to `Void` decoding.
+/// Implementation of `ByteBuffer` to `Void` decoding.
 extension EventLoopLambdaHandler where Output == Void {
     @inlinable
     public func encode(value: Void, into buffer: inout ByteBuffer) throws {}

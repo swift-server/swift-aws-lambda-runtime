@@ -21,7 +21,7 @@ import NIOFoundationCompat
 
 // MARK: - LambdaHandler Codable support
 
-/// Implementation of  a`ByteBuffer` to `Event` decoding.
+/// Implementation of `ByteBuffer` to `Event` decoding.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler where Event: Decodable {
     @inlinable
@@ -30,7 +30,7 @@ extension LambdaHandler where Event: Decodable {
     }
 }
 
-/// Implementation of  `Output` to `ByteBuffer` encoding.
+/// Implementation of `Output` to `ByteBuffer` encoding.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler where Output: Encodable {
     @inlinable
@@ -40,7 +40,7 @@ extension LambdaHandler where Output: Encodable {
 }
 
 /// Default `ByteBuffer` to `Event` decoder using Foundation's `JSONDecoder`.
-/// Advanced users that want to inject their own codec can do it by overriding these functions.
+/// Advanced users who want to inject their own codec can do it by overriding these functions.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler where Event: Decodable {
     public var decoder: LambdaCodableDecoder {
@@ -49,7 +49,7 @@ extension LambdaHandler where Event: Decodable {
 }
 
 /// Default `Output` to `ByteBuffer` encoder using Foundation's `JSONEncoder`.
-/// Advanced users that want to inject their own codec can do it by overriding these functions.
+/// Advanced users who want to inject their own codec can do it by overriding these functions.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler where Output: Encodable {
     public var encoder: LambdaCodableEncoder {
@@ -59,7 +59,7 @@ extension LambdaHandler where Output: Encodable {
 
 // MARK: - EventLoopLambdaHandler Codable support
 
-/// Implementation of  a`ByteBuffer` to `Event` decoding.
+/// Implementation of `ByteBuffer` to `Event` decoding.
 extension EventLoopLambdaHandler where Event: Decodable {
     @inlinable
     public func decode(buffer: ByteBuffer) throws -> Event {
@@ -67,7 +67,7 @@ extension EventLoopLambdaHandler where Event: Decodable {
     }
 }
 
-/// Implementation of  `Output` to `ByteBuffer` encoding.
+/// Implementation of `Output` to `ByteBuffer` encoding.
 extension EventLoopLambdaHandler where Output: Encodable {
     @inlinable
     public func encode(value: Output, into buffer: inout ByteBuffer) throws {
