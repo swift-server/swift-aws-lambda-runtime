@@ -19,7 +19,7 @@ import NIOCore
 extension LambdaHandler where Event == String {
     /// Implementation of a `ByteBuffer` to `String` decoding.
     @inlinable
-    public func decode(buffer: ByteBuffer) throws -> String {
+    public func decode(buffer: ByteBuffer) throws -> Event {
         guard let value = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
             throw CodecError.invalidString
         }
@@ -31,7 +31,7 @@ extension LambdaHandler where Event == String {
 extension LambdaHandler where Output == String {
     /// Implementation of `String` to `ByteBuffer` encoding.
     @inlinable
-    public func encode(value: String, into buffer: inout ByteBuffer) throws {
+    public func encode(value: Output, into buffer: inout ByteBuffer) throws {
         buffer.writeString(value)
     }
 }
@@ -41,7 +41,7 @@ extension LambdaHandler where Output == String {
 extension EventLoopLambdaHandler where Event == String {
     /// Implementation of `String` to `ByteBuffer` encoding.
     @inlinable
-    public func decode(buffer: ByteBuffer) throws -> String {
+    public func decode(buffer: ByteBuffer) throws -> Event {
         guard let value = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
             throw CodecError.invalidString
         }
@@ -52,7 +52,7 @@ extension EventLoopLambdaHandler where Event == String {
 extension EventLoopLambdaHandler where Output == String {
     /// Implementation of a `ByteBuffer` to `String` decoding.
     @inlinable
-    public func encode(value: String, into buffer: inout ByteBuffer) throws {
+    public func encode(value: Output, into buffer: inout ByteBuffer) throws {
         buffer.writeString(value)
     }
 }

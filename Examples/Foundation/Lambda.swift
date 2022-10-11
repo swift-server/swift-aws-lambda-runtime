@@ -25,9 +25,6 @@ import Logging
 
 @main
 struct MyLambda: LambdaHandler {
-    typealias Event = Request
-    typealias Output = [Exchange]
-
     let calculator: ExchangeRatesCalculator
 
     init(context: LambdaInitializationContext) async throws {

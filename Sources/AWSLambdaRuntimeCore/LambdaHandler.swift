@@ -15,11 +15,31 @@
 import Dispatch
 import NIOCore
 
+// MARK: - SimpleLambdaHandler
+
+/// Strongly typed, processing protocol for a Lambda that takes a user defined
+/// ``LambdaHandler/Event`` and returns a user defined
+/// ``LambdaHandler/Output`` asynchronously.
+///
+/// - note: Most users should implement the ``LambdaHandler`` protocol instead
+///         which defines the Lambda initialization method.
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+public protocol SimpleLambdaHandler: LambdaHandler {
+    init()
+}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension SimpleLambdaHandler {
+    public init(context: LambdaInitializationContext) async throws {
+        self.init()
+    }
+}
+
 // MARK: - LambdaHandler
 
 /// Strongly typed, processing protocol for a Lambda that takes a user defined
-/// ``EventLoopLambdaHandler/Event`` and returns a user defined
-/// ``EventLoopLambdaHandler/Output`` asynchronously.
+/// ``LambdaHandler/Event`` and returns a user defined
+/// ``LambdaHandler/Output`` asynchronously.
 ///
 /// - note: Most users should implement this protocol instead of the lower
 ///         level protocols ``EventLoopLambdaHandler`` and
@@ -33,8 +53,12 @@ public protocol LambdaHandler {
     /// The lambda function's output. Can be `Void`.
     associatedtype Output
 
-    init()
-
+    /// The Lambda initialization method.
+    /// Use this method to initialize resources that will be used in every request.
+    ///
+    /// Examples for this can be HTTP or database clients.
+    /// - parameters:
+    ///     - context: Runtime ``LambdaInitializationContext``.
     init(context: LambdaInitializationContext) async throws
 
     /// The Lambda handling method.
@@ -64,23 +88,6 @@ public protocol LambdaHandler {
     ///
     /// - Returns: A request or event of type ``Event``.
     func decode(buffer: ByteBuffer) throws -> Event
-}
-
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-extension LambdaHandler {
-    public init() {
-        self.init()
-    }
-
-    /// The Lambda initialization method.
-    /// Use this method to initialize resources that will be used in every request.
-    ///
-    /// Examples for this can be HTTP or database clients.
-    /// - parameters:
-    ///     - context: Runtime ``LambdaInitializationContext``.
-    public init(context: LambdaInitializationContext) async throws {
-        self.init()
-    }
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -133,7 +140,7 @@ final class CodableLambdaHandler<Underlying: LambdaHandler>: ByteBufferLambdaHan
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler where Output == Void {
     @inlinable
-    public func encode(value: Void, into buffer: inout ByteBuffer) throws {}
+    public func encode(value: Output, into buffer: inout ByteBuffer) throws {}
 }
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -173,10 +180,7 @@ internal struct UncheckedSendableHandler<Underlying: LambdaHandler, Event, Outpu
 // MARK: - EventLoopLambdaHandler
 
 /// Strongly typed, `EventLoopFuture` based processing protocol for a Lambda that takes a user
-/// defined ``Event`` and returns a user defined ``Output`` asynchronously.
-///
-/// ``EventLoopLambdaHandler`` extends ``ByteBufferLambdaHandler``, performing
-/// `ByteBuffer` -> ``Event`` decoding and ``Output`` -> `ByteBuffer` encoding.
+/// defined ``EventLoopLambdaHandler/Event`` and returns a user defined ``EventLoopLambdaHandler/Output`` asynchronously.
 ///
 /// - note: To implement a Lambda, implement either ``LambdaHandler`` or the
 ///         ``EventLoopLambdaHandler`` protocol. The ``LambdaHandler`` will offload
@@ -235,7 +239,7 @@ public protocol EventLoopLambdaHandler {
 /// Implementation of `ByteBuffer` to `Void` decoding.
 extension EventLoopLambdaHandler where Output == Void {
     @inlinable
-    public func encode(value: Void, into buffer: inout ByteBuffer) throws {}
+    public func encode(value: Output, into buffer: inout ByteBuffer) throws {}
 }
 
 internal final class CodableEventLoopLambdaHandler<Underlying: EventLoopLambdaHandler>: ByteBufferLambdaHandler {

@@ -17,7 +17,7 @@ import AWSLambdaRuntime
 // in this example we are receiving and responding with strings
 
 @main
-struct MyLambda: LambdaHandler {
+struct MyLambda: SimpleLambdaHandler {
     func handle(_ event: String, context: LambdaContext) async throws -> String {
         // as an example, respond with the event's reversed body
         String(event.reversed())

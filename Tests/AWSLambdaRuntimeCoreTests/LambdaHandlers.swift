@@ -17,9 +17,6 @@ import NIOCore
 import XCTest
 
 struct EchoHandler: EventLoopLambdaHandler {
-    typealias Event = String
-    typealias Output = String
-
     static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<EchoHandler> {
         context.eventLoop.makeSucceededFuture(EchoHandler())
     }
@@ -32,9 +29,6 @@ struct EchoHandler: EventLoopLambdaHandler {
 struct StartupError: Error {}
 
 struct StartupErrorHandler: EventLoopLambdaHandler {
-    typealias Event = String
-    typealias Output = String
-
     static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<StartupErrorHandler> {
         context.eventLoop.makeFailedFuture(StartupError())
     }
@@ -48,9 +42,6 @@ struct StartupErrorHandler: EventLoopLambdaHandler {
 struct RuntimeError: Error {}
 
 struct RuntimeErrorHandler: EventLoopLambdaHandler {
-    typealias Event = String
-    typealias Output = Void
-
     static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<RuntimeErrorHandler> {
         context.eventLoop.makeSucceededFuture(RuntimeErrorHandler())
     }

@@ -34,9 +34,6 @@ class CodableLambdaTest: XCTestCase {
 
     func testCodableVoidEventLoopFutureHandler() {
         struct Handler: EventLoopLambdaHandler {
-            typealias Event = Request
-            typealias Output = Void
-
             var expected: Request?
 
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
@@ -66,9 +63,6 @@ class CodableLambdaTest: XCTestCase {
 
     func testCodableEventLoopFutureHandler() {
         struct Handler: EventLoopLambdaHandler {
-            typealias Event = Request
-            typealias Output = Response
-
             var expected: Request?
 
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
@@ -100,10 +94,7 @@ class CodableLambdaTest: XCTestCase {
 
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testCodableVoidHandler() async throws {
-        struct Handler: LambdaHandler {
-            typealias Event = Request
-            typealias Output = Void
-
+        struct Handler: SimpleLambdaHandler {
             var expected: Request?
 
             func handle(_ event: Request, context: LambdaContext) async throws {
@@ -130,10 +121,7 @@ class CodableLambdaTest: XCTestCase {
 
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testCodableHandler() async throws {
-        struct Handler: LambdaHandler {
-            typealias Event = Request
-            typealias Output = Response
-
+        struct Handler: SimpleLambdaHandler {
             var expected: Request?
 
             func handle(_ event: Request, context: LambdaContext) async throws -> Response {

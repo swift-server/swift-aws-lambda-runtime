@@ -17,6 +17,51 @@ import NIOCore
 import XCTest
 
 class LambdaHandlerTest: XCTestCase {
+    // MARK: - SimpleLambdaHandler
+
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    func testBootstrapSimpleNoInit() {
+        let server = MockLambdaServer(behavior: Behavior())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        struct TestBootstrapHandler: SimpleLambdaHandler {
+            func handle(_ event: String, context: LambdaContext) async throws -> String {
+                event
+            }
+        }
+
+        let maxTimes = Int.random(in: 10 ... 20)
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
+        assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
+    }
+
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    func testBootstrapSimpleInit() {
+        let server = MockLambdaServer(behavior: Behavior())
+        XCTAssertNoThrow(try server.start().wait())
+        defer { XCTAssertNoThrow(try server.stop().wait()) }
+
+        struct TestBootstrapHandler: SimpleLambdaHandler {
+            var initialized = false
+
+            init() {
+                XCTAssertFalse(self.initialized)
+                self.initialized = true
+            }
+
+            func handle(_ event: String, context: LambdaContext) async throws -> String {
+                event
+            }
+        }
+
+        let maxTimes = Int.random(in: 10 ... 20)
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
+        assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
+    }
+
     // MARK: - LambdaHandler
 
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -52,9 +97,6 @@ class LambdaHandlerTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct TestBootstrapHandler: LambdaHandler {
-            typealias Event = String
-            typealias Output = Void
-
             var initialized = false
 
             init(context: LambdaInitializationContext) async throws {
@@ -75,55 +117,12 @@ class LambdaHandlerTest: XCTestCase {
     }
 
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    func testBootstrapInitSimple() {
-        let server = MockLambdaServer(behavior: Behavior())
-        XCTAssertNoThrow(try server.start().wait())
-        defer { XCTAssertNoThrow(try server.stop().wait()) }
-
-        struct TestBootstrapHandler: LambdaHandler {
-            var initialized = false
-
-            init() {
-                XCTAssertFalse(self.initialized)
-                self.initialized = true
-            }
-
-            func handle(_ event: String, context: LambdaContext) async throws -> String {
-                event
-            }
-        }
-
-        let maxTimes = Int.random(in: 10 ... 20)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
-        assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
-    }
-
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    func testBootstrapNoInit() {
-        let server = MockLambdaServer(behavior: Behavior())
-        XCTAssertNoThrow(try server.start().wait())
-        defer { XCTAssertNoThrow(try server.stop().wait()) }
-
-        struct TestBootstrapHandler: LambdaHandler {
-            func handle(_ event: String, context: LambdaContext) async throws -> String {
-                event
-            }
-        }
-
-        let maxTimes = Int.random(in: 10 ... 20)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
-        let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
-        assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
-    }
-
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testHandlerSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: LambdaHandler {
+        struct Handler: SimpleLambdaHandler {
             func handle(_ event: String, context: LambdaContext) async throws -> String {
                 event
             }
@@ -141,7 +140,7 @@ class LambdaHandlerTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: LambdaHandler {
+        struct Handler: SimpleLambdaHandler {
             func handle(_ event: String, context: LambdaContext) async throws {}
         }
 
@@ -158,7 +157,7 @@ class LambdaHandlerTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        struct Handler: LambdaHandler {
+        struct Handler: SimpleLambdaHandler {
             func handle(_ event: String, context: LambdaContext) async throws -> String {
                 throw TestError("boom")
             }
@@ -178,9 +177,6 @@ class LambdaHandlerTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: EventLoopLambdaHandler {
-            typealias Event = String
-            typealias Output = String
-
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
@@ -202,9 +198,6 @@ class LambdaHandlerTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: EventLoopLambdaHandler {
-            typealias Event = String
-            typealias Output = Void
-
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
@@ -226,9 +219,6 @@ class LambdaHandlerTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: EventLoopLambdaHandler {
-            typealias Event = String
-            typealias Output = String
-
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
@@ -250,9 +240,6 @@ class LambdaHandlerTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: EventLoopLambdaHandler {
-            typealias Event = String
-            typealias Output = String
-
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeFailedFuture(TestError("kaboom"))
             }

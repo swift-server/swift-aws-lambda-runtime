@@ -16,7 +16,7 @@ import AWSLambdaRuntime
 
 // introductory example, the obligatory "hello, world!"
 @main
-struct HelloWorldHandler: LambdaHandler {
+struct HelloWorldHandler: SimpleLambdaHandler {
     func handle(_ event: String, context: LambdaContext) async throws -> String {
         "hello, world"
     }

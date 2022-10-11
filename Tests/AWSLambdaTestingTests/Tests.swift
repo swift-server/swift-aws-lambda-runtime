@@ -20,10 +20,7 @@ import XCTest
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 class LambdaTestingTests: XCTestCase {
     func testBasics() async throws {
-        struct MyLambda: LambdaHandler {
-            typealias Event = String
-            typealias Output = String
-
+        struct MyLambda: SimpleLambdaHandler {
             func handle(_ event: String, context: LambdaContext) async throws -> String {
                 event
             }
@@ -43,10 +40,7 @@ class LambdaTestingTests: XCTestCase {
             let message: String
         }
 
-        struct MyLambda: LambdaHandler {
-            typealias Event = Request
-            typealias Output = Response
-
+        struct MyLambda: SimpleLambdaHandler {
             func handle(_ event: Request, context: LambdaContext) async throws -> Response {
                 Response(message: "echo" + event.name)
             }
@@ -62,12 +56,9 @@ class LambdaTestingTests: XCTestCase {
             let name: String
         }
 
-        struct MyLambda: LambdaHandler {
+        struct MyLambda: SimpleLambdaHandler {
             // DIRTY HACK: To verify the handler was actually invoked, we change a global variable.
             static var VoidLambdaHandlerInvokeCount: Int = 0
-
-            typealias Event = Request
-            typealias Output = Void
 
             func handle(_ event: Request, context: LambdaContext) async throws {
                 Self.VoidLambdaHandlerInvokeCount += 1
@@ -83,10 +74,7 @@ class LambdaTestingTests: XCTestCase {
     func testInvocationFailure() async throws {
         struct MyError: Error {}
 
-        struct MyLambda: LambdaHandler {
-            typealias Event = String
-            typealias Output = Void
-
+        struct MyLambda: SimpleLambdaHandler {
             func handle(_ event: String, context: LambdaContext) async throws {
                 throw MyError()
             }
@@ -101,10 +89,7 @@ class LambdaTestingTests: XCTestCase {
     }
 
     func testAsyncLongRunning() async throws {
-        struct MyLambda: LambdaHandler {
-            typealias Event = String
-            typealias Output = String
-
+        struct MyLambda: SimpleLambdaHandler {
             func handle(_ event: String, context: LambdaContext) async throws -> String {
                 try await Task.sleep(nanoseconds: 500 * 1000 * 1000)
                 return event

@@ -254,9 +254,6 @@ class LambdaTest: XCTestCase {
     #if compiler(>=5.6)
     func testSendable() async throws {
         struct Handler: EventLoopLambdaHandler {
-            typealias Event = String
-            typealias Output = String
-
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
