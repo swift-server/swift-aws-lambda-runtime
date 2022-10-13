@@ -1,9 +1,15 @@
-// swift-tools-version:5.6
+// swift-tools-version:5.7
 
 import PackageDescription
 
 let package = Package(
     name: "swift-aws-lambda-runtime",
+    platforms: [
+        .macOS(.v12),
+        .iOS(.v15),
+        .tvOS(.v15),
+        .watchOS(.v8),
+    ],
     products: [
         // this library exports `AWSLambdaRuntimeCore` and adds Foundation convenience methods
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
@@ -15,7 +21,7 @@ let package = Package(
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.33.0")),
+        .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.43.1")),
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.4.2")),
         .package(url: "https://github.com/swift-server/swift-backtrace.git", .upToNextMajor(from: "1.2.3")),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),

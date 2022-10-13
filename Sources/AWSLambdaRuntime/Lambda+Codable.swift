@@ -19,10 +19,43 @@ import class Foundation.JSONEncoder
 import NIOCore
 import NIOFoundationCompat
 
+// MARK: - SimpleLambdaHandler Codable support
+
+/// Implementation of `ByteBuffer` to `Event` decoding.
+extension SimpleLambdaHandler where Event: Decodable {
+    @inlinable
+    public func decode(buffer: ByteBuffer) throws -> Event {
+        try self.decoder.decode(Event.self, from: buffer)
+    }
+}
+
+/// Implementation of `Output` to `ByteBuffer` encoding.
+extension SimpleLambdaHandler where Output: Encodable {
+    @inlinable
+    public func encode(value: Output, into buffer: inout ByteBuffer) throws {
+        try self.encoder.encode(value, into: &buffer)
+    }
+}
+
+/// Default `ByteBuffer` to `Event` decoder using Foundation's `JSONDecoder`.
+/// Advanced users who want to inject their own codec can do it by overriding these functions.
+extension SimpleLambdaHandler where Event: Decodable {
+    public var decoder: LambdaCodableDecoder {
+        Lambda.defaultJSONDecoder
+    }
+}
+
+/// Default `Output` to `ByteBuffer` encoder using Foundation's `JSONEncoder`.
+/// Advanced users who want to inject their own codec can do it by overriding these functions.
+extension SimpleLambdaHandler where Output: Encodable {
+    public var encoder: LambdaCodableEncoder {
+        Lambda.defaultJSONEncoder
+    }
+}
+
 // MARK: - LambdaHandler Codable support
 
 /// Implementation of `ByteBuffer` to `Event` decoding.
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler where Event: Decodable {
     @inlinable
     public func decode(buffer: ByteBuffer) throws -> Event {
@@ -31,7 +64,6 @@ extension LambdaHandler where Event: Decodable {
 }
 
 /// Implementation of `Output` to `ByteBuffer` encoding.
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler where Output: Encodable {
     @inlinable
     public func encode(value: Output, into buffer: inout ByteBuffer) throws {
@@ -41,7 +73,6 @@ extension LambdaHandler where Output: Encodable {
 
 /// Default `ByteBuffer` to `Event` decoder using Foundation's `JSONDecoder`.
 /// Advanced users who want to inject their own codec can do it by overriding these functions.
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler where Event: Decodable {
     public var decoder: LambdaCodableDecoder {
         Lambda.defaultJSONDecoder
@@ -50,7 +81,6 @@ extension LambdaHandler where Event: Decodable {
 
 /// Default `Output` to `ByteBuffer` encoder using Foundation's `JSONEncoder`.
 /// Advanced users who want to inject their own codec can do it by overriding these functions.
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension LambdaHandler where Output: Encodable {
     public var encoder: LambdaCodableEncoder {
         Lambda.defaultJSONEncoder

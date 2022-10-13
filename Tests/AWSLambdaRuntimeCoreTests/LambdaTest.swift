@@ -279,15 +279,15 @@ class LambdaTest: XCTestCase {
             let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration)
 
             try runner.run(
-                logger: logger,
                 handler: CodableEventLoopLambdaHandler(
                     handler: handler1,
                     allocator: ByteBufferAllocator()
-                )
+                ),
+                logger: logger
             ).wait()
 
             try runner.initialize(handlerType: CodableEventLoopLambdaHandler<Handler>.self, logger: logger, terminator: LambdaTerminator()).flatMap { handler2 in
-                runner.run(logger: logger, handler: handler2)
+                runner.run(handler: handler2, logger: logger)
             }.wait()
         }
 

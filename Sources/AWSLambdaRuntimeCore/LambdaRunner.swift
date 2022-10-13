@@ -60,7 +60,7 @@ internal final class LambdaRunner {
             }
     }
 
-    func run(logger: Logger, handler: any ByteBufferLambdaHandler) -> EventLoopFuture<Void> {
+    func run(handler: any ByteBufferLambdaHandler, logger: Logger) -> EventLoopFuture<Void> {
         logger.debug("lambda invocation sequence starting")
         // 1. request invocation from lambda runtime engine
         self.isGettingNextInvocation = true

@@ -19,7 +19,6 @@ import XCTest
 class LambdaHandlerTest: XCTestCase {
     // MARK: - SimpleLambdaHandler
 
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testBootstrapSimpleNoInit() {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
@@ -37,7 +36,6 @@ class LambdaHandlerTest: XCTestCase {
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testBootstrapSimpleInit() {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
@@ -64,7 +62,6 @@ class LambdaHandlerTest: XCTestCase {
 
     // MARK: - LambdaHandler
 
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testBootstrapSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
@@ -90,7 +87,6 @@ class LambdaHandlerTest: XCTestCase {
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testBootstrapFailure() {
         let server = MockLambdaServer(behavior: FailedBootstrapBehavior())
         XCTAssertNoThrow(try server.start().wait())
@@ -116,7 +112,6 @@ class LambdaHandlerTest: XCTestCase {
         assertLambdaRuntimeResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testHandlerSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
         XCTAssertNoThrow(try server.start().wait())
@@ -134,7 +129,6 @@ class LambdaHandlerTest: XCTestCase {
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testVoidHandlerSuccess() {
         let server = MockLambdaServer(behavior: Behavior(result: .success(nil)))
         XCTAssertNoThrow(try server.start().wait())
@@ -151,7 +145,6 @@ class LambdaHandlerTest: XCTestCase {
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testHandlerFailure() {
         let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
         XCTAssertNoThrow(try server.start().wait())

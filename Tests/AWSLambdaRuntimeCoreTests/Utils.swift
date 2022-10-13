@@ -18,7 +18,10 @@ import NIOCore
 import NIOPosix
 import XCTest
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+func runLambda<Handler: SimpleLambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
+    try runLambda(behavior: behavior, handlerType: CodableSimpleLambdaHandler<Handler>.self)
+}
+
 func runLambda<Handler: LambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
     try runLambda(behavior: behavior, handlerType: CodableLambdaHandler<Handler>.self)
 }
@@ -37,7 +40,7 @@ func runLambda(behavior: LambdaServerBehavior, handlerType: (some ByteBufferLamb
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer { XCTAssertNoThrow(try server.stop().wait()) }
     try runner.initialize(handlerType: handlerType, logger: logger, terminator: terminator).flatMap { handler in
-        runner.run(logger: logger, handler: handler)
+        runner.run(handler: handler, logger: logger)
     }.wait()
 }
 

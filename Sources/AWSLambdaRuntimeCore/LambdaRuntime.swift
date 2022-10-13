@@ -37,10 +37,19 @@ public final class LambdaRuntime {
     /// Create a new `LambdaRuntime`.
     ///
     /// - parameters:
+    ///     - handlerType: The ``SimpleLambdaHandler`` type the `LambdaRuntime` shall create and manage.
+    ///     - eventLoop: An `EventLoop` to run the Lambda on.
+    ///     - logger: A `Logger` to log the Lambda events.
+    public convenience init<Handler: SimpleLambdaHandler>(_ handlerType: Handler.Type, eventLoop: EventLoop, logger: Logger) {
+        self.init(CodableSimpleLambdaHandler<Handler>.self, eventLoop: eventLoop, logger: logger)
+    }
+
+    /// Create a new `LambdaRuntime`.
+    ///
+    /// - parameters:
     ///     - handlerType: The ``LambdaHandler`` type the `LambdaRuntime` shall create and manage.
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     public convenience init<Handler: LambdaHandler>(_ handlerType: Handler.Type, eventLoop: EventLoop, logger: Logger) {
         self.init(CodableLambdaHandler<Handler>.self, eventLoop: eventLoop, logger: logger)
     }
@@ -62,10 +71,10 @@ public final class LambdaRuntime {
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
     public convenience init(_ handlerType: (some ByteBufferLambdaHandler).Type, eventLoop: EventLoop, logger: Logger) {
-        self.init(handlerType, eventLoop: eventLoop, logger: logger, configuration: .init())
+        self.init(handlerType: handlerType, eventLoop: eventLoop, logger: logger, configuration: .init())
     }
 
-    init(_ handlerType: (some ByteBufferLambdaHandler).Type, eventLoop: EventLoop, logger: Logger, configuration: LambdaConfiguration) {
+    init(handlerType: (some ByteBufferLambdaHandler).Type, eventLoop: EventLoop, logger: Logger, configuration: LambdaConfiguration) {
         self.eventLoop = eventLoop
         self.shutdownPromise = eventLoop.makePromise(of: Int.self)
         self.logger = logger
@@ -165,7 +174,7 @@ public final class LambdaRuntime {
                 }
                 var logger = self.logger
                 logger[metadataKey: "lifecycleIteration"] = "\(count)"
-                runner.run(logger: logger, handler: handler).whenComplete { result in
+                runner.run(handler: handler, logger: logger).whenComplete { result in
                     switch result {
                     case .success:
                         logger.log(level: .debug, "lambda invocation sequence completed successfully")

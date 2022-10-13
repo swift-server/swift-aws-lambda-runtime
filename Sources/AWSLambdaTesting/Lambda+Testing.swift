@@ -34,12 +34,12 @@
 // }
 
 @testable import AWSLambdaRuntime
+@testable import AWSLambdaRuntimeCore
 import Dispatch
 import Logging
 import NIOCore
 import NIOPosix
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension Lambda {
     public struct TestConfig {
         public var requestID: String
@@ -58,11 +58,47 @@ extension Lambda {
         }
     }
 
+    public static func test<Handler: SimpleLambdaHandler>(
+        _ handlerType: Handler.Type,
+        with event: Handler.Event,
+        using config: TestConfig = .init()
+    ) async throws -> Handler.Output {
+        let context = Self.makeContext(config: config)
+        let handler = Handler()
+        return try await handler.handle(event, context: context.1)
+    }
+
     public static func test<Handler: LambdaHandler>(
         _ handlerType: Handler.Type,
         with event: Handler.Event,
         using config: TestConfig = .init()
     ) async throws -> Handler.Output {
+        let context = Self.makeContext(config: config)
+        let handler = try await Handler(context: context.0)
+        return try await handler.handle(event, context: context.1)
+    }
+
+    public static func test<Handler: EventLoopLambdaHandler>(
+        _ handlerType: Handler.Type,
+        with event: Handler.Event,
+        using config: TestConfig = .init()
+    ) async throws -> Handler.Output {
+        let context = Self.makeContext(config: config)
+        let handler = try await Handler.makeHandler(context: context.0).get()
+        return try await handler.handle(event, context: context.1).get()
+    }
+
+    public static func test<Handler: ByteBufferLambdaHandler>(
+        _ handlerType: Handler.Type,
+        with buffer: ByteBuffer,
+        using config: TestConfig = .init()
+    ) async throws -> ByteBuffer? {
+        let context = Self.makeContext(config: config)
+        let handler = try await Handler.makeHandler(context: context.0).get()
+        return try await handler.handle(buffer, context: context.1).get()
+    }
+
+    private static func makeContext(config: TestConfig) -> (LambdaInitializationContext, LambdaContext) {
         let logger = Logger(label: "test")
 
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -85,7 +121,6 @@ extension Lambda {
             eventLoop: eventLoop
         )
 
-        let handler = try await Handler(context: initContext)
-        return try await handler.handle(event, context: context)
+        return (initContext, context)
     }
 }

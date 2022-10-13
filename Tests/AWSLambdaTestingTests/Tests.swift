@@ -17,7 +17,6 @@ import AWSLambdaTesting
 import NIOCore
 import XCTest
 
-@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 class LambdaTestingTests: XCTestCase {
     func testBasics() async throws {
         struct MyLambda: SimpleLambdaHandler {

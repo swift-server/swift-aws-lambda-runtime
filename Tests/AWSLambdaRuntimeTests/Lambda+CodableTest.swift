@@ -92,9 +92,10 @@ class CodableLambdaTest: XCTestCase {
         XCTAssertEqual(response?.requestId, request.requestId)
     }
 
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testCodableVoidHandler() async throws {
-        struct Handler: SimpleLambdaHandler {
+        struct Handler: LambdaHandler {
+            init(context: AWSLambdaRuntimeCore.LambdaInitializationContext) async throws {}
+
             var expected: Request?
 
             func handle(_ event: Request, context: LambdaContext) async throws {
@@ -119,9 +120,10 @@ class CodableLambdaTest: XCTestCase {
         XCTAssertEqual(outputBuffer?.readableBytes, 0)
     }
 
-    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     func testCodableHandler() async throws {
-        struct Handler: SimpleLambdaHandler {
+        struct Handler: LambdaHandler {
+            init(context: AWSLambdaRuntimeCore.LambdaInitializationContext) async throws {}
+
             var expected: Request?
 
             func handle(_ event: Request, context: LambdaContext) async throws -> Response {
@@ -137,6 +139,63 @@ class CodableLambdaTest: XCTestCase {
         var underlying = try await Handler(context: self.newInitContext())
         underlying.expected = request
         let handler = CodableLambdaHandler(
+            handler: underlying,
+            allocator: context.allocator
+        )
+
+        var inputBuffer = context.allocator.buffer(capacity: 1024)
+        XCTAssertNoThrow(try JSONEncoder().encode(request, into: &inputBuffer))
+
+        var outputBuffer: ByteBuffer?
+        XCTAssertNoThrow(outputBuffer = try handler.handle(inputBuffer, context: context).wait())
+        XCTAssertNoThrow(response = try JSONDecoder().decode(Response.self, from: XCTUnwrap(outputBuffer)))
+        XCTAssertNoThrow(try handler.handle(inputBuffer, context: context).wait())
+        XCTAssertEqual(response?.requestId, request.requestId)
+    }
+
+    func testCodableVoidSimpleHandler() async throws {
+        struct Handler: SimpleLambdaHandler {
+            var expected: Request?
+
+            func handle(_ event: Request, context: LambdaContext) async throws {
+                XCTAssertEqual(event, self.expected)
+            }
+        }
+
+        let context = self.newContext()
+        let request = Request(requestId: UUID().uuidString)
+
+        var underlying = Handler()
+        underlying.expected = request
+        let handler = CodableSimpleLambdaHandler(
+            handler: underlying,
+            allocator: context.allocator
+        )
+
+        var inputBuffer = context.allocator.buffer(capacity: 1024)
+        XCTAssertNoThrow(try JSONEncoder().encode(request, into: &inputBuffer))
+        var outputBuffer: ByteBuffer?
+        XCTAssertNoThrow(outputBuffer = try handler.handle(inputBuffer, context: context).wait())
+        XCTAssertEqual(outputBuffer?.readableBytes, 0)
+    }
+
+    func testCodableSimpleHandler() async throws {
+        struct Handler: SimpleLambdaHandler {
+            var expected: Request?
+
+            func handle(_ event: Request, context: LambdaContext) async throws -> Response {
+                XCTAssertEqual(event, self.expected)
+                return Response(requestId: event.requestId)
+            }
+        }
+
+        let context = self.newContext()
+        let request = Request(requestId: UUID().uuidString)
+        var response: Response?
+
+        var underlying = Handler()
+        underlying.expected = request
+        let handler = CodableSimpleLambdaHandler(
             handler: underlying,
             allocator: context.allocator
         )
