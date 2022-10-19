@@ -29,7 +29,7 @@ class LambdaRuntimeTest: XCTestCase {
 
         let eventLoop = eventLoopGroup.next()
         let logger = Logger(label: "TestLogger")
-        let runtime = LambdaRuntime(StartupErrorHandler.self, eventLoop: eventLoop, logger: logger)
+        let runtime = LambdaRuntimeFactory.makeRuntime(StartupErrorHandler.self, eventLoop: eventLoop, logger: logger)
 
         // eventLoop.submit in this case returns an EventLoopFuture<EventLoopFuture<ByteBufferHandler>>
         // which is why we need `wait().wait()`
@@ -51,7 +51,7 @@ class LambdaRuntimeTest: XCTestCase {
 
         let eventLoop = eventLoopGroup.next()
         let logger = Logger(label: "TestLogger")
-        let runtime = LambdaRuntime(EchoHandler.self, eventLoop: eventLoop, logger: logger)
+        let runtime = LambdaRuntimeFactory.makeRuntime(EchoHandler.self, eventLoop: eventLoop, logger: logger)
 
         XCTAssertNoThrow(_ = try eventLoop.flatSubmit { runtime.start() }.wait())
         XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) {
@@ -98,7 +98,7 @@ class LambdaRuntimeTest: XCTestCase {
 
         let eventLoop = eventLoopGroup.next()
         let logger = Logger(label: "TestLogger")
-        let runtime = LambdaRuntime(ShutdownErrorHandler.self, eventLoop: eventLoop, logger: logger)
+        let runtime = LambdaRuntimeFactory.makeRuntime(ShutdownErrorHandler.self, eventLoop: eventLoop, logger: logger)
 
         XCTAssertNoThrow(try eventLoop.flatSubmit { runtime.start() }.wait())
         XCTAssertThrowsError(try runtime.shutdownFuture.wait()) { error in

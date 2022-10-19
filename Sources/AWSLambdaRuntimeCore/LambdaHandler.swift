@@ -62,9 +62,12 @@ public protocol SimpleLambdaHandler {
     func decode(buffer: ByteBuffer) throws -> Event
 }
 
+@usableFromInline
 final class CodableSimpleLambdaHandler<Underlying: SimpleLambdaHandler>: ByteBufferLambdaHandler {
-    private let handler: Underlying
-    private var outputBuffer: ByteBuffer
+    @usableFromInline
+    let handler: Underlying
+    @usableFromInline
+    private(set) var outputBuffer: ByteBuffer
 
     @inlinable
     static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<CodableSimpleLambdaHandler> {
@@ -181,9 +184,12 @@ public protocol LambdaHandler {
     func decode(buffer: ByteBuffer) throws -> Event
 }
 
+@usableFromInline
 final class CodableLambdaHandler<Underlying: LambdaHandler>: ByteBufferLambdaHandler {
-    private let handler: Underlying
-    private var outputBuffer: ByteBuffer
+    @usableFromInline
+    let handler: Underlying
+    @usableFromInline
+    private(set) var outputBuffer: ByteBuffer
 
     @inlinable
     static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<CodableLambdaHandler> {
@@ -329,9 +335,12 @@ extension EventLoopLambdaHandler where Output == Void {
     public func encode(value: Output, into buffer: inout ByteBuffer) throws {}
 }
 
-internal final class CodableEventLoopLambdaHandler<Underlying: EventLoopLambdaHandler>: ByteBufferLambdaHandler {
-    private let handler: Underlying
-    private var outputBuffer: ByteBuffer
+@usableFromInline
+final class CodableEventLoopLambdaHandler<Underlying: EventLoopLambdaHandler>: ByteBufferLambdaHandler {
+    @usableFromInline
+    let handler: Underlying
+    @usableFromInline
+    private(set) var outputBuffer: ByteBuffer
 
     @inlinable
     static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<CodableEventLoopLambdaHandler> {
