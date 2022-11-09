@@ -13,14 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 @testable import AWSLambdaRuntimeCore
-#if compiler(>=5.6)
-@preconcurrency import Logging
-@preconcurrency import NIOPosix
-#else
 import Logging
-import NIOPosix
-#endif
 import NIOCore
+import NIOPosix
 import XCTest
 
 class LambdaTest: XCTestCase {
@@ -32,7 +27,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
+        assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
     func testFailure() {
@@ -43,7 +38,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = Int.random(in: 10 ... 20)
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: RuntimeErrorHandler.self)
-        assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
+        assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
     func testBootstrapFailure() {
@@ -141,7 +136,7 @@ class LambdaTest: XCTestCase {
 
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: 1))
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shoudHaveRun: 1)
+        assertLambdaRuntimeResult(result, shouldHaveRun: 1)
     }
 
     func testKeepAliveServer() {
@@ -152,7 +147,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = 10
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
+        assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
     func testNoKeepAliveServer() {
@@ -163,7 +158,7 @@ class LambdaTest: XCTestCase {
         let maxTimes = 10
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shoudHaveRun: maxTimes)
+        assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
     func testServerFailure() {
@@ -259,9 +254,6 @@ class LambdaTest: XCTestCase {
     #if compiler(>=5.6)
     func testSendable() async throws {
         struct Handler: EventLoopLambdaHandler {
-            typealias Event = String
-            typealias Output = String
-
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Handler> {
                 context.eventLoop.makeSucceededFuture(Handler())
             }
@@ -286,10 +278,16 @@ class LambdaTest: XCTestCase {
             logger.info("hello")
             let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration)
 
-            try runner.run(logger: logger, handler: handler1).wait()
+            try runner.run(
+                handler: CodableEventLoopLambdaHandler(
+                    handler: handler1,
+                    allocator: ByteBufferAllocator()
+                ),
+                logger: logger
+            ).wait()
 
-            try runner.initialize(logger: logger, terminator: LambdaTerminator(), handlerType: Handler.self).flatMap { handler2 in
-                runner.run(logger: logger, handler: handler2)
+            try runner.initialize(handlerType: CodableEventLoopLambdaHandler<Handler>.self, logger: logger, terminator: LambdaTerminator()).flatMap { handler2 in
+                runner.run(handler: handler2, logger: logger)
             }.wait()
         }
 

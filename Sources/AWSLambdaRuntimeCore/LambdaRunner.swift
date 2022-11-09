@@ -33,7 +33,7 @@ internal final class LambdaRunner {
     /// Run the user provided initializer. This *must* only be called once.
     ///
     /// - Returns: An `EventLoopFuture<LambdaHandler>` fulfilled with the outcome of the initialization.
-    func initialize<Handler: ByteBufferLambdaHandler>(logger: Logger, terminator: LambdaTerminator, handlerType: Handler.Type) -> EventLoopFuture<Handler> {
+    func initialize<Handler: ByteBufferLambdaHandler>(handlerType: Handler.Type, logger: Logger, terminator: LambdaTerminator) -> EventLoopFuture<Handler> {
         logger.debug("initializing lambda")
         // 1. create the handler from the factory
         // 2. report initialization error if one occurred
@@ -43,7 +43,8 @@ internal final class LambdaRunner {
             allocator: self.allocator,
             terminator: terminator
         )
-        return Handler.makeHandler(context: context)
+
+        return handlerType.makeHandler(context: context)
             // Hopping back to "our" EventLoop is important in case the factory returns a future
             // that originated from a foreign EventLoop/EventLoopGroup.
             // This can happen if the factory uses a library (let's say a database client) that manages its own threads/loops
@@ -58,7 +59,7 @@ internal final class LambdaRunner {
             }
     }
 
-    func run<Handler: ByteBufferLambdaHandler>(logger: Logger, handler: Handler) -> EventLoopFuture<Void> {
+    func run(handler: some ByteBufferLambdaHandler, logger: Logger) -> EventLoopFuture<Void> {
         logger.debug("lambda invocation sequence starting")
         // 1. request invocation from lambda runtime engine
         self.isGettingNextInvocation = true
@@ -73,10 +74,10 @@ internal final class LambdaRunner {
                 allocator: self.allocator,
                 invocation: invocation
             )
-            logger.debug("sending invocation to lambda handler \(handler)")
+            logger.debug("sending invocation to lambda handler")
             return handler.handle(bytes, context: context)
                 // Hopping back to "our" EventLoop is important in case the handler returns a future that
-                // originiated from a foreign EventLoop/EventLoopGroup.
+                // originated from a foreign EventLoop/EventLoopGroup.
                 // This can happen if the handler uses a library (lets say a DB client) that manages its own threads/loops
                 // for whatever reason and returns a future that originated from that foreign EventLoop.
                 .hop(to: self.eventLoop)

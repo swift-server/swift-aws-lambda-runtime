@@ -13,25 +13,65 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
-extension EventLoopLambdaHandler where Event == String {
+// MARK: - SimpleLambdaHandler String support
+
+extension SimpleLambdaHandler where Event == String {
     /// Implementation of a `ByteBuffer` to `String` decoding.
     @inlinable
-    public func decode(buffer: ByteBuffer) throws -> String {
-        var buffer = buffer
-        guard let string = buffer.readString(length: buffer.readableBytes) else {
-            fatalError("buffer.readString(length: buffer.readableBytes) failed")
+    public func decode(buffer: ByteBuffer) throws -> Event {
+        guard let value = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
+            throw CodecError.invalidString
         }
-        return string
+        return value
+    }
+}
+
+extension SimpleLambdaHandler where Output == String {
+    /// Implementation of `String` to `ByteBuffer` encoding.
+    @inlinable
+    public func encode(value: Output, into buffer: inout ByteBuffer) throws {
+        buffer.writeString(value)
+    }
+}
+
+// MARK: - LambdaHandler String support
+
+extension LambdaHandler where Event == String {
+    /// Implementation of a `ByteBuffer` to `String` decoding.
+    @inlinable
+    public func decode(buffer: ByteBuffer) throws -> Event {
+        guard let value = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
+            throw CodecError.invalidString
+        }
+        return value
+    }
+}
+
+extension LambdaHandler where Output == String {
+    /// Implementation of `String` to `ByteBuffer` encoding.
+    @inlinable
+    public func encode(value: Output, into buffer: inout ByteBuffer) throws {
+        buffer.writeString(value)
+    }
+}
+
+// MARK: - EventLoopLambdaHandler String support
+
+extension EventLoopLambdaHandler where Event == String {
+    /// Implementation of `String` to `ByteBuffer` encoding.
+    @inlinable
+    public func decode(buffer: ByteBuffer) throws -> Event {
+        guard let value = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
+            throw CodecError.invalidString
+        }
+        return value
     }
 }
 
 extension EventLoopLambdaHandler where Output == String {
-    /// Implementation of `String` to `ByteBuffer` encoding.
+    /// Implementation of a `ByteBuffer` to `String` decoding.
     @inlinable
-    public func encode(allocator: ByteBufferAllocator, value: String) throws -> ByteBuffer? {
-        // FIXME: reusable buffer
-        var buffer = allocator.buffer(capacity: value.utf8.count)
+    public func encode(value: Output, into buffer: inout ByteBuffer) throws {
         buffer.writeString(value)
-        return buffer
     }
 }

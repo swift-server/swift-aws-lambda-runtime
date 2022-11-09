@@ -17,14 +17,7 @@ import AWSLambdaRuntime
 // in this example we are receiving and responding with strings
 
 @main
-struct MyLambda: LambdaHandler {
-    typealias Event = String
-    typealias Output = String
-
-    init(context: LambdaInitializationContext) async throws {
-        // setup your resources that you want to reuse for every invocation here.
-    }
-
+struct MyLambda: SimpleLambdaHandler {
     func handle(_ input: String, context: LambdaContext) async throws -> String {
         // as an example, respond with the input's reversed
         String(input.reversed())

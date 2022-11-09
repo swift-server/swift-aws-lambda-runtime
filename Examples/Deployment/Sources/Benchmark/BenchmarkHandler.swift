@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntimeCore
-import NIO
+import NIOCore
 
 // If you would like to benchmark Swift's Lambda Runtime,
 // use this example which is more performant.
@@ -22,9 +22,6 @@ import NIO
 
 @main
 struct BenchmarkHandler: EventLoopLambdaHandler {
-    typealias Event = String
-    typealias Output = String
-
     static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Self> {
         context.eventLoop.makeSucceededFuture(BenchmarkHandler())
     }

@@ -26,14 +26,7 @@ struct Response: Codable {
 // codables to model your request and response objects
 
 @main
-struct MyLambda: LambdaHandler {
-    typealias Event = Request
-    typealias Output = Response
-
-    init(context: LambdaInitializationContext) async throws {
-        // setup your resources that you want to reuse for every invocation here.
-    }
-
+struct MyLambda: SimpleLambdaHandler {
     func handle(_ event: Request, context: LambdaContext) async throws -> Response {
         // as an example, respond with the input event's reversed body
         Response(body: String(event.body.reversed()))

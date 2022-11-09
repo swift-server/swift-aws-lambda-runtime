@@ -18,7 +18,19 @@ import NIOCore
 import NIOPosix
 import XCTest
 
-func runLambda<Handler: ByteBufferLambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
+func runLambda<Handler: SimpleLambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
+    try runLambda(behavior: behavior, handlerType: CodableSimpleLambdaHandler<Handler>.self)
+}
+
+func runLambda<Handler: LambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
+    try runLambda(behavior: behavior, handlerType: CodableLambdaHandler<Handler>.self)
+}
+
+func runLambda<Handler: EventLoopLambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
+    try runLambda(behavior: behavior, handlerType: CodableEventLoopLambdaHandler<Handler>.self)
+}
+
+func runLambda(behavior: LambdaServerBehavior, handlerType: (some ByteBufferLambdaHandler).Type) throws {
     let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
@@ -27,17 +39,17 @@ func runLambda<Handler: ByteBufferLambdaHandler>(behavior: LambdaServerBehavior,
     let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer { XCTAssertNoThrow(try server.stop().wait()) }
-    try runner.initialize(logger: logger, terminator: terminator, handlerType: handlerType).flatMap { handler in
-        runner.run(logger: logger, handler: handler)
+    try runner.initialize(handlerType: handlerType, logger: logger, terminator: terminator).flatMap { handler in
+        runner.run(handler: handler, logger: logger)
     }.wait()
 }
 
-func assertLambdaRuntimeResult(_ result: Result<Int, Error>, shoudHaveRun: Int = 0, shouldFailWithError: Error? = nil, file: StaticString = #file, line: UInt = #line) {
+func assertLambdaRuntimeResult(_ result: Result<Int, Error>, shouldHaveRun: Int = 0, shouldFailWithError: Error? = nil, file: StaticString = #file, line: UInt = #line) {
     switch result {
     case .success where shouldFailWithError != nil:
         XCTFail("should fail with \(shouldFailWithError!)", file: file, line: line)
     case .success(let count) where shouldFailWithError == nil:
-        XCTAssertEqual(shoudHaveRun, count, "should have run \(shoudHaveRun) times", file: file, line: line)
+        XCTAssertEqual(shouldHaveRun, count, "should have run \(shouldHaveRun) times", file: file, line: line)
     case .failure(let error) where shouldFailWithError == nil:
         XCTFail("should succeed, but failed with \(error)", file: file, line: line)
     case .failure(let error) where shouldFailWithError != nil:

@@ -39,10 +39,10 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
     public convenience init(_ handlerType: Handler.Type, eventLoop: EventLoop, logger: Logger) {
-        self.init(eventLoop: eventLoop, logger: logger, configuration: .init())
+        self.init(handlerType: handlerType, eventLoop: eventLoop, logger: logger, configuration: .init())
     }
 
-    init(eventLoop: EventLoop, logger: Logger, configuration: LambdaConfiguration) {
+    init(handlerType: Handler.Type, eventLoop: EventLoop, logger: Logger, configuration: LambdaConfiguration) {
         self.eventLoop = eventLoop
         self.shutdownPromise = eventLoop.makePromise(of: Int.self)
         self.logger = logger
@@ -85,7 +85,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
         let terminator = LambdaTerminator()
         let runner = LambdaRunner(eventLoop: self.eventLoop, configuration: self.configuration)
 
-        let startupFuture = runner.initialize(logger: logger, terminator: terminator, handlerType: Handler.self)
+        let startupFuture = runner.initialize(handlerType: Handler.self, logger: logger, terminator: terminator)
         startupFuture.flatMap { handler -> EventLoopFuture<Result<Int, Error>> in
             // after the startup future has succeeded, we have a handler that we can use
             // to `run` the lambda.
@@ -141,7 +141,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
                 }
                 var logger = self.logger
                 logger[metadataKey: "lifecycleIteration"] = "\(count)"
-                runner.run(logger: logger, handler: handler).whenComplete { result in
+                runner.run(handler: handler, logger: logger).whenComplete { result in
                     switch result {
                     case .success:
                         logger.log(level: .debug, "lambda invocation sequence completed successfully")
@@ -175,7 +175,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     private enum State {
         case idle
         case initializing
-        case active(LambdaRunner, Handler)
+        case active(LambdaRunner, any ByteBufferLambdaHandler)
         case shuttingdown
         case shutdown
 
@@ -196,7 +196,40 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     }
 }
 
+public enum LambdaRuntimeFactory {
+    /// Create a new `LambdaRuntime`.
+    ///
+    /// - parameters:
+    ///     - handlerType: The ``SimpleLambdaHandler`` type the `LambdaRuntime` shall create and manage.
+    ///     - eventLoop: An `EventLoop` to run the Lambda on.
+    ///     - logger: A `Logger` to log the Lambda events.
+    @inlinable
+    public static func makeRuntime<H: SimpleLambdaHandler>(_ handlerType: H.Type, eventLoop: any EventLoop, logger: Logger) -> LambdaRuntime<some ByteBufferLambdaHandler> {
+        LambdaRuntime<CodableSimpleLambdaHandler<H>>(CodableSimpleLambdaHandler<H>.self, eventLoop: eventLoop, logger: logger)
+    }
+
+    /// Create a new `LambdaRuntime`.
+    ///
+    /// - parameters:
+    ///     - handlerType: The ``LambdaHandler`` type the `LambdaRuntime` shall create and manage.
+    ///     - eventLoop: An `EventLoop` to run the Lambda on.
+    ///     - logger: A `Logger` to log the Lambda events.
+    @inlinable
+    public static func makeRuntime<H: LambdaHandler>(_ handlerType: H.Type, eventLoop: any EventLoop, logger: Logger) -> LambdaRuntime<some ByteBufferLambdaHandler> {
+        LambdaRuntime<CodableLambdaHandler<H>>(CodableLambdaHandler<H>.self, eventLoop: eventLoop, logger: logger)
+    }
+
+    /// Create a new `LambdaRuntime`.
+    ///
+    /// - parameters:
+    ///     - handlerType: The ``EventLoopLambdaHandler`` type the `LambdaRuntime` shall create and manage.
+    ///     - eventLoop: An `EventLoop` to run the Lambda on.
+    ///     - logger: A `Logger` to log the Lambda events.
+    @inlinable
+    public static func makeRuntime<H: EventLoopLambdaHandler>(_ handlerType: H.Type, eventLoop: any EventLoop, logger: Logger) -> LambdaRuntime<some ByteBufferLambdaHandler> {
+        LambdaRuntime<CodableEventLoopLambdaHandler<H>>(CodableEventLoopLambdaHandler<H>.self, eventLoop: eventLoop, logger: logger)
+    }
+}
+
 /// This is safe since lambda runtime synchronizes by dispatching all methods to a single `EventLoop`
-#if compiler(>=5.5) && canImport(_Concurrency)
 extension LambdaRuntime: @unchecked Sendable {}
-#endif

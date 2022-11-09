@@ -17,12 +17,7 @@ import AWSLambdaRuntime
 // MARK: - Run Lambda
 
 @main
-struct MyLambda: LambdaHandler {
-    typealias Event = Request
-    typealias Output = Response
-
-    init(context: LambdaInitializationContext) async throws {}
-
+struct MyLambda: SimpleLambdaHandler {
     func handle(_ request: Request, context: LambdaContext) async throws -> Response {
         // switch over the error type "requested" by the request, and trigger such error accordingly
         switch request.error {
