@@ -17,6 +17,10 @@ let package = Package(
         .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
         // plugin to package the lambda, creating an archive that can be uploaded to AWS
         .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
+        // plugin to deploy the lambda, relies on AWS SAM command line
+        .plugin(name: "AWSLambdaDeployer", targets: ["AWSLambdaDeployer"]),
+        // plugin to deploy the lambda, relies on AWS SAM command line
+        .library(name: "AWSLambdaDeploymentDescriptor", targets: ["AWSLambdaDeploymentDescriptor"]),
         // for testing only
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
@@ -25,6 +29,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.4.2")),
         .package(url: "https://github.com/swift-server/swift-backtrace.git", .upToNextMajor(from: "1.2.3")),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
+        .package(url: "https://github.com/jpsim/Yams.git", from: "5.0.1")
     ],
     targets: [
         .target(name: "AWSLambdaRuntime", dependencies: [
@@ -47,6 +52,23 @@ let package = Package(
                     verb: "archive",
                     description: "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS or non Amazonlinux 2 distributions."
                 )
+            )
+        ),
+        .target(
+            name: "AWSLambdaDeploymentDescriptor",
+            dependencies: [
+                .product(name: "Yams", package: "Yams")
+            ],
+            path: "Sources/AWSLambdaDeploymentDescriptor"
+        ),
+        .plugin(
+            name: "AWSLambdaDeployer",
+            capability: .command(
+                intent: .custom(
+                    verb: "deploy",
+                    description: "Deploy the Lambda ZIP created by the archive plugin. Generates SAM-compliant deployment files based on deployment struct passed by the developer and invoke the SAM command."
+                )
+//                permissions: [.writeToPackageDirectory(reason: "This plugin generates a SAM template to describe your deployment")]
             )
         ),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [
