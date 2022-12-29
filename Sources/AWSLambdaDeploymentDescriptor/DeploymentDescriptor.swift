@@ -55,37 +55,35 @@ extension DeploymentDescriptor {
             
             // do we need to create a SQS queue ? Filter on SQSEvent source without Queue Arn
             let sqsEventSources: [EventSource] = eventSources.filter{
-                switch $0 {
-                case .httpApiEvent: return false
-                case .sqsEvent: return true //FIXME: check if an queue Arn is provided
-                    // according to https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-eventsourcemapping.html#cfn-lambda-eventsourcemapping-eventsourcearn
-                    // ARN Regex is arn:(aws[a-zA-Z0-9-]*):([a-zA-Z0-9\-])+:([a-z]{2}(-gov)?-[a-z]+-\d{1})?:(\d{12})?:(.*)
-                }
+                //FIXME: check if an queue Arn is provided
+                // according to https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-eventsourcemapping.html#cfn-lambda-eventsourcemapping-eventsourcearn
+                // ARN Regex is arn:(aws[a-zA-Z0-9-]*):([a-zA-Z0-9\-])+:([a-z]{2}(-gov)?-[a-z]+-\d{1})?:(\d{12})?:(.*)
+                $0.type == "SQS" // && TODO ....
             }
-            
+
             // for each of SQSEvent Source without queue Arn, add a SQS resource and modify the event source to point ot that new resource
             for sqsES in sqsEventSources {
                 
-                if case .sqsEvent(let event, _) = sqsES {
-                    // add a queue resource to the SAM teamplate
-                    let logicalName = logicalName(resourceType: "Queue", resourceName: event.properties.queue)
-                    additionalressources.append(.queue(logicalName,
-                                                       SQSResource(properties: SQSResourceProperties(queueName: event.properties.queue))))
-                                                
-                    // replace the event source to point to this new queue
-                    eventSources.removeAll{ $0 == sqsES }
-                    eventSources.append(EventSource.sqsEvent(.init(queueRef: logicalName)))
-                    
-                } else {
-                    fatalError("Non SQSEvent in our list of event sources")
+                // add a queue resource to the SAM teamplate
+                guard let queueName = (sqsES.properties as? SQSEventProperties)?.queue else {
+                    fatalError("SQS Event Source's properties is not a SAMEventProperties")
                 }
+                let logicalName = logicalName(resourceType: "Queue",
+                                              resourceName: queueName)
+                additionalressources.append(Resource.sqsQueue(name: logicalName,
+                                                              properties: SQSResourceProperties(queueName: queueName)))
+                                                
+                // replace the event source to point to this new queue resource
+                eventSources.removeAll{ $0 == sqsES }
+                eventSources.append(EventSource.sqs(queue: "!GetAtt \(logicalName).Arn"))
+
             }
             
             // finally, let's build the function definition
-            return Resource.function(name,
-                                    .init(codeUri: package,
-                                          eventSources: eventSources,
-                                          environment: environmentVariables(name)))
+            return Resource.serverlessFunction(name: name,
+                                               codeUri: package,
+                                               eventSources: eventSources,
+                                               environment: environmentVariables(name))
             
         }
         

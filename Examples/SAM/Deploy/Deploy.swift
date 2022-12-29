@@ -11,12 +11,12 @@ public struct HttpApiLambdaDeployment: DeploymentDescriptor {
 
         if lambdaName == "HttpApiLambda" {
             return [
-                .httpApiEvent()
-                // .httpApiEvent(.init(method: .GET, path: "/test")),
+                .httpApi()
+                // .httpApi(method: .GET, path: "/test"),
             ]
 
         } else if lambdaName == "SQSLambda" {
-            return [.sqsEvent(.init(queue: "swift-lambda-test"))]
+            return [.sqs(queue: "swift-lambda-test")]
 
         } else {
             fatalError("Unknown Lambda name : \(lambdaName)")

@@ -42,7 +42,7 @@ public struct SAMDeployment: DeploymentDefinition {
         self.resources = [String: Resource]()
         
         for res in resources {
-            self.resources[res.resourceLogicalName()] = res
+            self.resources[res.name()] = res
         }
     }
     
@@ -67,32 +67,29 @@ public struct SAMDeployment: DeploymentDefinition {
     }
 }
 
-public enum Resource: Encodable {
-        
-    case function(_ name: String, _ function: ServerlessFunctionResource)
-    case simpleTable(_ name: String, _ table: SimpleTableResource)
-    case queue(_ name: String, _ queue: SQSResource)
+public protocol SAMResource: Encodable {}
+public protocol SAMResourceProperties: Encodable {}
+
+public struct Resource: SAMResource {
     
-    // a resource provides it's own key for encoding
+    let type: String
+    let properties: SAMResourceProperties
+    let _name: String
+    
+    public func name() -> String { return _name }
+    
+    enum CodingKeys: String, CodingKey {
+        case type = "Type"
+        case properties = "Properties"
+    }
+    
+    // this is to make the compiler happy : Resource now confoms to Encodable
     public func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        
-        switch self {
-        case .function(_, let function):
-            try? container.encode(function)
-        case .simpleTable(_, let table):
-            try? container.encode(table)
-        case .queue(_, let queue):
-            try? container.encode(queue)
-        }
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try? container.encode(self.type, forKey: .type)
+        try? container.encode(self.properties, forKey: .properties)
     }
-    public func resourceLogicalName() -> String {
-        switch self {
-        case .function(let name, _): return name
-        case .simpleTable(let name, _): return name
-        case .queue(let name, _): return name
-        }
-    }
+    
 }
 
 //MARK: Lambda Function resource definition
@@ -102,27 +99,23 @@ public enum Resource: Encodable {
  https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html
 -----------------------------------------------------------------------------------------*/
 
-public struct ServerlessFunctionResource: Encodable {
-    
-    let type: String = "AWS::Serverless::Function"
-    let properties: ServerlessFunctionProperties
-    
-    public init(codeUri: String,
-                eventSources: [EventSource] = [],
-                environment: EnvironmentVariable = EnvironmentVariable.none()) {
+extension Resource {
+    public static func serverlessFunction(name: String,
+                                          codeUri: String,
+                                          eventSources: [EventSource] = [],
+                                          environment: EnvironmentVariable = EnvironmentVariable.none()) -> Resource {
         
-        self.properties = ServerlessFunctionProperties(codeUri: codeUri,
+        let properties = ServerlessFunctionProperties(codeUri: codeUri,
                                                        eventSources: eventSources,
                                                        environment: environment)
+        return Resource(type: "AWS::Serverless::Function",
+                        properties: properties,
+                        _name: name)
     }
-    
-    enum CodingKeys: String, CodingKey {
-        case type = "Type"
-        case properties = "Properties"
-    }
+
 }
 
-public struct ServerlessFunctionProperties: Encodable {
+public struct ServerlessFunctionProperties: SAMResourceProperties {
     public enum Architectures: String, Encodable {
         case x64 = "x86_64"
         case arm64 = "arm64"
@@ -152,7 +145,7 @@ public struct ServerlessFunctionProperties: Encodable {
         self.environment = environment
         
         for es in eventSources {
-            self.eventSources[es.eventLogicalName()] = es
+            self.eventSources[es.name()] = es
         }
     }
     
@@ -199,31 +192,37 @@ public struct EnvironmentVariable: Codable {
 }
 
 //MARK: Lambda Function event source
-public enum EventSource: Encodable, Equatable {
+
+public protocol SAMEvent : Encodable, Equatable {}
+public protocol SAMEventProperties : Encodable {}
+
+public struct EventSource: SAMEvent {
+
+    let type: String
+    let properties: SAMEventProperties?
+    let _name: String
     
-    // I put name as last parameters to allow unnamed default values
-    case httpApiEvent(_ httpApi: HttpApiEvent = HttpApiEvent(), _ name: String = "HttpApiEvent")
-    case sqsEvent(_ sqs: SQSEvent, _ name: String = "SQSEvent")
+    public func name() -> String { return _name }
     
-    // each source provide it's own top-level key
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-    
-        switch self {
-        case .httpApiEvent(let httpApi, _):
-            try? container.encode(httpApi)
-        case .sqsEvent(let sqs, _):
-            try? container.encode(sqs)
-        }
+    enum CodingKeys: String, CodingKey {
+        case type = "Type"
+        case properties = "Properties"
     }
     
-    public func eventLogicalName() -> String {
-        switch self {
-            case .httpApiEvent(_, let name): return name
-            case .sqsEvent(_, let name): return name
+    public static func == (lhs: EventSource, rhs: EventSource) -> Bool {
+        lhs.type == rhs.type && lhs.name() == rhs.name()
+    }
+
+    // this is to make the compiler happy : Resource now confoms to Encodable
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try? container.encode(self.type, forKey: .type)
+        if let properties = self.properties {
+            try? container.encode(properties, forKey: .properties)
         }
     }
 }
+
 
 //MARK: HTTP API Event definition
 /*---------------------------------------------------------------------------------------
@@ -232,31 +231,23 @@ public enum EventSource: Encodable, Equatable {
  https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-httpapi.html
 -----------------------------------------------------------------------------------------*/
 
-public struct HttpApiEvent: Encodable, Equatable {
-    let type: String = "HttpApi"
-    let properties: HttpApiProperties?
-    public init(method: HttpVerb? = nil, path: String? = nil) {
+extension EventSource {
+    public static func httpApi(name: String = "HttpApiEvent",
+                               method: HttpVerb? = nil,
+                               path: String? = nil) -> EventSource {
+        
+        var properties: SAMEventProperties? = nil
         if method != nil || path != nil {
-            self.properties = .init(method: method, path: path)
-        } else {
-            self.properties = nil
+            properties = HttpApiProperties(method: method, path: path)
         }
-    }
-    
-    // Properties is option, HttpApi without properties forwards all requests to the lambda function
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: HttpApiEventKeys.self)
-        try container.encode(self.type, forKey: .type)
-        if let properties = self.properties {
-            try container.encode(properties, forKey: .properties)
-        }
-    }
-    enum HttpApiEventKeys: String, CodingKey {
-        case type = "Type"
-        case properties = "Properties"
+        
+        return EventSource(type: "HttpApi",
+                           properties: properties,
+                           _name: name)
     }
 }
-struct HttpApiProperties: Encodable, Equatable {
+
+struct HttpApiProperties: SAMEventProperties, Equatable {
     init(method: HttpVerb? = nil, path: String? = nil) {
         self.method = method
         self.path = path
@@ -290,22 +281,16 @@ public enum HttpVerb: String, Encodable {
  
  https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-sqs.html
 -----------------------------------------------------------------------------------------*/
-public struct SQSEvent: Encodable, Equatable {
-    var type: String = "SQS"
-    public let properties: SQSProperties
-    public init(queue: String) {
-        self.properties = .init(queue: queue)
-    }
-    public init(queueArn: String) {
-        //FIXME: check for Arn Format
-        self.properties = .init(queue: queueArn)
-    }
-    public init(queueRef: String) {
-        self.properties = .init(queue: "!GetAtt \(queueRef).Arn")
-    }
-    enum CodingKeys: String, CodingKey {
-        case type = "Type"
-        case properties = "Properties"
+
+extension EventSource {
+    public static func sqs(name: String = "SQSEvent",
+                           queue: String) -> EventSource {
+        
+        let properties = SQSEventProperties(queue)
+        
+        return EventSource(type: "SQS",
+                           properties: properties,
+                           _name: name)
     }
 }
 
@@ -313,7 +298,7 @@ public struct SQSEvent: Encodable, Equatable {
    Represents SQS queue properties.
    When `queue` name  is a shorthand YAML reference to another resource, like `!GetAtt`, it splits the shorthand into proper YAML to make the parser happy
  */
-public struct SQSProperties: Codable, Equatable {
+public struct SQSEventProperties: SAMEventProperties, Equatable {
     
     private var _queue: String = ""
 
@@ -339,8 +324,7 @@ public struct SQSProperties: Codable, Equatable {
     }
     var intrisicFunction: [String:[String]] = [:]
     
-    
-    public init(queue: String) {
+    public init(_ queue: String) {
         self.queue = queue
     }
     enum CodingKeys: String, CodingKey {
@@ -364,21 +348,18 @@ public struct SQSProperties: Codable, Equatable {
  Documentation
  https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-sqs-queue.html
 -----------------------------------------------------------------------------------------*/
-public struct SQSResource: Encodable {
-    
-    let type: String = "AWS::SQS::Queue"
-    public let properties: SQSResourceProperties
-    
-    public init(properties: SQSResourceProperties) {
-        self.properties = properties
+extension Resource {
+    public static func sqsQueue(name: String,
+                                properties: SQSResourceProperties) -> Resource {
+                                                
+        return Resource(type: "AWS::SQS::Queue",
+                        properties: properties,
+                        _name: name)
     }
-    enum CodingKeys: String, CodingKey {
-        case type = "Type"
-        case properties = "Properties"
-    }
+
 }
 
-public struct SQSResourceProperties: Encodable {
+public struct SQSResourceProperties: SAMResourceProperties {
     public let queueName: String
     enum CodingKeys: String, CodingKey {
         case queueName = "QueueName"
@@ -393,21 +374,18 @@ public struct SQSResourceProperties: Encodable {
  https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-simpletable.html
 -----------------------------------------------------------------------------------------*/
 
-public struct SimpleTableResource: Encodable {
-    
-    let type: String = "AWS::Serverless::SimpleTable"
-    let properties: SimpleTableProperties
-    
-    public init(properties: SimpleTableProperties) {
-        self.properties = properties
+extension Resource {
+    public static func simpleTable(name: String,
+                                   properties: SimpleTableProperties) -> Resource {
+                                                
+        return Resource(type: "AWS::Serverless::SimpleTable",
+                        properties: properties,
+                        _name: name)
     }
-    enum CodingKeys: String, CodingKey {
-        case type = "Type"
-        case properties = "Properties"
-    }
+
 }
 
-public struct SimpleTableProperties: Encodable {
+public struct SimpleTableProperties: SAMResourceProperties {
     let primaryKey: PrimaryKey
     let tableName: String
     let provisionedThroughput: ProvisionedThroughput?
