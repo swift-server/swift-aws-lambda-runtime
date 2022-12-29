@@ -19,7 +19,7 @@ let package = Package(
         .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
         // plugin to deploy the lambda, relies on AWS SAM command line
         .plugin(name: "AWSLambdaDeployer", targets: ["AWSLambdaDeployer"]),
-        // plugin to deploy the lambda, relies on AWS SAM command line
+        // Shared Library to generate a SAM deployment descriptor
         .library(name: "AWSLambdaDeploymentDescriptor", targets: ["AWSLambdaDeploymentDescriptor"]),
         // for testing only
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
