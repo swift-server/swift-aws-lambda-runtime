@@ -21,7 +21,7 @@ public protocol DeploymentDefinition: Encodable {}
 
 // a Swift definition of a SAM deployment decsriptor.
 // currently limited to the properties I needed for the examples.
-// A immediate TODO if this code is accepted is to add more properties and more classes
+// An immediate TODO if this code is accepted is to add more properties and more classes
 public struct SAMDeployment: DeploymentDefinition {
     
     let awsTemplateFormatVersion: String
@@ -68,7 +68,7 @@ public struct SAMDeployment: DeploymentDefinition {
 }
 
 public enum Resource: Encodable {
-    
+        
     case function(_ name: String, _ function: ServerlessFunctionResource)
     case simpleTable(_ name: String, _ table: SimpleTableResource)
     case queue(_ name: String, _ queue: SQSResource)
@@ -202,7 +202,7 @@ public struct EnvironmentVariable: Codable {
 public enum EventSource: Encodable, Equatable {
     
     // I put name as last parameters to allow unnamed default values
-    case httpApiEvent(_ httpApi: HttpApiEvent, _ name: String = "HttpApiEvent")
+    case httpApiEvent(_ httpApi: HttpApiEvent = HttpApiEvent(), _ name: String = "HttpApiEvent")
     case sqsEvent(_ sqs: SQSEvent, _ name: String = "SQSEvent")
     
     // each source provide it's own top-level key

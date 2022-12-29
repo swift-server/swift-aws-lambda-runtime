@@ -11,7 +11,7 @@ public struct HttpApiLambdaDeployment: DeploymentDescriptor {
 
         if lambdaName == "HttpApiLambda" {
             return [
-                .httpApiEvent(.init())
+                .httpApiEvent()
                 // .httpApiEvent(.init(method: .GET, path: "/test")),
             ]
 
