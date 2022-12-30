@@ -42,7 +42,7 @@ public struct SAMDeployment: DeploymentDefinition {
         self.resources = [String: Resource]()
         
         for res in resources {
-            self.resources[res.name()] = res
+            self.resources[res.name] = res
         }
     }
     
@@ -74,10 +74,8 @@ public struct Resource: SAMResource {
     
     let type: String
     let properties: SAMResourceProperties
-    let _name: String
-    
-    public func name() -> String { return _name }
-    
+    let name: String
+        
     enum CodingKeys: String, CodingKey {
         case type = "Type"
         case properties = "Properties"
@@ -110,7 +108,7 @@ extension Resource {
                                                        environment: environment)
         return Resource(type: "AWS::Serverless::Function",
                         properties: properties,
-                        _name: name)
+                        name: name)
     }
 
 }
@@ -145,7 +143,7 @@ public struct ServerlessFunctionProperties: SAMResourceProperties {
         self.environment = environment
         
         for es in eventSources {
-            self.eventSources[es.name()] = es
+            self.eventSources[es.name] = es
         }
     }
     
@@ -200,17 +198,15 @@ public struct EventSource: SAMEvent {
 
     let type: String
     let properties: SAMEventProperties?
-    let _name: String
-    
-    public func name() -> String { return _name }
-    
+    let name: String
+        
     enum CodingKeys: String, CodingKey {
         case type = "Type"
         case properties = "Properties"
     }
     
     public static func == (lhs: EventSource, rhs: EventSource) -> Bool {
-        lhs.type == rhs.type && lhs.name() == rhs.name()
+        lhs.type == rhs.type && lhs.name == rhs.name
     }
 
     // this is to make the compiler happy : Resource now confoms to Encodable
@@ -243,7 +239,7 @@ extension EventSource {
         
         return EventSource(type: "HttpApi",
                            properties: properties,
-                           _name: name)
+                           name: name)
     }
 }
 
@@ -290,7 +286,7 @@ extension EventSource {
         
         return EventSource(type: "SQS",
                            properties: properties,
-                           _name: name)
+                           name: name)
     }
 }
 
@@ -354,7 +350,7 @@ extension Resource {
                                                 
         return Resource(type: "AWS::SQS::Queue",
                         properties: properties,
-                        _name: name)
+                        name: name)
     }
 
 }
@@ -380,7 +376,7 @@ extension Resource {
                                                 
         return Resource(type: "AWS::Serverless::SimpleTable",
                         properties: properties,
-                        _name: name)
+                        name: name)
     }
 
 }
