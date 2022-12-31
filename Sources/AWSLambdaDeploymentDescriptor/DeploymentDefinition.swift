@@ -46,19 +46,6 @@ public struct SAMDeployment: DeploymentDefinition {
         }
     }
     
-    // allows to add more resource. It returns a new SAMDeploymentDescription with the updated list of resources
-    public func addResource(_ resource: Resource) -> SAMDeployment {
-        
-        var existingResources: [Resource] = self.resources.values.compactMap{ $0 }
-        existingResources.append(resource)
-        
-        return SAMDeployment(templateVersion: self.awsTemplateFormatVersion,
-                             transform: self.transform,
-                             description: self.description,
-                             resources: existingResources)
-    }
-
-    
     enum CodingKeys: String, CodingKey {
         case awsTemplateFormatVersion = "AWSTemplateFormatVersion"
         case transform = "Transform"
@@ -87,7 +74,6 @@ public struct Resource: SAMResource {
         try? container.encode(self.type, forKey: .type)
         try? container.encode(self.properties, forKey: .properties)
     }
-    
 }
 
 //MARK: Lambda Function resource definition
@@ -384,9 +370,11 @@ extension Resource {
 public struct SimpleTableProperties: SAMResourceProperties {
     let primaryKey: PrimaryKey
     let tableName: String
-    let provisionedThroughput: ProvisionedThroughput?
+    let provisionedThroughput: ProvisionedThroughput? = nil
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try? container.encode(tableName, forKey: .tableName)
+        try? container.encode(primaryKey, forKey: .primaryKey)
         if let provisionedThroughput = self.provisionedThroughput {
             try container.encode(provisionedThroughput, forKey: .provisionedThroughput)
         }

@@ -25,8 +25,8 @@ public protocol DeploymentDescriptor {
     // returns environment variables to associate with the given Lambda function
     func environmentVariables(_ lambdaName: String) -> EnvironmentVariable
 
-    // TODO: add the possibility to add additional resources.
-    // func addResource() -> Resource ?
+    // returns additional resources to create in the cloud (ex : a dynamoDB table)
+    func addResource() -> [Resource]
 }
 
 // Generates a deployment descriptor modelized by DeploymentDefinition
@@ -43,7 +43,7 @@ extension DeploymentDescriptor {
         var additionalressources : [Resource] = []
         
         // create function resources for each Lambda function
-        var resources = lambdaNames().map { name in
+        var resources = self.lambdaNames().map { name in
             
             // default output dir for archive plugin is
             // .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/HttpApiLambda/HttpApiLambda.zip
@@ -51,7 +51,7 @@ extension DeploymentDescriptor {
             let package = ".build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/\(name)/\(name).zip"
 
             // add event sources provided by Lambda developer
-            var eventSources = eventSources(name)
+            var eventSources = self.eventSources(name)
             
             // do we need to create a SQS queue ? Filter on SQSEvent source without Queue Arn
             let sqsEventSources: [EventSource] = eventSources.filter{
@@ -90,14 +90,23 @@ extension DeploymentDescriptor {
         // add newly created resources (non-functions)
         resources.append(contentsOf: additionalressources)
         
+        // add developer-provided resources
+        resources.append(contentsOf: self.addResource())
+
         // craete the SAM deployment decsriptor
         return SAMDeployment(resources: resources)
     }
     
     // returns environment variables to associate with the given Lambda function
     // This is a default implementation to avoid forcing the lambda developer to implement it when not needed
-    func environmentVariables(_ lambdaName: String) -> EnvironmentVariable {
+    public func environmentVariables(_ lambdaName: String) -> EnvironmentVariable {
         return EnvironmentVariable.none()
+    }
+    
+    // returns additional resources to create in the cloud (ex : a dynamoDB table)
+    // This is a default implementation to avoid forcing the lambda developer to implement it when not needed
+    public func addResource() -> [Resource] {
+        return []
     }
     
     // entry point and main function. Lambda developer must call this function.
