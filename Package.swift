@@ -80,6 +80,9 @@ let package = Package(
             .byName(name: "AWSLambdaRuntimeCore"),
             .byName(name: "AWSLambdaRuntime"),
         ]),
+        .testTarget(name: "AWSLambdaDeploymentDescriptorTests", dependencies: [
+            .byName(name: "AWSLambdaDeploymentDescriptor"),
+        ]),
         // testing helper
         .target(name: "AWSLambdaTesting", dependencies: [
             .byName(name: "AWSLambdaRuntime"),
