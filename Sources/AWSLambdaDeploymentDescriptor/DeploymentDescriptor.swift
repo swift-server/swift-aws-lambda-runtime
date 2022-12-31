@@ -54,11 +54,13 @@ extension DeploymentDescriptor {
             var eventSources = self.eventSources(name)
             
             // do we need to create a SQS queue ? Filter on SQSEvent source without Queue Arn
-            let sqsEventSources: [EventSource] = eventSources.filter{
-                //FIXME: check if an queue Arn is provided
-                // according to https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-eventsourcemapping.html#cfn-lambda-eventsourcemapping-eventsourcearn
-                // ARN Regex is arn:(aws[a-zA-Z0-9-]*):([a-zA-Z0-9\-])+:([a-z]{2}(-gov)?-[a-z]+-\d{1})?:(\d{12})?:(.*)
-                $0.type == "SQS" // && TODO ....
+            let sqsEventSources: [EventSource] = eventSources.filter{ eventSource in
+                // Arn regex from https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-eventsourcemapping.html#cfn-lambda-eventsourcemapping-eventsourcearn
+                let arnRegex = #"arn:(aws[a-zA-Z0-9-]*):([a-zA-Z0-9\-])+:([a-z]{2}(-gov)?-[a-z]+-\d{1})?:(\d{12})?:(.*)"#
+                let queueName = (eventSource.properties as? SQSEventProperties)?.queue
+                return
+                    eventSource.type == "SQS" &&
+                    queueName?.range(of: arnRegex, options: .regularExpression) == nil
             }
 
             // for each of SQSEvent Source without queue Arn, add a SQS resource and modify the event source to point ot that new resource
