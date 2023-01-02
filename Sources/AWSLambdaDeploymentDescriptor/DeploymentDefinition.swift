@@ -63,6 +63,8 @@ public struct Resource: SAMResource {
     let properties: SAMResourceProperties
     let name: String
         
+    public static func none() -> [Resource] { return [] }
+    
     enum CodingKeys: String, CodingKey {
         case type = "Type"
         case properties = "Properties"
@@ -170,6 +172,7 @@ public struct EnvironmentVariable: Codable {
     }
     public static func none() -> EnvironmentVariable { return EnvironmentVariable([:]) }
     public func isEmpty() -> Bool { return variables.count == 0 }
+    
     enum CodingKeys: String, CodingKey {
         case variables = "Variables"
     }
@@ -194,6 +197,8 @@ public struct EventSource: SAMEvent {
     public static func == (lhs: EventSource, rhs: EventSource) -> Bool {
         lhs.type == rhs.type && lhs.name == rhs.name
     }
+
+    public static func none() -> [EventSource] { return [] }
 
     // this is to make the compiler happy : Resource now confoms to Encodable
     public func encode(to encoder: Encoder) throws {
