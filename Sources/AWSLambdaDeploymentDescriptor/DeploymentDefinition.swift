@@ -57,13 +57,17 @@ public struct SAMDeployment: DeploymentDefinition {
 public protocol SAMResource: Encodable {}
 public protocol SAMResourceProperties: Encodable {}
 
-public struct Resource: SAMResource {
+public struct Resource: SAMResource, Equatable {
     
     let type: String
     let properties: SAMResourceProperties
     let name: String
         
     public static func none() -> [Resource] { return [] }
+    
+    public static func == (lhs: Resource, rhs: Resource) -> Bool {
+        lhs.type == rhs.type && lhs.name == rhs.name
+    }
     
     enum CodingKeys: String, CodingKey {
         case type = "Type"
@@ -166,12 +170,16 @@ public struct ServerlessFunctionProperties: SAMResourceProperties {
      LOG_LEVEL: debug
  */
 public struct EnvironmentVariable: Codable {
-    public let variables: [String:String]
+    public var variables: [String:String]
     public init(_ variables: [String:String]) {
         self.variables = variables
     }
     public static func none() -> EnvironmentVariable { return EnvironmentVariable([:]) }
     public func isEmpty() -> Bool { return variables.count == 0 }
+    
+    public mutating func append(_ key: String, _ value: String) {
+        variables[key] = value
+    }
     
     enum CodingKeys: String, CodingKey {
         case variables = "Variables"
@@ -270,14 +278,27 @@ public enum HttpVerb: String, Encodable {
 -----------------------------------------------------------------------------------------*/
 
 extension EventSource {
-    public static func sqs(name: String = "SQSEvent",
-                           queue: String) -> EventSource {
-        
-        let properties = SQSEventProperties(queue)
+    private static func sqs(name: String = "SQSEvent",
+                            properties: SQSEventProperties) -> EventSource {
         
         return EventSource(type: "SQS",
                            properties: properties,
                            name: name)
+    }
+    public static func sqs(name: String = "SQSEvent",
+                           queue queueRef: String) -> EventSource {
+        
+        let properties = SQSEventProperties(byRef: queueRef)
+        return EventSource.sqs(name: name,
+                               properties: properties)
+    }
+    
+    public static func sqs(name: String = "SQSEvent",
+                           queue: Resource) -> EventSource {
+        
+        let properties = SQSEventProperties(queue)
+        return EventSource.sqs(name: name,
+                               properties: properties)
     }
 }
 
@@ -287,45 +308,41 @@ extension EventSource {
  */
 public struct SQSEventProperties: SAMEventProperties, Equatable {
     
-    private var _queue: String = ""
-
-    // Change encoding when queueName starts with !GetAtt - it should be
-    // Fn::GetAtt: [ logicalNameOfResource, attributeName ]
-    // doc : https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-getatt.html
-    public var queue: String {
-        get {
-            return _queue
-        }
-        set(newQueue) {
-            if newQueue.starts(with: "!") {
-                let elements = newQueue.split(separator: " ")
-                guard elements.count == 2 else {
-                    fatalError("Invalid intrisic function: \(newQueue), only one space allowed")
-                }
-                let key = String(elements[0]).replacingOccurrences(of: "!", with: "Fn::")
-                self.intrisicFunction[key] = elements[1].split(separator: ".").map{ String($0) }
-            } else {
-                self._queue = newQueue
-            }
-        }
-    }
-    var intrisicFunction: [String:[String]] = [:]
+    public var queueByArn: String? = nil
+    public var queue: Resource? = nil
     
-    public init(_ queue: String) {
-        self.queue = queue
+    init(byRef ref: String) {
+        
+        // when the ref is an ARN, leave it as it, otherwise, create a queue resource and pass a reference to it
+        if let arn = Arn(ref)?.arn {
+            self.queueByArn = arn
+        } else {
+            let logicalName = Resource.logicalName(resourceType: "Queue",
+                                                   resourceName: ref)
+            self.queue = Resource.sqsQueue(name: logicalName,
+                                           properties: SQSResourceProperties(queueName: ref))
+        }
+        
     }
+    init(_ queue: Resource) { self.queue = queue }
+
     enum CodingKeys: String, CodingKey {
-        case _queue = "Queue"
+        case queue = "Queue"
     }
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if  intrisicFunction.isEmpty {
-            try container.encode(self.queue, forKey: ._queue)
-        } else {
-            try container.encode(intrisicFunction, forKey: ._queue)
+        
+        // if we have an Arn, return the Arn, otherwise pass a reference with GetAtt
+        // https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-sqs.html#sam-function-sqs-queue
+        if  let queueByArn {
+            try container.encode(queueByArn, forKey: .queue)
+        } else if let queue {
+            var getAttIntrinsicFunction: [String:[String]] = [:]
+            getAttIntrinsicFunction["Fn::GetAtt"] = [ queue.name, "Arn"]
+            try container.encode(getAttIntrinsicFunction, forKey: .queue)
         }
     }
-    
 }
 
 //MARK: SQS queue resource definition
@@ -344,6 +361,12 @@ extension Resource {
                         name: name)
     }
 
+    public static func sqsQueue(logicalName: String,
+                                physicalName: String ) -> Resource {
+                                    
+        let sqsProperties = SQSResourceProperties(queueName: physicalName)
+        return sqsQueue(name: logicalName, properties: sqsProperties)
+    }
 }
 
 public struct SQSResourceProperties: SAMResourceProperties {
@@ -369,8 +392,14 @@ extension Resource {
                         properties: properties,
                         name: name)
     }
-
-}
+    public static func simpleTable(logicalName: String,
+                                   physicalname: String,
+                                   primaryKeyName: String,
+                                   primaryKeyValue: String) -> Resource {
+        let primaryKey = SimpleTableProperties.PrimaryKey(name: primaryKeyName, type: primaryKeyValue)
+        let properties = SimpleTableProperties(primaryKey: primaryKey, tableName: physicalname)
+        return simpleTable(name: logicalName, properties: properties)
+    }}
 
 public struct SimpleTableProperties: SAMResourceProperties {
     let primaryKey: PrimaryKey
@@ -404,6 +433,34 @@ public struct SimpleTableProperties: SAMResourceProperties {
             case readCapacityUnits = "ReadCapacityUnits"
             case writeCapacityUnits = "WriteCapacityUnits"
         }
+    }
+}
+
+
+//MARK: Utils
+
+struct Arn {
+    public let arn: String
+    init?(_ arn: String) {
+        // Arn regex from https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-eventsourcemapping.html#cfn-lambda-eventsourcemapping-eventsourcearn
+        let arnRegex = #"arn:(aws[a-zA-Z0-9-]*):([a-zA-Z0-9\-])+:([a-z]{2}(-gov)?-[a-z]+-\d{1})?:(\d{12})?:(.*)"#
+        if arn.range(of: arnRegex, options: .regularExpression) != nil {
+            self.arn = arn
+        } else {
+            return nil
+        }
+    }
+}
+
+extension Resource {
+    // Transform resourceName :
+    // remove space
+    // remove hyphen
+    // camel case
+    static func logicalName(resourceType: String, resourceName: String) -> String {
+        let noSpaceName = resourceName.split(separator: " ").map{ $0.capitalized }.joined(separator: "")
+        let noHyphenName = noSpaceName.split(separator: "-").map{ $0.capitalized }.joined(separator: "")
+        return resourceType.capitalized + noHyphenName
     }
 }
 

@@ -106,43 +106,19 @@ extension DeploymentDescriptor {
         let package = ".build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/\(name)/\(name).zip"
 
         // add event sources provided by Lambda developer
-        var lambdaEventSources = eventSources(name)
+        let lambdaEventSources = eventSources(name)
         
-        // do we need to create a SQS queue ? When SQS event source is specified, the Lambda function developer
-        // might give a queue name or a queue Arn. When developer gives just a queue name,
-        // we add a resource to create the queue and reference this new resource as event source
-        var ressources : [Resource] = []
+        // When SQS event source is specified, the Lambda function developer
+        // might give a queue name, a queue Arn, or a queue resource.
+        // When developer gives a queue name or a queue resource,
+        // the event source eventually creates the queue resource and references the resource.
+        // Now, we need to collect all queue resources created by SQS event sources or passed by Lambda function develper
+        // to add them to the list of resources to synthetize
+        var resources : [Resource] = lambdaEventSources.filter{ lambdaEventSource in
+            lambdaEventSource.type == "SQS" &&
+            (lambdaEventSource.properties as? SQSEventProperties)?.queue != nil
+        }.compactMap { sqsEventSource in (sqsEventSource.properties as? SQSEventProperties)?.queue }
 
-        // First, filter on SQSEvent source **without** Queue Arn
-        let sqsEventSources: [EventSource] = lambdaEventSources.filter{ lambdaEventSource in
-            // Arn regex from https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-eventsourcemapping.html#cfn-lambda-eventsourcemapping-eventsourcearn
-            let arnRegex = #"arn:(aws[a-zA-Z0-9-]*):([a-zA-Z0-9\-])+:([a-z]{2}(-gov)?-[a-z]+-\d{1})?:(\d{12})?:(.*)"#
-            let queueName = (lambdaEventSource.properties as? SQSEventProperties)?.queue
-            return lambdaEventSource.type == "SQS" &&
-                   queueName?.range(of: arnRegex, options: .regularExpression) == nil
-        }
-        
-        // Second, for each SQSEvent source without queue Arn,
-        // create a SQS resource and modify the event source to point to that new resource
-        for sqsES in sqsEventSources {
-            
-            // add a queue resource to the SAM teamplate
-            guard let queueName = (sqsES.properties as? SQSEventProperties)?.queue else {
-                fatalError("SQS Event Source's properties is not a SAMEventProperties or there is no queue name")
-            }
-            // create a logical name for the queue name
-            let logicalName = logicalName(resourceType: "Queue",
-                                          resourceName: queueName)
-            ressources.append(Resource.sqsQueue(name: logicalName,
-                                                properties: SQSResourceProperties(queueName: queueName)))
-            
-            // replace the event source to point to this new queue resource
-            lambdaEventSources.removeAll{ $0 == sqsES }
-            lambdaEventSources.append(EventSource.sqs(queue: "!GetAtt \(logicalName).Arn"))
-            
-        }
-        
-        
         // finally, let's build the function definition
         let serverlessFunction =  Resource.serverlessFunction(name: name,
                                                               codeUri: package,
@@ -150,8 +126,8 @@ extension DeploymentDescriptor {
                                                               environment: environmentVariables(name))
         
         // put all resources together
-        ressources.append(serverlessFunction)
-        return ressources
+        resources.append(serverlessFunction)
+        return resources
     }
     
     // Transform resourceName :
