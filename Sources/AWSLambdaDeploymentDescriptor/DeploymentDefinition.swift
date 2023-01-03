@@ -169,20 +169,75 @@ public struct ServerlessFunctionProperties: SAMResourceProperties {
    Variables:
      LOG_LEVEL: debug
  */
-public struct EnvironmentVariable: Codable {
-    public var variables: [String:String]
+public struct EnvironmentVariable: Encodable {
+    
+    public var variables: [String:EnvironmentVariableValue] = [:]
+    public init() {}
     public init(_ variables: [String:String]) {
-        self.variables = variables
+        for key in variables.keys {
+            self.variables[key] = .string(value: variables[key] ?? "")
+        }
     }
     public static func none() -> EnvironmentVariable { return EnvironmentVariable([:]) }
     public func isEmpty() -> Bool { return variables.count == 0 }
     
     public mutating func append(_ key: String, _ value: String) {
-        variables[key] = value
+        variables[key] = .string(value: value)
     }
-    
+    public mutating func append(_ key: String, _ value: [String:String]) {
+        variables[key] = .array(value: value)
+    }
+    public mutating func append(_ key: String, _ value: [String:[String]]) {
+        variables[key] = .dictionary(value: value)
+    }
+    public mutating func append(_ key: String, _ value: Resource) {
+        variables[key] = .array(value: ["Ref": value.name])
+    }
+
     enum CodingKeys: String, CodingKey {
         case variables = "Variables"
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        var nestedContainer = container.nestedContainer(keyedBy: AnyStringKey.self, forKey: .variables)
+
+        for key in variables.keys {
+            switch variables[key] {
+            case .string(let value):
+                try? nestedContainer.encode(value, forKey: AnyStringKey(key))
+            case .array(let value):
+                try? nestedContainer.encode(value, forKey: AnyStringKey(key))
+            case .dictionary(let value):
+                try? nestedContainer.encode(value, forKey: AnyStringKey(key))
+            case .none:
+                break
+            }
+        }
+    }
+    
+    public enum EnvironmentVariableValue {
+        // KEY: VALUE
+        case string(value: String)
+        
+        // KEY:
+        //    Ref: VALUE
+        case array(value: [String:String])
+        
+        // KEY:
+        //    Fn::GetAtt:
+        //      - VALUE1
+        //      - VALUE2
+        case dictionary(value: [String:[String]])
+    }
+
+    private struct AnyStringKey: CodingKey, Hashable, ExpressibleByStringLiteral {
+        var stringValue: String
+        init(stringValue: String) { self.stringValue = stringValue }
+        init(_ stringValue: String) { self.init(stringValue: stringValue) }
+        var intValue: Int?
+        init?(intValue: Int) { return nil }
+        init(stringLiteral value: String) { self.init(value) }
     }
 }
 
@@ -319,8 +374,8 @@ public struct SQSEventProperties: SAMEventProperties, Equatable {
         } else {
             let logicalName = Resource.logicalName(resourceType: "Queue",
                                                    resourceName: ref)
-            self.queue = Resource.sqsQueue(name: logicalName,
-                                           properties: SQSResourceProperties(queueName: ref))
+            self.queue = Resource.queue(name: logicalName,
+                                        properties: SQSResourceProperties(queueName: ref))
         }
         
     }
@@ -353,19 +408,19 @@ public struct SQSEventProperties: SAMEventProperties, Equatable {
  https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-sqs-queue.html
 -----------------------------------------------------------------------------------------*/
 extension Resource {
-    public static func sqsQueue(name: String,
-                                properties: SQSResourceProperties) -> Resource {
+    public static func queue(name: String,
+                             properties: SQSResourceProperties) -> Resource {
                                                 
         return Resource(type: "AWS::SQS::Queue",
                         properties: properties,
                         name: name)
     }
 
-    public static func sqsQueue(logicalName: String,
-                                physicalName: String ) -> Resource {
+    public static func queue(logicalName: String,
+                             physicalName: String ) -> Resource {
                                     
         let sqsProperties = SQSResourceProperties(queueName: physicalName)
-        return sqsQueue(name: logicalName, properties: sqsProperties)
+        return queue(name: logicalName, properties: sqsProperties)
     }
 }
 
@@ -385,20 +440,20 @@ public struct SQSResourceProperties: SAMResourceProperties {
 -----------------------------------------------------------------------------------------*/
 
 extension Resource {
-    public static func simpleTable(name: String,
+    public static func table(name: String,
                                    properties: SimpleTableProperties) -> Resource {
                                                 
         return Resource(type: "AWS::Serverless::SimpleTable",
                         properties: properties,
                         name: name)
     }
-    public static func simpleTable(logicalName: String,
-                                   physicalname: String,
-                                   primaryKeyName: String,
-                                   primaryKeyValue: String) -> Resource {
-        let primaryKey = SimpleTableProperties.PrimaryKey(name: primaryKeyName, type: primaryKeyValue)
-        let properties = SimpleTableProperties(primaryKey: primaryKey, tableName: physicalname)
-        return simpleTable(name: logicalName, properties: properties)
+    public static func table(logicalName: String,
+                             physicalName: String,
+                             primaryKeyName: String,
+                             primaryKeyType: String) -> Resource {
+        let primaryKey = SimpleTableProperties.PrimaryKey(name: primaryKeyName, type: primaryKeyType)
+        let properties = SimpleTableProperties(primaryKey: primaryKey, tableName: physicalName)
+        return table(name: logicalName, properties: properties)
     }}
 
 public struct SimpleTableProperties: SAMResourceProperties {

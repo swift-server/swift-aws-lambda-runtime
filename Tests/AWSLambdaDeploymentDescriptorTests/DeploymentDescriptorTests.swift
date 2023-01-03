@@ -104,11 +104,10 @@ LogicalTestTable:
         testDeployment.environmentVariableFunction = { _ in EnvironmentVariable.none() }
         testDeployment.eventSourceFunction = { _ in [] }
         testDeployment.additionalResourcesFunction = {
-            return [Resource.simpleTable(name: "LogicalTestTable",
-                                         properties: SimpleTableProperties(primaryKey: .init(name: "pk",
-                                                                                             type: "String"),
-                                                                           tableName: "TestTable")
-                                        )]
+            return [Resource.table(logicalName: "LogicalTestTable",
+                                   physicalName: "TestTable",
+                                   primaryKeyName: "pk",
+                                   primaryKeyType: "String")]
         }
         
         do {
@@ -136,8 +135,8 @@ LogicalTestTable:
         testDeployment.environmentVariableFunction = { _ in EnvironmentVariable.none() }
         testDeployment.eventSourceFunction = { _ in [] }
         testDeployment.additionalResourcesFunction = {
-            return [Resource.sqsQueue(name: "LogicalQueueName",
-                                      properties: SQSResourceProperties(queueName: "queue-name"))
+            return [Resource.queue(name: "LogicalQueueName",
+                                   properties: SQSResourceProperties(queueName: "queue-name"))
             ]
         }
         
@@ -266,7 +265,7 @@ LogicalTestTable:
         
     }
     
-    func testEnvironmentVariables() {
+    func testEnvironmentVariablesString() {
         
         // given
         let expectedOne = """
@@ -297,6 +296,93 @@ LogicalTestTable:
         }
     }
     
+    func testEnvironmentVariablesArray() {
+        
+        // given
+        let expectedOne = """
+      Environment:
+        Variables:
+          TEST1_VAR:
+            Ref: TEST1_VALUE
+"""
+        
+        var testDeployment = MockDeploymentDescriptor()
+        testDeployment.environmentVariableFunction = { _ in
+            var envVars = EnvironmentVariable()
+            envVars.append("TEST1_VAR", ["Ref" : "TEST1_VALUE"])
+            return envVars
+        }
+        
+        do {
+            // when
+            let samYaml = try testDeployment.toYaml()
+            
+            // then
+            XCTAssertTrue(samYaml.contains(expectedOne))
+        } catch {
+            XCTFail("toYaml should not throw an exceptoon")
+        }
+    }
+
+    func testEnvironmentVariablesDictionary() {
+        
+        // given
+        let expectedOne = """
+      Environment:
+        Variables:
+          TEST1_VAR:
+            Fn::GetAtt:
+            - TEST1_VALUE
+            - Arn
+"""
+        
+        var testDeployment = MockDeploymentDescriptor()
+        testDeployment.environmentVariableFunction = { _ in
+            var envVars = EnvironmentVariable()
+            envVars.append("TEST1_VAR", ["Fn::GetAtt" : ["TEST1_VALUE", "Arn"]])
+            return envVars
+        }
+        
+        do {
+            // when
+            let samYaml = try testDeployment.toYaml()
+            
+            // then
+            XCTAssertTrue(samYaml.contains(expectedOne))
+        } catch {
+            XCTFail("toYaml should not throw an exceptoon")
+        }
+    }
+
+    func testEnvironmentVariablesResource() {
+        
+        // given
+        let expectedOne = """
+      Environment:
+        Variables:
+          TEST1_VAR:
+            Ref: LogicalName
+"""
+        
+        var testDeployment = MockDeploymentDescriptor()
+        testDeployment.environmentVariableFunction = { _ in
+            let resource = Resource.queue(logicalName: "LogicalName", physicalName: "PhysicalName")
+            var envVars = EnvironmentVariable()
+            envVars.append("TEST1_VAR", resource)
+            return envVars
+        }
+        
+        do {
+            // when
+            let samYaml = try testDeployment.toYaml()
+            
+            // then
+            XCTAssertTrue(samYaml.contains(expectedOne))
+        } catch {
+            XCTFail("toYaml should not throw an exceptoon")
+        }
+    }
+
     func testArnOK() {
         // given
         let validArn = "arn:aws:sqs:eu-central-1:012345678901:lambda-test"
