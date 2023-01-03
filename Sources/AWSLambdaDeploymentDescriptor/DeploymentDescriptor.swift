@@ -129,15 +129,4 @@ extension DeploymentDescriptor {
         resources.append(serverlessFunction)
         return resources
     }
-    
-    // Transform resourceName :
-    // remove space
-    // remove hyphen
-    // camel case 
-    private func logicalName(resourceType: String, resourceName: String) -> String {
-        
-        let noSpaceName = resourceName.split(separator: " ").map{ $0.capitalized }.joined(separator: "")
-        let noHyphenName = noSpaceName.split(separator: "-").map{ $0.capitalized }.joined(separator: "")
-        return resourceType.capitalized + noHyphenName
-    }
 }
