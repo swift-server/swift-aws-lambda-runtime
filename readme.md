@@ -51,7 +51,7 @@ Next, create a `MyLambda.swift` and implement your Lambda.
  struct MyLambda: SimpleLambdaHandler {
      // in this example we are receiving and responding with strings
      func handle(_ name: String, context: LambdaContext) async throws -> String {
-         return "Hello, \(name)"
+         "Hello, \(name)"
      }
  }
  ```
