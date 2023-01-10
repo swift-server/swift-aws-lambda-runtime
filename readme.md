@@ -41,7 +41,7 @@ Next, create a `MyLambda.swift` and implement your Lambda.
 
 ### Using async function
 
- The simplest way to use `AWSLambdaRuntime` is to use the `SimpleLambdaHandler` protocol and pass in a async function, for example:
+ The simplest way to use `AWSLambdaRuntime` is to use the `SimpleLambdaHandler` protocol and pass in an async function, for example:
 
  ```swift
  // Import the module
