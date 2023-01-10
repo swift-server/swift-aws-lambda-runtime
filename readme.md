@@ -179,7 +179,7 @@ Next, create a `MyLambda.swift` and implement your Lambda.
 
 To deploy Lambda functions to AWS Lambda, you need to compile the code for Amazon Linux which is the OS used on AWS Lambda microVMs, package it as a Zip file, and upload to AWS.
 
-Swift AWS Lambda Runtime includes a SwiftPM plugin designed to help with the creation of of the zip archive.
+Swift AWS Lambda Runtime includes a SwiftPM plugin designed to help with the creation of the zip archive.
 To build and package your Lambda, run the following command:
 
  ```shell
