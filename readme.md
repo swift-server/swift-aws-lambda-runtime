@@ -118,7 +118,7 @@ Next, create a `MyLambda.swift` and implement your Lambda.
  // In this example we are receiving an SQS Event, with no response (Void).
  @main
  struct MyLambda: SimpleLambdaHandler {
-     // In this example we are receiving and responding with `Codable`.
+     // In this example we are receiving a SQS Event, with no response (Void).
      func handle(_ event: SQS.Event, context: LambdaContext) async throws -> Void {
          ...
      }
