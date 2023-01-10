@@ -115,7 +115,6 @@ Next, create a `MyLambda.swift` and implement your Lambda.
  import AWSLambdaRuntime
  import AWSLambdaEvents
 
- // In this example we are receiving an SQS Event, with no response (Void).
  @main
  struct MyLambda: SimpleLambdaHandler {
      // In this example we are receiving a SQS Event, with no response (Void).
