@@ -158,3 +158,6 @@ extension Result {
         }
     }
 }
+
+/// This is safe since lambda runtime synchronizes by dispatching all methods to a single `EventLoop`
+extension LambdaRunner: @unchecked Sendable {}
