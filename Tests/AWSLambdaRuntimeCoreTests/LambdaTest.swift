@@ -266,7 +266,7 @@ class LambdaTest: XCTestCase {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
 
-        let server = try MockLambdaServer(behavior: Behavior()).start().wait()
+        let server = try await MockLambdaServer(behavior: Behavior()).start().get()
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let logger = Logger(label: "TestLogger")
@@ -278,17 +278,17 @@ class LambdaTest: XCTestCase {
             logger.info("hello")
             let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration)
 
-            try runner.run(
+            try await runner.run(
                 handler: CodableEventLoopLambdaHandler(
                     handler: handler1,
                     allocator: ByteBufferAllocator()
                 ),
                 logger: logger
-            ).wait()
+            ).get()
 
-            try runner.initialize(handlerType: CodableEventLoopLambdaHandler<Handler>.self, logger: logger, terminator: LambdaTerminator()).flatMap { handler2 in
+            try await runner.initialize(handlerType: CodableEventLoopLambdaHandler<Handler>.self, logger: logger, terminator: LambdaTerminator()).flatMap { handler2 in
                 runner.run(handler: handler2, logger: logger)
-            }.wait()
+            }.get()
         }
 
         try await task.value
