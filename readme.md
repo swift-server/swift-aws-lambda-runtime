@@ -37,7 +37,7 @@ First, create a SwiftPM project and pull Swift AWS Lambda Runtime as dependency 
  )
  ```
 
-Next, create a `MyLambda.swift` and implement your Lambda.
+Next, create a `MyLambda.swift` and implement your Lambda. Note that the file can not be named `main.swift` or you will encounter the following error: `'main' attribute cannot be used in a module that contains top-level code`.
 
 ### Using async function
 
