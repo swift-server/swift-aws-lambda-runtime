@@ -252,15 +252,23 @@ private struct Configuration: CustomStringConvertible {
         for t in deployProducts[0].targets {
             print("\(t.name) - \(t.directory)")
         }
+        guard deployProducts[0].targets.count == 1 else {
+            fatalError("There is more than one Deploy target \(deployProducts[0].targets)")
+        }
 #if arch(arm64)
         let arch = "arm64-apple-macosx"
 #else
         let arch = "x86_64-apple-macosx"
 #endif
-        self.deployExecutable = URL(fileURLWithPath: deployProducts[0].targets[0].directory.string)
-            .deletingLastPathComponent()
-            .appendingPathComponent(".build/\(arch)/\(self.buildConfiguration)/Deploy")
+        var deployExecutableURL = URL(fileURLWithPath: deployProducts[0].targets[0].directory.string)
+        // while there is /Sources or /Deploy => remove last path component 
+        while deployExecutableURL.path.contains("/Sources") ||
+              deployExecutableURL.path.contains("/Deploy") {
 
+            deployExecutableURL = deployExecutableURL.deletingLastPathComponent()
+        }
+        self.deployExecutable = deployExecutableURL.appendingPathComponent(".build/\(arch)/\(self.buildConfiguration)/Deploy")
+        
         if self.verboseLogging {
             print("-------------------------------------------------------------------------")
             print("configuration")
