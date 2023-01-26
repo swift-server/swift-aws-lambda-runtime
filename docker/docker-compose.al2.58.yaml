@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: swift-aws-lambda:al2-5.8
+    build:
+      args:
+        base_image: "swiftlang/swift:nightly-5.8-amazonlinux2"
+
+  test:
+    image: swift-aws-lambda:al2-5.8
+
+  test-samples:
+    image: swift-aws-lambda:al2-5.8
+
+  shell:
+    image: swift-aws-lambda:al2-5.8
