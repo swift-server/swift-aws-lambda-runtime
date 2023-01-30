@@ -16,6 +16,11 @@
 
 import PackageDescription
 
+var deploymentDescriptorDependency : [Target.Dependency] = []
+#if !os(Linux)
+    deploymentDescriptorDependency = [.product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime")]
+#endif
+
 let package = Package(
   name: "swift-aws-lambda-runtime-example",
   platforms: [
@@ -24,30 +29,22 @@ let package = Package(
   products: [
     .executable(name: "HttpApiLambda", targets: ["HttpApiLambda"]),
     .executable(name: "SQSLambda", targets: ["SQSLambda"]),
-    // this generate the AWS SAM template for deployment. It is called by the deployment plugin (swift package deploy)
-    .executable(name: "Deploy", targets: ["Deploy"])
   ],
   dependencies: [
     // this is the dependency on the swift-aws-lambda-runtime library
     // in real-world projects this would say
-    // .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
+//    .package(url: "https://github.com/sebsto/swift-aws-lambda-runtime.git", branch: "sebsto/deployerplugin"),
+//    .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
     .package(name: "swift-aws-lambda-runtime", path: "../.."),
     .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", branch: "main")
   ],
   targets: [
     .executableTarget(
-      name: "Deploy",
-      dependencies: [
-        .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime")
-      ],
-      path: "./Deploy"
-    ),
-    .executableTarget(
       name: "HttpApiLambda",
       dependencies: [
         .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
         .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events")
-      ],
+      ] + deploymentDescriptorDependency,
       path: "./HttpApiLambda"
     ),
     .executableTarget(
@@ -55,7 +52,7 @@ let package = Package(
       dependencies: [
         .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
         .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events")
-      ],
+      ] + deploymentDescriptorDependency,
       path: "./SQSLambda"
     )
   ]

@@ -19,255 +19,262 @@ import PackagePlugin
 @main
 struct AWSLambdaPackager: CommandPlugin {
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
-
+        
         let configuration = try Configuration(context: context, arguments: arguments)
-        guard !configuration.products.isEmpty else {
-            throw Errors.unknownProduct("no appropriate products found to deploy")
+        
+        // gather file paths
+        let samDeploymentDescriptorFilePath = "\(context.package.directory)/sam.json"
+        
+        let swiftExecutablePath = try self.findExecutable(context: context,
+                                                          executableName: "swift",
+                                                          helpMessage: "Is Swift or Xcode installed? (https://www.swift.org/getting-started)",
+                                                          verboseLogging: configuration.verboseLogging)
+        
+        let samExecutablePath = try self.findExecutable(context: context,
+                                                        executableName: "sam",
+                                                        helpMessage: "Is SAM installed ? (brew tap aws/tap && brew install aws-sam-cli)",
+                                                        verboseLogging: configuration.verboseLogging)
+        
+        // generate the deployment descriptor
+        try self.generateDeploymentDescriptor(projectDirectory: context.package.directory,
+                                              buildConfiguration: configuration.buildConfiguration,
+                                              swiftExecutable: swiftExecutablePath,
+                                              samDeploymentDescriptorFilePath: samDeploymentDescriptorFilePath,
+                                              archivePath: configuration.archiveDirectory,
+                                              verboseLogging: configuration.verboseLogging)
+        
+        
+        // validate the template
+        try self.validate(samExecutablePath: samExecutablePath,
+                          samDeploymentDescriptorFilePath: samDeploymentDescriptorFilePath,
+                          verboseLogging: configuration.verboseLogging)
+        
+        // deploy the functions
+        if !configuration.noDeploy {
+            try self.deploy(samExecutablePath: samExecutablePath,
+                            samDeploymentDescriptorFilePath: samDeploymentDescriptorFilePath,
+                            stackName : configuration.stackName,
+                            verboseLogging: configuration.verboseLogging)
+        }
+    }
+    
+    private func generateDeploymentDescriptor(projectDirectory: Path,
+                                              buildConfiguration: PackageManager.BuildConfiguration,
+                                              swiftExecutable: Path,
+                                              samDeploymentDescriptorFilePath: String,
+                                              archivePath: String,
+                                              verboseLogging: Bool) throws {
+        print("-------------------------------------------------------------------------")
+        print("Generating SAM deployment descriptor")
+        print("-------------------------------------------------------------------------")
+        
+        //
+        // Build and run the Deploy.swift package description
+        // this generates the SAM deployment decsriptor
+        //
+        let deploymentDescriptorFileName = "Deploy.swift"
+        let deploymentDescriptorFilePath = "\(projectDirectory)/\(deploymentDescriptorFileName)"
+        let sharedLibraryName = "AWSLambdaDeploymentDescriptor" // provided by the swift lambda runtime
+        
+        // Check if Deploy.swift exists. Stop when it does not exist.
+        guard FileManager.default.fileExists(atPath: deploymentDescriptorFilePath) else {
+            print("`Deploy.Swift` file not found in directory \(projectDirectory)")
+            throw PluginError.deployswiftDoesNotExist
         }
 
-        let samExecutable = try context.tool(named: "sam")
-        let samExecutableUrl = URL(fileURLWithPath: samExecutable.path.string)
-        let deploymentDescriptorExecutableUrl = configuration.deployExecutable
-        if configuration.verboseLogging {
-            print("-------------------------------------------------------------------------")
-            print("executables")
-            print("-------------------------------------------------------------------------")
-            print("SAM Executable : \(samExecutableUrl)")
-            print("Deployment Descriptor Executable : \(deploymentDescriptorExecutableUrl)")
-        }
-
-        let currentDirectory = FileManager.default.currentDirectoryPath
-        let samDeploymentDescriptorUrl = URL(fileURLWithPath: currentDirectory)
-                                        .appendingPathComponent("sam.yaml")
         do {
-            print("-------------------------------------------------------------------------")
-            print("generating SAM deployment descriptor")
-            configuration.verboseLogging ? print("\(samDeploymentDescriptorUrl)") : nil
-            print("-------------------------------------------------------------------------")
-            let samDeploymentDescriptor = try self.execute(
-                executable: deploymentDescriptorExecutableUrl,
-                arguments: configuration.products.compactMap { $0.name },
-                logLevel: configuration.verboseLogging ? .debug : .silent)
+            let cmd = [
+                swiftExecutable.string,
+                "-L \(projectDirectory)/.build/\(buildConfiguration)/",
+                "-I \(projectDirectory)/.build/\(buildConfiguration)/",
+                "-l\(sharedLibraryName)",
+                deploymentDescriptorFilePath,
+                "--archive-path", archivePath
+            ]
+            let helperCmd = cmd.joined(separator: " \\\n")
+            
+            if verboseLogging {
+                print("-------------------------------------------------------------------------")
+                print("Swift compile and run Deploy.swift")
+                print("-------------------------------------------------------------------------")
+                print("Swift command:\n\n\(helperCmd)\n")
+            }
+            
+            // create and execute a plugin helper to run the "swift" command
+            let helperFilePath = "\(projectDirectory)/compile.sh"
+            let helperFileUrl = URL(fileURLWithPath: helperFilePath)
+            try helperCmd.write(to: helperFileUrl, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helperFilePath)
+            let samDeploymentDescriptor = try execute(
+                executable: Path("/bin/bash"),
+                arguments: ["-c", helperFilePath],
+                customWorkingDirectory: projectDirectory,
+                logLevel: verboseLogging ? .debug : .silent)
+            // running the swift command directly from the plugin does not work 🤷‍♂️
+            //            let samDeploymentDescriptor = try execute(
+            //                executable: swiftExecutable.path,
+            //                arguments: Array(cmd.dropFirst()),
+            //                customWorkingDirectory: context.package.directory,
+            //                logLevel: configuration.verboseLogging ? .debug : .silent)
+            try FileManager.default.removeItem(at: helperFileUrl)
+            
+            // write the generated SAM deployment decsriptor to disk
+            let samDeploymentDescriptorFileUrl = URL(fileURLWithPath: samDeploymentDescriptorFilePath)
             try samDeploymentDescriptor.write(
-                to: samDeploymentDescriptorUrl, atomically: true, encoding: .utf8)
-
-            print("-------------------------------------------------------------------------")
-            print("validating SAM deployment descriptor")
-            print("-------------------------------------------------------------------------")
-            try self.execute(
-                executable: samExecutableUrl,
-                arguments: ["validate", "-t", samDeploymentDescriptorUrl.path],
-                logLevel: configuration.verboseLogging ? .debug : .silent)
-
-            if !configuration.noDeploy {
-                print("-------------------------------------------------------------------------")
-                print("deploying AWS Lambda function")
-                print("-------------------------------------------------------------------------")
-                try self.execute(
-                    executable: samExecutableUrl,
-                    arguments: ["deploy", "-t", samDeploymentDescriptorUrl.path],
-                    logLevel: configuration.verboseLogging ? .debug : .silent)
-            }
-        } catch Errors.processFailed(_, _) {
-            print("The generated SAM template is invalid or can not be deployed.")
-            if configuration.verboseLogging {
-                print("File at : \(samDeploymentDescriptorUrl)")
-            } else {
-                print("Run the command again with --verbose argument to receive more details.")
-            }
+                to: samDeploymentDescriptorFileUrl, atomically: true, encoding: .utf8)
+            verboseLogging ? print("\(samDeploymentDescriptorFilePath)") : nil
+            
+        } catch let error as PluginError {
+            print("Error while compiling Deploy.swift")
+            print(error)
+            print("Run the deploy plugin again with --verbose argument to receive more details.")
+            throw PluginError.error(error)
         } catch {
-            print("Can not execute file at:")
-            print("\(deploymentDescriptorExecutableUrl.path)")
-            print("or at:")
-            print("\(samExecutableUrl.path)")
-            print("Is SAM installed ? (brew tap aws/tap && brew install aws-sam-cli)")
-            print("Did you add a 'Deploy' executable target into your project's Package.swift ?")
-            print("Did you build the release version ? (swift build -c release)")
+            print("Unexpected error : \(error)")
+            throw PluginError.error(error)
+        }
+        
+    }
+    
+    private func findExecutable(context: PluginContext,
+                                executableName: String,
+                                helpMessage: String,
+                                verboseLogging: Bool) throws -> Path {
+        
+        guard let executable = try? context.tool(named: executableName) else {
+            print("Can not find `\(executableName)` executable.")
+            print(helpMessage)
+            throw PluginError.toolNotFound(executableName)
+        }
+        
+        if verboseLogging {
+            print("-------------------------------------------------------------------------")
+            print("\(executableName) executable : \(executable.path)")
+            print("-------------------------------------------------------------------------")
+        }
+        return executable.path
+    }
+    
+    private func validate(samExecutablePath: Path,
+                          samDeploymentDescriptorFilePath: String,
+                          verboseLogging: Bool) throws {
+        
+        print("-------------------------------------------------------------------------")
+        print("Validating SAM deployment descriptor")
+        print("-------------------------------------------------------------------------")
+        
+        do {
+            try execute(
+                executable: samExecutablePath,
+                arguments: ["validate", "-t", samDeploymentDescriptorFilePath],
+                logLevel: verboseLogging ? .debug : .silent)
+            
+        } catch let error as PluginError {
+            print("Error while validating the SAM template.")
+            print(error)
+            print("Run the deploy plugin again with --verbose argument to receive more details.")
+            throw PluginError.error(error)
+        } catch {
+            print("Unexpected error : \(error)")
+            throw PluginError.error(error)
         }
     }
+    
+    private func deploy(samExecutablePath: Path,
+                        samDeploymentDescriptorFilePath: String,
+                        stackName: String,
+                        verboseLogging: Bool) throws {
+        
+        //TODO: check if there is a samconfig.toml file.
+        // when there is no file, generate one with default data or data collected from params
+        
+        
+        print("-------------------------------------------------------------------------")
+        print("Deploying AWS Lambda function")
+        print("-------------------------------------------------------------------------")
+        do {
 
-    @discardableResult
-    private func execute(
-        executable: URL,
-        arguments: [String],
-        customWorkingDirectory: URL? = nil,
-        logLevel: ProcessLogLevel
-    ) throws -> String {
-        try self.execute(
-            executable: Path(executable.path),
-            arguments: arguments,
-            customWorkingDirectory: customWorkingDirectory == nil
-            ? nil : Path(customWorkingDirectory!.path),
-            logLevel: logLevel)
+            try execute(
+                executable: samExecutablePath,
+                arguments: ["deploy",
+                            "-t", samDeploymentDescriptorFilePath,
+                            "--stack-name", stackName,
+                            "--capabilities", "CAPABILITY_IAM",
+                            "--resolve-s3"],
+                logLevel: verboseLogging ? .debug : .silent)
+        } catch let error as PluginError {
+            print("Error while deploying the SAM template.")
+            print(error)
+            print("Run the deploy plugin again with --verbose argument to receive more details.")
+            throw PluginError.error(error)
+        } catch {
+            print("Unexpected error : \(error)")
+            throw PluginError.error(error)
+        }
     }
-
-    // **************************************************************
-    // Below this line, the code is copied from the archiver plugin
-    // **************************************************************
-    @discardableResult
-    private func execute(
-        executable: Path,
-        arguments: [String],
-        customWorkingDirectory: Path? = .none,
-        logLevel: ProcessLogLevel
-    ) throws -> String {
-        if logLevel >= .debug {
-            print("\(executable.string) \(arguments.joined(separator: " "))")
-        }
-
-        var output = ""
-        let outputSync = DispatchGroup()
-        let outputQueue = DispatchQueue(label: "AWSLambdaPackager.output")
-        let outputHandler = { (data: Data?) in
-            dispatchPrecondition(condition: .onQueue(outputQueue))
-
-            outputSync.enter()
-            defer { outputSync.leave() }
-
-            guard
-                let _output = data.flatMap({
-                    String(data: $0, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(["\n"]))
-                }), !_output.isEmpty
-            else {
-                return
-            }
-
-            output += _output + "\n"
-
-            switch logLevel {
-            case .silent:
-                break
-            case .debug(let outputIndent), .output(let outputIndent):
-                print(String(repeating: " ", count: outputIndent), terminator: "")
-                print(_output)
-                fflush(stdout)
-            }
-        }
-
-        let pipe = Pipe()
-        pipe.fileHandleForReading.readabilityHandler = { fileHandle in
-            outputQueue.async { outputHandler(fileHandle.availableData) }
-        }
-
-        let process = Process()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        process.executableURL = URL(fileURLWithPath: executable.string)
-        process.arguments = arguments
-        if let workingDirectory = customWorkingDirectory {
-            process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory.string)
-        }
-        process.terminationHandler = { _ in
-            outputQueue.async {
-                outputHandler(try? pipe.fileHandleForReading.readToEnd())
-            }
-        }
-
-        try process.run()
-        process.waitUntilExit()
-
-        // wait for output to be full processed
-        outputSync.wait()
-
-        if process.terminationStatus != 0 {
-            // print output on failure and if not already printed
-            if logLevel < .output {
-                print(output)
-                fflush(stdout)
-            }
-            throw Errors.processFailed([executable.string] + arguments, process.terminationStatus)
-        }
-
-        return output
-    }
-    // **************************************************************
-    // end copied code
-    // **************************************************************
 }
 
 private struct Configuration: CustomStringConvertible {
-    public let products: [Product]
-    public let deployExecutable: URL
-    public let explicitProducts: Bool
     public let buildConfiguration: PackageManager.BuildConfiguration
     public let noDeploy: Bool
     public let verboseLogging: Bool
-
+    public let archiveDirectory: String
+    public let stackName: String
+    
+    private let context: PluginContext
+    
     public init(
         context: PluginContext,
         arguments: [String]
     ) throws {
-
-        // extrcat command line arguments
+        
+        self.context = context // keep a reference for self.description
+        
+        // extract command line arguments
         var argumentExtractor = ArgumentExtractor(arguments)
         let nodeployArgument = argumentExtractor.extractFlag(named: "nodeploy") > 0
         let verboseArgument = argumentExtractor.extractFlag(named: "verbose") > 0
-        let productsArgument = argumentExtractor.extractOption(named: "products")
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
-
+        let archiveDirectoryArgument = argumentExtractor.extractOption(named: "archive-path")
+        let stackNamenArgument = argumentExtractor.extractOption(named: "stackname")
+        
         // define deployment option
         self.noDeploy = nodeployArgument
-
+        
         // define logging verbosity
         self.verboseLogging = verboseArgument
-
-        // define products
-        self.explicitProducts = !productsArgument.isEmpty
-        if self.explicitProducts {
-            let products = try context.package.products(named: productsArgument)
-            for product in products {
-                guard product is ExecutableProduct else {
-                    throw Errors.invalidArgument(
-                        "product named '\(product.name)' is not an executable product")
-                }
-            }
-            self.products = products
-
-        } else {
-            self.products = context.package.products.filter {
-                $0 is ExecutableProduct && $0.name != "Deploy"
-            }
-        }
-
-        // define build configuration
+        
+        // define build configuration, defaults to debug
         if let buildConfigurationName = configurationArgument.first {
             guard
                 let buildConfiguration = PackageManager.BuildConfiguration(rawValue: buildConfigurationName)
             else {
-                throw Errors.invalidArgument(
+                throw PluginError.invalidArgument(
                     "invalid build configuration named '\(buildConfigurationName)'")
             }
             self.buildConfiguration = buildConfiguration
         } else {
-            self.buildConfiguration = .release
+            self.buildConfiguration = .debug
         }
-
-        // search for deployment configuration executable
-        let deployProducts = context.package.products.filter { $0.name == "Deploy" }
-        guard deployProducts.count == 1,
-              deployProducts[0].targets.count == 1
-        else {
-            throw Errors.deploymentDescriptorProductNotFound("Deploy")
+        
+        // use a default archive directory when none are given
+        if let archiveDirectory = archiveDirectoryArgument.first {
+            self.archiveDirectory = archiveDirectory
+        } else {
+            self.archiveDirectory = "\(context.package.directory.string)/.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/"
         }
-        for t in deployProducts[0].targets {
-            print("\(t.name) - \(t.directory)")
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: self.archiveDirectory, isDirectory: &isDirectory), isDirectory.boolValue else {
+            throw PluginError.invalidArgument(
+                "invalid archive directory: \(self.archiveDirectory)\nthe directory does not exists")
         }
-        guard deployProducts[0].targets.count == 1 else {
-            fatalError("There is more than one Deploy target \(deployProducts[0].targets)")
+        
+        // infer or consume stackname
+        if let stackName = stackNamenArgument.first {
+            self.stackName = stackName
+        } else {
+            self.stackName = context.package.displayName 
         }
-#if arch(arm64)
-        let arch = "arm64-apple-macosx"
-#else
-        let arch = "x86_64-apple-macosx"
-#endif
-        var deployExecutableURL = URL(fileURLWithPath: deployProducts[0].targets[0].directory.string)
-        // while there is /Sources or /Deploy => remove last path component 
-        while deployExecutableURL.path.contains("/Sources") ||
-              deployExecutableURL.path.contains("/Deploy") {
-
-            deployExecutableURL = deployExecutableURL.deletingLastPathComponent()
-        }
-        self.deployExecutable = deployExecutableURL.appendingPathComponent(".build/\(arch)/\(self.buildConfiguration)/Deploy")
         
         if self.verboseLogging {
             print("-------------------------------------------------------------------------")
@@ -276,40 +283,42 @@ private struct Configuration: CustomStringConvertible {
             print(self)
         }
     }
-
+    
     var description: String {
     """
     {
-      products: \(self.products.map(\.name))
+      verbose: \(self.verboseLogging)
+      noDeploy: \(self.noDeploy)
       buildConfiguration: \(self.buildConfiguration)
-      deployExecutable: \(self.deployExecutable)
+      archiveDirectory: \(self.archiveDirectory)
+      stackName: \(self.stackName)
+      
+      Plugin directory: \(self.context.pluginWorkDirectory)
+      Project directory: \(self.context.package.directory)
     }
     """
     }
 }
 
-private enum Errors: Error, CustomStringConvertible {
+private enum PluginError: Error, CustomStringConvertible {
     case invalidArgument(String)
-    case unsupportedPlatform(String)
-    case unknownProduct(String)
-    case productExecutableNotFound(String)
-    case deploymentDescriptorProductNotFound(String)
     case processFailed([String], Int32)
-
+    case toolNotFound(String)
+    case deployswiftDoesNotExist
+    case error(Error)
+    
     var description: String {
         switch self {
         case .invalidArgument(let description):
             return description
-        case .unsupportedPlatform(let description):
-            return description
-        case .unknownProduct(let description):
-            return description
-        case .productExecutableNotFound(let product):
-            return "product executable not found '\(product)'"
-        case .deploymentDescriptorProductNotFound(let product):
-            return "your project Package.swift has no executable named '\(product)'"
-        case .processFailed(let arguments, let code):
-            return "\(arguments.joined(separator: " ")) failed with code \(code)"
+        case .processFailed(let command, let code):
+            return "\(command.joined(separator: " ")) failed with exit code \(code)"
+        case .toolNotFound(let tool):
+            return tool
+        case .deployswiftDoesNotExist:
+            return "Deploy.swift does not exist"
+        case .error(let rootCause):
+            return "Error caused by:\n\(rootCause)"
         }
     }
 }
@@ -317,12 +326,88 @@ private enum Errors: Error, CustomStringConvertible {
 // **************************************************************
 // Below this line, the code is copied from the archiver plugin
 // **************************************************************
+@discardableResult
+private func execute(
+    executable: Path,
+    arguments: [String],
+    customWorkingDirectory: Path? = .none,
+    logLevel: ProcessLogLevel
+) throws -> String {
+    if logLevel >= .debug {
+        print("\(executable.string) \(arguments.joined(separator: " "))")
+    }
+    
+    var output = ""
+    let outputSync = DispatchGroup()
+    let outputQueue = DispatchQueue(label: "AWSLambdaPackager.output")
+    let outputHandler = { (data: Data?) in
+        dispatchPrecondition(condition: .onQueue(outputQueue))
+        
+        outputSync.enter()
+        defer { outputSync.leave() }
+        
+        guard
+            let _output = data.flatMap({
+                String(data: $0, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(["\n"]))
+            }), !_output.isEmpty
+        else {
+            return
+        }
+        
+        output += _output + "\n"
+        
+        switch logLevel {
+        case .silent:
+            break
+        case .debug(let outputIndent), .output(let outputIndent):
+            print(String(repeating: " ", count: outputIndent), terminator: "")
+            print(_output)
+            fflush(stdout)
+        }
+    }
+    
+    let pipe = Pipe()
+    pipe.fileHandleForReading.readabilityHandler = { fileHandle in
+        outputQueue.async { outputHandler(fileHandle.availableData) }
+    }
+    
+    let process = Process()
+    process.standardOutput = pipe
+    process.standardError = pipe
+    process.executableURL = URL(fileURLWithPath: executable.string)
+    process.arguments = arguments
+    if let workingDirectory = customWorkingDirectory {
+        process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory.string)
+    }
+    process.terminationHandler = { _ in
+        outputQueue.async {
+            outputHandler(try? pipe.fileHandleForReading.readToEnd())
+        }
+    }
+    
+    try process.run()
+    process.waitUntilExit()
+    
+    // wait for output to be full processed
+    outputSync.wait()
+    
+    if process.terminationStatus != 0 {
+        // print output on failure and if not already printed
+        if logLevel < .output {
+            print(output)
+            fflush(stdout)
+        }
+        throw PluginError.processFailed([executable.string] + arguments, process.terminationStatus)
+    }
+    
+    return output
+}
 
 private enum ProcessLogLevel: Comparable {
     case silent
     case output(outputIndent: Int)
     case debug(outputIndent: Int)
-
+    
     var naturalOrder: Int {
         switch self {
         case .silent:
@@ -333,16 +418,21 @@ private enum ProcessLogLevel: Comparable {
             return 2
         }
     }
-
+    
     static var output: Self {
         .output(outputIndent: 2)
     }
-
+    
     static var debug: Self {
         .debug(outputIndent: 2)
     }
-
+    
     static func < (lhs: ProcessLogLevel, rhs: ProcessLogLevel) -> Bool {
         lhs.naturalOrder < rhs.naturalOrder
     }
 }
+
+
+// **************************************************************
+// end copied code
+// **************************************************************
