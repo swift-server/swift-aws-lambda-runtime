@@ -18,7 +18,19 @@ public struct DeploymentDefinition {
         resources: [Resource])
     {
         
-        var additionalresources = resources
+        let functionResources = createResources(for: functions)
+        
+        self.deployment = SAMDeployment(description: description,
+                                        resources:  functionResources + resources)
+        
+        //TODO: add default output section to return the URL of the API Gateway
+        
+        dumpPackageAtExit(self, to: 1) // 1 = stdout
+    }
+    
+    // create one Resource per function + additional resource for the function dependencies (ex: a SQS queue)
+    private func createResources(for functions: [Function]) -> [Resource] {
+        var additionalresources : [Resource] = []
         let functionResources = functions.compactMap { function in
             
             // compute the path for the lambda archive
@@ -53,13 +65,7 @@ public struct DeploymentDefinition {
                                                eventSources: function.eventSources,
                                                environment: function.environment)
         }
-        
-        self.deployment = SAMDeployment(description: description,
-                                        resources:  functionResources + additionalresources)
-        
-        //TODO: add default output section to return the URL of the API Gateway
-        
-        dumpPackageAtExit(self, to: 1) // 1 = stdout
+        return functionResources + additionalresources
     }
     
     // When SQS event source is specified, the Lambda function developer
