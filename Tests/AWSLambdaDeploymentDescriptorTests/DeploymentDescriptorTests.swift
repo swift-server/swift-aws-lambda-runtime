@@ -19,6 +19,12 @@ final class DeploymentDescriptorTest: XCTestCase {
     
     var originalCommandLineArgs: [String] = []
     
+#if arch(arm64)
+    private let architecture = "arm64"
+#else
+    private let architecture = "x86_64"
+#endif
+    
     override func setUp() {
         // save the original Command Line args, just in case
         originalCommandLineArgs = CommandLine.arguments
@@ -51,11 +57,6 @@ final class DeploymentDescriptorTest: XCTestCase {
     func testLambdaFunctionResource() {
 
         // given
-#if arch(arm64)
-        let architecture = "arm64"
-#else
-        let architecture = "x86_64"
-#endif
         let expected = """
 function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(architecture)"]}}}
 """
@@ -103,7 +104,7 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
 
         // given
         let expected = """
-"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{"HttpApiEvent":{"Type":"HttpApi"}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["arm64"]}}}
+"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{"HttpApiEvent":{"Type":"HttpApi"}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(self.architecture)"]}}}
 """
 
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
@@ -117,7 +118,7 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
 
         // given
         let expected = """
-"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{"HttpApiEvent":{"Type":"HttpApi","Properties":{"Path":"\\/test","Method":"GET"}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["arm64"]}}}
+"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{"HttpApiEvent":{"Type":"HttpApi","Properties":{"Path":"\\/test","Method":"GET"}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(self.architecture)"]}}}
 """
 
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
@@ -131,7 +132,7 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
 
         // given
         let expected = """
-"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{"SQSEvent":{"Type":"SQS","Properties":{"Queue":"arn:aws:sqs:eu-central-1:012345678901:lambda-test"}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["arm64"]}}}
+"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{"SQSEvent":{"Type":"SQS","Properties":{"Queue":"arn:aws:sqs:eu-central-1:012345678901:lambda-test"}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(self.architecture)"]}}}
 """
 
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
