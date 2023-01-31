@@ -5,7 +5,9 @@ import Foundation
 //
 public struct DeploymentDefinition {
     
-    public init(
+    private var deployment : DeploymentDescriptor? = nil // optional is required to allow initialization after the capturing closure (compactMap)
+    
+    public init (
         // the description of the SAM template
         description: String,
         
@@ -16,25 +18,35 @@ public struct DeploymentDefinition {
         resources: [Resource])
     {
         
-        var queueResources : [Resource] = []
+        var additionalresources = resources
         let functionResources = functions.compactMap { function in
             
             // compute the path for the lambda archive
-            var lambdaPackage = ".build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/\(function.name)/\(function.name).zip"
+            // propose a default path unless the --archive-path argument was used
+            var lambdaPackage : String? = ".build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/\(function.name)/\(function.name).zip"
             if let optIdx = CommandLine.arguments.firstIndex(of: "--archive-path") {
                 if CommandLine.arguments.count >= optIdx + 1 {
                     let archiveArg = CommandLine.arguments[optIdx + 1]
                     lambdaPackage = "\(archiveArg)/\(function.name)/\(function.name).zip"
-                    
-                    // check the ZIP file exists
-                    guard FileManager.default.fileExists(atPath: lambdaPackage) else {
-                        fatalError("Lambda package does not exist at \(lambdaPackage)")
-                    }
                 }
             }
-            
+
+            // check the ZIP file exists
+            if !FileManager.default.fileExists(atPath: lambdaPackage!) {
+                // I choose to report an error in the generated JSON.
+                // happy to listen other ideas.
+                // I think they are 5 options here
+                // 1. fatalError() -> does not allow for unit testing
+                // 2. throw Error -> requires Lambda function developer to manage the error
+                // 3. return an empty deployement descriptor {} => would require more changes in DeploymentDescriptor
+                // 4. return an error message to be reported in CodeUri property => but `sam validate` does not catch it.
+                // 5. return nil and CodeUri will be ignored in the JSON  => but `sam validate` does not catch it.
+                // TODO: can we add code in `Plugin.swift` to force it to fail when such error is detected
+                lambdaPackage = "### ERROR package does not exist: \(lambdaPackage!) ###"
+            }
+
             // extract sqs resources to be created, if any
-            queueResources += self.explicitQueueResources(function: function)
+            additionalresources += self.explicitQueueResources(function: function)
             
             return Resource.serverlessFunction(name: function.name,
                                                codeUri: lambdaPackage,
@@ -42,12 +54,12 @@ public struct DeploymentDefinition {
                                                environment: function.environment)
         }
         
-        let deployment = SAMDeployment(description: description,
-                                       resources:  functionResources + queueResources)
+        self.deployment = SAMDeployment(description: description,
+                                        resources:  functionResources + additionalresources)
         
         //TODO: add default output section to return the URL of the API Gateway
         
-        dumpPackageAtExit(deployment, to: 1) // 1 = stdout
+        dumpPackageAtExit(self, to: 1) // 1 = stdout
     }
     
     // When SQS event source is specified, the Lambda function developer
@@ -67,6 +79,16 @@ public struct DeploymentDefinition {
             .compactMap {
                 sqsEventSource in (sqsEventSource.properties as? SQSEventProperties)?.queue }
     }
+    
+    public func toJSON(pretty: Bool = true) -> String {
+        let encoder = JSONEncoder()
+        if pretty {
+            encoder.outputFormatting = .prettyPrinted
+        }
+        let jsonData = try! encoder.encode(self.deployment!)
+        return String(data: jsonData, encoding: .utf8)!
+    }
+
 }
 
 // Intermediate structure to generate SAM Resources of type AWS::Serverless::Function
@@ -100,21 +122,18 @@ public struct Function {
 
 // inspired by
 // https://github.com/apple/swift-package-manager/blob/main/Sources/PackageDescription/PackageDescription.swift#L479
-private func manifestToJSON(_ deploymentDescriptor : DeploymentDescriptor) -> String {
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = .prettyPrinted
-    let jsonData = try! encoder.encode(deploymentDescriptor)
-    return String(data: jsonData, encoding: .utf8)!
+// left public for testing
+private func manifestToJSON(_ deploymentDefinition : DeploymentDefinition) -> String {
+    return deploymentDefinition.toJSON()
 }
-private var dumpInfo: (deploymentDescriptor: DeploymentDescriptor, fileDesc: Int32)?
-private func dumpPackageAtExit(_ deploymentDescriptor: DeploymentDescriptor, to fileDesc: Int32) {
+private var dumpInfo: (deploymentDefinition: DeploymentDefinition, fileDesc: Int32)?
+private func dumpPackageAtExit(_ deploymentDefinition: DeploymentDefinition, to fileDesc: Int32) {
     func dump() {
         guard let dumpInfo = dumpInfo else { return }
         guard let fd = fdopen(dumpInfo.fileDesc, "w") else { return }
-        fputs(manifestToJSON(dumpInfo.deploymentDescriptor), fd)
+        fputs(manifestToJSON(dumpInfo.deploymentDefinition), fd)
         fclose(fd)
     }
-    dumpInfo = (deploymentDescriptor, fileDesc)
+    dumpInfo = (deploymentDefinition, fileDesc)
     atexit(dump)
-}    
-
+}

@@ -89,7 +89,7 @@ public struct Resource: SAMResource, Equatable {
 
 extension Resource {
     public static func serverlessFunction(name: String,
-                                          codeUri: String,
+                                          codeUri: String?,
                                           eventSources: [EventSource] = [],
                                           environment: EnvironmentVariable = .none) -> Resource {
         
@@ -110,12 +110,12 @@ public struct ServerlessFunctionProperties: SAMResourceProperties {
     let architectures: [Architectures]
     let handler: String
     let runtime: String
-    let codeUri: String
+    let codeUri: String?
     let autoPublishAlias: String
     var eventSources: [String: EventSource]
     var environment: EnvironmentVariable
     
-    public init(codeUri: String,
+    public init(codeUri: String?,
                 eventSources: [EventSource] = [],
                 environment: EnvironmentVariable = .none) {
         
@@ -142,7 +142,9 @@ public struct ServerlessFunctionProperties: SAMResourceProperties {
         try container.encode(self.architectures, forKey: .architectures)
         try container.encode(self.handler, forKey: .handler)
         try container.encode(self.runtime, forKey: .runtime)
-        try container.encode(self.codeUri, forKey: .codeUri)
+        if let codeUri = self.codeUri {
+            try container.encode(codeUri, forKey: .codeUri)
+        }
         try container.encode(self.autoPublishAlias, forKey: .autoPublishAlias)
         try container.encode(self.eventSources, forKey: .eventSources)
         if !environment.isEmpty() {

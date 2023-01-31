@@ -28,31 +28,28 @@ final class DeploymentDescriptorTest: XCTestCase {
         CommandLine.arguments = originalCommandLineArgs
     }
     
+    private func generateAndTestDeploymentDecsriptor(deployment: MockDeploymentDescriptor, expected: String) -> Bool {
+        // when
+        let samJSON = deployment.deploymentDescriptor.toJSON(pretty: false)
+        print(samJSON)
+        // then
+        return samJSON.contains(expected)
+    }
+    
     func testSAMHeader() {
         
         // given
         let expected = """
-AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::Serverless-2016-10-31
-Description: A SAM template to deploy a Swift Lambda function
+{"Description":"A SAM template to deploy a Swift Lambda function","AWSTemplateFormatVersion":"2010-09-09","Resources":{},"Transform":"AWS::Serverless-2016-10-31"}
 """
-        var testDeployment = MockDeploymentDescriptor()
-        testDeployment.environmentVariableFunction = { _ in EnvironmentVariable.none() }
-        testDeployment.eventSourceFunction = { _ in [] }
-        
-        do {
-            // when
-            let samYaml = try testDeployment.toYaml()
-            
-            // then
-            XCTAssertTrue(samYaml.contains(expected))
-        } catch {
-            XCTFail("toYaml should not throw an exceptoon")
-        }
+
+        let testDeployment = MockDeploymentDescriptor(withFunction: false)
+        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                               expected: expected))
     }
     
     func testLambdaFunctionResource() {
-        
+
         // given
 #if arch(arm64)
         let architecture = "arm64"
@@ -60,347 +57,197 @@ Description: A SAM template to deploy a Swift Lambda function
         let architecture = "x86_64"
 #endif
         let expected = """
-Resources:
-  TestLambda:
-    Type: AWS::Serverless::Function
-    Properties:
-      Architectures:
-      - \(architecture)
-      Handler: Provided
-      Runtime: provided.al2
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/TestLambda/TestLambda.zip
-      AutoPublishAlias: Live
-      Events: {}
+function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(architecture)"]}}}
 """
-        var testDeployment = MockDeploymentDescriptor()
-        testDeployment.environmentVariableFunction = { _ in EnvironmentVariable.none() }
-        testDeployment.eventSourceFunction = { _ in [] }
-        
-        do {
-            // when
-            let samYaml = try testDeployment.toYaml()
-            
-            // then
-            XCTAssertTrue(samYaml.contains(expected))
-        } catch {
-            XCTFail("toYaml should not throw an exceptoon")
-        }
+        let testDeployment = MockDeploymentDescriptor(withFunction: true)
+        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                               expected: expected))
     }
-    
+
     func testSimpleTableResource() {
-        
+
         // given
         let expected = """
-LogicalTestTable:
-    Type: AWS::Serverless::SimpleTable
-    Properties:
-      TableName: TestTable
-      PrimaryKey:
-        Name: pk
-        Type: String
+"Resources":{"LogicalTestTable":{"Type":"AWS::Serverless::SimpleTable","Properties":{"TableName":"TestTable","PrimaryKey":{"Name":"pk","Type":"String"}}}}
 """
-        
-        var testDeployment = MockDeploymentDescriptor()
-        testDeployment.environmentVariableFunction = { _ in EnvironmentVariable.none() }
-        testDeployment.eventSourceFunction = { _ in [] }
-        testDeployment.additionalResourcesFunction = {
-            return [Resource.table(logicalName: "LogicalTestTable",
-                                   physicalName: "TestTable",
-                                   primaryKeyName: "pk",
-                                   primaryKeyType: "String")]
-        }
-        
-        do {
-            // when
-            let samYaml = try testDeployment.toYaml()
-            
-            // then
-            XCTAssertTrue(samYaml.contains(expected))
-        } catch {
-            XCTFail("toYaml should not throw an exceptoon")
-        }
+
+        let testDeployment = MockDeploymentDescriptor(withFunction: false,
+                                                      additionalResources:
+                    [.table(logicalName: "LogicalTestTable",
+                            physicalName: "TestTable",
+                            primaryKeyName: "pk",
+                            primaryKeyType: "String")]
+        )
+        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                               expected: expected))
     }
-    
+
     func testSQSQueueResource() {
-        
+
         // given
         let expected = """
-  LogicalQueueName:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: queue-name
+"Resources":{"LogicalQueueName":{"Type":"AWS::SQS::Queue","Properties":{"QueueName":"queue-name"}}}
 """
-        
-        var testDeployment = MockDeploymentDescriptor()
-        testDeployment.environmentVariableFunction = { _ in EnvironmentVariable.none() }
-        testDeployment.eventSourceFunction = { _ in [] }
-        testDeployment.additionalResourcesFunction = {
-            return [Resource.queue(name: "LogicalQueueName",
-                                   properties: SQSResourceProperties(queueName: "queue-name"))
-            ]
-        }
-        
-        do {
-            // when
-            let samYaml = try testDeployment.toYaml()
+
+        let testDeployment = MockDeploymentDescriptor(withFunction: false,
+                                                      additionalResources:
+                    [.queue(name: "LogicalQueueName",
+                            properties: SQSResourceProperties(queueName: "queue-name"))]
             
-            // then
-            XCTAssertTrue(samYaml.contains(expected))
-        } catch {
-            XCTFail("toYaml should not throw an exceptoon")
-        }
+        )
+        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                               expected: expected))
     }
-    
+
     func testHttpApiEventSourceCatchAll() {
-        
+
         // given
         let expected = """
-      Events:
-        HttpApiEvent:
-          Type: HttpApi
+"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{"HttpApiEvent":{"Type":"HttpApi"}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["arm64"]}}}
 """
-        
-        var testDeployment = MockDeploymentDescriptor()
-        testDeployment.environmentVariableFunction = { _ in EnvironmentVariable.none() }
-        testDeployment.eventSourceFunction = { _ in [ .httpApi() ] }
-        
-        do {
-            // when
-            let samYaml = try testDeployment.toYaml()
-            
-            // then
-            XCTAssertTrue(samYaml.contains(expected))
-        } catch {
-            XCTFail("toYaml should not throw an exceptoon")
-        }
+
+        let testDeployment = MockDeploymentDescriptor(withFunction: true,
+                                                      eventSource: [ .httpApi() ] )
+
+        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                               expected: expected))
     }
-    
+
     func testHttpApiEventSourceSpecific() {
-        
+
         // given
         let expected = """
-        HttpApiEvent:
-          Type: HttpApi
-          Properties:
-            Method: GET
-            Path: /test
+"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{"HttpApiEvent":{"Type":"HttpApi","Properties":{"Path":"\\/test","Method":"GET"}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["arm64"]}}}
 """
-        
-        var testDeployment = MockDeploymentDescriptor()
-        testDeployment.environmentVariableFunction = { _ in EnvironmentVariable.none() }
-        testDeployment.eventSourceFunction = { _ in [ .httpApi(method: .GET,
-                                                               path: "/test") ] }
-        
-        do {
-            // when
-            let samYaml = try testDeployment.toYaml()
-            
-            // then
-            XCTAssertTrue(samYaml.contains(expected))
-        } catch {
-            XCTFail("toYaml should not throw an exceptoon")
-        }
+
+        let testDeployment = MockDeploymentDescriptor(withFunction: true,
+                                                      eventSource: [ .httpApi(method: .GET, path: "/test") ])
+
+        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                               expected: expected))
     }
-    
+//
     func testSQSEventSourceWithArn() {
-        
+
         // given
         let expected = """
-      Events:
-        SQSEvent:
-          Type: SQS
-          Properties:
-            Queue: arn:aws:sqs:eu-central-1:012345678901:lambda-test
+"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{"SQSEvent":{"Type":"SQS","Properties":{"Queue":"arn:aws:sqs:eu-central-1:012345678901:lambda-test"}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["arm64"]}}}
 """
-        
-        var testDeployment = MockDeploymentDescriptor()
-        testDeployment.environmentVariableFunction = { _ in EnvironmentVariable.none() }
-        testDeployment.eventSourceFunction = { _ in [ .sqs(queue: "arn:aws:sqs:eu-central-1:012345678901:lambda-test") ] }
-        
-        do {
-            // when
-            let samYaml = try testDeployment.toYaml()
-            
-            // then
-            XCTAssertTrue(samYaml.contains(expected))
-        } catch {
-            XCTFail("toYaml should not throw an exceptoon")
-        }
+
+        let testDeployment = MockDeploymentDescriptor(withFunction: true,
+                                                      eventSource: [ .sqs(queue: "arn:aws:sqs:eu-central-1:012345678901:lambda-test") ] )
+
+        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                               expected: expected))
     }
-    
+
     func testSQSEventSourceWithoutArn() {
-        
+
+        // given
+        var expected = """
+"QueueQueueLambdaTest":{"Type":"AWS::SQS::Queue","Properties":{"QueueName":"queue-lambda-test"}}
+"""
+
+        let testDeployment = MockDeploymentDescriptor(withFunction: true,
+                                                      eventSource: [ .sqs(queue: "queue-lambda-test") ] )
+
+        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                               expected: expected))
+
+        expected = """
+"Events":{"SQSEvent":{"Type":"SQS","Properties":{"Queue":{"Fn::GetAtt":["QueueQueueLambdaTest","Arn"]}}}}
+"""
+        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                               expected: expected))
+    }
+
+    func testEnvironmentVariablesString() {
+
+        // given
+        let expectedinOrder = """
+"Environment":{"Variables":{"TEST2_VAR":"TEST2_VALUE","TEST1_VAR":"TEST1_VALUE"}}
+"""
+        let expectedOutOfOrder = """
+"Environment":{"Variables":{"TEST1_VAR":"TEST1_VALUE","TEST2_VAR":"TEST2_VALUE"}}
+"""
+
+
+        let testDeployment = MockDeploymentDescriptor(withFunction: true,
+                                                      environmentVariable: EnvironmentVariable(["TEST1_VAR": "TEST1_VALUE",
+                                                                                                "TEST2_VAR": "TEST2_VALUE"]) )
+
+        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                               expected: expectedinOrder)
+                      ||
+                      self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                                             expected: expectedOutOfOrder)
+        )
+    }
+
+    func testEnvironmentVariablesArray() {
+
         // given
         let expected = """
-      Events:
-        SQSEvent:
-          Type: SQS
-          Properties:
-            Queue:
-              Fn::GetAtt:
-              - QueueQueueLambdaTest
-              - Arn
+"Environment":{"Variables":{"TEST1_VAR":{"Ref":"TEST1_VALUE"}}}
 """
-        let expectedResource = """
-  QueueQueueLambdaTest:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: queue-lambda-test
-"""
-        
-        var testDeployment = MockDeploymentDescriptor()
-        testDeployment.environmentVariableFunction = { _ in EnvironmentVariable.none() }
-        testDeployment.eventSourceFunction = { _ in [ .sqs(queue: "queue-lambda-test") ] }
-        
-        do {
-            // when
-            let samYaml = try testDeployment.toYaml()
-            
-            // then
-            XCTAssertTrue(samYaml.contains(expected))
-            XCTAssertTrue(samYaml.contains(expectedResource))
-        } catch {
-            XCTFail("toYaml should not throw an exceptoon")
-        }
-        
-    }
-    
-    func testEnvironmentVariablesString() {
-        
-        // given
-        let expectedOne = """
-      Environment:
-        Variables:
-          TEST2_VAR: TEST2_VALUE
-          TEST1_VAR: TEST1_VALUE
-"""
-        let expectedTwo = """
-      Environment:
-        Variables:
-          TEST1_VAR: TEST1_VALUE
-          TEST2_VAR: TEST2_VALUE
-"""
-        
-        var testDeployment = MockDeploymentDescriptor()
-        testDeployment.environmentVariableFunction = { _ in EnvironmentVariable(["TEST1_VAR": "TEST1_VALUE",
-                                                                                 "TEST2_VAR": "TEST2_VALUE"]) }
-        
-        do {
-            // when
-            let samYaml = try testDeployment.toYaml()
-            
-            // then
-            XCTAssertTrue(samYaml.contains(expectedOne) || samYaml.contains(expectedTwo))
-        } catch {
-            XCTFail("toYaml should not throw an exceptoon")
-        }
-    }
-    
-    func testEnvironmentVariablesArray() {
-        
-        // given
-        let expectedOne = """
-      Environment:
-        Variables:
-          TEST1_VAR:
-            Ref: TEST1_VALUE
-"""
-        
-        var testDeployment = MockDeploymentDescriptor()
-        testDeployment.environmentVariableFunction = { _ in
-            var envVars = EnvironmentVariable()
-            envVars.append("TEST1_VAR", ["Ref" : "TEST1_VALUE"])
-            return envVars
-        }
-        
-        do {
-            // when
-            let samYaml = try testDeployment.toYaml()
-            
-            // then
-            XCTAssertTrue(samYaml.contains(expectedOne))
-        } catch {
-            XCTFail("toYaml should not throw an exceptoon")
-        }
+
+        var envVar = EnvironmentVariable()
+        envVar.append("TEST1_VAR", ["Ref" : "TEST1_VALUE"])
+        let testDeployment = MockDeploymentDescriptor(withFunction: true,
+                                                      environmentVariable: envVar )
+        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                               expected: expected))
     }
 
     func testEnvironmentVariablesDictionary() {
-        
+
         // given
-        let expectedOne = """
-      Environment:
-        Variables:
-          TEST1_VAR:
-            Fn::GetAtt:
-            - TEST1_VALUE
-            - Arn
+        let expected = """
+"Environment":{"Variables":{"TEST1_VAR":{"Fn::GetAtt":["TEST1_VALUE","Arn"]}}}
 """
-        
-        var testDeployment = MockDeploymentDescriptor()
-        testDeployment.environmentVariableFunction = { _ in
-            var envVars = EnvironmentVariable()
-            envVars.append("TEST1_VAR", ["Fn::GetAtt" : ["TEST1_VALUE", "Arn"]])
-            return envVars
-        }
-        
-        do {
-            // when
-            let samYaml = try testDeployment.toYaml()
-            
-            // then
-            XCTAssertTrue(samYaml.contains(expectedOne))
-        } catch {
-            XCTFail("toYaml should not throw an exceptoon")
-        }
+
+        var envVar = EnvironmentVariable()
+        envVar.append("TEST1_VAR", ["Fn::GetAtt" : ["TEST1_VALUE", "Arn"]])
+        let testDeployment = MockDeploymentDescriptor(withFunction: true,
+                                                      environmentVariable: envVar )
+        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                               expected: expected))
     }
 
     func testEnvironmentVariablesResource() {
-        
+
         // given
-        let expectedOne = """
-      Environment:
-        Variables:
-          TEST1_VAR:
-            Ref: LogicalName
+        let expected = """
+"Environment":{"Variables":{"TEST1_VAR":{"Ref":"LogicalName"}}}
 """
-        
-        var testDeployment = MockDeploymentDescriptor()
-        testDeployment.environmentVariableFunction = { _ in
-            let resource = Resource.queue(logicalName: "LogicalName", physicalName: "PhysicalName")
-            var envVars = EnvironmentVariable()
-            envVars.append("TEST1_VAR", resource)
-            return envVars
-        }
-        
-        do {
-            // when
-            let samYaml = try testDeployment.toYaml()
-            
-            // then
-            XCTAssertTrue(samYaml.contains(expectedOne))
-        } catch {
-            XCTFail("toYaml should not throw an exceptoon")
-        }
+
+        let resource = Resource.queue(logicalName: "LogicalName", physicalName: "PhysicalName")
+        var envVar = EnvironmentVariable()
+        envVar.append("TEST1_VAR", resource)
+        let testDeployment = MockDeploymentDescriptor(withFunction: true,
+                                                      environmentVariable: envVar )
+        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                                                               expected: expected))
     }
 
     func testArnOK() {
         // given
         let validArn = "arn:aws:sqs:eu-central-1:012345678901:lambda-test"
-        
+
         // when
         let arn = Arn(validArn)
-        
+
         // then
         XCTAssertNotNil(arn)
     }
-    
+
     func testArnFail() {
         // given
         let invalidArn = "invalid"
-        
+
         // when
         let arn = Arn(invalidArn)
-        
+
         // then
         XCTAssertNil(arn)
     }

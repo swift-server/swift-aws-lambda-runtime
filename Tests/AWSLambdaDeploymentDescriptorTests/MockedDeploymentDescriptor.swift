@@ -15,36 +15,34 @@
 import Foundation
 import AWSLambdaDeploymentDescriptor
 
-struct MockDeploymentDescriptor: DeploymentDescriptor {
+struct MockDeploymentDescriptor {
 
-    var eventSourceFunction: ( (String) -> [EventSource] )?
-    var environmentVariableFunction: ( (String) -> EnvironmentVariable )?
-    var additionalResourcesFunction: ( () -> [Resource] )?
-
-    // returns the event sources for the given Lambda function
-    func eventSources(_ lambdaName: String) -> [EventSource] {
-        if let eventSourceFunction {
-            return eventSourceFunction(lambdaName)
+    let deploymentDescriptor : DeploymentDefinition
+    
+    init(withFunction: Bool = true,
+         eventSource:  [EventSource]? = nil,
+         environmentVariable: EnvironmentVariable? = nil,
+         additionalResources: [Resource]? = nil)
+    {
+        if withFunction {
+            self.deploymentDescriptor = DeploymentDefinition(
+                description: "A SAM template to deploy a Swift Lambda function",
+                functions: [
+                    .function(
+                        name: "TestLambda",
+                        eventSources: eventSource ?? [],
+                        environment: environmentVariable ?? EnvironmentVariable.none
+                    )
+                ],
+                resources: additionalResources ?? []
+            )
         } else {
-            return []
-        }
-    }
-
-    // returns environment variables to associate with the given Lambda function
-    func environmentVariables(_ lambdaName: String) -> EnvironmentVariable {
-        if let environmentVariableFunction {
-            return environmentVariableFunction(lambdaName)
-        } else {
-            return EnvironmentVariable.none()
-        }
-    }
-
-    // returns environment variables to associate with the given Lambda function
-    func addResource() -> [Resource] {
-        if let additionalResourcesFunction {
-            return additionalResourcesFunction()
-        } else {
-            return []
+            self.deploymentDescriptor = DeploymentDefinition(
+                description: "A SAM template to deploy a Swift Lambda function",
+                functions: [],
+                resources: additionalResources ?? []
+            )
         }
     }
 }
+
