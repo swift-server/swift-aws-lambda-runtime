@@ -20,6 +20,7 @@ struct MockDeploymentDescriptor {
     let deploymentDescriptor : DeploymentDefinition
     
     init(withFunction: Bool = true,
+         architecture: Architectures = Architectures.defaultArchitecture(),
          eventSource:  [EventSource]? = nil,
          environmentVariable: EnvironmentVariable? = nil,
          additionalResources: [Resource]? = nil)
@@ -30,6 +31,7 @@ struct MockDeploymentDescriptor {
                 functions: [
                     .function(
                         name: "TestLambda",
+                        architecture: architecture,
                         eventSources: eventSource ?? [],
                         environment: environmentVariable ?? EnvironmentVariable.none
                     )

@@ -234,7 +234,7 @@ OPTIONS:
     --configuration <configuration>
                     Build for a specific configuration.
                     Must be aligned with what was used to build and package.
-                    Valid values : [ debug, release ] (default: debug)
+                    Valid values: [ debug, release ] (default: debug)
     --archive-path <archive-path>
                     The path where the archive plugin created the ZIP archive.
                     Must be aligned with the value passed to archive --output-path.

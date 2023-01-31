@@ -89,11 +89,13 @@ public struct Resource: SAMResource, Equatable {
 
 extension Resource {
     public static func serverlessFunction(name: String,
+                                          architecture: Architectures,
                                           codeUri: String?,
                                           eventSources: [EventSource] = [],
                                           environment: EnvironmentVariable = .none) -> Resource {
         
         let properties = ServerlessFunctionProperties(codeUri: codeUri,
+                                                      architecture: architecture,
                                                       eventSources: eventSources,
                                                       environment: environment)
         return Resource(type: "AWS::Serverless::Function",
@@ -102,11 +104,26 @@ extension Resource {
     }
 }
 
-public struct ServerlessFunctionProperties: SAMResourceProperties {
-    public enum Architectures: String, Encodable {
-        case x64 = "x86_64"
-        case arm64 = "arm64"
+public enum Architectures: String, Encodable, CaseIterable {
+    case x64 = "x86_64"
+    case arm64 = "arm64"
+    
+    // the default value is the current architecture
+    public static func defaultArchitecture() -> Architectures {
+#if arch(arm64)
+        return .arm64
+#else
+        return .x64
+#endif
     }
+    
+    // valid values for error and help message
+    public static func validValues() -> String {
+        return Architectures.allCases.map { $0.rawValue }.joined(separator: ", ")
+    }
+}
+
+public struct ServerlessFunctionProperties: SAMResourceProperties {
     let architectures: [Architectures]
     let handler: String
     let runtime: String
@@ -116,14 +133,11 @@ public struct ServerlessFunctionProperties: SAMResourceProperties {
     var environment: EnvironmentVariable
     
     public init(codeUri: String?,
+                architecture: Architectures,
                 eventSources: [EventSource] = [],
                 environment: EnvironmentVariable = .none) {
         
-#if arch(arm64) //when we build on Arm, we deploy on Arm
-        self.architectures = [.arm64]
-#else
-        self.architectures = [.x64]
-#endif
+        self.architectures = [architecture]
         self.handler = "Provided"
         self.runtime = "provided.al2" // Amazon Linux 2 supports both arm64 and x64
         self.autoPublishAlias = "Live"

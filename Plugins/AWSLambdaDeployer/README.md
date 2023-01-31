@@ -84,6 +84,7 @@ let _ = DeploymentDefinition(
     functions: [        
         .function(
             name: "HttpApiLambda",
+            architecture: .arm64, // optional, defaults to current build platform
             eventSources: [
                 .httpApi(method: .GET, path: "/test"),
             ],

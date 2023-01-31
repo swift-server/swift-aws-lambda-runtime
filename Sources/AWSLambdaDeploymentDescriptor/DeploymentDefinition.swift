@@ -30,6 +30,7 @@ public struct DeploymentDefinition {
     
     // create one Resource per function + additional resource for the function dependencies (ex: a SQS queue)
     private func createResources(for functions: [Function]) -> [Resource] {
+        
         var additionalresources : [Resource] = []
         let functionResources = functions.compactMap { function in
             
@@ -61,6 +62,7 @@ public struct DeploymentDefinition {
             additionalresources += self.explicitQueueResources(function: function)
             
             return Resource.serverlessFunction(name: function.name,
+                                               architecture: function.architecture,
                                                codeUri: lambdaPackage,
                                                eventSources: function.eventSources,
                                                environment: function.environment)
@@ -105,9 +107,11 @@ public struct DeploymentDefinition {
 //TODO: should I move this to the Resource() struct ? Then I need a way to add CodeUri at a later stage
 public struct Function {
     let name: String
+    let architecture: Architectures
     let eventSources: [EventSource]
     let environment: EnvironmentVariable
     public static func function(name : String,
+                                architecture: Architectures = Architectures.defaultArchitecture(),
                                 eventSources: [EventSource],
                                 environment: EnvironmentVariable = .none) -> Function {
         
@@ -121,6 +125,7 @@ public struct Function {
         }
         
         return self.init(name: name,
+                         architecture: architecture,
                          eventSources: eventSources,
                          environment: environment)
     }
