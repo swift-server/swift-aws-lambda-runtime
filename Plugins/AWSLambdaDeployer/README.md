@@ -136,6 +136,38 @@ REPORT RequestId: 23cb7237-5c46-420a-b311-45ae9d4d19b7  Init Duration: 0.44 ms  
 {"headers":{"content-type":"application\/json"},"body":"{\"isBase64Encoded\":false,\"headers\":{\"x-forwarded-for\":\"90.103.90.59\",\"sec-fetch-site\":\"none\",\"x-amzn-trace-id\":\"Root=1-63a29de7-371407804cbdf89323be4902\",\"content-length\":\"0\",\"host\":\"x6v980zzkh.execute-api.eu-central-1.amazonaws.com\",\"x-forwarded-port\":\"443\",\"accept\":\"text\\\/html,application\\\/xhtml+xml,application\\\/xml;q=0.9,image\\\/avif,image\\\/webp,*\\\/*;q=0.8\",\"sec-fetch-user\":\"?1\",\"user-agent\":\"Mozilla\\\/5.0 (Macintosh; Intel Mac OS X 10.15; rv:108.0) Gecko\\\/20100101 Firefox\\\/108.0\",\"accept-language\":\"en-US,en;q=0.8,fr-FR;q=0.5,fr;q=0.3\",\"sec-fetch-dest\":\"document\",\"dnt\":\"1\",\"sec-fetch-mode\":\"navigate\",\"x-forwarded-proto\":\"https\",\"accept-encoding\":\"gzip, deflate, br\",\"upgrade-insecure-requests\":\"1\"},\"version\":\"2.0\",\"queryStringParameters\":{\"arg1\":\"value1\",\"arg2\":\"value2\"},\"routeKey\":\"$default\",\"requestContext\":{\"domainPrefix\":\"x6v980zzkh\",\"stage\":\"$default\",\"timeEpoch\":1671601639995,\"apiId\":\"x6v980zzkh\",\"http\":{\"protocol\":\"HTTP\\\/1.1\",\"sourceIp\":\"90.103.90.59\",\"method\":\"GET\",\"userAgent\":\"Mozilla\\\/5.0 (Macintosh; Intel Mac OS X 10.15; rv:108.0) Gecko\\\/20100101 Firefox\\\/108.0\",\"path\":\"\\\/test\"},\"time\":\"21\\\/Dec\\\/2022:05:47:19 +0000\",\"domainName\":\"x6v980zzkh.execute-api.eu-central-1.amazonaws.com\",\"requestId\":\"de2cRil5liAEM5Q=\",\"accountId\":\"486652066693\"},\"rawQueryString\":\"arg1=value1&arg2=value2\",\"rawPath\":\"\\\/test\"}","statusCode":202}% 
 ```
 
+### Command Line Options
+
+The deployer plugin accepts multiple options on the command line.
+
+```bash
+swift package plugin deploy --help
+OVERVIEW: A swift plugin to deploy your Lambda function on your AWS account.
+          
+REQUIREMENTS: To use this plugin, you must have an AWS account and have `sam` installed.
+              You can install sam with the following command:
+              (brew tap aws/tap && brew install aws-sam-cli)
+
+USAGE: swift package --disable-sandbox deploy [--help] [--verbose] [--nodeploy] [--configuration <configuration>] [--archive-path <archive_path>] [--stack-name <stack-name>]
+
+OPTIONS:
+    --verbose       Produce verbose output for debugging.
+    --nodeploy      Generates the JSON deployment descriptor, but do not deploy.
+    --configuration <configuration>
+                    Build for a specific configuration.
+                    Must be aligned with what was used to build and package.
+                    Valid values : [ debug, release ] (default: debug)
+    --archive-path <archive-path>
+                    The path where the archive plugin created the ZIP archive.
+                    Must be aligned with the value passed to archive --output-path.
+                    (default: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager)
+    --stack-name <stack-name>
+                    The name of the CloudFormation stack when deploying.
+                    (default: the project name)
+    --help          Show help information.
+```
+
+
 ### What is missing ?
 
 If this proposal is accepted, Swift Lambda function developers would need a much larger coverage of the SAM template format. I will add support for resources and properties. We can also look at generating the Swift data structures automatically from the AWS-provided SAM schema definition (in JSON)

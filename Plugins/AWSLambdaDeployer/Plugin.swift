@@ -21,6 +21,10 @@ struct AWSLambdaPackager: CommandPlugin {
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
         
         let configuration = try Configuration(context: context, arguments: arguments)
+        if configuration.help {
+            displayHelpMessage()
+            return
+        }
         
         // gather file paths
         let samDeploymentDescriptorFilePath = "\(context.package.directory)/sam.json"
@@ -213,10 +217,39 @@ struct AWSLambdaPackager: CommandPlugin {
             throw DeployerPluginError.error(error)
         }
     }
+    
+    private func displayHelpMessage() {
+        print("""
+OVERVIEW: A swift plugin to deploy your Lambda function on your AWS account.
+          
+REQUIREMENTS: To use this plugin, you must have an AWS account and have `sam` installed.
+              You can install sam with the following command:
+              (brew tap aws/tap && brew install aws-sam-cli)
+
+USAGE: swift package --disable-sandbox deploy [--help] [--verbose] [--nodeploy] [--configuration <configuration>] [--archive-path <archive_path>] [--stack-name <stack-name>]
+
+OPTIONS:
+    --verbose       Produce verbose output for debugging.
+    --nodeploy      Generates the JSON deployment descriptor, but do not deploy.
+    --configuration <configuration>
+                    Build for a specific configuration.
+                    Must be aligned with what was used to build and package.
+                    Valid values : [ debug, release ] (default: debug)
+    --archive-path <archive-path>
+                    The path where the archive plugin created the ZIP archive.
+                    Must be aligned with the value passed to archive --output-path.
+                    (default: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager)
+    --stack-name <stack-name>
+                    The name of the CloudFormation stack when deploying.
+                    (default: the project name)
+    --help          Show help information.
+""")
+    }
 }
 
 private struct Configuration: CustomStringConvertible {
     public let buildConfiguration: PackageManager.BuildConfiguration
+    public let help: Bool
     public let noDeploy: Bool
     public let verboseLogging: Bool
     public let archiveDirectory: String
@@ -237,7 +270,11 @@ private struct Configuration: CustomStringConvertible {
         let verboseArgument = argumentExtractor.extractFlag(named: "verbose") > 0
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
         let archiveDirectoryArgument = argumentExtractor.extractOption(named: "archive-path")
-        let stackNamenArgument = argumentExtractor.extractOption(named: "stackname")
+        let stackNameArgument = argumentExtractor.extractOption(named: "stackname")
+        let helpArgument = argumentExtractor.extractFlag(named: "help") > 0
+
+        // help required ?
+        self.help = helpArgument
         
         // define deployment option
         self.noDeploy = nodeployArgument
@@ -271,7 +308,7 @@ private struct Configuration: CustomStringConvertible {
         }
         
         // infer or consume stackname
-        if let stackName = stackNamenArgument.first {
+        if let stackName = stackNameArgument.first {
             self.stackName = stackName
         } else {
             self.stackName = context.package.displayName 
