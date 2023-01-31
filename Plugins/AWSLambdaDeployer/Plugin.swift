@@ -102,9 +102,9 @@ struct AWSLambdaPackager: CommandPlugin {
             
             // create and execute a plugin helper to run the "swift" command
             let helperFilePath = "\(projectDirectory)/compile.sh"
-            let helperFileUrl = URL(fileURLWithPath: helperFilePath)
-            try helperCmd.write(to: helperFileUrl, atomically: true, encoding: .utf8)
-            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helperFilePath)
+            FileManager.default.createFile(atPath: helperFilePath,
+                                           contents: helperCmd.data(using: .utf8),
+                                           attributes: [.posixPermissions: 0o755])
             let samDeploymentDescriptor = try Utils.execute(
                 executable: Path("/bin/bash"),
                 arguments: ["-c", helperFilePath],
@@ -116,12 +116,11 @@ struct AWSLambdaPackager: CommandPlugin {
             //                arguments: Array(cmd.dropFirst()),
             //                customWorkingDirectory: context.package.directory,
             //                logLevel: configuration.verboseLogging ? .debug : .silent)
-            try FileManager.default.removeItem(at: helperFileUrl)
+            try FileManager.default.removeItem(atPath: helperFilePath)
             
             // write the generated SAM deployment decsriptor to disk
-            let samDeploymentDescriptorFileUrl = URL(fileURLWithPath: samDeploymentDescriptorFilePath)
-            try samDeploymentDescriptor.write(
-                to: samDeploymentDescriptorFileUrl, atomically: true, encoding: .utf8)
+            FileManager.default.createFile(atPath: samDeploymentDescriptorFilePath,
+                                           contents: samDeploymentDescriptor.data(using: .utf8))
             verboseLogging ? print("\(samDeploymentDescriptorFilePath)") : nil
             
         } catch let error as DeployerPluginError {
