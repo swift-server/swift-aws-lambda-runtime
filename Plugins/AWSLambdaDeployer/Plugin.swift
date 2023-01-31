@@ -166,7 +166,9 @@ struct AWSLambdaPackager: CommandPlugin {
         do {
             try execute(
                 executable: samExecutablePath,
-                arguments: ["validate", "-t", samDeploymentDescriptorFilePath],
+                arguments: ["validate",
+                            "-t", samDeploymentDescriptorFilePath,
+                            "--lint"],
                 logLevel: verboseLogging ? .debug : .silent)
             
         } catch let error as PluginError {
