@@ -5,7 +5,7 @@ import Foundation
 //
 public struct DeploymentDefinition {
     
-    private var deployment : DeploymentDescriptor? = nil // optional is required to allow initialization after the capturing closure (compactMap)
+    private var deployment : DeploymentDescriptor 
     
     public init (
         // the description of the SAM template
@@ -18,7 +18,7 @@ public struct DeploymentDefinition {
         resources: [Resource])
     {
         
-        let functionResources = createResources(for: functions)
+        let functionResources = DeploymentDefinition.createResources(for: functions)
         
         self.deployment = SAMDeployment(description: description,
                                         resources:  functionResources + resources)
@@ -29,7 +29,7 @@ public struct DeploymentDefinition {
     }
     
     // create one Resource per function + additional resource for the function dependencies (ex: a SQS queue)
-    private func createResources(for functions: [Function]) -> [Resource] {
+    private static func createResources(for functions: [Function]) -> [Resource] {
         
         var additionalresources : [Resource] = []
         let functionResources = functions.compactMap { function in
@@ -43,7 +43,7 @@ public struct DeploymentDefinition {
                     lambdaPackage = "\(archiveArg)/\(function.name)/\(function.name).zip"
                 }
             }
-
+            
             // check the ZIP file exists
             if !FileManager.default.fileExists(atPath: lambdaPackage!) {
                 // I choose to report an error in the generated JSON.
@@ -57,9 +57,9 @@ public struct DeploymentDefinition {
                 // TODO: can we add code in `Plugin.swift` to force it to fail when such error is detected
                 lambdaPackage = "### ERROR package does not exist: \(lambdaPackage!) ###"
             }
-
+            
             // extract sqs resources to be created, if any
-            additionalresources += self.explicitQueueResources(function: function)
+            additionalresources += DeploymentDefinition.explicitQueueResources(function: function)
             
             return Resource.serverlessFunction(name: function.name,
                                                architecture: function.architecture,
@@ -77,7 +77,7 @@ public struct DeploymentDefinition {
     // the event source eventually creates the queue resource and it returns a reference to the resource it has created
     // This function collects all queue resources created by SQS event sources or passed by Lambda function developer
     // to add them to the list of resources to synthetize
-    private func explicitQueueResources(function: Function) -> [Resource] {
+    private static func explicitQueueResources(function: Function) -> [Resource] {
         
         return function.eventSources
         // first filter on event sources of type SQS where the `queue` property is defined (not nil)
@@ -93,10 +93,10 @@ public struct DeploymentDefinition {
         if pretty {
             encoder.outputFormatting = .prettyPrinted
         }
-        let jsonData = try! encoder.encode(self.deployment!)
+        let jsonData = try! encoder.encode(self.deployment)
         return String(data: jsonData, encoding: .utf8)!
     }
-
+    
 }
 
 // Intermediate structure to generate SAM Resources of type AWS::Serverless::Function

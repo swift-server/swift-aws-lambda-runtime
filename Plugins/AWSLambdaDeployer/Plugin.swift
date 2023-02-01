@@ -85,7 +85,7 @@ struct AWSLambdaPackager: CommandPlugin {
             print("`Deploy.Swift` file not found in directory \(projectDirectory)")
             throw DeployerPluginError.deployswiftDoesNotExist
         }
-
+        
         do {
             let cmd = [
                 swiftExecutable.string,
@@ -198,7 +198,7 @@ struct AWSLambdaPackager: CommandPlugin {
         print("Deploying AWS Lambda function")
         print("-------------------------------------------------------------------------")
         do {
-
+            
             try Utils.execute(
                 executable: samExecutablePath,
                 arguments: ["deploy",
@@ -272,7 +272,7 @@ private struct Configuration: CustomStringConvertible {
         let archiveDirectoryArgument = argumentExtractor.extractOption(named: "archive-path")
         let stackNameArgument = argumentExtractor.extractOption(named: "stackname")
         let helpArgument = argumentExtractor.extractFlag(named: "help") > 0
-
+        
         // help required ?
         self.help = helpArgument
         

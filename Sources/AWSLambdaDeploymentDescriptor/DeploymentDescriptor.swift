@@ -62,7 +62,7 @@ public struct Resource: SAMResource, Equatable {
     let type: String
     let properties: SAMResourceProperties
     let name: String
-        
+    
     public static func == (lhs: Resource, rhs: Resource) -> Bool {
         lhs.type == rhs.type && lhs.name == rhs.name
     }
