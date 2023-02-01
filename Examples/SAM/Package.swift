@@ -28,10 +28,8 @@ let package = Package(
   dependencies: [
     // this is the dependency on the swift-aws-lambda-runtime library
     // in real-world projects this would say
-//    .package(url: "https://github.com/sebsto/swift-aws-lambda-runtime.git", branch: "sebsto/deployerplugin"),
-//    .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
+    // .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
     .package(name: "swift-aws-lambda-runtime", path: "../.."),
-//    .package(url: "../..", branch: "sebsto/deployerplugin"),
     .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", branch: "main")
   ],
   targets: [
@@ -40,9 +38,6 @@ let package = Package(
       dependencies: [
         .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
         .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
-        // linking the dynamic library does not work on Linux with --static-swift-stdlib because it is a dynamic library,
-        // but we don't need it for packaging. Making it conditional will generate smaller ZIP files 
-        .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime", condition: .when(platforms: [.macOS]))
       ],
       path: "./HttpApiLambda"
     ),
@@ -51,9 +46,6 @@ let package = Package(
       dependencies: [
         .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
         .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
-        // linking the dynamic library does not work on Linux with --static-swift-stdlib because it is a dynamic library,
-        // but we don't need it for packaging. Making it conditional will generate smaller ZIP files 
-        .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime", condition: .when(platforms: [.macOS]))
       ] ,
       path: "./SQSLambda"
     ),
@@ -61,8 +53,17 @@ let package = Package(
       name: "LambdaTests",
       dependencies: [
         "HttpApiLambda", "SQSLambda",
-        .product(name: "AWSLambdaTesting", package: "swift-aws-lambda-runtime")
+        .product(name: "AWSLambdaTesting", package: "swift-aws-lambda-runtime"),
+
+        // at least one target must have this dependency. It ensures the dylib is built
+        // The dylib is loaded dynamically by the deploy plugin when compiling Deploy.swift.
+        // The Lambda functions or the tests do not actually depend on it.
+        // I choose to add the dependency on a test target, because the archive plugin
+        // links the executable targets with --static-swift-stdlib which cannot include this dynamic library,
+        // and causes the build to fail
+        .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime")
       ],
+      // testing data 
       resources: [
         .process("data/apiv2.json"),
         .process("data/sqs.json")

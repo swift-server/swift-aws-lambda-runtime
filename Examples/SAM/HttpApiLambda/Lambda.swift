@@ -43,7 +43,7 @@ struct HttpApiLambda: SimpleLambdaHandler {
             
         } catch {
             // should never happen as the decoding was made by the runtime
-            // when the inoput event is malformed, this function is not even called
+            // when the input event is malformed, this function is not even called
             header["content-type"] = "text/plain"
             return Output(statusCode: .badRequest, headers: header, body: "\(error.localizedDescription)")
         }

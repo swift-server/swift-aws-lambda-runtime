@@ -254,7 +254,7 @@ private struct Configuration: CustomStringConvertible {
             self.products = products
 
         } else {
-            self.products = context.package.products.filter { $0 is ExecutableProduct && $0.name != "Deploy" }
+            self.products = context.package.products.filter { $0 is ExecutableProduct }
         }
 
         if let buildConfigurationName = configurationArgument.first {

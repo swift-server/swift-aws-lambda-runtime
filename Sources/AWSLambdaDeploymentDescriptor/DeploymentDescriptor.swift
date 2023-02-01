@@ -112,7 +112,7 @@ public enum Architectures: String, Encodable, CaseIterable {
     public static func defaultArchitecture() -> Architectures {
 #if arch(arm64)
         return .arm64
-#else
+#else // I understand this #else will not always be true. Developers can overwrite the default in Deploy.swift
         return .x64
 #endif
     }
@@ -291,9 +291,7 @@ public struct EventSource: SAMEvent {
     public static func == (lhs: EventSource, rhs: EventSource) -> Bool {
         lhs.type == rhs.type && lhs.name == rhs.name
     }
-    
-    public static func none() -> [EventSource] { return [] }
-    
+        
     // this is to make the compiler happy : Resource now confoms to Encodable
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -548,10 +546,4 @@ extension Resource {
         let noHyphenName = noSpaceName.split(separator: "-").map{ $0.capitalized }.joined(separator: "")
         return resourceType.capitalized + noHyphenName
     }
-}
-
-public enum DeploymentEncodingError: Error {
-    case yamlError(causedBy: Error)
-    case jsonError(causedBy: Error)
-    case stringError(causedBy: Data)
 }

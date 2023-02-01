@@ -17,21 +17,10 @@ import XCTest
 
 final class DeploymentDescriptorTest: XCTestCase {
     
-    var originalCommandLineArgs: [String] = []
-    
-    override func setUp() {
-        // save the original Command Line args, just in case
-        originalCommandLineArgs = CommandLine.arguments
-        CommandLine.arguments = ["mocked_arg0", "TestLambda"]
-    }
-    override func tearDown() {
-        CommandLine.arguments = originalCommandLineArgs
-    }
-    
     private func generateAndTestDeploymentDecsriptor(deployment: MockDeploymentDescriptor, expected: String) -> Bool {
         // when
         let samJSON = deployment.deploymentDescriptor.toJSON(pretty: false)
-        print(samJSON)
+
         // then
         return samJSON.contains(expected)
     }
