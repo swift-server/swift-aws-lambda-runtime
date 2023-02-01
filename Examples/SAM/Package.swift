@@ -16,11 +16,6 @@
 
 import PackageDescription
 
-var deploymentDescriptorDependency : [Target.Dependency] = []
-#if !os(Linux)
-    deploymentDescriptorDependency = [.product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime")]
-#endif
-
 let package = Package(
   name: "swift-aws-lambda-runtime-example",
   platforms: [
@@ -44,16 +39,22 @@ let package = Package(
       name: "HttpApiLambda",
       dependencies: [
         .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-        .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events")
-      ] + deploymentDescriptorDependency,
+        .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
+        // linking the dynamic library does not work on Linux with --static-swift-stdlib because it is a dynamic library,
+        // but we don't need it for packaging. Making it conditional will generate smaller ZIP files 
+        .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime", condition: .when(platforms: [.macOS]))
+      ],
       path: "./HttpApiLambda"
     ),
     .executableTarget(
       name: "SQSLambda",
       dependencies: [
         .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-        .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events")
-      ] + deploymentDescriptorDependency,
+        .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
+        // linking the dynamic library does not work on Linux with --static-swift-stdlib because it is a dynamic library,
+        // but we don't need it for packaging. Making it conditional will generate smaller ZIP files 
+        .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime", condition: .when(platforms: [.macOS]))
+      ] ,
       path: "./SQSLambda"
     ),
     .testTarget(
