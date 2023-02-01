@@ -16,6 +16,9 @@ let _ = DeploymentDefinition(
         .function(
             // the name of the function
             name: "HttpApiLambda",
+
+            // the AWS Lambda architecture (defaults to current build platform)
+            //architecture: .x64,
             
             // the event sources
             eventSources: [
