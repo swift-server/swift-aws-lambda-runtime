@@ -4,6 +4,9 @@ build:
 update: 
 	swift package update
 
+test:
+	swift test
+
 release:
 	swift build -c release
 

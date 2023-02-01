@@ -18,32 +18,34 @@ import Foundation
 
 @main
 struct HttpApiLambda: SimpleLambdaHandler {
-  typealias Event = APIGatewayV2Request
-  typealias Output = APIGatewayV2Response
-
-  init() {}
-  init(context: LambdaInitializationContext) async throws {
-    context.logger.info(
-      "Log Level env var : \(ProcessInfo.processInfo.environment["LOG_LEVEL"] ?? "info" )")
-  }
-
-  func handle(_ event: Event, context: AWSLambdaRuntimeCore.LambdaContext) async throws -> Output {
-
-    var header = HTTPHeaders()
-    do {
-      context.logger.debug("HTTP API Message received")
-
-      header["content-type"] = "application/json"
-
-      // echo the request in the response
-      let data = try JSONEncoder().encode(event)
-      let response = String(data: data, encoding: .utf8)
-
-      return Output(statusCode: .accepted, headers: header, body: response)
-
-    } catch {
-      header["content-type"] = "text/plain"
-      return Output(statusCode: .badRequest, headers: header, body: "\(error.localizedDescription)")
+    typealias Event = APIGatewayV2Request
+    typealias Output = APIGatewayV2Response
+    
+    init() {}
+    init(context: LambdaInitializationContext) async throws {
+        context.logger.info(
+            "Log Level env var : \(ProcessInfo.processInfo.environment["LOG_LEVEL"] ?? "info" )")
     }
-  }
+    
+    func handle(_ event: Event, context: AWSLambdaRuntimeCore.LambdaContext) async throws -> Output {
+        
+        var header = HTTPHeaders()
+        do {
+            context.logger.debug("HTTP API Message received")
+            
+            header["content-type"] = "application/json"
+            
+            // echo the request in the response
+            let data = try JSONEncoder().encode(event)
+            let response = String(data: data, encoding: .utf8)
+            
+            return Output(statusCode: .ok, headers: header, body: response)
+            
+        } catch {
+            // should never happen as the decoding was made by the runtime
+            // when the inoput event is malformed, this function is not even called
+            header["content-type"] = "text/plain"
+            return Output(statusCode: .badRequest, headers: header, body: "\(error.localizedDescription)")
+        }
+    }
 }

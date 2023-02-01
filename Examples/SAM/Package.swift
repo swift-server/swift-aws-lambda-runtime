@@ -36,6 +36,7 @@ let package = Package(
 //    .package(url: "https://github.com/sebsto/swift-aws-lambda-runtime.git", branch: "sebsto/deployerplugin"),
 //    .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
     .package(name: "swift-aws-lambda-runtime", path: "../.."),
+//    .package(url: "../..", branch: "sebsto/deployerplugin"),
     .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", branch: "main")
   ],
   targets: [
@@ -54,6 +55,17 @@ let package = Package(
         .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events")
       ] + deploymentDescriptorDependency,
       path: "./SQSLambda"
+    ),
+    .testTarget(
+      name: "LambdaTests",
+      dependencies: [
+        "HttpApiLambda", "SQSLambda",
+        .product(name: "AWSLambdaTesting", package: "swift-aws-lambda-runtime")
+      ],
+      resources: [
+        .process("data/apiv2.json"),
+        .process("data/sqs.json")
+      ]
     )
   ]
 )
