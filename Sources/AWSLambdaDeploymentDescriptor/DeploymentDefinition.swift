@@ -5,7 +5,7 @@ import Foundation
 //
 public struct DeploymentDefinition {
     
-    private var deployment : DeploymentDescriptor 
+    private let deployment : DeploymentDescriptor 
     
     public init (
         // the description of the SAM template
