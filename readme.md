@@ -118,7 +118,7 @@ Next, create a `MyLambda.swift` and implement your Lambda. Note that the file ca
  @main
  struct MyLambda: SimpleLambdaHandler {
      // In this example we are receiving a SQS Event, with no response (Void).
-     func handle(_ event: SQS.Event, context: LambdaContext) async throws -> Void {
+     func handle(_ event: SQSEvent, context: LambdaContext) async throws {
          ...
      }
  }
