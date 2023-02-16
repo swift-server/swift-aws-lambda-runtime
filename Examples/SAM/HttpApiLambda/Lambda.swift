@@ -17,17 +17,15 @@ import AWSLambdaRuntime
 import Foundation
 
 @main
-struct HttpApiLambda: SimpleLambdaHandler {
-    typealias Event = APIGatewayV2Request
-    typealias Output = APIGatewayV2Response
-    
+struct HttpApiLambda: SimpleLambdaHandler {    
     init() {}
     init(context: LambdaInitializationContext) async throws {
         context.logger.info(
             "Log Level env var : \(ProcessInfo.processInfo.environment["LOG_LEVEL"] ?? "info" )")
     }
-    
-    func handle(_ event: Event, context: AWSLambdaRuntimeCore.LambdaContext) async throws -> Output {
+
+    // the return value must be either APIGatewayV2Response or any Encodable struct
+    func handle(_ event: APIGatewayV2Request, context: AWSLambdaRuntimeCore.LambdaContext) async throws -> APIGatewayV2Response {
         
         var header = HTTPHeaders()
         do {
@@ -39,13 +37,16 @@ struct HttpApiLambda: SimpleLambdaHandler {
             let data = try JSONEncoder().encode(event)
             let response = String(data: data, encoding: .utf8)
             
-            return Output(statusCode: .ok, headers: header, body: response)
+            // if you want contronl on the status code and headers, return an APIGatewayV2Response
+            // otherwise, just return any Encodable struct, the runtime will wrap it for you
+            return APIGatewayV2Response(statusCode: .ok, headers: header, body: response)
             
         } catch {
             // should never happen as the decoding was made by the runtime
             // when the input event is malformed, this function is not even called
             header["content-type"] = "text/plain"
-            return Output(statusCode: .badRequest, headers: header, body: "\(error.localizedDescription)")
+            return APIGatewayV2Response(statusCode: .badRequest, headers: header, body: "\(error.localizedDescription)")
+            
         }
     }
 }
