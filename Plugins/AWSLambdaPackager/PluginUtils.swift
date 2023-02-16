@@ -82,18 +82,18 @@ struct Utils {
                 print(output)
                 fflush(stdout)
             }
-            throw ProcessError.processFailed([executable.string] + arguments, process.terminationStatus)
+            throw ProcessError.processFailed([executable.string] + arguments, process.terminationStatus, output)
         }
         
         return output
     }
 
     enum ProcessError: Error, CustomStringConvertible {
-        case processFailed([String], Int32)
+        case processFailed([String], Int32, String)
 
         var description: String {
             switch self {
-            case .processFailed(let arguments, let code):
+            case .processFailed(let arguments, let code, _):
                 return "\(arguments.joined(separator: " ")) failed with code \(code)"
             }
         }

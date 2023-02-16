@@ -60,6 +60,15 @@ struct AWSLambdaPackager: CommandPlugin {
                             stackName : configuration.stackName,
                             verboseLogging: configuration.verboseLogging)
         }
+
+        // list endpoints 
+        if !configuration.noList {
+            let output = try self.listEndpoints(samExecutablePath: samExecutablePath,
+                                                samDeploymentDescriptorFilePath: samDeploymentDescriptorFilePath,
+                                                stackName : configuration.stackName,
+                                                verboseLogging: configuration.verboseLogging)
+            print(output)
+        }
     }
     
     private func generateDeploymentDescriptor(projectDirectory: Path,
@@ -212,12 +221,48 @@ struct AWSLambdaPackager: CommandPlugin {
             print(error)
             print("Run the deploy plugin again with --verbose argument to receive more details.")
             throw DeployerPluginError.error(error)
+        } catch let error as Utils.ProcessError {
+            if case .processFailed(_, let errorCode, let output) = error {
+               if errorCode == 1 && output.contains("Error: No changes to deploy.") {
+                    print("There is no changes to deploy.")  
+                } else {
+                    print("ProcessError : \(error)")
+                    throw DeployerPluginError.error(error)                
+                }
+            }
         } catch {
             print("Unexpected error : \(error)")
             throw DeployerPluginError.error(error)
         }
     }
     
+    private func listEndpoints(samExecutablePath: Path,
+                        samDeploymentDescriptorFilePath: String,
+                        stackName: String,
+                        verboseLogging: Bool) throws  -> String {
+        
+        //TODO: check if there is a samconfig.toml file.
+        // when there is no file, generate one with default data or data collected from params
+        
+        
+        print("-------------------------------------------------------------------------")
+        print("Listing AWS endpoints")
+        print("-------------------------------------------------------------------------")
+        do {
+            
+            return try Utils.execute(
+                                executable: samExecutablePath,
+                                arguments: ["list", "endpoints",
+                                            "-t", samDeploymentDescriptorFilePath,
+                                            "--stack-name", stackName,
+                                            "--output", "json"],
+                                logLevel: verboseLogging ? .debug : .silent)
+        } catch {
+            print("Unexpected error : \(error)")
+            throw DeployerPluginError.error(error)
+        }
+    }
+
     private func displayHelpMessage() {
         print("""
 OVERVIEW: A swift plugin to deploy your Lambda function on your AWS account.
@@ -242,6 +287,7 @@ OPTIONS:
     --stack-name <stack-name>
                     The name of the CloudFormation stack when deploying.
                     (default: the project name)
+    --nolist        Do not list endpoints
     --help          Show help information.
 """)
     }
@@ -251,6 +297,7 @@ private struct Configuration: CustomStringConvertible {
     public let buildConfiguration: PackageManager.BuildConfiguration
     public let help: Bool
     public let noDeploy: Bool
+    public let noList: Bool
     public let verboseLogging: Bool
     public let archiveDirectory: String
     public let stackName: String
@@ -268,6 +315,7 @@ private struct Configuration: CustomStringConvertible {
         var argumentExtractor = ArgumentExtractor(arguments)
         let nodeployArgument = argumentExtractor.extractFlag(named: "nodeploy") > 0
         let verboseArgument = argumentExtractor.extractFlag(named: "verbose") > 0
+        let noListArgument = argumentExtractor.extractFlag(named: "nolist") > 0
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
         let archiveDirectoryArgument = argumentExtractor.extractOption(named: "archive-path")
         let stackNameArgument = argumentExtractor.extractOption(named: "stackname")
@@ -278,6 +326,9 @@ private struct Configuration: CustomStringConvertible {
         
         // define deployment option
         self.noDeploy = nodeployArgument
+
+        // define control on list endpoints after a deployment 
+        self.noList = noListArgument
         
         // define logging verbosity
         self.verboseLogging = verboseArgument
@@ -327,6 +378,7 @@ private struct Configuration: CustomStringConvertible {
     {
       verbose: \(self.verboseLogging)
       noDeploy: \(self.noDeploy)
+      noList: \(self.noList)
       buildConfiguration: \(self.buildConfiguration)
       archiveDirectory: \(self.archiveDirectory)
       stackName: \(self.stackName)
