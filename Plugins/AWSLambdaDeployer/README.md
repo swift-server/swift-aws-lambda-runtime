@@ -1,6 +1,6 @@
 This PR shows proof-of-concept code to add a deployer plugin, in addition to the existing archiver plugin. The deployer plugin generates a SAM deployment descriptor and calls the SAM command line to deploy the lambda function and it's dependencies.
 
-### Motivation:
+## Motivation
 
 The existing `archive` plugin generates a ZIP to be deployed on AWS. While it removes undifferentiated heavy lifting to compile and package Swift code into a Lambda function package, it does not help Swift developers to deploy the Lambda function to AWS, nor define how to invoke this function from other AWS services.  Deploying requires knowledge about AWS, and deployment tools such as the AWS CLI, the CDK, the SAM CLI, or the AWS console.
 
@@ -14,11 +14,7 @@ The `deploy` plugin leverages SAM to create an end-to-end infrastructure and to 
 
 The Lambda function developer describes the API gateway or SQS queue using the Swift programming language by writing a `Deploy.swift` file (similar to `Package.swift` used by SPM).  The plugin transform the `Deploy.swift` data structure into a SAM template. It then calls the SAM CLI to validate and to deploy the template.
 
-### Why create a dependency on SAM ?
-
-SAM is already broadly adopted, well maintained and documented. It does the job.  I think it is easier to ask Swift Lambda function developers to install SAM (it is just two `brew` commands) rather than having this project investing in its own mechanism to describe a deployment and to generate the CloudFormation or CDK code to deploy the Lambda function and its dependencies. In the future, we might imagine a multi-framework solution where the plugin could generate code for SAM, or CDK, or Serverless etc ... I am curious to get community feedback about this choice.
-
-### Modifications:
+## Modifications:
 
 I added two targets to `Package.swift` : 
 
@@ -28,7 +24,7 @@ I added two targets to `Package.swift` :
 
 I added a new Example project : `SAM`. It contains two Lambda functions, one invoked through HTTP API, and one invoked through SQS.  It also defines shared resources such as SQS Queue and a DynamoDB Table. It provides a `Deploy.swift` example to describe the required HTTP API and SQS code and to allow `AWSLambdaDeploymentDescriptor` to generate the SAM deployment descriptor. The project also contains unit testing for the two Lambda functions.
 
-### Result:
+## Result:
 
 As a Swift function developer, here is the workflow to use the new `deploy` plugin.
 
@@ -104,7 +100,7 @@ let _ = DeploymentDefinition(
   ]
 ```
 
-I also might add this dependency on one of your Lambda function `executableTarget`. In this case, I make sure it is added only when building on macOS.
+I also might add this dependency on one of my Lambda functions `executableTarget`. In this case, I make sure it is added only when building on macOS.
 
 ```swift
   .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime", condition: .when(platforms: [.macOS]))
@@ -131,7 +127,7 @@ Similarly to the archiver plugin, the deployer plugin must escape the sandbox be
 sam local invoke -t sam.json -e Tests/LambdaTests/data/apiv2.json HttpApiLambda 
 ```
 
-### Command Line Options
+## Command Line Options
 
 The deployer plugin accepts multiple options on the command line.
 
@@ -148,6 +144,7 @@ USAGE: swift package --disable-sandbox deploy [--help] [--verbose] [--nodeploy] 
 OPTIONS:
     --verbose       Produce verbose output for debugging.
     --nodeploy      Generates the JSON deployment descriptor, but do not deploy.
+    --nolist        Do not call sam list to list endpoints
     --configuration <configuration>
                     Build for a specific configuration.
                     Must be aligned with what was used to build and package.
@@ -162,11 +159,51 @@ OPTIONS:
     --help          Show help information.
 ```
 
+### Design Decisions
 
-### What is missing ?
+#### SAM
 
-If this proposal is accepted, Swift Lambda function developers would need a much larger coverage of the SAM template format. I will add support for resources and properties. We can also look at generating the Swift data structures automatically from the AWS-provided SAM schema definition (in JSON)
+SAM is already broadly adopted, well maintained and documented. It does the job.  I think it is easier to ask Swift Lambda function developers to install SAM (it is just two `brew` commands) rather than having this project investing in its own mechanism to describe a deployment and to generate the CloudFormation or CDK code to deploy the Lambda function and its dependencies. In the future, we might imagine a multi-framework solution where the plugin could generate code for SAM, or CDK, or Serverless etc ... 
 
-Just like for the `archive` plugin, it would be great to have a more granular permission mechanism allowing to escape the plugin sandbox for selected network calls.
+#### Deploy.swift
+
+Swift Lambda function developers must be able to describe the additional infrastructure services required to deploy their functions: a SQS queue, an HTTP API etc.
+
+I assume the typical Lambda function developer knows the Swift programming language, but not the AWS-specific DSL (such as SAM or CloudFormation) required to describe and deploy the project dependencies. I chose to ask the Lambda function developer to describe its deployment with a Swift struct in a top-level `Deploy.swift` file. The `deploy` plugin dynamically compiles this file to generate the SAM JSON deployment descriptor.
+
+The source code to implement this approach is in the `AWSLambdaDeploymentDescriptor` library. This approach is similar to `Package.swift` used by the Swift Package Manager.
+
+This is a strong design decision and [a one-way door](https://shit.management/one-way-and-two-way-door-decisions/). It engages the maintainer of the project on the long term to implement and maintain (close) feature parity between SAM DSL and the Swift `AWSLambdaDeploymentDescriptor` library.
+
+One way to mitigate the maintenance work would be to generate the `AWSLambdaDeploymentDescriptor` library automatically, based on the [the SAM schema definition](https://github.com/aws/serverless-application-model/blob/develop/samtranslator/validator/sam_schema/schema.json). The core structs might be generated automatically and we would need to manually maintain only a couple of extensions providing syntactic sugar for Lambda function developers. This approach is similar to AWS SDKs code generation ([Soto](https://github.com/soto-project/soto-codegenerator) and the [AWS SDK for Swift](https://github.com/awslabs/aws-sdk-swift/tree/main/codegen)). This would require a significant one-time engineering effort however and I haven't had time to further explore this idea.
+
+**Alternatives Considered** 
+
+One alternative proposed during early reviews is to use a DSL instead of a programmatic approach. A Swift-based DSL might be implemented using [Result Builders](https://github.com/apple/swift-evolution/blob/main/proposals/0289-result-builders.md), available since Swift 5.4.
+After having read [tutorials](https://theswiftdev.com/result-builders-in-swift/) and watch a [WWDC 2021 session](https://developer.apple.com/videos/play/wwdc2021/10253/), I understand this might provide Swift Lambda function developer a strongly typed, Swift-friendly, DSL to express their SAM deployment descriptor.  I will give a try to this approach and propose it in a PR.
+
+Another alternative is to not use a programmatic approach to describe the deployment at all (i.e. remove `Deploy.swift` and the `AWSLambdaDeploymentDescriptor` from this PR). In this scenario, the `deploy` plugin would generate a minimum SAM deployment template with default configuration for the current Lambda functions in the build target. The plugin would accept command-line arguments for basic pre-configuration of dependant AWS services, such as `--httpApi` or `--sqs <queue_name>` for example. The Swift Lambda function developer could leverage this SAM template to provide additional infrastructure or configuration elements as required. After having generated the initial SAM template, the `deploy` plugin will not overwrite the changes made by the developer.
+
+This approach removes the need to maintain feature parity between the SAM DSL and the `AWSLambdaDeploymentDescriptor` library.
+
+Please comment on this PR to share your feedback about the current design decisions and the proposed alternatives (or propose other alternatives :-) ) 
+
+### What is missing
+
+If this proposal is accepted in its current format, Swift Lambda function developers would need a much larger coverage of the SAM template format. I will add support for resources and properties. We can also look at generating the Swift data structures automatically from the AWS-provided SAM schema definition (in JSON)
+
+### Future directions 
+
+Here are a list of todo and thoughts for future implementations.
+
+- Both for the `deploy` and the `archive` plugin, it would be great to have a more granular permission mechanism allowing to escape the SPM plugin sandbox for selected network calls. SPM 5.8 should make this happen.
+
+- For HTTPApi, I believe the default SAM code and Lambda function examples must create Authenticated API by default. I believe our duty is to propose secured code by default and not encourage bad practices such as deploying open endpoints. But this approach will make the initial developer experience a bit more complex.
+
+- This project should add sample code to demonstrate how to use the Soto SDK or the AWS SDK for Swift. I suspect most Swift Lambda function will leverage other AWS services.
+
+- What about bootstrapping new projects? I would like to create a plugin or command line tool that would scaffold a new project, create the `Package.swift` file and the required project directory and files.  We could imagine a CLI or SPM plugin that ask the developer a couple of questions, such as how she wants to trigger the Lambda function and generate the corresponding code.
+
+---
 
 Happy to read your feedback and suggestions. Let's make the deployment of Swift Lambda functions easier for Swift developers.
