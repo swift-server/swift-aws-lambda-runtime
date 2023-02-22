@@ -200,6 +200,14 @@ The `archive` command can be customized using the following parameters
 
 Both `--swift-version` and `--base-docker-image` are mutually exclusive
 
+Here's an example
+
+```zsh
+swift package archive --output-path /Users/JohnAppleseed/Desktop --verbose 2
+```
+
+This command execution will generate a folder at `/Users/JohnAppleseed/Desktop` with the lambda zipped and ready to upload it and set the command detail output level to `2` (debug)
+
  on macOS, the archiving plugin uses docker to build the Lambda for Amazon Linux 2, and as such requires to communicate with Docker over the localhost network.
  At the moment, SwiftPM does not allow plugin communication over network, and as such the invocation requires breaking from the SwiftPM plugin sandbox. This limitation would be removed in the future.
  
