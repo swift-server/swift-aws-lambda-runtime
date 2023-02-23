@@ -185,8 +185,33 @@ To build and package your Lambda, run the following command:
  swift package archive
  ```
 
+The `archive` command can be customized using the following parameters
+
+* `--output-path` A valid file system path where a folder with the archive operation result will be placed. This folder will contains the following elements:
+    * A file link named `bootstrap`
+    * An executable file
+    * A **Zip** file ready to be upload to AWS
+* `--verbose` A number that sets the command output detail level between the following values:
+    * `0` (Silent)
+    * `1` (Output)
+    * `2` (Debug)
+* `--swift-version` Swift language version used to define the Amazon Linux 2 Docker image. For example "5.7.3"
+* `--base-docker-image` An Amazon Linux 2 docker image name available in your system.
+
+Both `--swift-version` and `--base-docker-image` are mutually exclusive
+
+Here's an example
+
+```zsh
+swift package archive --output-path /Users/JohnAppleseed/Desktop --verbose 2
+```
+
+This command execution will generate a folder at `/Users/JohnAppleseed/Desktop` with the lambda zipped and ready to upload it and set the command detail output level to `2` (debug)
+
  on macOS, the archiving plugin uses docker to build the Lambda for Amazon Linux 2, and as such requires to communicate with Docker over the localhost network.
  At the moment, SwiftPM does not allow plugin communication over network, and as such the invocation requires breaking from the SwiftPM plugin sandbox. This limitation would be removed in the future.
+ 
+ 
 
 ```shell
  swift package --disable-sandbox archive
