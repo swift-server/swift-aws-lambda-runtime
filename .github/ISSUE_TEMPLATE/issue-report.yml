@@ -50,7 +50,7 @@ body:
       placeholder: 1.0.0-alpha.1
     validations:
       required: true
-  - type: input
+  - type: textarea
     id: swift-version
     attributes:
       label: Swift version
