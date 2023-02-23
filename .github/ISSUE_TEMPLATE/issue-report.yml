@@ -48,7 +48,6 @@ body:
       label: What version of this project (`swift-aws-lambda-runtime`) are you using?
       description: The release, branch or commit hash related with this issue.
       placeholder: 1.0.0-alpha.1
-      render: shell
     validations:
       required: true
   - type: input
@@ -60,7 +59,6 @@ body:
         Open a Terminal and execute the following command
 
         swift --version && uname -a
-      render: shell
     validations:
       required: true
   - type: input
@@ -69,6 +67,5 @@ body:
       label: Amazon Linux 2 docker image version
       description: The docker image tag used to archive the lambda, if available.
       placeholder: 5.7.3-amazonlinux2
-      render: shell
     validations:
       required: false
