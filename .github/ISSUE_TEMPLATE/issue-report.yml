@@ -1,0 +1,74 @@
+name: Swift AWS Lambda SDK issue
+description: File an issue report with the usage of the Swift AWS Lambda Runtime
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for taking the time to fill out this issue report"
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen?
+      placeholder: Describe with your own words the expected result
+    validations:
+      required: true
+  - type: textarea
+    id: what-happend
+    attributes:
+      label: Actual behavior
+      description: What actually happened
+      placeholder: Describe 
+    validations:
+      required: true
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the steps followed to reproduce the behaviour you are reporting
+      placeholder: |
+        1. First I...
+        2. Then...
+        3. Finally...
+    validations:
+      required: true
+  - type: textarea
+    id: code-snippet
+    attributes:
+      label: If possible, minimal yet complete reproducer code (or URL to code)
+      description: List the steps followed to reproduce the behaviour you are reporting
+      placeholder: |
+        You can add any relevant code snippet that you consider or an URL to code.
+
+        URL could be a link to a GitHub Gist, for example
+    validations:
+      required: false
+  - type: input
+    id: swift-aws-lambda-runtime-version
+    attributes:
+      label: What version of this project (`swift-aws-lambda-runtime`) are you using?
+      description: The release, branch or commit hash related with this issue.
+      placeholder: 1.0.0-alpha.1
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: swift-version
+    attributes:
+      label: Swift version
+      description: Swift environment version.
+      placeholder: |  
+        Open a Terminal and execute the following command
+
+        swift --version && uname -a
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: amazon-linux-2-version
+    attributes:
+      label: Amazon Linux 2 docker image version
+      description: The docker image tag used to archive the lambda, if available.
+      placeholder: 5.7.3-amazonlinux2
+      render: shell
+    validations:
+      required: false
