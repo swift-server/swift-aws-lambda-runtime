@@ -83,7 +83,7 @@ struct AWSLambdaPackager: CommandPlugin {
         
         //
         // Build and run the Deploy.swift package description
-        // this generates the SAM deployment decsriptor
+        // this generates the SAM deployment descriptor
         //
         let deploymentDescriptorFileName = "Deploy.swift"
         let deploymentDescriptorFilePath = "\(projectDirectory)/\(deploymentDescriptorFileName)"
