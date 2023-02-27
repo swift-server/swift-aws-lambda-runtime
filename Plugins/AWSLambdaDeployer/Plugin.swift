@@ -27,7 +27,7 @@ struct AWSLambdaPackager: CommandPlugin {
         }
         
         // gather file paths
-        let samDeploymentDescriptorFilePath = "\(context.package.directory)/sam.json"
+        let samDeploymentDescriptorFilePath = "\(context.package.directory)/sam.yaml"
         
         let swiftExecutablePath = try self.findExecutable(context: context,
                                                           executableName: "swift",
@@ -45,6 +45,7 @@ struct AWSLambdaPackager: CommandPlugin {
                                               swiftExecutable: swiftExecutablePath,
                                               samDeploymentDescriptorFilePath: samDeploymentDescriptorFilePath,
                                               archivePath: configuration.archiveDirectory,
+                                              force: configuration.force,
                                               verboseLogging: configuration.verboseLogging)
         
         
@@ -76,6 +77,7 @@ struct AWSLambdaPackager: CommandPlugin {
                                               swiftExecutable: Path,
                                               samDeploymentDescriptorFilePath: String,
                                               archivePath: String,
+                                              force: Bool,
                                               verboseLogging: Bool) throws {
         print("-------------------------------------------------------------------------")
         print("Generating SAM deployment descriptor")
@@ -131,10 +133,19 @@ struct AWSLambdaPackager: CommandPlugin {
             //                logLevel: configuration.verboseLogging ? .debug : .silent)
             try FileManager.default.removeItem(atPath: helperFilePath)
             
-            // write the generated SAM deployment decsriptor to disk
-            FileManager.default.createFile(atPath: samDeploymentDescriptorFilePath,
-                                           contents: samDeploymentDescriptor.data(using: .utf8))
-            verboseLogging ? print("\(samDeploymentDescriptorFilePath)") : nil
+            // write the generated SAM deployment descriptor to disk
+            if FileManager.default.fileExists(atPath: samDeploymentDescriptorFilePath) && !force {
+                
+                print("SAM deployment descriptor already exists at")
+                print("\(samDeploymentDescriptorFilePath)")
+                print("use --force option to overwrite it.")
+                
+            } else {
+                
+                FileManager.default.createFile(atPath: samDeploymentDescriptorFilePath,
+                                               contents: samDeploymentDescriptor.data(using: .utf8))
+                verboseLogging ? print("Overwriting file at \(samDeploymentDescriptorFilePath)") : nil
+            }
             
         } catch let error as DeployerPluginError {
             print("Error while compiling Deploy.swift")
@@ -271,23 +282,28 @@ REQUIREMENTS: To use this plugin, you must have an AWS account and have `sam` in
               You can install sam with the following command:
               (brew tap aws/tap && brew install aws-sam-cli)
 
-USAGE: swift package --disable-sandbox deploy [--help] [--verbose] [--nodeploy] [--configuration <configuration>] [--archive-path <archive_path>] [--stack-name <stack-name>]
+USAGE: swift package --disable-sandbox deploy [--help] [--verbose]
+                                              [--archive-path <archive_path>]
+                                              [--configuration <configuration>]
+                                              [--force] [--nodeploy] [--nolist]
+                                              [--stack-name <stack-name>]
 
 OPTIONS:
     --verbose       Produce verbose output for debugging.
-    --nodeploy      Generates the JSON deployment descriptor, but do not deploy.
-    --configuration <configuration>
-                    Build for a specific configuration.
-                    Must be aligned with what was used to build and package.
-                    Valid values: [ debug, release ] (default: debug)
     --archive-path <archive-path>
                     The path where the archive plugin created the ZIP archive.
                     Must be aligned with the value passed to archive --output-path.
                     (default: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager)
+    --configuration <configuration>
+                    Build for a specific configuration.
+                    Must be aligned with what was used to build and package.
+                    Valid values: [ debug, release ] (default: debug)
+    --force         Overwrites existing SAM deployment descriptor
+    --nodeploy      Generates the JSON deployment descriptor, but do not deploy.
+    --nolist        Do not list endpoints
     --stack-name <stack-name>
                     The name of the CloudFormation stack when deploying.
                     (default: the project name)
-    --nolist        Do not list endpoints
     --help          Show help information.
 """)
     }
@@ -298,6 +314,7 @@ private struct Configuration: CustomStringConvertible {
     public let help: Bool
     public let noDeploy: Bool
     public let noList: Bool
+    public let force: Bool
     public let verboseLogging: Bool
     public let archiveDirectory: String
     public let stackName: String
@@ -316,6 +333,7 @@ private struct Configuration: CustomStringConvertible {
         let nodeployArgument = argumentExtractor.extractFlag(named: "nodeploy") > 0
         let verboseArgument = argumentExtractor.extractFlag(named: "verbose") > 0
         let noListArgument = argumentExtractor.extractFlag(named: "nolist") > 0
+        let forceArgument = argumentExtractor.extractFlag(named: "force") > 0
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
         let archiveDirectoryArgument = argumentExtractor.extractOption(named: "archive-path")
         let stackNameArgument = argumentExtractor.extractOption(named: "stackname")
@@ -323,6 +341,9 @@ private struct Configuration: CustomStringConvertible {
         
         // help required ?
         self.help = helpArgument
+        
+        // force overwrite the SAM deployment descriptor when it already exists
+        self.force = forceArgument
         
         // define deployment option
         self.noDeploy = nodeployArgument
@@ -358,7 +379,7 @@ private struct Configuration: CustomStringConvertible {
                 "invalid archive directory: \(self.archiveDirectory)\nthe directory does not exists")
         }
         
-        // infer or consume stackname
+        // infer or consume stack name
         if let stackName = stackNameArgument.first {
             self.stackName = stackName
         } else {

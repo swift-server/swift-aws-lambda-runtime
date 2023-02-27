@@ -23,10 +23,10 @@ nodeploy: build
 	swift package --disable-sandbox deploy --verbose --nodeploy --configuration debug 
 
 localtest:
-	sam local invoke -t sam.json -e Tests/LambdaTests/data/apiv2.json HttpApiLambda 
+	sam local invoke -t sam.yaml -e Tests/LambdaTests/data/apiv2.json HttpApiLambda 
 
 list: 
-	sam list endpoints -t sam.json --stack-name swift-aws-lambda-runtime-example --output json
+	sam list endpoints -t sam.yaml --stack-name swift-aws-lambda-runtime-example --output json
 	
 clean:
 	# find . -name .build -exec rm -rf {} \;
