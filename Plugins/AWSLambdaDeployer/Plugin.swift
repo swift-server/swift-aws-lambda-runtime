@@ -292,15 +292,15 @@ OPTIONS:
     --verbose       Produce verbose output for debugging.
     --archive-path <archive-path>
                     The path where the archive plugin created the ZIP archive.
-                    Must be aligned with the value passed to archive --output-path.
+                    Must be aligned with the value passed to archive --output-path plugin.
                     (default: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager)
     --configuration <configuration>
                     Build for a specific configuration.
                     Must be aligned with what was used to build and package.
                     Valid values: [ debug, release ] (default: debug)
-    --force         Overwrites existing SAM deployment descriptor
-    --nodeploy      Generates the JSON deployment descriptor, but do not deploy.
-    --nolist        Do not list endpoints
+    --force         Overwrites existing SAM deployment descriptor.
+    --nodeploy      Generates the YAML deployment descriptor, but do not deploy.
+    --nolist        Do not list endpoints.
     --stack-name <stack-name>
                     The name of the CloudFormation stack when deploying.
                     (default: the project name)
