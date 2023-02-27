@@ -112,8 +112,7 @@ struct AWSLambdaPackager: CommandPlugin {
             let buildCommand = "swift build -c \(buildConfiguration.rawValue) --product \(product.name) --static-swift-stdlib"
             try Utils.execute(
                 executable: dockerToolPath,
-                // arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildCommand],
-                arguments: ["run", "--rm", "-v", "\(packageDirectory.string)/../..:/workspace", "-w", "/workspace/Examples/SAM", baseImage, "bash", "-cl", buildCommand],                logLevel: verboseLogging ? .debug : .output
+                arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildCommand],
             )
             let productPath = buildOutputPath.appending(product.name)
             guard FileManager.default.fileExists(atPath: productPath.string) else {

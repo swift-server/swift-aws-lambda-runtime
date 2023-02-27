@@ -4,8 +4,11 @@ build:
 update: 
 	swift package update
 
-test:
+testlambda:
 	swift test
+
+test:
+	(cd ../.. && swift test --filter AWSLambdaDeploymentDescriptor)
 
 release:
 	swift build -c release

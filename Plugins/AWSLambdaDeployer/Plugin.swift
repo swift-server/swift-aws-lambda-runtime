@@ -60,8 +60,8 @@ struct AWSLambdaPackager: CommandPlugin {
                             stackName : configuration.stackName,
                             verboseLogging: configuration.verboseLogging)
         }
-
-        // list endpoints 
+        
+        // list endpoints
         if !configuration.noList {
             let output = try self.listEndpoints(samExecutablePath: samExecutablePath,
                                                 samDeploymentDescriptorFilePath: samDeploymentDescriptorFilePath,
@@ -223,11 +223,11 @@ struct AWSLambdaPackager: CommandPlugin {
             throw DeployerPluginError.error(error)
         } catch let error as Utils.ProcessError {
             if case .processFailed(_, let errorCode, let output) = error {
-               if errorCode == 1 && output.contains("Error: No changes to deploy.") {
-                    print("There is no changes to deploy.")  
+                if errorCode == 1 && output.contains("Error: No changes to deploy.") {
+                    print("There is no changes to deploy.")
                 } else {
                     print("ProcessError : \(error)")
-                    throw DeployerPluginError.error(error)                
+                    throw DeployerPluginError.error(error)
                 }
             }
         } catch {
@@ -237,9 +237,9 @@ struct AWSLambdaPackager: CommandPlugin {
     }
     
     private func listEndpoints(samExecutablePath: Path,
-                        samDeploymentDescriptorFilePath: String,
-                        stackName: String,
-                        verboseLogging: Bool) throws  -> String {
+                               samDeploymentDescriptorFilePath: String,
+                               stackName: String,
+                               verboseLogging: Bool) throws  -> String {
         
         //TODO: check if there is a samconfig.toml file.
         // when there is no file, generate one with default data or data collected from params
@@ -251,18 +251,18 @@ struct AWSLambdaPackager: CommandPlugin {
         do {
             
             return try Utils.execute(
-                                executable: samExecutablePath,
-                                arguments: ["list", "endpoints",
-                                            "-t", samDeploymentDescriptorFilePath,
-                                            "--stack-name", stackName,
-                                            "--output", "json"],
-                                logLevel: verboseLogging ? .debug : .silent)
+                executable: samExecutablePath,
+                arguments: ["list", "endpoints",
+                            "-t", samDeploymentDescriptorFilePath,
+                            "--stack-name", stackName,
+                            "--output", "json"],
+                logLevel: verboseLogging ? .debug : .silent)
         } catch {
             print("Unexpected error : \(error)")
             throw DeployerPluginError.error(error)
         }
     }
-
+    
     private func displayHelpMessage() {
         print("""
 OVERVIEW: A swift plugin to deploy your Lambda function on your AWS account.
@@ -326,8 +326,8 @@ private struct Configuration: CustomStringConvertible {
         
         // define deployment option
         self.noDeploy = nodeployArgument
-
-        // define control on list endpoints after a deployment 
+        
+        // define control on list endpoints after a deployment
         self.noList = noListArgument
         
         // define logging verbosity
@@ -362,7 +362,7 @@ private struct Configuration: CustomStringConvertible {
         if let stackName = stackNameArgument.first {
             self.stackName = stackName
         } else {
-            self.stackName = context.package.displayName 
+            self.stackName = context.package.displayName
         }
         
         if self.verboseLogging {

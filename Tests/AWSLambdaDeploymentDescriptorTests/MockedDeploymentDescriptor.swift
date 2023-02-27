@@ -13,10 +13,10 @@
 // ===----------------------------------------------------------------------===//
 
 import Foundation
-import AWSLambdaDeploymentDescriptor
+@testable import AWSLambdaDeploymentDescriptor
 
 struct MockDeploymentDescriptor {
-
+    
     let deploymentDescriptor : SAMDeploymentDescriptor
     
     init(withFunction: Bool = true,
@@ -37,7 +37,7 @@ struct MockDeploymentDescriptor {
                         environment: environmentVariable ?? SAMEnvironmentVariable.none
                     )
                 ] + (additionalResources ?? [])
-
+                
             )
         } else {
             self.deploymentDescriptor = SAMDeploymentDescriptor(
@@ -45,6 +45,54 @@ struct MockDeploymentDescriptor {
                 resources: (additionalResources ?? [])
             )
         }
+    }
+    func toJSON() -> String {
+        return self.deploymentDescriptor.toJSON(pretty: false)
+    }
+}
+
+struct MockDeploymentDescriptorBuilder {
+    
+    static let functioName = "TestLambda"
+    let deploymentDescriptor : DeploymentDescriptor
+    
+    init(withFunction: Bool = true,
+         architecture: Architectures = Architectures.defaultArchitecture(),
+         eventSource:  Resource<EventSourceType>,
+         environmentVariable: [String:String])
+    {
+        if withFunction {
+            
+            self.deploymentDescriptor = DeploymentDescriptor {
+                "A SAM template to deploy a Swift Lambda function"
+                
+                Function(name: MockDeploymentDescriptorBuilder.functioName,
+                         architecture: architecture) {
+                    EventSources {
+                        eventSource
+                    }
+                    EnvironmentVariables {
+                        environmentVariable
+                    }
+                }
+            }
+            
+        } else {
+            self.deploymentDescriptor = DeploymentDescriptor {
+                "A SAM template to deploy a Swift Lambda function"
+            }
+        }
+    }
+    
+    func toJSON() -> String {
+        return self.deploymentDescriptor.samDeploymentDescriptor.toJSON(pretty: false)
+    }
+    
+    static func packageDir() -> String {
+        return "/\(functioName)"
+    }
+    static func packageZip() -> String {
+        return "/\(functioName).zip"
     }
 }
 
