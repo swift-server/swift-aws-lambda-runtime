@@ -15,7 +15,7 @@ DeploymentDescriptor {
   "Description of this deployment descriptor"
 
   // a lambda function
-  Function(name: "HttpApiLambda", architecture: .x64) {
+  Function(name: "HttpApiLambda") {
 
     EventSources {
 
@@ -39,7 +39,7 @@ DeploymentDescriptor {
   }
 
   // create a Lambda function and its depending resources
-  Function(name: "SQSLambda") {
+  Function(name: "SQSLambda", architecture: .arm64) {
 
     EventSources {
 

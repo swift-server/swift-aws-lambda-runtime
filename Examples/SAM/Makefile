@@ -27,6 +27,15 @@ localtest:
 
 list: 
 	sam list endpoints -t sam.yaml --stack-name swift-aws-lambda-runtime-example --output json
+
+logs:
+	sam logs --stack-name swift-aws-lambda-runtime-example  
+
+logstail:
+	sam logs --stack-name swift-aws-lambda-runtime-example -t 
+
+delete:
+	sam delete --stack-name swift-aws-lambda-runtime-example 
 	
 clean:
 	# find . -name .build -exec rm -rf {} \;
