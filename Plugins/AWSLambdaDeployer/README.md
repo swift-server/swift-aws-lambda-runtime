@@ -177,9 +177,9 @@ SAM is already broadly adopted, well maintained and documented. It does the job.
 
 Swift Lambda function developers must be able to describe the additional infrastructure services required to deploy their functions: a SQS queue, an HTTP API etc.
 
-I assume the typical Lambda function developer knows the Swift programming language, but not the AWS-specific DSL (such as SAM or CloudFormation) required to describe and deploy the project dependencies. I chose to ask the Lambda function developer to describe its deployment with a Swift struct in a top-level `Deploy.swift` file. The `deploy` plugin dynamically compiles this file to generate the SAM JSON deployment descriptor.
+I assume the typical Lambda function developer knows the Swift programming language, but not the AWS-specific DSL (such as SAM or CloudFormation) required to describe and deploy the project dependencies. I chose to ask the Lambda function developer to describe its deployment with a Swift DSL in a top-level `Deploy.swift` file. The `deploy` plugin dynamically compiles this file to generate the SAM YAML deployment descriptor.
 
-The source code to implement this approach is in the `AWSLambdaDeploymentDescriptor` library. This approach is similar to `Package.swift` used by the Swift Package Manager.
+The source code to implement this approach is in the `AWSLambdaDeploymentDescriptor` library.
 
 This is a strong design decision and [a one-way door](https://shit.management/one-way-and-two-way-door-decisions/). It engages the maintainer of the project on the long term to implement and maintain (close) feature parity between SAM DSL and the Swift `AWSLambdaDeploymentDescriptor` library and DSL.
 
