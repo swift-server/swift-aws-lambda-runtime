@@ -17,10 +17,13 @@ import XCTest
 
 final class DeploymentDescriptorTest: XCTestCase {
     
-    private func generateAndTestDeploymentDecsriptor(deployment: MockDeploymentDescriptor, expected: String) -> Bool {
+    private func generateAndTestDeploymentDescriptor(deployment: MockDeploymentDescriptor, expected: String) -> Bool {
         // when
         let samJSON = deployment.deploymentDescriptor.toJSON(pretty: false)
-
+        print(samJSON)
+        print("====")
+        print(expected)
+        
         // then
         return samJSON.contains(expected)
     }
@@ -33,7 +36,7 @@ final class DeploymentDescriptorTest: XCTestCase {
 """
 
         let testDeployment = MockDeploymentDescriptor(withFunction: false)
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
     
@@ -41,10 +44,10 @@ final class DeploymentDescriptorTest: XCTestCase {
 
         // given
         let expected = """
-function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.defaultArchitecture())"]}}}
+function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"\\/path\\/lambda.zip","Events":{},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.defaultArchitecture())"]}}}
 """
         let testDeployment = MockDeploymentDescriptor(withFunction: true)
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
 
@@ -52,11 +55,11 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
 
         // given
         let expected = """
-function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.x64.rawValue)"]}}}
+function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"\\/path\\/lambda.zip","Events":{},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.x64.rawValue)"]}}}
 """
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
                                                       architecture: .x64)
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
 
@@ -74,7 +77,7 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
                             primaryKeyName: "pk",
                             primaryKeyType: "String")]
         )
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
 
@@ -91,7 +94,7 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
                             properties: SQSResourceProperties(queueName: "queue-name"))]
             
         )
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
 
@@ -99,13 +102,13 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
 
         // given
         let expected = """
-"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{"HttpApiEvent":{"Type":"HttpApi"}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.defaultArchitecture())"]}}}
+"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"\\/path\\/lambda.zip","Events":{"HttpApiEvent":{"Type":"HttpApi"}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.defaultArchitecture())"]}}}
 """
 
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
                                                       eventSource: [ .httpApi() ] )
 
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
 
@@ -113,13 +116,13 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
 
         // given
         let expected = """
-"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{"HttpApiEvent":{"Type":"HttpApi","Properties":{"Path":"\\/test","Method":"GET"}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.defaultArchitecture())"]}}}
+"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"\\/path\\/lambda.zip","Events":{"HttpApiEvent":{"Type":"HttpApi","Properties":{"Path":"\\/test","Method":"GET"}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.defaultArchitecture())"]}}}
 """
 
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
                                                       eventSource: [ .httpApi(method: .GET, path: "/test") ])
 
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
 //
@@ -127,33 +130,26 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
 
         // given
         let expected = """
-"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"### ERROR package does not exist: .build\\/plugins\\/AWSLambdaPackager\\/outputs\\/AWSLambdaPackager\\/TestLambda\\/TestLambda.zip ###","Events":{"SQSEvent":{"Type":"SQS","Properties":{"Queue":"arn:aws:sqs:eu-central-1:012345678901:lambda-test"}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.defaultArchitecture())"]}}}
+"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"\\/path\\/lambda.zip","Events":{"SQSEvent":{"Type":"SQS","Properties":{"Queue":"arn:aws:sqs:eu-central-1:012345678901:lambda-test"}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.defaultArchitecture())"]}}}
 """
 
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
                                                       eventSource: [ .sqs(queue: "arn:aws:sqs:eu-central-1:012345678901:lambda-test") ] )
 
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
 
     func testSQSEventSourceWithoutArn() {
 
         // given
-        var expected = """
-"QueueQueueLambdaTest":{"Type":"AWS::SQS::Queue","Properties":{"QueueName":"queue-lambda-test"}}
-"""
-
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
                                                       eventSource: [ .sqs(queue: "queue-lambda-test") ] )
 
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
-                                                               expected: expected))
-
-        expected = """
+        let expected = """
 "Events":{"SQSEvent":{"Type":"SQS","Properties":{"Queue":{"Fn::GetAtt":["QueueQueueLambdaTest","Arn"]}}}}
 """
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
 
@@ -169,13 +165,13 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
 
 
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
-                                                      environmentVariable: EnvironmentVariable(["TEST1_VAR": "TEST1_VALUE",
-                                                                                                "TEST2_VAR": "TEST2_VALUE"]) )
+                                                      environmentVariable: SAMEnvironmentVariable(["TEST1_VAR": "TEST1_VALUE",
+                                                                                                   "TEST2_VAR": "TEST2_VALUE"]) )
 
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expectedinOrder)
                       ||
-                      self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+                      self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                              expected: expectedOutOfOrder)
         )
     }
@@ -187,11 +183,11 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
 "Environment":{"Variables":{"TEST1_VAR":{"Ref":"TEST1_VALUE"}}}
 """
 
-        var envVar = EnvironmentVariable()
+        var envVar = SAMEnvironmentVariable()
         envVar.append("TEST1_VAR", ["Ref" : "TEST1_VALUE"])
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
                                                       environmentVariable: envVar )
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
 
@@ -202,11 +198,11 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
 "Environment":{"Variables":{"TEST1_VAR":{"Fn::GetAtt":["TEST1_VALUE","Arn"]}}}
 """
 
-        var envVar = EnvironmentVariable()
+        var envVar = SAMEnvironmentVariable()
         envVar.append("TEST1_VAR", ["Fn::GetAtt" : ["TEST1_VALUE", "Arn"]])
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
                                                       environmentVariable: envVar )
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
 
@@ -217,12 +213,12 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
 "Environment":{"Variables":{"TEST1_VAR":{"Ref":"LogicalName"}}}
 """
 
-        let resource = Resource.queue(logicalName: "LogicalName", physicalName: "PhysicalName")
-        var envVar = EnvironmentVariable()
+        let resource = Resource<ResourceType>.queue(logicalName: "LogicalName", physicalName: "PhysicalName")
+        var envVar = SAMEnvironmentVariable()
         envVar.append("TEST1_VAR", resource)
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
                                                       environmentVariable: envVar )
-        XCTAssertTrue(self.generateAndTestDeploymentDecsriptor(deployment: testDeployment,
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
 

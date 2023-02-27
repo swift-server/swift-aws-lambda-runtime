@@ -347,7 +347,7 @@ public struct Table {
 
 extension SAMDeploymentDescriptor {
 
-  fileprivate func toJSON(pretty: Bool = true) -> String {
+  internal func toJSON(pretty: Bool = true) -> String {
     let encoder = JSONEncoder()
     if pretty {
       encoder.outputFormatting = .prettyPrinted
@@ -356,7 +356,7 @@ extension SAMDeploymentDescriptor {
     return String(data: jsonData, encoding: .utf8)!
   }
 
-  fileprivate func toYAML() -> String {
+  internal func toYAML() -> String {
     let yaml = try! YAMLEncoder().encode(self)
     return yaml
   }

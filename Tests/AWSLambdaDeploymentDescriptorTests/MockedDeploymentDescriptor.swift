@@ -17,32 +17,32 @@ import AWSLambdaDeploymentDescriptor
 
 struct MockDeploymentDescriptor {
 
-    let deploymentDescriptor : DeploymentDefinition
+    let deploymentDescriptor : SAMDeploymentDescriptor
     
     init(withFunction: Bool = true,
          architecture: Architectures = Architectures.defaultArchitecture(),
-         eventSource:  [EventSource]? = nil,
-         environmentVariable: EnvironmentVariable? = nil,
-         additionalResources: [Resource]? = nil)
+         eventSource:  [Resource<EventSourceType>]? = nil,
+         environmentVariable: SAMEnvironmentVariable? = nil,
+         additionalResources: [Resource<ResourceType>]? = nil)
     {
         if withFunction {
-            self.deploymentDescriptor = DeploymentDefinition(
+            self.deploymentDescriptor = SAMDeploymentDescriptor(
                 description: "A SAM template to deploy a Swift Lambda function",
-                functions: [
-                    .function(
+                resources: [
+                    .serverlessFunction(
                         name: "TestLambda",
                         architecture: architecture,
+                        codeUri: "/path/lambda.zip",
                         eventSources: eventSource ?? [],
-                        environment: environmentVariable ?? EnvironmentVariable.none
+                        environment: environmentVariable ?? SAMEnvironmentVariable.none
                     )
-                ],
-                resources: additionalResources ?? []
+                ] + (additionalResources ?? [])
+
             )
         } else {
-            self.deploymentDescriptor = DeploymentDefinition(
+            self.deploymentDescriptor = SAMDeploymentDescriptor(
                 description: "A SAM template to deploy a Swift Lambda function",
-                functions: [],
-                resources: additionalResources ?? []
+                resources: (additionalResources ?? [])
             )
         }
     }
