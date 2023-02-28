@@ -22,6 +22,9 @@ final class DeploymentDescriptorTest: XCTestCase {
                                                      expected: String) -> Bool {
         // when
         let samJSON = deployment.toJSON()
+        // print(samJSON)
+        // print("===========")
+        // print(expected)
         
         // then
         return samJSON.contains(expected)
@@ -129,7 +132,7 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
         
         // given
         let expected = """
-"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"\\/path\\/lambda.zip","Events":{"SQSEvent":{"Type":"SQS","Properties":{"Queue":"arn:aws:sqs:eu-central-1:012345678901:lambda-test"}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.defaultArchitecture())"]}}}
+"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"\\/path\\/lambda.zip","Events":{"SQSEvent":{"Type":"SQS","Properties":{"Queue":"arn:aws:sqs:eu-central-1:012345678901:lambda-test"," BatchSize":10,"Enabled":true}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["arm64"]}}}
 """
         
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
@@ -146,7 +149,7 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
                                                       eventSource: [ .sqs(queue: "queue-lambda-test") ] )
         
         let expected = """
-"Events":{"SQSEvent":{"Type":"SQS","Properties":{"Queue":{"Fn::GetAtt":["QueueQueueLambdaTest","Arn"]}}}}
+"Events":{"SQSEvent":{"Type":"SQS","Properties":{"Queue":{"Fn::GetAtt":["QueueQueueLambdaTest","Arn"]}," BatchSize":10,"Enabled":true}}}
 """
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))

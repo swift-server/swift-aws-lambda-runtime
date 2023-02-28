@@ -251,16 +251,29 @@ public struct Sqs {
     private let name: String
     private var queueRef: String? = nil
     private var queue: Queue? = nil
+    public var batchSize : Int = 10 
+    public var enabled : Bool = true 
+
     public init(name: String = "SQSEvent") {
         self.name = name
     }
-    public init(name: String = "SQSEvent", _ queue: String) {
+    public init(name: String = "SQSEvent",
+                _ queue: String,
+                batchSize: Int = 10,
+                enabled: Bool = true) {
         self.name = name
         self.queueRef = queue
+        self.batchSize = batchSize
+        self.enabled = enabled
     }
-    public init(name: String = "SQSEvent", _ queue: Queue) {
+    public init(name: String = "SQSEvent",
+                _ queue: Queue,
+                batchSize: Int = 10,
+                enabled: Bool = true) {
         self.name = name
         self.queue = queue
+        self.batchSize = batchSize
+        self.enabled = enabled
     }
     public func queue(logicalName: String, physicalName: String) -> Sqs {
         let queue = Queue(logicalName: logicalName, physicalName: physicalName)
@@ -268,9 +281,15 @@ public struct Sqs {
     }
     internal func resource() -> Resource<EventSourceType> {
         if self.queue != nil {
-            return Resource<EventSourceType>.sqs(name: self.name, queue: self.queue!.resource())
+            return Resource<EventSourceType>.sqs(name: self.name,
+                                                 queue: self.queue!.resource(),
+                                                 batchSize: self.batchSize,
+                                                 enabled: self.enabled)
         } else if self.queueRef != nil {
-            return Resource<EventSourceType>.sqs(name: self.name, queue: self.queueRef!)
+            return Resource<EventSourceType>.sqs(name: self.name,
+                                                 queue: self.queueRef!,
+                                                 batchSize: self.batchSize,
+                                                 enabled: self.enabled)
         } else {
             fatalError("Either queue or queueRef muts have a value")
         }
@@ -376,6 +395,10 @@ private struct DeploymentDescriptorSerializer {
                           format: SerializeFormat,
                           to fileDesc: Int32 = 1
     ) throws {
+        
+        // do not output the deployment descriptor on stdout when running unit tests
+        if Thread.current.isRunningXCTest { return }
+
         guard let fd = fdopen(fileDesc, "w") else { return }
         switch format {
         case .json: fputs(deploymentDescriptor.toJSON(), fd)

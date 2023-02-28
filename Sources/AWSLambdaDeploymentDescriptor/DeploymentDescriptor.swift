@@ -345,33 +345,34 @@ public enum HttpVerb: String, Encodable {
  -----------------------------------------------------------------------------------------*/
 
 extension Resource {
-    internal static func sqs(
-        name: String = "SQSEvent",
-        properties: SQSEventProperties
-    ) -> Resource<EventSourceType> {
+    internal static func sqs(name: String = "SQSEvent", properties: SQSEventProperties) -> Resource<EventSourceType> {
         
         return Resource<EventSourceType>(
             type: .sqs,
             properties: properties,
             name: name)
     }
-    public static func sqs(
-        name: String = "SQSEvent",
-        queue queueRef: String
-    ) -> Resource<EventSourceType> {
+    public static func sqs(name: String = "SQSEvent",
+                           queue queueRef: String,
+                           batchSize: Int = 10,
+                           enabled: Bool = true) -> Resource<EventSourceType> {
         
-        let properties = SQSEventProperties(byRef: queueRef)
+        let properties = SQSEventProperties(byRef: queueRef,
+                                                   batchSize: batchSize,
+                                                   enabled: enabled)
         return Resource<EventSourceType>.sqs(
             name: name,
             properties: properties)
     }
     
-    public static func sqs(
-        name: String = "SQSEvent",
-        queue: Resource<ResourceType>
-    ) -> Resource<EventSourceType> {
+    public static func sqs(name: String = "SQSEvent",                           
+                           queue: Resource<ResourceType>,
+                           batchSize: Int = 10,
+                           enabled: Bool = true) -> Resource<EventSourceType> {
         
-        let properties = SQSEventProperties(queue)
+        let properties = SQSEventProperties(queue,
+                                            batchSize: batchSize,
+                                            enabled: enabled)
         return Resource<EventSourceType>.sqs(
             name: name,
             properties: properties)
@@ -384,26 +385,41 @@ public struct SQSEventProperties: SAMResourceProperties, Equatable {
     
     public var queueByArn: String? = nil
     public var queue: Resource<ResourceType>? = nil
+    public var batchSize : Int
+    public var enabled : Bool
     
-    init(byRef ref: String) {
+    init(byRef ref: String,
+         batchSize: Int,
+         enabled: Bool) {
         
         // when the ref is an ARN, leave it as it, otherwise, create a queue resource and pass a reference to it
         if let arn = Arn(ref)?.arn {
             self.queueByArn = arn
         } else {
             let logicalName = Resource<EventSourceType>.logicalName(
-                resourceType: "Queue",
-                resourceName: ref)
+                                            resourceType: "Queue",
+                                            resourceName: ref)
             self.queue = Resource<ResourceType>.queue(
-                name: logicalName,
-                properties: SQSResourceProperties(queueName: ref))
-        }
-        
+                                                name: logicalName,
+                                                properties: SQSResourceProperties(queueName: ref))
+        }   
+        self.batchSize = batchSize
+        self.enabled = enabled
     }
-    init(_ queue: Resource<ResourceType>) { self.queue = queue }
+
+    init(_ queue: Resource<ResourceType>,
+         batchSize: Int,
+         enabled: Bool) { 
+
+        self.queue = queue
+        self.batchSize = batchSize
+        self.enabled = enabled
+    }
     
     enum CodingKeys: String, CodingKey {
         case queue = "Queue"
+        case batchSize = " BatchSize"
+        case enabled = "Enabled"
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -418,6 +434,8 @@ public struct SQSEventProperties: SAMResourceProperties, Equatable {
             getAttIntrinsicFunction["Fn::GetAtt"] = [queue.name, "Arn"]
             try container.encode(getAttIntrinsicFunction, forKey: .queue)
         }
+        try container.encode(batchSize, forKey: .batchSize)
+        try container.encode(enabled, forKey: .enabled)
     }
 }
 
