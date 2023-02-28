@@ -92,23 +92,7 @@ DeploymentDescriptor {
 }
 ```
 
-3. I add a dependency in my project's `Package.swift`. On a `testTarget`, I add this dependency:
-
-```swift
-  // on the testTarget()
-  dependencies: [
-      // other dependencies 
-      .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime")
-  ]
-```
-
-I also might add this dependency on one of my Lambda functions `executableTarget`. In this case, I make sure it is added only when building on macOS.
-
-```swift
-  .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime", condition: .when(platforms: [.macOS]))
-```
-
-4. I invoke the archive plugin and the deploy plugin from the command line.
+3. I invoke the archive plugin and the deploy plugin from the command line.
 
 ```bash
 
@@ -123,7 +107,7 @@ swift package --disable-sandbox deploy
 
 Similarly to the archiver plugin, the deployer plugin must escape the sandbox because the SAM CLI makes network calls to AWS API (IAM and CloudFormation) to validate and to deploy the template.
 
-5. (optionally) Swift lambda function developer may also use SAM to test the code locally.
+4. (optionally) Swift lambda function developer may also use SAM to test the code locally.
 
 ```bash
 sam local invoke -t sam.yaml -e Tests/LambdaTests/data/apiv2.json HttpApiLambda 

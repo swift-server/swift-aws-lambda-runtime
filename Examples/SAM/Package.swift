@@ -54,14 +54,6 @@ let package = Package(
       dependencies: [
         "HttpApiLambda", "SQSLambda",
         .product(name: "AWSLambdaTesting", package: "swift-aws-lambda-runtime"),
-
-        // at least one target must have this dependency. It ensures Swift builds the dylib
-        // The dylib is loaded dynamically by the deploy plugin when compiling Deploy.swift.
-        // The Lambda functions or the tests do not actually depend on it.
-        // I choose to add the dependency on a test target, because the archive plugin
-        // links the executable targets with --static-swift-stdlib which cannot include this dynamic library,
-        // and causes the build to fail
-        .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime")
       ],
       // testing data 
       resources: [

@@ -57,7 +57,7 @@ let package = Package(
         .target(
             name: "AWSLambdaDeploymentDescriptor",
             dependencies: [
-                .product(name: "Yams", package: "Yams")
+                .product(name: "Yams", package: "Yams"),
             ],
             path: "Sources/AWSLambdaDeploymentDescriptor"
         ),
@@ -69,7 +69,10 @@ let package = Package(
                     description: "Deploy the Lambda ZIP created by the archive plugin. Generates SAM-compliant deployment files based on deployment struct passed by the developer and invoke the SAM command."
                 )
 //                permissions: [.writeToPackageDirectory(reason: "This plugin generates a SAM template to describe your deployment")]
-            )
+            ),
+            dependencies: [
+                .byName(name: "AWSLambdaDeploymentDescriptor")
+            ]
         ),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
