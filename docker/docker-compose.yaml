@@ -30,18 +30,33 @@ services:
     <<: *common
     command: /bin/bash -cl "swift test -Xswiftc -warnings-as-errors $${SANITIZER_ARG-}"
 
+  # to be deprecated, sue test-examples instead
   test-samples:
     <<: *common
     command: >-
       /bin/bash -clx "
-      swift build --package-path Examples/Benchmark &&
-      swift build --package-path Examples/Deployment &&
-      swift build --package-path Examples/Echo &&
-      swift build --package-path Examples/ErrorHandling &&
-      swift build --package-path Examples/Foundation &&
-      swift build --package-path Examples/JSON &&
-      swift build --package-path Examples/LocalDebugging/MyLambda  &&
-      swift test --package-path Examples/Testing
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Benchmark &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Deployment &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Echo &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/ErrorHandling &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Foundation &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/JSON &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/LocalDebugging/MyLambda &&
+      LAMBDA_USE_LOCAL_DEPS=true swift test --package-path Examples/Testing
+      "
+
+  test-examples:
+    <<: *common
+    command: >-
+      /bin/bash -clx "
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Benchmark &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Deployment &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Echo &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/ErrorHandling &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Foundation &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/JSON &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/LocalDebugging/MyLambda &&
+      LAMBDA_USE_LOCAL_DEPS=true swift test --package-path Examples/Testing
       "
 
   # util
