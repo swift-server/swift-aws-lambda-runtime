@@ -11,7 +11,7 @@ services:
   test:
     image: swift-aws-lambda:al2-main
 
-  test-samples:
+  test-examples:
     image: swift-aws-lambda:al2-main
 
   shell:
