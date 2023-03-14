@@ -418,7 +418,7 @@ public struct SQSEventProperties: SAMResourceProperties, Equatable {
     
     enum CodingKeys: String, CodingKey {
         case queue = "Queue"
-        case batchSize = " BatchSize"
+        case batchSize = "BatchSize"
         case enabled = "Enabled"
     }
     

@@ -15,7 +15,11 @@
 import Foundation
 @testable import AWSLambdaDeploymentDescriptor
 
-struct MockDeploymentDescriptor {
+protocol MockDeploymentDescriptorBehavior {
+    func toJSON() -> String
+}
+
+struct MockDeploymentDescriptor: MockDeploymentDescriptorBehavior {
     
     let deploymentDescriptor : SAMDeploymentDescriptor
     
@@ -51,7 +55,7 @@ struct MockDeploymentDescriptor {
     }
 }
 
-struct MockDeploymentDescriptorBuilder {
+struct MockDeploymentDescriptorBuilder: MockDeploymentDescriptorBehavior {
     
     static let functioName = "TestLambda"
     let deploymentDescriptor : DeploymentDescriptor

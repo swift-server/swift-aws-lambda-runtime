@@ -16,26 +16,13 @@
 import XCTest
 
 // this test case tests the generation of the SAM deployment descriptor in JSON
-final class DeploymentDescriptorTest: XCTestCase {
-    
-    private func generateAndTestDeploymentDescriptor(deployment: MockDeploymentDescriptor,
-                                                     expected: String) -> Bool {
-        // when
-        let samJSON = deployment.toJSON()
-        // print(samJSON)
-        // print("===========")
-        // print(expected)
-        
-        // then
-        return samJSON.contains(expected)
-    }
-    
+final class DeploymentDescriptorTests: DeploymentDescriptorBaseTest {
+
+    private var defaultCodeUri = "\\/path\\/lambda.zip"
     func testSAMHeader() {
         
         // given
-        let expected = """
-{"Description":"A SAM template to deploy a Swift Lambda function","AWSTemplateFormatVersion":"2010-09-09","Resources":{},"Transform":"AWS::Serverless-2016-10-31"}
-"""
+        let expected = expectedSAMHeaders()
         
         let testDeployment = MockDeploymentDescriptor(withFunction: false)
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
@@ -45,9 +32,8 @@ final class DeploymentDescriptorTest: XCTestCase {
     func testLambdaFunctionResource() {
         
         // given
-        let expected = """
-function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"\\/path\\/lambda.zip","Events":{},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.defaultArchitecture())"]}}}
-"""
+        let expected = [expectedFunction(codeURI: defaultCodeUri), expectedSAMHeaders()].flatMap{ $0 }
+
         let testDeployment = MockDeploymentDescriptor(withFunction: true)
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
@@ -56,9 +42,10 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
     func testLambdaFunctionWithSpecificArchitectures() {
         
         // given
-        let expected = """
-function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"\\/path\\/lambda.zip","Events":{},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.x64.rawValue)"]}}}
-"""
+        let expected = [expectedFunction(architecture: Architectures.x64.rawValue, codeURI: defaultCodeUri),
+                                  expectedSAMHeaders()]
+                                  .flatMap{ $0 }
+
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
                                                       architecture: .x64)
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
@@ -68,9 +55,25 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
     func testSimpleTableResource() {
         
         // given
-        let expected = """
-"Resources":{"LogicalTestTable":{"Type":"AWS::Serverless::SimpleTable","Properties":{"TableName":"TestTable","PrimaryKey":{"Name":"pk","Type":"String"}}}}
+        let expected = ["""
+"Resources":{"LogicalTestTable"
+""",
 """
+"Type":"AWS::Serverless::SimpleTable"
+""",
+"""
+"TableName":"TestTable"
+""",
+"""
+"PrimaryKey"
+""",
+"""
+"Name":"pk"
+""",
+"""
+"Type":"String"
+"""]
+
         
         let testDeployment = MockDeploymentDescriptor(withFunction: false,
                                                       additionalResources:
@@ -86,14 +89,12 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
     func testSQSQueueResource() {
         
         // given
-        let expected = """
-"Resources":{"LogicalQueueName":{"Type":"AWS::SQS::Queue","Properties":{"QueueName":"queue-name"}}}
-"""
+        let expected = expectedQueue()
         
         let testDeployment = MockDeploymentDescriptor(withFunction: false,
                                                       additionalResources:
-                                                        [.queue(name: "LogicalQueueName",
-                                                                properties: SQSResourceProperties(queueName: "queue-name"))]
+                                                        [.queue(name: "QueueTestQueue",
+                                                                properties: SQSResourceProperties(queueName: "test-queue"))]
                                                       
         )
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
@@ -103,9 +104,11 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
     func testHttpApiEventSourceCatchAll() {
         
         // given
-        let expected = """
-"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"\\/path\\/lambda.zip","Events":{"HttpApiEvent":{"Type":"HttpApi"}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.defaultArchitecture())"]}}}
-"""
+        let expected = [expectedSAMHeaders(),
+                               expectedFunction(architecture: Architectures.defaultArchitecture().rawValue, codeURI: defaultCodeUri),
+["""
+"HttpApiEvent":{"Type":"HttpApi"}
+"""] ].flatMap{ $0 }
         
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
                                                       eventSource: [ .httpApi() ] )
@@ -117,9 +120,23 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
     func testHttpApiEventSourceSpecific() {
         
         // given
-        let expected = """
-"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"\\/path\\/lambda.zip","Events":{"HttpApiEvent":{"Type":"HttpApi","Properties":{"Path":"\\/test","Method":"GET"}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["\(Architectures.defaultArchitecture())"]}}}
+        let expected = [expectedSAMHeaders(),
+                               expectedFunction(architecture: Architectures.defaultArchitecture().rawValue, codeURI: defaultCodeUri),
+["""
+{"HttpApiEvent":
+""",
 """
+"Type":"HttpApi"
+""",
+"""
+"Properties"
+""",
+"""
+"Path":"\\/test"
+""",
+"""
+"Method":"GET"
+"""] ].flatMap{ $0 }
         
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
                                                       eventSource: [ .httpApi(method: .GET, path: "/test") ])
@@ -127,16 +144,18 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
-    //
+    
     func testSQSEventSourceWithArn() {
         
+        let name = #"arn:aws:sqs:eu-central-1:012345678901:lambda-test"#
         // given
-        let expected = """
-"Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Runtime":"provided.al2","CodeUri":"\\/path\\/lambda.zip","Events":{"SQSEvent":{"Type":"SQS","Properties":{"Queue":"arn:aws:sqs:eu-central-1:012345678901:lambda-test"," BatchSize":10,"Enabled":true}}},"Handler":"Provided","AutoPublishAlias":"Live","Architectures":["arm64"]}}}
-"""
+        let expected = [ expectedSAMHeaders(), 
+                                   expectedFunction(codeURI: defaultCodeUri),
+                                   expectedQueueEventSource(source: name)
+                                 ].flatMap{ $0 }
         
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
-                                                      eventSource: [ .sqs(queue: "arn:aws:sqs:eu-central-1:012345678901:lambda-test") ] )
+                                                      eventSource: [ .sqs(queue: name) ] )
         
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
@@ -144,13 +163,19 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
     
     func testSQSEventSourceWithoutArn() {
         
+        let name = """
+        "Queue":{"Fn::GetAtt":["QueueQueueLambdaTest","Arn"]}
+        """
+
         // given
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
                                                       eventSource: [ .sqs(queue: "queue-lambda-test") ] )
         
-        let expected = """
-"Events":{"SQSEvent":{"Type":"SQS","Properties":{"Queue":{"Fn::GetAtt":["QueueQueueLambdaTest","Arn"]}," BatchSize":10,"Enabled":true}}}
-"""
+        let expected = [ expectedSAMHeaders(),
+                                   expectedFunction(codeURI: defaultCodeUri),
+                                   expectedQueueEventSource(source: name)
+                                 ].flatMap{ $0 }
+
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
@@ -158,12 +183,18 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
     func testEnvironmentVariablesString() {
         
         // given
-        let expectedinOrder = """
-"Environment":{"Variables":{"TEST2_VAR":"TEST2_VALUE","TEST1_VAR":"TEST1_VALUE"}}
+        let expected = ["""
+"Environment"
+""",
 """
-        let expectedOutOfOrder = """
-"Environment":{"Variables":{"TEST1_VAR":"TEST1_VALUE","TEST2_VAR":"TEST2_VALUE"}}
+"Variables"
+""",
 """
+"TEST2_VAR":"TEST2_VALUE"
+""",
+"""
+"TEST1_VAR":"TEST1_VALUE"
+"""]
         
         
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
@@ -171,11 +202,8 @@ function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Ty
                                                                                                    "TEST2_VAR": "TEST2_VALUE"]) )
         
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
-                                                               expected: expectedinOrder)
-                      ||
-                      self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
-                                                               expected: expectedOutOfOrder)
-        )
+                                                               expected: expected))
+        
     }
     
     func testEnvironmentVariablesArray() {

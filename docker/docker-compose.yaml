@@ -41,7 +41,8 @@ services:
       LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Foundation &&
       LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/JSON &&
       LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/LocalDebugging/MyLambda &&
-      LAMBDA_USE_LOCAL_DEPS=true swift test --package-path Examples/Testing
+      LAMBDA_USE_LOCAL_DEPS=true swift test --package-path Examples/Testing &&
+      LAMBDA_USE_LOCAL_DEPS=true swift test --package-path Examples/SAM 
       "
 
   # util

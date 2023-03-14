@@ -17,25 +17,17 @@ import XCTest
 
 // This test case tests the logic built into the DSL,
 // i.e. the additional resources created automatically
-// and the check on existance of the ZIP file
+// and the check on existence of the ZIP file
 // the rest is boiler plate code
-final class DeploymentDescriptorBuilderTests: XCTestCase {
-    
-    private func generateAndTestDeploymentDescriptor(deployment: MockDeploymentDescriptorBuilder,
-                                                     expected: String) -> Bool {
-        // when
-        let samJSON = deployment.toJSON()
-        
-        // then
-        return samJSON.contains(expected)
-    }
+final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
     
     func testGenericFunction() {
         
         // given
-        let expected = """
-{"Description":"A SAM template to deploy a Swift Lambda function","AWSTemplateFormatVersion":"2010-09-09","Resources":{"TestLambda":{"Type":"AWS::Serverless::Function","Properties":{"Events":{"HttpApiEvent":{"Type":"HttpApi"}},"AutoPublishAlias":"Live","Handler":"Provided","CodeUri":"ERROR","Environment":{"Variables":{"NAME1":"VALUE1"}},"Runtime":"provided.al2","Architectures":["arm64"]}}},"Transform":"AWS::Serverless-2016-10-31"}
-"""
+        let expected = [expectedSAMHeaders(),
+                        expectedFunction(),
+                        expectedEnvironmentVariables(), 
+                        expectedHttpAPi()].flatMap { $0 }
         
         let testDeployment = MockDeploymentDescriptorBuilder(
             withFunction: true,
@@ -53,9 +45,7 @@ final class DeploymentDescriptorBuilderTests: XCTestCase {
     func testLambdaCreateAdditionalResourceWithName() {
         
         // given
-        let expected = """
-"Resources":{"QueueTestQueue":{"Type":"AWS::SQS::Queue","Properties":{"QueueName":"test-queue"}}
-"""
+        let expected = expectedQueue()
         
         let sqsEventSource = Sqs("test-queue").resource()
         
@@ -74,9 +64,7 @@ final class DeploymentDescriptorBuilderTests: XCTestCase {
     func testLambdaCreateAdditionalResourceWithQueue() {
         
         // given
-        let expected = """
-"Resources":{"QueueTestQueue":{"Type":"AWS::SQS::Queue","Properties":{"QueueName":"test-queue"}}
-"""
+        let expected = expectedQueue()
         
         let sqsEventSource = Sqs(Queue(logicalName: "QueueTestQueue",
                                        physicalName: "test-queue")).resource()
@@ -106,7 +94,7 @@ final class DeploymentDescriptorBuilderTests: XCTestCase {
             eventSource: HttpApi().resource(),
             environmentVariable: ["NAME1": "VALUE1"] )
         
-        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
+        XCTAssertTrue(generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
     
@@ -151,5 +139,4 @@ final class DeploymentDescriptorBuilderTests: XCTestCase {
         let fm = FileManager.default
         XCTAssertNoThrow(try fm.removeItem(atPath: file))
     }
-    
 }
