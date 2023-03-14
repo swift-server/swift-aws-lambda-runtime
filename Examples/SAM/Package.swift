@@ -14,6 +14,7 @@
 //
 // ===----------------------------------------------------------------------===//
 
+import class Foundation.ProcessInfo // needed for CI to test the local version of the library
 import PackageDescription
 
 let package = Package(
@@ -26,10 +27,7 @@ let package = Package(
     .executable(name: "SQSLambda", targets: ["SQSLambda"]),
   ],
   dependencies: [
-    // this is the dependency on the swift-aws-lambda-runtime library
-    // in real-world projects this would say
-    // .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
-    .package(name: "swift-aws-lambda-runtime", path: "../.."),
+    .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "1.0.0-alpha"),
     .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", branch: "main")
   ],
   targets: [
@@ -63,3 +61,11 @@ let package = Package(
     )
   ]
 )
+
+// for CI to test the local version of the library
+if ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"] != nil {
+    package.dependencies = [
+        .package(name: "swift-aws-lambda-runtime", path: "../.."),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", branch: "main"),
+    ]
+}
