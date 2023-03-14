@@ -113,6 +113,7 @@ struct AWSLambdaPackager: CommandPlugin {
             try Utils.execute(
                 executable: dockerToolPath,
                 arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildCommand],
+                logLevel: verboseLogging ? .debug : .output
             )
             let productPath = buildOutputPath.appending(product.name)
             guard FileManager.default.fileExists(atPath: productPath.string) else {
