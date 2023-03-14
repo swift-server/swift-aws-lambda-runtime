@@ -46,7 +46,7 @@ clean:
 
 test-generate:
 	/usr/bin/swift \
-		-L .build/debug  \
-		-I .build/debug \
+		-L ../../.build/debug  \
+		-I ../../.build/debug \
 		-lAWSLambdaDeploymentDescriptor \
 		./Deploy.swift
