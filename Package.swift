@@ -29,7 +29,6 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.4.2")),
         .package(url: "https://github.com/swift-server/swift-backtrace.git", .upToNextMajor(from: "1.2.3")),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
-        .package(url: "https://github.com/jpsim/Yams.git", .upToNextMajor(from: "5.0.5")),
     ],
     targets: [
         .target(name: "AWSLambdaRuntime", dependencies: [
@@ -56,9 +55,6 @@ let package = Package(
         ),
         .target(
             name: "AWSLambdaDeploymentDescriptor",
-            dependencies: [
-                .product(name: "Yams", package: "Yams"),
-            ],
             path: "Sources/AWSLambdaDeploymentDescriptor"
         ),
         .plugin(

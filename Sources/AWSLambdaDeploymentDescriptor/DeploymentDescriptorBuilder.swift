@@ -13,17 +13,16 @@
 // ===----------------------------------------------------------------------===//
 
 import Foundation
-import Yams
 
 // global state for serialization
 // This is required because `atexit` can not capture self
-private var __deploymentDescriptor: SAMDeploymentDescriptor?
+private var _deploymentDescriptor: SAMDeploymentDescriptor?
 
 // a top level DeploymentDescriptor DSL
 @resultBuilder
 public struct DeploymentDescriptor {
     
-    // capture the deployment decsriptor for unit tests
+    // capture the deployment descriptor for unit tests
     let samDeploymentDescriptor : SAMDeploymentDescriptor
     
     // MARK: Generation of the SAM Deployment Descriptor
@@ -38,12 +37,12 @@ public struct DeploymentDescriptor {
             description: description,
             resources: resources)
         // and register it for serialization
-        __deploymentDescriptor = self.samDeploymentDescriptor
+        _deploymentDescriptor = self.samDeploymentDescriptor
         
         // at exit of this process,
         // we flush a YAML representation of the deployment descriptor to stdout
         atexit {
-            try! DeploymentDescriptorSerializer.serialize(__deploymentDescriptor!, format: .yaml)
+            try! DeploymentDescriptorSerializer.serialize(_deploymentDescriptor!, format: .yaml)
         }
     }
     
@@ -378,7 +377,7 @@ extension SAMDeploymentDescriptor {
     
     internal func toYAML() -> String {
         let yaml = try! YAMLEncoder().encode(self)
-        return yaml
+        return String(data: yaml, encoding: .utf8)!
     }
 }
 
