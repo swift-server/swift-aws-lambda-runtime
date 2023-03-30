@@ -1,0 +1,18 @@
+//
+//  AppConfig.xcconfig
+//  Premiere
+//
+//  Created by Adolfo Vera Blasco on 3/1/23.
+//
+
+// Configuration settings file format documentation can be found at:
+// https://help.apple.com/xcode/#/dev745c5c974
+
+TMDB_API_KEY = ae18023495231d6c234fd8f8ba1e2eb0
+TMDB_API_AUTH_KEY = eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhZTE4MDIzNDk1MjMxZDZjMjM0ZmQ4ZjhiYTFlMmViMCIsInN1YiI6IjUyNzBlNjRlMTljMjk1MmFjMDAzNWI1MyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.WFrdV7VnZQAhgFzhc-O9jIvpWEL2-JMxCC6rMhwE4l8
+
+AWS_ACCESS_KEY_ID = AKIATDXGUYITWP7KXS4S
+AWS_SECRET_ACCESS_KEY = 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
+
+AWS_SQS_QUEUE_URL = https:/$()/sqs.us-east-1.amazonaws.com/214158328359/user_activity
+AWS_API_GATEWAY_URL = https:/$()/fhlymaqeol.execute-api.us-east-1.amazonaws.com

@@ -1,0 +1,14 @@
+{
+  "colors" : [
+    {
+      "idiom" : "universal"
+    },
+    {
+      "idiom" : "tv"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
