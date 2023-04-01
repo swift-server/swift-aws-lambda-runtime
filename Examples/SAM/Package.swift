@@ -24,7 +24,7 @@ let package = Package(
   ],
   products: [
     .executable(name: "HttpApiLambda", targets: ["HttpApiLambda"]),
-    .executable(name: "SQSLambda", targets: ["SQSLambda"]),
+    .executable(name: "SQSLambda", targets: ["SQSLambda"])
   ],
   dependencies: [
     .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "1.0.0-alpha"),
@@ -35,7 +35,7 @@ let package = Package(
       name: "HttpApiLambda",
       dependencies: [
         .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-        .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
+        .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events")
       ],
       path: "./HttpApiLambda"
     ),
@@ -43,8 +43,8 @@ let package = Package(
       name: "SQSLambda",
       dependencies: [
         .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-        .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
-      ] ,
+        .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events")
+      ],
       path: "./SQSLambda"
     ),
     .testTarget(
@@ -52,6 +52,9 @@ let package = Package(
       dependencies: [
         "HttpApiLambda", "SQSLambda",
         .product(name: "AWSLambdaTesting", package: "swift-aws-lambda-runtime"),
+        // This dependency must be included to force Swift to build the deployment descriptor dynamic library
+        // It can be on any target. But as of Swift 5.8, it can not be added to the plugin target itself 😢
+        .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime")
       ],
       // testing data 
       resources: [
@@ -66,6 +69,6 @@ let package = Package(
 if ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"] != nil {
     package.dependencies = [
         .package(name: "swift-aws-lambda-runtime", path: "../.."),
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", branch: "main"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", branch: "main")
     ]
 }

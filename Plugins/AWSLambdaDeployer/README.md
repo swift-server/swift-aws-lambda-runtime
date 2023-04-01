@@ -92,6 +92,22 @@ DeploymentDescriptor {
 }
 ```
 
+3. I add a dependency in my project's `Package.swift`. On a `testTarget`, I add this dependency:
+
+```swift
+  // on the testTarget
+  dependencies: [
+      // other dependencies 
+      .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime")
+  ]
+```
+
+I also might add this dependency on one of my Lambda functions `executableTarget`. In this case, I make sure it is added only when building on macOS.
+
+```swift
+  .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime", condition: .when(platforms: [.macOS]))
+```
+
 3. I invoke the archive plugin and the deploy plugin from the command line.
 
 ```bash
@@ -110,7 +126,7 @@ Similarly to the archiver plugin, the deployer plugin must escape the sandbox be
 4. (optionally) Swift lambda function developer may also use SAM to test the code locally.
 
 ```bash
-sam local invoke -t sam.yaml -e Tests/LambdaTests/data/apiv2.json HttpApiLambda 
+sam local invoke -t template.yaml -e Tests/LambdaTests/data/apiv2.json HttpApiLambda 
 ```
 
 ## Command Line Options
@@ -130,6 +146,7 @@ USAGE: swift package --disable-sandbox deploy [--help] [--verbose]
                                               [--archive-path <archive_path>]
                                               [--configuration <configuration>]
                                               [--force] [--nodeploy] [--nolist]
+                                              [--region <aws_region>]
                                               [--stack-name <stack-name>]
 
 OPTIONS:
@@ -148,6 +165,8 @@ OPTIONS:
     --stack-name <stack-name>
                     The name of the CloudFormation stack when deploying.
                     (default: the project name)
+    --region        The AWS region to deploy to.
+                    (default: the region of AWS CLI's default profile)
     --help          Show help information.
 ```
 

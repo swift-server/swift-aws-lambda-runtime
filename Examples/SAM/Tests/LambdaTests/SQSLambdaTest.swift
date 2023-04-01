@@ -21,7 +21,7 @@ import XCTest
 class SQSLambdaTests: LambdaTest {
 
     func testSQSLambda() async throws {
-            
+
             // given 
             let eventData = try self.loadTestData(file: .sqs)
             let event = try JSONDecoder().decode(SQSEvent.self, from: eventData)

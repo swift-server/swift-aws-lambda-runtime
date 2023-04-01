@@ -1,7 +1,7 @@
-import Foundation 
+import Foundation
 import XCTest
 
-enum TestData : String {
+enum TestData: String {
     case apiGatewayV2 = "apiv2"
     case sqs = "sqs"
 }

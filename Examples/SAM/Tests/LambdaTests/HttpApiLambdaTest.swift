@@ -21,7 +21,7 @@ import XCTest
 class HttpApiLambdaTests: LambdaTest {
 
     func testHttpAPiLambda() async throws {
-            
+
             // given 
             let eventData = try self.loadTestData(file: .apiGatewayV2)
             let event = try JSONDecoder().decode(APIGatewayV2Request.self, from: eventData)

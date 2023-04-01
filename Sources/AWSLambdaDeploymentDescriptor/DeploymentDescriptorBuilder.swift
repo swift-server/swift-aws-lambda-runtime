@@ -21,33 +21,34 @@ private var _deploymentDescriptor: SAMDeploymentDescriptor?
 // a top level DeploymentDescriptor DSL
 @resultBuilder
 public struct DeploymentDescriptor {
-    
+
     // capture the deployment descriptor for unit tests
-    let samDeploymentDescriptor : SAMDeploymentDescriptor
-    
+    let samDeploymentDescriptor: SAMDeploymentDescriptor
+
     // MARK: Generation of the SAM Deployment Descriptor
-    
+
     private init(
         description: String,
         resources: [Resource<ResourceType>]
     ) {
-        
-        // create SAM deployment descriptor
+
         self.samDeploymentDescriptor = SAMDeploymentDescriptor(
             description: description,
-            resources: resources)
+            resources: resources
+        )
+
         // and register it for serialization
         _deploymentDescriptor = self.samDeploymentDescriptor
-        
+
         // at exit of this process,
         // we flush a YAML representation of the deployment descriptor to stdout
         atexit {
             try! DeploymentDescriptorSerializer.serialize(_deploymentDescriptor!, format: .yaml)
         }
     }
-    
+
     // MARK: resultBuilder specific code
-    
+
     // this initializer allows to declare a top level `DeploymentDescriptor { }``
     @discardableResult
     public init(@DeploymentDescriptor _ builder: () -> DeploymentDescriptor) {
@@ -84,84 +85,104 @@ public struct DeploymentDescriptor {
 }
 
 // MARK: Function resource
+
 public struct Function {
     let name: String
     let architecture: Architectures
+    let codeURI: String?
     let eventSources: [Resource<EventSourceType>]
     let environment: [String: String]
-    
+
+    enum FunctionError: Error, CustomStringConvertible {
+        case packageDoesNotExist(String)
+
+        var description: String {
+            switch self {
+            case .packageDoesNotExist(let pkg):
+                return "Package \(pkg) does not exist"
+            }
+        }
+    }
+
     private init(
         name: String,
         architecture: Architectures = Architectures.defaultArchitecture(),
+        codeURI: String?,
         eventSources: [Resource<EventSourceType>] = [],
         environment: [String: String] = [:]
     ) {
         self.name = name
         self.architecture = architecture
+        self.codeURI = codeURI
         self.eventSources = eventSources
         self.environment = environment
     }
     public init(
         name: String,
         architecture: Architectures = Architectures.defaultArchitecture(),
+        codeURI: String? = nil,
         @FunctionBuilder _ builder: () -> (EventSources, [String: String])
     ) {
-        
+
         let (eventSources, environmentVariables) = builder()
         let samEventSource: [Resource<EventSourceType>] = eventSources.samEventSources()
         self.init(
             name: name,
             architecture: architecture,
+            codeURI: codeURI,
             eventSources: samEventSource,
             environment: environmentVariables)
     }
-    
+
     // this method fails when the package does not exist at path
     internal func resources() -> [Resource<ResourceType>] {
-        
-        let functionResource = [
-            Resource<ResourceType>.serverlessFunction(
-                name: self.name,
-                architecture: self.architecture,
-                codeUri: packagePath(),
-                eventSources: self.eventSources,
-                environment: SAMEnvironmentVariable(self.environment))
-        ]
+
+        let properties = ServerlessFunctionProperties(
+            codeUri: try! packagePath(),
+            architecture: self.architecture,
+            eventSources: self.eventSources,
+            environment: SAMEnvironmentVariable(self.environment))
+
+        let functionResource = [Resource<ResourceType>(
+            type: .serverlessFunction,
+            properties: properties,
+            name: name)]
+
         let additionalQueueResources = collectQueueResources()
-        
+
         return functionResource + additionalQueueResources
     }
-    
+
     // compute the path for the lambda archive
-    private func packagePath() -> String {
-        
+    // package path comes from three sources with this priority
+    // 1. the --archive-path arg
+    // 2. the developer supplied value in Function() definition
+    // 3. a default value
+    // func is public for testability
+    public func packagePath() throws -> String {
+
         // propose a default path unless the --archive-path argument was used
         // --archive-path argument value must match the value given to the archive plugin --output-path argument
         var lambdaPackage =
         ".build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/\(self.name)/\(self.name).zip"
+        if let path = self.codeURI {
+            lambdaPackage = path
+        }
         if let optIdx = CommandLine.arguments.firstIndex(of: "--archive-path") {
             if CommandLine.arguments.count >= optIdx + 1 {
                 let archiveArg = CommandLine.arguments[optIdx + 1]
                 lambdaPackage = "\(archiveArg)/\(self.name)/\(self.name).zip"
             }
         }
-        
+
         // check the ZIP file exists
         if !FileManager.default.fileExists(atPath: lambdaPackage) {
-            let msg = "Error: package does not exist at path: \(lambdaPackage)"
-            
-            // when running in a unit test, return a marker value
-            // otherwise, fail abruptly
-            if !Thread.current.isRunningXCTest {
-                fatalError(msg)
-            } else {
-                lambdaPackage = "ERROR"
-            }
+            throw FunctionError.packageDoesNotExist(lambdaPackage)
         }
-        
+
         return lambdaPackage
     }
-    
+
     // When SQS event source is specified, the Lambda function developer
     // might give a queue name, a queue Arn, or a queue resource.
     // When developer gives a queue Arn there is nothing to do here
@@ -181,10 +202,13 @@ public struct Function {
                 sqsEventSource in (sqsEventSource.properties as? SQSEventProperties)?.queue
             }
     }
-    
+
     // MARK: Function DSL code
     @resultBuilder
     public enum FunctionBuilder {
+        public static func buildBlock(_ events: EventSources) -> (EventSources, [String: String]) {
+            return (events, [:])
+        }
         public static func buildBlock(_ events: EventSources,
                                       _ variables: EnvironmentVariables) -> (EventSources, [String: String]) {
             return (events, variables.environmentVariables)
@@ -199,7 +223,7 @@ public struct Function {
             fatalError()
         }
     }
-    
+
 }
 
 // MARK: Event Source
@@ -233,6 +257,7 @@ public struct EventSources {
 public struct HttpApi {
     private let method: HttpVerb?
     private let path: String?
+    private let name: String = "HttpApiEvent"
     public init(
         method: HttpVerb? = nil,
         path: String? = nil
@@ -241,17 +266,26 @@ public struct HttpApi {
         self.path = path
     }
     internal func resource() -> Resource<EventSourceType> {
-        return Resource<EventSourceType>.httpApi(method: self.method, path: self.path)
+
+        var properties: SAMResourceProperties?
+        if self.method != nil || self.path != nil {
+            properties = HttpApiProperties(method: method, path: path)
+        }
+
+        return Resource<EventSourceType>(
+            type: .httpApi,
+            properties: properties,
+            name: name)
     }
 }
 
 // MARK: SQS Event Source
 public struct Sqs {
     private let name: String
-    private var queueRef: String? = nil
-    private var queue: Queue? = nil
-    public var batchSize : Int = 10 
-    public var enabled : Bool = true 
+    private var queueRef: String?
+    private var queue: Queue?
+    public var batchSize: Int = 10
+    public var enabled: Bool = true
 
     public init(name: String = "SQSEvent") {
         self.name = name
@@ -279,36 +313,42 @@ public struct Sqs {
         return Sqs(name: self.name, queue)
     }
     internal func resource() -> Resource<EventSourceType> {
+        var properties: SQSEventProperties! = nil
         if self.queue != nil {
-            return Resource<EventSourceType>.sqs(name: self.name,
-                                                 queue: self.queue!.resource(),
-                                                 batchSize: self.batchSize,
-                                                 enabled: self.enabled)
+            properties = SQSEventProperties(self.queue!.resource(),
+                                            batchSize: self.batchSize,
+                                            enabled: self.enabled)
+
         } else if self.queueRef != nil {
-            return Resource<EventSourceType>.sqs(name: self.name,
-                                                 queue: self.queueRef!,
-                                                 batchSize: self.batchSize,
-                                                 enabled: self.enabled)
+
+            properties = SQSEventProperties(byRef: self.queueRef!,
+                                            batchSize: batchSize,
+                                            enabled: enabled)
         } else {
             fatalError("Either queue or queueRef muts have a value")
         }
+
+        return Resource<EventSourceType>(
+            type: .sqs,
+            properties: properties,
+            name: name)
     }
 }
 
 // MARK: Environment Variable
 public struct EnvironmentVariables {
-    
+
     internal let environmentVariables: [String: String]
-    
+
     // MARK: EnvironmentVariable DSL code
     public init(@EnvironmentVariablesBuilder _ builder: () -> [String: String]) {
         self.environmentVariables = builder()
     }
-    
+
     @resultBuilder
     public enum EnvironmentVariablesBuilder {
         public static func buildBlock(_ variables: [String: String]...) -> [String: String] {
-            
+
             // merge an array of dictionaries into a single dictionary.
             // existing values are preserved
             var mergedDictKeepCurrent: [String: String] = [:]
@@ -329,9 +369,13 @@ public struct Queue {
         self.physicalName = physicalName
     }
     internal func resource() -> Resource<ResourceType> {
-        return Resource<ResourceType>.queue(
-            logicalName: self.logicalName,
-            physicalName: self.physicalName)
+
+        let properties = SQSResourceProperties(queueName: self.physicalName)
+
+        return Resource<ResourceType>(
+                    type: .queue,
+                    properties: properties,
+                    name: self.logicalName)
     }
 }
 
@@ -347,34 +391,39 @@ public struct Table {
         primaryKeyName: String,
         primaryKeyType: String
     ) {
-        
+
         self.logicalName = logicalName
         self.physicalName = physicalName
         self.primaryKeyName = primaryKeyName
         self.primaryKeyType = primaryKeyType
     }
     internal func resource() -> Resource<ResourceType> {
-        return Resource<ResourceType>.table(
-            logicalName: self.logicalName,
-            physicalName: self.physicalName,
-            primaryKeyName: self.primaryKeyName,
-            primaryKeyType: self.primaryKeyType)
+
+        let primaryKey = SimpleTableProperties.PrimaryKey(name: primaryKeyName,
+                                                          type: primaryKeyType)
+        let properties = SimpleTableProperties(primaryKey: primaryKey,
+                                               tableName: physicalName)
+        return Resource<ResourceType>(
+            type: .table,
+            properties: properties,
+            name: logicalName)
     }
 }
 
 // MARK: Serialization code
 
 extension SAMDeploymentDescriptor {
-    
+
     internal func toJSON(pretty: Bool = true) -> String {
         let encoder = JSONEncoder()
+        encoder.outputFormatting = [.withoutEscapingSlashes]
         if pretty {
-            encoder.outputFormatting = .prettyPrinted
+            encoder.outputFormatting = [encoder.outputFormatting, .prettyPrinted]
         }
         let jsonData = try! encoder.encode(self)
         return String(data: jsonData, encoding: .utf8)!
     }
-    
+
     internal func toYAML() -> String {
         let yaml = try! YAMLEncoder().encode(self)
         return String(data: yaml, encoding: .utf8)!
@@ -382,19 +431,19 @@ extension SAMDeploymentDescriptor {
 }
 
 private struct DeploymentDescriptorSerializer {
-    
+
     enum SerializeFormat {
         case json
         case yaml
     }
-    
+
     // dump the JSON representation of the deployment descriptor to the given file descriptor
     // by default, it outputs on fileDesc = 1, which is stdout
     static func serialize(_ deploymentDescriptor: SAMDeploymentDescriptor,
                           format: SerializeFormat,
                           to fileDesc: Int32 = 1
     ) throws {
-        
+
         // do not output the deployment descriptor on stdout when running unit tests
         if Thread.current.isRunningXCTest { return }
 
@@ -403,14 +452,14 @@ private struct DeploymentDescriptorSerializer {
         case .json: fputs(deploymentDescriptor.toJSON(), fd)
         case .yaml: fputs(deploymentDescriptor.toYAML(), fd)
         }
-        
+
         fclose(fd)
     }
 }
 
 // MARK: Support code for unit testing
 // Detect when running inside a unit test
-// This allows to avoid calling `fatalError()` when unit testing
+// This allows to avoid calling `fatalError()` or to print the deployment descriptor when unit testing
 // inspired from https://stackoverflow.com/a/59732115/663360
 extension Thread {
     var isRunningXCTest: Bool {

@@ -20,110 +20,105 @@ import XCTest
 // and the check on existence of the ZIP file
 // the rest is boiler plate code
 final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
-    
+
     func testGenericFunction() {
-        
+
         // given
-        let expected = [expectedSAMHeaders(),
-                        expectedFunction(),
-                        expectedEnvironmentVariables(), 
-                        expectedHttpAPi()].flatMap { $0 }
-        
+        let expected: [Expected] = expectedSAMHeaders() +
+                                   expectedFunction() +
+                                   expectedEnvironmentVariables() +
+                                   expectedHttpAPi()
+
         let testDeployment = MockDeploymentDescriptorBuilder(
             withFunction: true,
             architecture: .arm64,
+            codeURI: self.codeURI,
             eventSource: HttpApi().resource(),
             environmentVariable: ["NAME1": "VALUE1"]
         )
-        
+
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
-        
+
     }
-    
+
     // check wether the builder creates additional queue resources 
     func testLambdaCreateAdditionalResourceWithName() {
-        
+
         // given
         let expected = expectedQueue()
-        
+
         let sqsEventSource = Sqs("test-queue").resource()
-        
-        
+
         let testDeployment = MockDeploymentDescriptorBuilder(
             withFunction: true,
             architecture: .arm64,
+            codeURI: self.codeURI,
             eventSource: sqsEventSource,
             environmentVariable: [:])
-        
+
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
-    
+
     // check wether the builder creates additional queue resources
     func testLambdaCreateAdditionalResourceWithQueue() {
-        
+
         // given
         let expected = expectedQueue()
-        
+
         let sqsEventSource = Sqs(Queue(logicalName: "QueueTestQueue",
                                        physicalName: "test-queue")).resource()
-        
-        
+
         let testDeployment = MockDeploymentDescriptorBuilder(
             withFunction: true,
             architecture: .arm64,
+            codeURI: self.codeURI,
             eventSource: sqsEventSource,
             environmentVariable: [:] )
-        
+
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
-    
+
     // check wether the builder detects missing ZIP package
     func testLambdaMissingZIPPackage() {
-        
-        // given
-        let expected = """
-"CodeUri":"ERROR"
-"""
-        
-        let testDeployment = MockDeploymentDescriptorBuilder(
-            withFunction: true,
-            architecture: .arm64,
-            eventSource: HttpApi().resource(),
-            environmentVariable: ["NAME1": "VALUE1"] )
-        
-        XCTAssertTrue(generateAndTestDeploymentDescriptor(deployment: testDeployment,
-                                                               expected: expected))
+
+        // when
+        let testFunction = Function(name: "TestFunction",
+                                    codeURI: "/path/does/not/exist/lambda.zip") {
+            EventSources {  }
+        }
+
+        // then 
+        XCTAssertThrowsError(try testFunction.packagePath())
     }
-    
+
     // check wether the builder detects existing packages
     func testLambdaExistingZIPPackage() {
-        
+
         // given
         let (tempDir, tempFile) = prepareTemporaryPackageFile()
-        
-        let expected = """
-"CodeUri":"\(tempFile)"
-""".replacingOccurrences(of: "/", with: "\\/")
-        
+
+        let expected = Expected.keyValue(indent: 3, keyValue: ["CodeUri": tempFile])
+
         CommandLine.arguments = ["test", "--archive-path", tempDir]
-        
+
         let testDeployment = MockDeploymentDescriptorBuilder(
             withFunction: true,
             architecture: .arm64,
+            codeURI: self.codeURI,
             eventSource: HttpApi().resource(),
             environmentVariable: ["NAME1": "VALUE1"] )
-        
+
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
-        
+
         // cleanup
         deleteTemporaryPackageFile(tempFile)
     }
-    
-    private func prepareTemporaryPackageFile() -> (String,String) {
+
+    private func prepareTemporaryPackageFile() -> (String, String) {
         let fm = FileManager.default
         let tempDir = fm.temporaryDirectory
         let packageDir = MockDeploymentDescriptorBuilder.packageDir()
@@ -134,7 +129,7 @@ final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
         XCTAssertTrue(fm.createFile(atPath: tempFile, contents: nil))
         return (tempDir.path, tempFile)
     }
-    
+
     private func deleteTemporaryPackageFile(_ file: String) {
         let fm = FileManager.default
         XCTAssertNoThrow(try fm.removeItem(atPath: file))

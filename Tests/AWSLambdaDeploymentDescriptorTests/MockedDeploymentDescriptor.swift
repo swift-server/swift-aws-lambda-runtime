@@ -17,31 +17,35 @@ import Foundation
 
 protocol MockDeploymentDescriptorBehavior {
     func toJSON() -> String
+    func toYAML() -> String
 }
 
 struct MockDeploymentDescriptor: MockDeploymentDescriptorBehavior {
-    
-    let deploymentDescriptor : SAMDeploymentDescriptor
-    
+
+    let deploymentDescriptor: SAMDeploymentDescriptor
+
     init(withFunction: Bool = true,
          architecture: Architectures = Architectures.defaultArchitecture(),
-         eventSource:  [Resource<EventSourceType>]? = nil,
+         codeURI: String,
+         eventSource: [Resource<EventSourceType>]? = nil,
          environmentVariable: SAMEnvironmentVariable? = nil,
-         additionalResources: [Resource<ResourceType>]? = nil)
-    {
+         additionalResources: [Resource<ResourceType>]? = nil) {
         if withFunction {
+
+            let properties = ServerlessFunctionProperties(
+                    codeUri: codeURI,
+                    architecture: architecture,
+                    eventSources: eventSource ?? [],
+                    environment: environmentVariable ?? SAMEnvironmentVariable.none)
+            let serverlessFunction = Resource<ResourceType>(
+                    type: .serverlessFunction,
+                    properties: properties,
+                    name: "TestLambda")
+
             self.deploymentDescriptor = SAMDeploymentDescriptor(
                 description: "A SAM template to deploy a Swift Lambda function",
-                resources: [
-                    .serverlessFunction(
-                        name: "TestLambda",
-                        architecture: architecture,
-                        codeUri: "/path/lambda.zip",
-                        eventSources: eventSource ?? [],
-                        environment: environmentVariable ?? SAMEnvironmentVariable.none
-                    )
-                ] + (additionalResources ?? [])
-                
+                resources: [ serverlessFunction ] + (additionalResources ?? [])
+
             )
         } else {
             self.deploymentDescriptor = SAMDeploymentDescriptor(
@@ -53,25 +57,29 @@ struct MockDeploymentDescriptor: MockDeploymentDescriptorBehavior {
     func toJSON() -> String {
         return self.deploymentDescriptor.toJSON(pretty: false)
     }
+    func toYAML() -> String {
+        return self.deploymentDescriptor.toYAML()
+    }
 }
 
 struct MockDeploymentDescriptorBuilder: MockDeploymentDescriptorBehavior {
-    
-    static let functioName = "TestLambda"
-    let deploymentDescriptor : DeploymentDescriptor
-    
+
+    static let functionName = "TestLambda"
+    let deploymentDescriptor: DeploymentDescriptor
+
     init(withFunction: Bool = true,
          architecture: Architectures = Architectures.defaultArchitecture(),
-         eventSource:  Resource<EventSourceType>,
-         environmentVariable: [String:String])
-    {
+         codeURI: String,
+         eventSource: Resource<EventSourceType>,
+         environmentVariable: [String: String]) {
         if withFunction {
-            
+
             self.deploymentDescriptor = DeploymentDescriptor {
                 "A SAM template to deploy a Swift Lambda function"
-                
-                Function(name: MockDeploymentDescriptorBuilder.functioName,
-                         architecture: architecture) {
+
+                Function(name: MockDeploymentDescriptorBuilder.functionName,
+                         architecture: architecture,
+                         codeURI: codeURI) {
                     EventSources {
                         eventSource
                     }
@@ -80,23 +88,25 @@ struct MockDeploymentDescriptorBuilder: MockDeploymentDescriptorBehavior {
                     }
                 }
             }
-            
+
         } else {
             self.deploymentDescriptor = DeploymentDescriptor {
                 "A SAM template to deploy a Swift Lambda function"
             }
         }
     }
-    
+
     func toJSON() -> String {
         return self.deploymentDescriptor.samDeploymentDescriptor.toJSON(pretty: false)
     }
-    
+    func toYAML() -> String {
+        return self.deploymentDescriptor.samDeploymentDescriptor.toYAML()
+    }
+
     static func packageDir() -> String {
-        return "/\(functioName)"
+        return "/\(functionName)"
     }
     static func packageZip() -> String {
-        return "/\(functioName).zip"
+        return "/\(functionName).zip"
     }
 }
-

@@ -15,18 +15,18 @@
 // This is based on Foundation's JSONEncoder
 // https://github.com/apple/swift-corelibs-foundation/blob/main/Sources/Foundation/JSONEncoder.swift
 
-import Foundation 
+import Foundation
 
 /// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
 /// containing `Encodable` values (in which case it should be exempt from key conversion strategies).
 ///
-fileprivate protocol _YAMLStringDictionaryEncodableMarker { }
+private protocol _YAMLStringDictionaryEncodableMarker { }
 
 extension Dictionary: _YAMLStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
 
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 // YAML Encoder
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 /// `YAMLEncoder` facilitates the encoding of `Encodable` values into YAML.
 open class YAMLEncoder {
@@ -47,7 +47,7 @@ open class YAMLEncoder {
 
         /// Produce JSON with dictionary keys sorted in lexicographic order.
         public static let sortedKeys    = OutputFormatting(rawValue: 1 << 1)
-        
+
         /// By default slashes get escaped ("/" → "\/", "http://apple.com/" → "http:\/\/apple.com\/")
         /// for security reasons, allowing outputted YAML to be safely embedded within HTML/XML.
         /// In contexts where this escaping is unnecessary, the YAML is known to not be embedded,
@@ -131,6 +131,9 @@ open class YAMLEncoder {
     /// Contextual user-provided information for use during encoding.
     open var userInfo: [CodingUserInfoKey: Any] = [:]
 
+    /// the number of space characters  for a single indent
+    public static let singleIndent: Int = 3
+
     /// Options set on the top-level encoder to pass down the encoding hierarchy.
     fileprivate struct _Options {
         let dateEncodingStrategy: DateEncodingStrategy
@@ -166,7 +169,7 @@ open class YAMLEncoder {
         let value: YAMLValue = try encodeAsYAMLValue(value)
         let writer = YAMLValue.Writer(options: self.outputFormatting)
         let bytes = writer.writeValue(value)
- 
+
         return Data(bytes)
     }
 
@@ -633,8 +636,7 @@ private struct YAMLKeyedEncodingContainer<K: CodingKey>: KeyedEncodingContainerP
     }
 
     mutating func nestedContainer<NestedKey>(keyedBy _: NestedKey.Type, forKey key: Self.Key) ->
-        KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey
-    {
+        KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey {
         let convertedKey = self._converted(key)
         let newPath = self.codingPath + [convertedKey]
         let object = self.object.setObject(for: convertedKey.stringValue)
@@ -768,8 +770,7 @@ private struct YAMLUnkeyedEncodingContainer: UnkeyedEncodingContainer, _SpecialT
     }
 
     mutating func nestedContainer<NestedKey>(keyedBy _: NestedKey.Type) ->
-        KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey
-    {
+        KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey {
         let newPath = self.codingPath + [_YAMLKey(index: self.count)]
         let object = self.array.appendObject()
         let nestedContainer = YAMLKeyedEncodingContainer<NestedKey>(impl: impl, object: object, codingPath: newPath)
@@ -917,7 +918,7 @@ extension YAMLValue {
         }
 
         private func addInset(to bytes: inout [UInt8], depth: Int) {
-            bytes.append(contentsOf: [UInt8](repeating: ._space, count: depth * 3))
+            bytes.append(contentsOf: [UInt8](repeating: ._space, count: depth * YAMLEncoder.singleIndent))
         }
 
         private func writeValuePretty(_ value: YAMLValue, into bytes: inout [UInt8], depth: Int = 0) {
@@ -956,8 +957,7 @@ extension YAMLValue {
         }
 
         private func writePrettyObject<Object: Sequence>(_ object: Object, into bytes: inout [UInt8], depth: Int = 0)
-            where Object.Element == (key: String, value: YAMLValue)
-        {
+            where Object.Element == (key: String, value: YAMLValue) {
             var iterator = object.makeIterator()
 
             while let (key, value) = iterator.next() {
@@ -1045,9 +1045,9 @@ extension YAMLValue {
     }
 }
 
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 // Shared Key Types
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 internal struct _YAMLKey: CodingKey {
     public var stringValue: String
@@ -1076,9 +1076,9 @@ internal struct _YAMLKey: CodingKey {
     internal static let `super` = _YAMLKey(stringValue: "super")!
 }
 
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 // Shared ISO8601 Date Formatter
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 // NOTE: This value is implicitly lazy and _must_ be lazy. We're compiled against the latest SDK (w/ ISO8601DateFormatter), but linked against whichever Foundation the user has. ISO8601DateFormatter might not exist, so we better not hit this code path on an older OS.
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
@@ -1088,9 +1088,9 @@ internal var _iso8601Formatter: ISO8601DateFormatter = {
     return formatter
 }()
 
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 // Error Utilities
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 extension EncodingError {
     /// Returns a `.invalidValue` error describing the given invalid floating-point value.
@@ -1133,7 +1133,7 @@ private extension YAMLValue {
             return true
         }
     }
-    
+
     var isContainer: Bool {
         switch self {
         case .array, .object:
@@ -1164,33 +1164,32 @@ private extension YAMLValue {
 }
 
 extension UInt8 {
-    
+
     internal static let _space = UInt8(ascii: " ")
     internal static let _return = UInt8(ascii: "\r")
     internal static let _newline = UInt8(ascii: "\n")
     internal static let _tab = UInt8(ascii: "\t")
-    
+
     internal static let _colon = UInt8(ascii: ":")
     internal static let _comma = UInt8(ascii: ",")
-    
+
     internal static let _openbrace = UInt8(ascii: "{")
     internal static let _closebrace = UInt8(ascii: "}")
-    
+
     internal static let _openbracket = UInt8(ascii: "[")
     internal static let _closebracket = UInt8(ascii: "]")
-    
+
     internal static let _quote = UInt8(ascii: "\"")
     internal static let _backslash = UInt8(ascii: "\\")
 
     internal static let _dash = UInt8(ascii: "-")
-    
+
 }
 
 extension Array where Element == UInt8 {
-    
+
     internal static let _true = [UInt8(ascii: "t"), UInt8(ascii: "r"), UInt8(ascii: "u"), UInt8(ascii: "e")]
     internal static let _false = [UInt8(ascii: "f"), UInt8(ascii: "a"), UInt8(ascii: "l"), UInt8(ascii: "s"), UInt8(ascii: "e")]
     internal static let _null = [UInt8(ascii: "n"), UInt8(ascii: "u"), UInt8(ascii: "l"), UInt8(ascii: "l")]
-    
-}
 
+}

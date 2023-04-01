@@ -17,7 +17,7 @@ import Foundation
 import PackagePlugin
 
 @main
-struct AWSLambdaPackager: CommandPlugin {
+struct AWSLambdaDeployer: CommandPlugin {
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
         
         let configuration = try Configuration(context: context, arguments: arguments)
@@ -27,7 +27,7 @@ struct AWSLambdaPackager: CommandPlugin {
         }
         
         // gather file paths
-        let samDeploymentDescriptorFilePath = "\(context.package.directory)/sam.yaml"
+        let samDeploymentDescriptorFilePath = "\(context.package.directory)/template.yaml"
         
         let swiftExecutablePath = try self.findExecutable(context: context,
                                                           executableName: "swift",
@@ -36,29 +36,48 @@ struct AWSLambdaPackager: CommandPlugin {
         
         let samExecutablePath = try self.findExecutable(context: context,
                                                         executableName: "sam",
-                                                        helpMessage: "Is SAM installed ? (brew tap aws/tap && brew install aws-sam-cli)",
+                                                        helpMessage: "SAM command line is required. (brew tap aws/tap && brew install aws-sam-cli)",
                                                         verboseLogging: configuration.verboseLogging)
+        
+        let shellExecutablePath = try self.findExecutable(context: context,
+                                                          executableName: "sh",
+                                                          helpMessage: "The default shell (/bin/sh) is required to run this plugin",
+                                                          verboseLogging: configuration.verboseLogging)
+        
+        let awsRegion = try self.getDefaultAWSRegion(context: context,
+                                                     regionFromCommandLine: configuration.region,
+                                                     verboseLogging: configuration.verboseLogging)
         
         // generate the deployment descriptor
         try self.generateDeploymentDescriptor(projectDirectory: context.package.directory,
                                               buildConfiguration: configuration.buildConfiguration,
                                               swiftExecutable: swiftExecutablePath,
+                                              shellExecutable: shellExecutablePath,
                                               samDeploymentDescriptorFilePath: samDeploymentDescriptorFilePath,
                                               archivePath: configuration.archiveDirectory,
                                               force: configuration.force,
                                               verboseLogging: configuration.verboseLogging)
         
+                
+        // check if there is a samconfig.toml file.
+        // when there is no file, generate one with default values and values collected from params
+        try self.checkOrCreateSAMConfigFile(projetDirectory: context.package.directory,
+                                            buildConfiguration: configuration.buildConfiguration,
+                                            region: awsRegion,
+                                            stackName: configuration.stackName,
+                                            force: configuration.force,
+                                            verboseLogging: configuration.verboseLogging)
         
         // validate the template
         try self.validate(samExecutablePath: samExecutablePath,
                           samDeploymentDescriptorFilePath: samDeploymentDescriptorFilePath,
                           verboseLogging: configuration.verboseLogging)
         
+
         // deploy the functions
         if !configuration.noDeploy {
             try self.deploy(samExecutablePath: samExecutablePath,
-                            samDeploymentDescriptorFilePath: samDeploymentDescriptorFilePath,
-                            stackName : configuration.stackName,
+                            buildConfiguration: configuration.buildConfiguration,
                             verboseLogging: configuration.verboseLogging)
         }
         
@@ -75,8 +94,9 @@ struct AWSLambdaPackager: CommandPlugin {
     private func generateDeploymentDescriptor(projectDirectory: Path,
                                               buildConfiguration: PackageManager.BuildConfiguration,
                                               swiftExecutable: Path,
+                                              shellExecutable: Path,
                                               samDeploymentDescriptorFilePath: String,
-                                              archivePath: String,
+                                              archivePath: String?,
                                               force: Bool,
                                               verboseLogging: Bool) throws {
         print("-------------------------------------------------------------------------")
@@ -98,14 +118,16 @@ struct AWSLambdaPackager: CommandPlugin {
         }
         
         do {
-            let cmd = [
-                swiftExecutable.string,
+            var cmd = [
+                "\"\(swiftExecutable.string)\"",
                 "-L \(projectDirectory)/.build/\(buildConfiguration)/",
                 "-I \(projectDirectory)/.build/\(buildConfiguration)/",
                 "-l\(sharedLibraryName)",
-                deploymentDescriptorFilePath,
-                "--archive-path", archivePath
+                "\"\(deploymentDescriptorFilePath)\""
             ]
+            if let archive = archivePath {
+                cmd = cmd + ["--archive-path", archive]
+            }
             let helperCmd = cmd.joined(separator: " \\\n")
             
             if verboseLogging {
@@ -116,22 +138,24 @@ struct AWSLambdaPackager: CommandPlugin {
             }
             
             // create and execute a plugin helper to run the "swift" command
-            let helperFilePath = "\(projectDirectory)/compile.sh"
+            let helperFilePath = "\(FileManager.default.temporaryDirectory.path)/compile.sh"
             FileManager.default.createFile(atPath: helperFilePath,
                                            contents: helperCmd.data(using: .utf8),
                                            attributes: [.posixPermissions: 0o755])
+            defer { try? FileManager.default.removeItem(atPath: helperFilePath) }                                           
+
+            // running the swift command directly from the plugin does not work 🤷‍♂️
+            // the below launches a bash shell script that will launch the `swift` command
             let samDeploymentDescriptor = try Utils.execute(
-                executable: Path("/bin/bash"),
+                executable: shellExecutable,
                 arguments: ["-c", helperFilePath],
                 customWorkingDirectory: projectDirectory,
                 logLevel: verboseLogging ? .debug : .silent)
-            // running the swift command directly from the plugin does not work 🤷‍♂️
-            //            let samDeploymentDescriptor = try execute(
-            //                executable: swiftExecutable.path,
-            //                arguments: Array(cmd.dropFirst()),
-            //                customWorkingDirectory: context.package.directory,
-            //                logLevel: configuration.verboseLogging ? .debug : .silent)
-            try FileManager.default.removeItem(atPath: helperFilePath)
+        //    let samDeploymentDescriptor = try Utils.execute(
+        //        executable: swiftExecutable,
+        //        arguments: Array(cmd.dropFirst()),
+        //        customWorkingDirectory: projectDirectory,
+        //        logLevel: verboseLogging ? .debug : .silent)
             
             // write the generated SAM deployment descriptor to disk
             if FileManager.default.fileExists(atPath: samDeploymentDescriptorFilePath) && !force {
@@ -144,7 +168,7 @@ struct AWSLambdaPackager: CommandPlugin {
                 
                 FileManager.default.createFile(atPath: samDeploymentDescriptorFilePath,
                                                contents: samDeploymentDescriptor.data(using: .utf8))
-                verboseLogging ? print("Overwriting file at \(samDeploymentDescriptorFilePath)") : nil
+                verboseLogging ? print("Writing file at \(samDeploymentDescriptorFilePath)") : nil
             }
             
         } catch let error as DeployerPluginError {
@@ -205,14 +229,43 @@ struct AWSLambdaPackager: CommandPlugin {
         }
     }
     
+    private func checkOrCreateSAMConfigFile(projetDirectory: Path,
+                                            buildConfiguration: PackageManager.BuildConfiguration,
+                                            region: String,
+                                            stackName: String,
+                                            force: Bool,
+                                            verboseLogging: Bool) throws {
+        
+        let samConfigFilePath = "\(projetDirectory)/samconfig.toml" // the default value for SAM
+        let samConfigTemplate = """
+version = 0.1
+[\(buildConfiguration)]
+[\(buildConfiguration).deploy]
+[\(buildConfiguration).deploy.parameters]
+stack_name = "\(stackName)"
+region = "\(region)"
+capabilities = "CAPABILITY_IAM"
+image_repositories = []
+"""
+        if FileManager.default.fileExists(atPath: samConfigFilePath) && !force  {
+            
+            print("SAM configuration file already exists at")
+            print("\(samConfigFilePath)")
+            print("use --force option to overwrite it.")
+            
+        } else {
+            
+            // when SAM config does not exist, create it, it will allow function developers to customize and reuse it
+            FileManager.default.createFile(atPath: samConfigFilePath,
+                                           contents: samConfigTemplate.data(using: .utf8))
+            verboseLogging ? print("Writing file at \(samConfigFilePath)") : nil
+
+        }
+    }
+    
     private func deploy(samExecutablePath: Path,
-                        samDeploymentDescriptorFilePath: String,
-                        stackName: String,
+                        buildConfiguration: PackageManager.BuildConfiguration,
                         verboseLogging: Bool) throws {
-        
-        //TODO: check if there is a samconfig.toml file.
-        // when there is no file, generate one with default data or data collected from params
-        
         
         print("-------------------------------------------------------------------------")
         print("Deploying AWS Lambda function")
@@ -222,9 +275,7 @@ struct AWSLambdaPackager: CommandPlugin {
             try Utils.execute(
                 executable: samExecutablePath,
                 arguments: ["deploy",
-                            "-t", samDeploymentDescriptorFilePath,
-                            "--stack-name", stackName,
-                            "--capabilities", "CAPABILITY_IAM",
+                            "--config-env", buildConfiguration.rawValue,
                             "--resolve-s3"],
                 logLevel: verboseLogging ? .debug : .silent)
         } catch let error as DeployerPluginError {
@@ -252,10 +303,6 @@ struct AWSLambdaPackager: CommandPlugin {
                                stackName: String,
                                verboseLogging: Bool) throws  -> String {
         
-        //TODO: check if there is a samconfig.toml file.
-        // when there is no file, generate one with default data or data collected from params
-        
-        
         print("-------------------------------------------------------------------------")
         print("Listing AWS endpoints")
         print("-------------------------------------------------------------------------")
@@ -274,6 +321,69 @@ struct AWSLambdaPackager: CommandPlugin {
         }
     }
     
+
+    /// provides a region name where to deploy
+    /// first check for the region provided as a command line param to the plugin
+    /// second check AWS_DEFAULT_REGION
+    /// third check [default] profile from AWS CLI (when AWS CLI is installed)
+    private func getDefaultAWSRegion(context: PluginContext,
+                                     regionFromCommandLine: String?,
+                                     verboseLogging: Bool) throws -> String {
+        
+        let helpMsg = """
+        Search order : 1. [--region] plugin parameter,
+                       2. AWS_DEFAULT_REGION environment variable,
+                       3. [default] profile from AWS CLI (~/.aws/config)
+"""
+
+        // first check the --region plugin command line
+        var result: String? = regionFromCommandLine
+        
+        guard result == nil else {
+            print("AWS Region : \(result!) (from command line)")
+            return result!
+        }
+
+        // second check the environment variable
+        result = ProcessInfo.processInfo.environment["AWS_DEFAULT_REGION"]
+        if result != nil && result!.isEmpty { result = nil }
+
+        guard result == nil else {
+            print("AWS Region : \(result!) (from environment variable)")
+            return result!
+        }
+
+        // third, check from AWS CLI configuration when it is available
+        // aws cli is optional. It is used as last resort to identify the default AWS Region
+        if let awsCLIPath  = try? self.findExecutable(context: context,
+                                                      executableName: "aws",
+                                                      helpMessage: "aws command line is used to find default AWS region. (brew install awscli)",
+                                                      verboseLogging: verboseLogging) {    
+
+            // aws --profile default configure get region
+            do {
+                result = try Utils.execute(
+                    executable: awsCLIPath,
+                    arguments: ["--profile", "default",
+                                "configure",
+                                "get", "region"],
+                    logLevel: verboseLogging ? .debug : .silent)
+                
+                result?.removeLast() // remove trailing newline char
+            } catch {
+                print("Unexpected error : \(error)")
+                throw DeployerPluginError.error(error)
+            }
+            
+            guard result == nil else {
+                print("AWS Region : \(result!) (from AWS CLI configuration)")
+                return result!
+            }
+        }
+
+        throw DeployerPluginError.noRegionFound(helpMsg)
+    }
+    
     private func displayHelpMessage() {
         print("""
 OVERVIEW: A swift plugin to deploy your Lambda function on your AWS account.
@@ -286,6 +396,7 @@ USAGE: swift package --disable-sandbox deploy [--help] [--verbose]
                                               [--archive-path <archive_path>]
                                               [--configuration <configuration>]
                                               [--force] [--nodeploy] [--nolist]
+                                              [--region <aws_region>]
                                               [--stack-name <stack-name>]
 
 OPTIONS:
@@ -304,6 +415,8 @@ OPTIONS:
     --stack-name <stack-name>
                     The name of the CloudFormation stack when deploying.
                     (default: the project name)
+    --region        The AWS region to deploy to.
+                    (default: the region of AWS CLI's default profile)
     --help          Show help information.
 """)
     }
@@ -316,8 +429,9 @@ private struct Configuration: CustomStringConvertible {
     public let noList: Bool
     public let force: Bool
     public let verboseLogging: Bool
-    public let archiveDirectory: String
+    public let archiveDirectory: String?
     public let stackName: String
+    public let region: String?
     
     private let context: PluginContext
     
@@ -337,6 +451,7 @@ private struct Configuration: CustomStringConvertible {
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
         let archiveDirectoryArgument = argumentExtractor.extractOption(named: "archive-path")
         let stackNameArgument = argumentExtractor.extractOption(named: "stackname")
+        let regionArgument = argumentExtractor.extractOption(named: "region")
         let helpArgument = argumentExtractor.extractFlag(named: "help") > 0
         
         // help required ?
@@ -370,13 +485,15 @@ private struct Configuration: CustomStringConvertible {
         // use a default archive directory when none are given
         if let archiveDirectory = archiveDirectoryArgument.first {
             self.archiveDirectory = archiveDirectory
+            
+            // check if archive directory exists
+            var isDirectory: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: archiveDirectory, isDirectory: &isDirectory), isDirectory.boolValue else {
+                throw DeployerPluginError.invalidArgument(
+                    "invalid archive directory: \(archiveDirectory)\nthe directory does not exists")
+            }
         } else {
-            self.archiveDirectory = "\(context.package.directory.string)/.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/"
-        }
-        var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: self.archiveDirectory, isDirectory: &isDirectory), isDirectory.boolValue else {
-            throw DeployerPluginError.invalidArgument(
-                "invalid archive directory: \(self.archiveDirectory)\nthe directory does not exists")
+            self.archiveDirectory = nil
         }
         
         // infer or consume stack name
@@ -384,6 +501,12 @@ private struct Configuration: CustomStringConvertible {
             self.stackName = stackName
         } else {
             self.stackName = context.package.displayName
+        }
+        
+        if let region = regionArgument.first {
+            self.region = region
+        } else {
+            self.region = nil
         }
         
         if self.verboseLogging {
@@ -398,12 +521,13 @@ private struct Configuration: CustomStringConvertible {
     """
     {
       verbose: \(self.verboseLogging)
+      force: \(self.force)
       noDeploy: \(self.noDeploy)
       noList: \(self.noList)
       buildConfiguration: \(self.buildConfiguration)
-      archiveDirectory: \(self.archiveDirectory)
+      archiveDirectory: \(self.archiveDirectory ?? "none provided on command line")
       stackName: \(self.stackName)
-      
+      region: \(self.region ?? "none provided on command line")
       Plugin directory: \(self.context.pluginWorkDirectory)
       Project directory: \(self.context.package.directory)
     }
@@ -415,6 +539,7 @@ private enum DeployerPluginError: Error, CustomStringConvertible {
     case invalidArgument(String)
     case toolNotFound(String)
     case deployswiftDoesNotExist
+    case noRegionFound(String)
     case error(Error)
     
     var description: String {
@@ -425,6 +550,8 @@ private enum DeployerPluginError: Error, CustomStringConvertible {
             return tool
         case .deployswiftDoesNotExist:
             return "Deploy.swift does not exist"
+        case .noRegionFound(let msg):
+            return "Can not find an AWS Region to deploy.\n\(msg)"
         case .error(let rootCause):
             return "Error caused by:\n\(rootCause)"
         }

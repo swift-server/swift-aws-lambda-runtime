@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
@@ -10,7 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 import Dispatch
 import Foundation
@@ -27,22 +27,22 @@ struct Utils {
         if logLevel >= .debug {
             print("\(executable.string) \(arguments.joined(separator: " "))")
         }
-        
+
         var output = ""
         let outputSync = DispatchGroup()
         let outputQueue = DispatchQueue(label: "AWSLambdaPackager.output")
         let outputHandler = { (data: Data?) in
             dispatchPrecondition(condition: .onQueue(outputQueue))
-            
+
             outputSync.enter()
             defer { outputSync.leave() }
-            
+
             guard let _output = data.flatMap({ String(data: $0, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(["\n"])) }), !_output.isEmpty else {
                 return
             }
-            
+
             output += _output + "\n"
-            
+
             switch logLevel {
             case .silent:
                 break
@@ -52,10 +52,10 @@ struct Utils {
                 fflush(stdout)
             }
         }
-        
+
         let pipe = Pipe()
         pipe.fileHandleForReading.readabilityHandler = { fileHandle in outputQueue.async { outputHandler(fileHandle.availableData) } }
-        
+
         let process = Process()
         process.standardOutput = pipe
         process.standardError = pipe
@@ -69,13 +69,13 @@ struct Utils {
                 outputHandler(try? pipe.fileHandleForReading.readToEnd())
             }
         }
-        
+
         try process.run()
         process.waitUntilExit()
-        
+
         // wait for output to be full processed
         outputSync.wait()
-        
+
         if process.terminationStatus != 0 {
             // print output on failure and if not already printed
             if logLevel < .output {
@@ -84,7 +84,7 @@ struct Utils {
             }
             throw ProcessError.processFailed([executable.string] + arguments, process.terminationStatus, output)
         }
-        
+
         return output
     }
 

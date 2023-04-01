@@ -30,7 +30,7 @@ struct TopLevelObjectWrapper<T: Codable & Equatable>: Codable, Equatable {
     }
 }
 
-class TestYAMLEncoder : XCTestCase {
+class TestYAMLEncoder: XCTestCase {
 
     // MARK: - Encoding Top-Level fragments
     func test_encodingTopLevelFragments() {
@@ -351,7 +351,6 @@ dictionary:
         let encodingStrategy: YAMLEncoder.NonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "INF", negativeInfinity: "-INF", nan: "NaN")
         // let decodingStrategy: YAMLDecoder.NonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "INF", negativeInfinity: "-INF", nan: "NaN")
 
-
         _testRoundTrip(of: TopLevelArrayWrapper(Float.infinity),
                        expectedYAML: ["INF"],
                        nonConformingFloatEncodingStrategy: encodingStrategy)
@@ -381,7 +380,7 @@ dictionary:
     func test_nestedContainerCodingPaths() {
         let encoder = YAMLEncoder()
         do {
-            let _ = try encoder.encode(NestedContainersTestType())
+            _ = try encoder.encode(NestedContainersTestType())
         } catch {
             XCTFail("Caught error during encoding nested container types: \(error)")
         }
@@ -390,7 +389,7 @@ dictionary:
     func test_superEncoderCodingPaths() {
         let encoder = YAMLEncoder()
         do {
-            let _ = try encoder.encode(NestedContainersTestType(testSuperEncoder: true))
+            _ = try encoder.encode(NestedContainersTestType(testSuperEncoder: true))
         } catch {
             XCTFail("Caught error during encoding nested container types: \(error)")
         }
@@ -424,7 +423,6 @@ dictionary:
         //     _ = try YAMLDecoder().decode([Bool].self, from: "[1]".data(using: .utf8)!)
         //     XCTFail("Coercing non-boolean numbers into Bools was expected to fail")
         // } catch { }
-
 
         // Check that a Bool false or true isn't converted to 0 or 1
 //        struct Foo: Decodable {
@@ -587,7 +585,6 @@ dictionary:
         test_codingOf(value: URL(string: "https://swift.org")!, toAndFrom: "https://swift.org")
     }
 
-
     // UInt and Int
     func test_codingOfUIntMinMax() {
 
@@ -647,18 +644,18 @@ dictionary:
         return [""]
     }
 
-    private func _testEncodeFailure<T : Encodable>(of value: T) {
+    private func _testEncodeFailure<T: Encodable>(of value: T) {
         do {
-            let _ = try YAMLEncoder().encode(value)
+            _ = try YAMLEncoder().encode(value)
             XCTFail("Encode of top-level \(T.self) was expected to fail.")
         } catch {}
     }
 
     private func _testRoundTrip<T>(of value: T,
                                    expectedYAML yaml: [String] = [],
-                                   dateEncodingStrategy: YAMLEncoder.DateEncodingStrategy = .deferredToDate,                                   
+                                   dateEncodingStrategy: YAMLEncoder.DateEncodingStrategy = .deferredToDate,
                                    dataEncodingStrategy: YAMLEncoder.DataEncodingStrategy = .base64,
-                                   nonConformingFloatEncodingStrategy: YAMLEncoder.NonConformingFloatEncodingStrategy = .throw) where T : Codable, T : Equatable {
+                                   nonConformingFloatEncodingStrategy: YAMLEncoder.NonConformingFloatEncodingStrategy = .throw) where T: Codable, T: Equatable {
         var payload: Data! = nil
         do {
             let encoder = YAMLEncoder()
@@ -669,7 +666,7 @@ dictionary:
         } catch {
             XCTFail("Failed to encode \(T.self) to YAML: \(error)")
         }
-        
+
         // We do not compare expectedYAML to payload directly, because they might have values like
         // {"name": "Bob", "age": 22}
         // and
@@ -680,12 +677,12 @@ dictionary:
         let payloadYAMLObject = String(data: payload, encoding: .utf8)!
         let result = yaml.allSatisfy { payloadYAMLObject.contains( $0 ) || $0 == "" }
         XCTAssertTrue(result, "Produced YAML not identical to expected YAML.")
-        
-        if (!result) {
+
+        if !result {
             print("===========")
             print(payloadYAMLObject)
             print("-----------")
-            print(yaml.filter{ !payloadYAMLObject.contains( $0 ) }.compactMap{ $0 })
+            print(yaml.filter { !payloadYAMLObject.contains( $0 ) }.compactMap { $0 })
             print("===========")
         }
     }
@@ -746,13 +743,13 @@ func expectEqualPaths(_ lhs: [CodingKey?], _ rhs: [CodingKey?], _ prefix: String
 /* FIXME: Import from %S/Inputs/Coding/SharedTypes.swift somehow. */
 
 // MARK: - Empty Types
-fileprivate struct EmptyStruct : Codable, Equatable {
+private struct EmptyStruct: Codable, Equatable {
     static func ==(_ lhs: EmptyStruct, _ rhs: EmptyStruct) -> Bool {
         return true
     }
 }
 
-fileprivate class EmptyClass : Codable, Equatable {
+private class EmptyClass: Codable, Equatable {
     static func ==(_ lhs: EmptyClass, _ rhs: EmptyClass) -> Bool {
         return true
     }
@@ -760,7 +757,7 @@ fileprivate class EmptyClass : Codable, Equatable {
 
 // MARK: - Single-Value Types
 /// A simple on-off switch type that encodes as a single Bool value.
-fileprivate enum Switch : Codable {
+private enum Switch: Codable {
     case off
     case on
 
@@ -782,7 +779,7 @@ fileprivate enum Switch : Codable {
 }
 
 /// A simple timestamp type that encodes as a single Double value.
-fileprivate struct Timestamp : Codable, Equatable {
+private struct Timestamp: Codable, Equatable {
     let value: Double
 
     init(_ value: Double) {
@@ -805,7 +802,7 @@ fileprivate struct Timestamp : Codable, Equatable {
 }
 
 /// A simple referential counter type that encodes as a single Int value.
-fileprivate final class Counter : Codable, Equatable {
+private final class Counter: Codable, Equatable {
     var count: Int = 0
 
     init() {}
@@ -827,7 +824,7 @@ fileprivate final class Counter : Codable, Equatable {
 
 // MARK: - Structured Types
 /// A simple address type that encodes as a dictionary of values.
-fileprivate struct Address : Codable, Equatable {
+private struct Address: Codable, Equatable {
     let street: String
     let city: String
     let state: String
@@ -860,7 +857,7 @@ fileprivate struct Address : Codable, Equatable {
 }
 
 /// A simple person class that encodes as a dictionary of values.
-fileprivate class Person : Codable, Equatable {
+private class Person: Codable, Equatable {
     let name: String
     let email: String
 
@@ -887,7 +884,7 @@ fileprivate class Person : Codable, Equatable {
 }
 
 /// A simple company struct which encodes as a dictionary of nested values.
-fileprivate struct Company : Codable, Equatable {
+private struct Company: Codable, Equatable {
     let address: Address
     var employees: [Person]
 
@@ -909,7 +906,7 @@ fileprivate struct Company : Codable, Equatable {
 
 /// A key type which can take on any string or integer value.
 /// This needs to mirror _YAMLKey.
-fileprivate struct _TestKey : CodingKey {
+private struct _TestKey: CodingKey {
   var stringValue: String
   var intValue: Int?
 
@@ -930,7 +927,7 @@ fileprivate struct _TestKey : CodingKey {
 }
 
 /// Wraps a type T so that it can be encoded at the top level of a payload.
-fileprivate struct TopLevelArrayWrapper<T> : Codable, Equatable where T : Codable, T : Equatable {
+private struct TopLevelArrayWrapper<T>: Codable, Equatable where T: Codable, T: Equatable {
     let value: T
 
     init(_ value: T) {
@@ -953,7 +950,7 @@ fileprivate struct TopLevelArrayWrapper<T> : Codable, Equatable where T : Codabl
     }
 }
 
-fileprivate struct FloatNaNPlaceholder : Codable, Equatable {
+private struct FloatNaNPlaceholder: Codable, Equatable {
     init() {}
 
     func encode(to encoder: Encoder) throws {
@@ -974,7 +971,7 @@ fileprivate struct FloatNaNPlaceholder : Codable, Equatable {
     }
 }
 
-fileprivate struct DoubleNaNPlaceholder : Codable, Equatable {
+private struct DoubleNaNPlaceholder: Codable, Equatable {
     init() {}
 
     func encode(to encoder: Encoder) throws {
@@ -996,7 +993,7 @@ fileprivate struct DoubleNaNPlaceholder : Codable, Equatable {
 }
 
 /// A type which encodes as an array directly through a single value container.
-struct Numbers : Codable, Equatable {
+struct Numbers: Codable, Equatable {
     let values = [4, 8, 15, 16, 23, 42]
 
     init() {}
@@ -1024,16 +1021,16 @@ struct Numbers : Codable, Equatable {
 }
 
 /// A type which encodes as a dictionary directly through a single value container.
-fileprivate final class Mapping : Codable, Equatable {
-    let values: [String : URL]
+private final class Mapping: Codable, Equatable {
+    let values: [String: URL]
 
-    init(values: [String : URL]) {
+    init(values: [String: URL]) {
         self.values = values
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        values = try container.decode([String : URL].self)
+        values = try container.decode([String: URL].self)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1051,20 +1048,20 @@ fileprivate final class Mapping : Codable, Equatable {
     }
 }
 
-struct NestedContainersTestType : Encodable {
+struct NestedContainersTestType: Encodable {
     let testSuperEncoder: Bool
 
     init(testSuperEncoder: Bool = false) {
         self.testSuperEncoder = testSuperEncoder
     }
 
-    enum TopLevelCodingKeys : Int, CodingKey {
+    enum TopLevelCodingKeys: Int, CodingKey {
         case a
         case b
         case c
     }
 
-    enum IntermediateCodingKeys : Int, CodingKey {
+    enum IntermediateCodingKeys: Int, CodingKey {
         case one
         case two
     }
@@ -1130,7 +1127,7 @@ struct NestedContainersTestType : Encodable {
             expectEqualPaths(firstLevelContainer.codingPath, baseCodingPath, "First-level keyed container's codingPath changed.")
             expectEqualPaths(secondLevelContainer.codingPath, baseCodingPath + [TopLevelCodingKeys.b], "Second-level unkeyed container's codingPath changed.")
             expectEqualPaths(thirdLevelContainerKeyed.codingPath, baseCodingPath + [TopLevelCodingKeys.b, _TestKey(index: 0)], "New third-level keyed container had unexpected codingPath.")
-            
+
             // Appending an unkeyed container should not change existing coding paths.
             let thirdLevelContainerUnkeyed = secondLevelContainer.nestedUnkeyedContainer()
             expectEqualPaths(encoder.codingPath, baseCodingPath, "Top-level Encoder's codingPath changed.")
@@ -1143,7 +1140,7 @@ struct NestedContainersTestType : Encodable {
 
 // MARK: - Helpers
 
-fileprivate struct YAML: Equatable {
+private struct YAML: Equatable {
     private var jsonObject: Any
 
     fileprivate init(data: Data) throws {
@@ -1221,7 +1218,7 @@ extension TestYAMLEncoder {
             // ("test_dictionary_snake_case_decoding", test_dictionary_snake_case_decoding),
             // ("test_dictionary_snake_case_encoding", test_dictionary_snake_case_encoding),
             ("test_OutputFormattingValues", test_OutputFormattingValues),
-            ("test_SR17581_codingEmptyDictionaryWithNonstringKeyDoesRoundtrip", test_SR17581_codingEmptyDictionaryWithNonstringKeyDoesRoundtrip),
+            ("test_SR17581_codingEmptyDictionaryWithNonstringKeyDoesRoundtrip", test_SR17581_codingEmptyDictionaryWithNonstringKeyDoesRoundtrip)
         ]
     }
 }

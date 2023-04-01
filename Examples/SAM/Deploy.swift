@@ -30,7 +30,7 @@ DeploymentDescriptor {
     EnvironmentVariables {
       [
         "NAME1": "VALUE1",
-        "NAME2": "VALUE2",
+        "NAME2": "VALUE2"
       ]
 
       // shared environment variables declared upfront
@@ -53,7 +53,8 @@ DeploymentDescriptor {
       // Sqs()
       //     .queue(logicalName: "LambdaQueueResource", physicalName: "swift-lambda-queue-resource")
 
-      // // this will reference a shared queue resource created in this deployment descriptor
+      // this references a shared queue resource created at the top of this deployment descriptor
+      // the queue resource will be created automatically, you do not need to add `sharedQueue` as a resource
       // Sqs(sharedQueue)
     }
 
@@ -63,9 +64,6 @@ DeploymentDescriptor {
 
     }
   }
-
-  // shared resources declared upfront
-  sharedQueue
 
   //
   // additional resources

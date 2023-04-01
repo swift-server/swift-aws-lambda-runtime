@@ -21,22 +21,24 @@ import Foundation
 // currently limited to the properties I needed for the examples.
 // An immediate TODO if this code is accepted is to add more properties and more struct
 public struct SAMDeploymentDescriptor: Encodable {
-    
+
     let templateVersion: String = "2010-09-09"
     let transform: String = "AWS::Serverless-2016-10-31"
     let description: String
     var resources: [String: Resource<ResourceType>] = [:]
-    
+
     public init(
         description: String = "A SAM template to deploy a Swift Lambda function",
         resources: [Resource<ResourceType>] = []
     ) {
         self.description = description
+
+        // extract resources names for serialization
         for res in resources {
             self.resources[res.name] = res
         }
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case templateVersion = "AWSTemplateFormatVersion"
         case transform = "Transform"
@@ -49,11 +51,22 @@ public protocol SAMResource: Encodable {}
 public protocol SAMResourceType: Encodable, Equatable {}
 public protocol SAMResourceProperties: Encodable {}
 
-public enum ResourceType: String, SAMResourceType {
-    case serverlessFunction = "AWS::Serverless::Function"
-    case queue = "AWS::SQS::Queue"
-    case table = "AWS::Serverless::SimpleTable"
+public enum ResourceType: SAMResourceType {
+
+    case type(_ name: String)
+
+    static var serverlessFunction: Self { .type("AWS::Serverless::Function") }
+    static var queue: Self { .type("AWS::SQS::Queue") }
+    static var table: Self { .type("AWS::Serverless::SimpleTable") }
+
+    public func encode(to encoder: Encoder) throws {
+        if case let .type(value) = self {
+            var container = encoder.singleValueContainer()
+            try? container.encode(value)
+        }
+    }
 }
+
 public enum EventSourceType: String, SAMResourceType {
     case httpApi = "HttpApi"
     case sqs = "SQS"
@@ -61,20 +74,20 @@ public enum EventSourceType: String, SAMResourceType {
 
 // generic type to represent either a top-level resource or an event source
 public struct Resource<T: SAMResourceType>: SAMResource, Equatable {
-    
+
     let type: T
     let properties: SAMResourceProperties?
     let name: String
-    
+
     public static func == (lhs: Resource<T>, rhs: Resource<T>) -> Bool {
         lhs.type == rhs.type && lhs.name == rhs.name
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case type = "Type"
         case properties = "Properties"
     }
-    
+
     // this is to make the compiler happy : Resource now conforms to Encodable
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -85,38 +98,18 @@ public struct Resource<T: SAMResourceType>: SAMResource, Equatable {
     }
 }
 
-//MARK: Lambda Function resource definition
+// MARK: Lambda Function resource definition
+
 /*---------------------------------------------------------------------------------------
  Lambda Function
  
  https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html
  -----------------------------------------------------------------------------------------*/
 
-extension Resource {
-    public static func serverlessFunction(
-        name: String,
-        architecture: Architectures,
-        codeUri: String?,
-        eventSources: [Resource<EventSourceType>] = [],
-        environment: SAMEnvironmentVariable = .none
-    ) -> Resource<ResourceType> {
-        
-        let properties = ServerlessFunctionProperties(
-            codeUri: codeUri,
-            architecture: architecture,
-            eventSources: eventSources,
-            environment: environment)
-        return Resource<ResourceType>(
-            type: .serverlessFunction,
-            properties: properties,
-            name: name)
-    }
-}
-
 public enum Architectures: String, Encodable, CaseIterable {
     case x64 = "x86_64"
     case arm64 = "arm64"
-    
+
     // the default value is the current architecture
     public static func defaultArchitecture() -> Architectures {
 #if arch(arm64)
@@ -125,7 +118,7 @@ public enum Architectures: String, Encodable, CaseIterable {
         return .x64
 #endif
     }
-    
+
     // valid values for error and help message
     public static func validValues() -> String {
         return Architectures.allCases.map { $0.rawValue }.joined(separator: ", ")
@@ -140,14 +133,14 @@ public struct ServerlessFunctionProperties: SAMResourceProperties {
     let autoPublishAlias: String
     var eventSources: [String: Resource<EventSourceType>]
     var environment: SAMEnvironmentVariable
-    
+
     public init(
         codeUri: String?,
         architecture: Architectures,
         eventSources: [Resource<EventSourceType>] = [],
         environment: SAMEnvironmentVariable = .none
     ) {
-        
+
         self.architectures = [architecture]
         self.handler = "Provided"
         self.runtime = "provided.al2"  // Amazon Linux 2 supports both arm64 and x64
@@ -155,12 +148,12 @@ public struct ServerlessFunctionProperties: SAMResourceProperties {
         self.codeUri = codeUri
         self.eventSources = [:]
         self.environment = environment
-        
+
         for es in eventSources {
             self.eventSources[es.name] = es
         }
     }
-    
+
     // custom encoding to not provide Environment variables when there is none
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -176,7 +169,7 @@ public struct ServerlessFunctionProperties: SAMResourceProperties {
             try container.encode(self.environment, forKey: .environment)
         }
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case architectures = "Architectures"
         case handler = "Handler"
@@ -194,7 +187,7 @@ public struct ServerlessFunctionProperties: SAMResourceProperties {
  LOG_LEVEL: debug
  */
 public struct SAMEnvironmentVariable: Encodable {
-    
+
     public var variables: [String: SAMEnvironmentVariableValue] = [:]
     public init() {}
     public init(_ variables: [String: String]) {
@@ -203,7 +196,7 @@ public struct SAMEnvironmentVariable: Encodable {
         }
     }
     public static var none: SAMEnvironmentVariable { return SAMEnvironmentVariable([:]) }
-    
+
     public static func variable(_ name: String, _ value: String) -> SAMEnvironmentVariable {
         return SAMEnvironmentVariable([name: value])
     }
@@ -211,18 +204,18 @@ public struct SAMEnvironmentVariable: Encodable {
         return SAMEnvironmentVariable(variables)
     }
     public static func variable(_ variables: [[String: String]]) -> SAMEnvironmentVariable {
-        
+
         var mergedDictKeepCurrent: [String: String] = [:]
         variables.forEach { dict in
             // inspired by https://stackoverflow.com/a/43615143/663360
             mergedDictKeepCurrent = mergedDictKeepCurrent.merging(dict) { (current, _) in current }
         }
-        
+
         return SAMEnvironmentVariable(mergedDictKeepCurrent)
-        
+
     }
     public func isEmpty() -> Bool { return variables.count == 0 }
-    
+
     public mutating func append(_ key: String, _ value: String) {
         variables[key] = .string(value: value)
     }
@@ -235,15 +228,15 @@ public struct SAMEnvironmentVariable: Encodable {
     public mutating func append(_ key: String, _ value: Resource<ResourceType>) {
         variables[key] = .array(value: ["Ref": value.name])
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case variables = "Variables"
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         var nestedContainer = container.nestedContainer(keyedBy: AnyStringKey.self, forKey: .variables)
-        
+
         for key in variables.keys {
             switch variables[key] {
             case .string(let value):
@@ -257,57 +250,38 @@ public struct SAMEnvironmentVariable: Encodable {
             }
         }
     }
-    
+
     public enum SAMEnvironmentVariableValue {
         // KEY: VALUE
         case string(value: String)
-        
+
         // KEY:
         //    Ref: VALUE
         case array(value: [String: String])
-        
+
         // KEY:
         //    Fn::GetAtt:
         //      - VALUE1
         //      - VALUE2
         case dictionary(value: [String: [String]])
     }
-    
-    private struct AnyStringKey: CodingKey, Hashable, ExpressibleByStringLiteral {
-        var stringValue: String
-        init(stringValue: String) { self.stringValue = stringValue }
-        init(_ stringValue: String) { self.init(stringValue: stringValue) }
-        var intValue: Int?
-        init?(intValue: Int) { return nil }
-        init(stringLiteral value: String) { self.init(value) }
-    }
 }
 
-//MARK: HTTP API Event definition
+internal struct AnyStringKey: CodingKey, Hashable, ExpressibleByStringLiteral {
+    var stringValue: String
+    init(stringValue: String) { self.stringValue = stringValue }
+    init(_ stringValue: String) { self.init(stringValue: stringValue) }
+    var intValue: Int?
+    init?(intValue: Int) { return nil }
+    init(stringLiteral value: String) { self.init(value) }
+}
+
+// MARK: HTTP API Event definition
 /*---------------------------------------------------------------------------------------
  HTTP API Event (API Gateway v2)
  
  https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-httpapi.html
  -----------------------------------------------------------------------------------------*/
-
-extension Resource {
-    public static func httpApi(
-        name: String = "HttpApiEvent",
-        method: HttpVerb? = nil,
-        path: String? = nil
-    ) -> Resource<EventSourceType> {
-        
-        var properties: SAMResourceProperties? = nil
-        if method != nil || path != nil {
-            properties = HttpApiProperties(method: method, path: path)
-        }
-        
-        return Resource<EventSourceType>(
-            type: .httpApi,
-            properties: properties,
-            name: name)
-    }
-}
 
 struct HttpApiProperties: SAMResourceProperties, Equatable {
     init(method: HttpVerb? = nil, path: String? = nil) {
@@ -325,7 +299,7 @@ struct HttpApiProperties: SAMResourceProperties, Equatable {
     }
     let method: HttpVerb?
     let path: String?
-    
+
     enum HttpApiKeys: String, CodingKey {
         case method = "Method"
         case path = "Path"
@@ -337,61 +311,26 @@ public enum HttpVerb: String, Encodable {
     case POST
 }
 
-//MARK: SQS event definition
+// MARK: SQS event definition
 /*---------------------------------------------------------------------------------------
  SQS Event
  
  https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-sqs.html
  -----------------------------------------------------------------------------------------*/
 
-extension Resource {
-    internal static func sqs(name: String = "SQSEvent", properties: SQSEventProperties) -> Resource<EventSourceType> {
-        
-        return Resource<EventSourceType>(
-            type: .sqs,
-            properties: properties,
-            name: name)
-    }
-    public static func sqs(name: String = "SQSEvent",
-                           queue queueRef: String,
-                           batchSize: Int = 10,
-                           enabled: Bool = true) -> Resource<EventSourceType> {
-        
-        let properties = SQSEventProperties(byRef: queueRef,
-                                                   batchSize: batchSize,
-                                                   enabled: enabled)
-        return Resource<EventSourceType>.sqs(
-            name: name,
-            properties: properties)
-    }
-    
-    public static func sqs(name: String = "SQSEvent",                           
-                           queue: Resource<ResourceType>,
-                           batchSize: Int = 10,
-                           enabled: Bool = true) -> Resource<EventSourceType> {
-        
-        let properties = SQSEventProperties(queue,
-                                            batchSize: batchSize,
-                                            enabled: enabled)
-        return Resource<EventSourceType>.sqs(
-            name: name,
-            properties: properties)
-    }
-}
-
 /// Represents SQS queue properties.
 /// When `queue` name  is a shorthand YAML reference to another resource, like `!GetAtt`, it splits the shorthand into proper YAML to make the parser happy
 public struct SQSEventProperties: SAMResourceProperties, Equatable {
-    
-    public var queueByArn: String? = nil
-    public var queue: Resource<ResourceType>? = nil
-    public var batchSize : Int
-    public var enabled : Bool
-    
+
+    public var queueByArn: String?
+    public var queue: Resource<ResourceType>?
+    public var batchSize: Int
+    public var enabled: Bool
+
     init(byRef ref: String,
          batchSize: Int,
          enabled: Bool) {
-        
+
         // when the ref is an ARN, leave it as it, otherwise, create a queue resource and pass a reference to it
         if let arn = Arn(ref)?.arn {
             self.queueByArn = arn
@@ -399,32 +338,32 @@ public struct SQSEventProperties: SAMResourceProperties, Equatable {
             let logicalName = Resource<EventSourceType>.logicalName(
                                             resourceType: "Queue",
                                             resourceName: ref)
-            self.queue = Resource<ResourceType>.queue(
-                                                name: logicalName,
-                                                properties: SQSResourceProperties(queueName: ref))
-        }   
+            self.queue = Resource<ResourceType>(type: .queue,
+                                                properties: SQSResourceProperties(queueName: ref),
+                                                name: logicalName)
+        }
         self.batchSize = batchSize
         self.enabled = enabled
     }
 
     init(_ queue: Resource<ResourceType>,
          batchSize: Int,
-         enabled: Bool) { 
+         enabled: Bool) {
 
         self.queue = queue
         self.batchSize = batchSize
         self.enabled = enabled
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case queue = "Queue"
         case batchSize = "BatchSize"
         case enabled = "Enabled"
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        
+
         // if we have an Arn, return the Arn, otherwise pass a reference with GetAtt
         // https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-sqs.html#sam-function-sqs-queue
         if let queueByArn {
@@ -439,34 +378,13 @@ public struct SQSEventProperties: SAMResourceProperties, Equatable {
     }
 }
 
-//MARK: SQS queue resource definition
+// MARK: SQS queue resource definition
 /*---------------------------------------------------------------------------------------
  SQS Queue Resource
  
  Documentation
  https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-sqs-queue.html
  -----------------------------------------------------------------------------------------*/
-extension Resource {
-    internal static func queue(
-        name: String,
-        properties: SQSResourceProperties
-    ) -> Resource<ResourceType> {
-        
-        return Resource<ResourceType>(
-            type: .queue,
-            properties: properties,
-            name: name)
-    }
-    
-    public static func queue(
-        logicalName: String,
-        physicalName: String
-    ) -> Resource<ResourceType> {
-        
-        let sqsProperties = SQSResourceProperties(queueName: physicalName)
-        return queue(name: logicalName, properties: sqsProperties)
-    }
-}
 
 public struct SQSResourceProperties: SAMResourceProperties {
     public let queueName: String
@@ -475,36 +393,13 @@ public struct SQSResourceProperties: SAMResourceProperties {
     }
 }
 
-//MARK: Simple DynamoDB table resource definition
+// MARK: Simple DynamoDB table resource definition
 /*---------------------------------------------------------------------------------------
  Simple DynamoDB Table Resource
  
  Documentation
  https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-simpletable.html
  -----------------------------------------------------------------------------------------*/
-
-extension Resource {
-    internal static func table(
-        name: String,
-        properties: SimpleTableProperties
-    ) -> Resource<ResourceType> {
-        
-        return Resource<ResourceType>(
-            type: .table,
-            properties: properties,
-            name: name)
-    }
-    public static func table(
-        logicalName: String,
-        physicalName: String,
-        primaryKeyName: String,
-        primaryKeyType: String
-    ) -> Resource<ResourceType> {
-        let primaryKey = SimpleTableProperties.PrimaryKey(name: primaryKeyName, type: primaryKeyType)
-        let properties = SimpleTableProperties(primaryKey: primaryKey, tableName: physicalName)
-        return table(name: logicalName, properties: properties)
-    }
-}
 
 public struct SimpleTableProperties: SAMResourceProperties {
     let primaryKey: PrimaryKey
@@ -541,7 +436,7 @@ public struct SimpleTableProperties: SAMResourceProperties {
     }
 }
 
-//MARK: Utils
+// MARK: Utils
 
 struct Arn {
     public let arn: String
