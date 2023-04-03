@@ -52,9 +52,6 @@ let package = Package(
       dependencies: [
         "HttpApiLambda", "SQSLambda",
         .product(name: "AWSLambdaTesting", package: "swift-aws-lambda-runtime"),
-        // This dependency must be included to force Swift to build the deployment descriptor dynamic library
-        // It can be on any target. But as of Swift 5.8, it can not be added to the plugin target itself 😢
-        .product(name: "AWSLambdaDeploymentDescriptor", package: "swift-aws-lambda-runtime")
       ],
       // testing data 
       resources: [

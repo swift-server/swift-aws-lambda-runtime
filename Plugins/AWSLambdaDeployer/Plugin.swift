@@ -48,6 +48,12 @@ struct AWSLambdaDeployer: CommandPlugin {
                                                      regionFromCommandLine: configuration.region,
                                                      verboseLogging: configuration.verboseLogging)
         
+        // build the shared lib to compile the deployment descriptor
+        try self.compileSharedLibrary(projectDirectory: context.package.directory,
+                                              buildConfiguration: configuration.buildConfiguration,
+                                              swiftExecutable: swiftExecutablePath,
+                                              verboseLogging: configuration.verboseLogging)
+
         // generate the deployment descriptor
         try self.generateDeploymentDescriptor(projectDirectory: context.package.directory,
                                               buildConfiguration: configuration.buildConfiguration,
@@ -90,7 +96,26 @@ struct AWSLambdaDeployer: CommandPlugin {
             print(output)
         }
     }
-    
+
+    private func compileSharedLibrary(projectDirectory: Path,
+                                      buildConfiguration: PackageManager.BuildConfiguration,
+                                      swiftExecutable: Path,
+                                      verboseLogging: Bool) throws {
+        print("-------------------------------------------------------------------------")
+        print("Compile shared library")
+        print("-------------------------------------------------------------------------")
+
+        let cmd = [ "swift", "build",
+                    "-c", buildConfiguration.rawValue,
+                    "--product", "AWSLambdaDeploymentDescriptor"]
+
+        try Utils.execute(executable: swiftExecutable,
+                          arguments: Array(cmd.dropFirst()),
+                          customWorkingDirectory: projectDirectory,
+                          logLevel: verboseLogging ? .debug : .silent)
+
+    }
+
     private func generateDeploymentDescriptor(projectDirectory: Path,
                                               buildConfiguration: PackageManager.BuildConfiguration,
                                               swiftExecutable: Path,
@@ -408,7 +433,7 @@ OPTIONS:
     --configuration <configuration>
                     Build for a specific configuration.
                     Must be aligned with what was used to build and package.
-                    Valid values: [ debug, release ] (default: debug)
+                    Valid values: [ debug, release ] (default: release)
     --force         Overwrites existing SAM deployment descriptor.
     --nodeploy      Generates the YAML deployment descriptor, but do not deploy.
     --nolist        Do not list endpoints.
