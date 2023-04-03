@@ -479,7 +479,7 @@ private struct Configuration: CustomStringConvertible {
             }
             self.buildConfiguration = buildConfiguration
         } else {
-            self.buildConfiguration = .debug
+            self.buildConfiguration = .release
         }
         
         // use a default archive directory when none are given
