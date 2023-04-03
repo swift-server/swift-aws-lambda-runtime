@@ -110,11 +110,24 @@ struct AWSLambdaPackager: CommandPlugin {
         for product in products {
             print("building \"\(product.name)\"")
             let buildCommand = "swift build -c \(buildConfiguration.rawValue) --product \(product.name) --static-swift-stdlib"
-            try Utils.execute(
-                executable: dockerToolPath,
-                arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildCommand],
-                logLevel: verboseLogging ? .debug : .output
-            )
+            if ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"] != nil {
+                // when developing locally, we must have the full swift-aws-lambda-runtime project in the container
+                // because Examples' Package.swift have a dependency on ../..
+                // just like Package.swift's examples assume ../.., we assume we are two levels below the root project
+                let lastComponent = packageDirectory.lastComponent
+                let beforeLastComponent = packageDirectory.removingLastComponent().lastComponent
+                try Utils.execute(
+                    executable: dockerToolPath,
+                    arguments: ["run", "--rm", "--env", "LAMBDA_USE_LOCAL_DEPS=true", "-v", "\(packageDirectory.string)/../..:/workspace", "-w", "/workspace/\(beforeLastComponent)/\(lastComponent)", baseImage, "bash", "-cl", buildCommand],
+                    logLevel: verboseLogging ? .debug : .output
+                )
+            } else {
+                try Utils.execute(
+                    executable: dockerToolPath,
+                    arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildCommand],
+                    logLevel: verboseLogging ? .debug : .output
+                )
+            }
             let productPath = buildOutputPath.appending(product.name)
             guard FileManager.default.fileExists(atPath: productPath.string) else {
                 Diagnostics.error("expected '\(product.name)' binary at \"\(productPath.string)\"")
