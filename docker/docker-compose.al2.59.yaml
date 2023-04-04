@@ -3,16 +3,16 @@ version: "3"
 services:
 
   runtime-setup:
-    image: swift-aws-lambda:al2-main
+    image: swift-aws-lambda:al2-5.9
     build:
       args:
         base_image: "swiftlang/swift:nightly-5.9-amazonlinux2"
 
   test:
-    image: swift-aws-lambda:al2-main
+    image: swift-aws-lambda:al2-5.9
 
   test-examples:
-    image: swift-aws-lambda:al2-main
+    image: swift-aws-lambda:al2-5.9
 
   shell:
-    image: swift-aws-lambda:al2-main
+    image: swift-aws-lambda:al2-5.9
