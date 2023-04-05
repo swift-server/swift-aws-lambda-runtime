@@ -383,26 +383,31 @@ image_repositories = []
         if let awsCLIPath  = try? self.findExecutable(context: context,
                                                       executableName: "aws",
                                                       helpMessage: "aws command line is used to find default AWS region. (brew install awscli)",
-                                                      verboseLogging: verboseLogging) {    
+                                                      verboseLogging: verboseLogging) {
 
-            // aws --profile default configure get region
-            do {
-                result = try Utils.execute(
-                    executable: awsCLIPath,
-                    arguments: ["--profile", "default",
-                                "configure",
-                                "get", "region"],
-                    logLevel: verboseLogging ? .debug : .silent)
+            let userDir = FileManager.default.homeDirectoryForCurrentUser.path
+            if FileManager.default.fileExists(atPath: "\(userDir)/.aws/config") {
+                // aws --profile default configure get region
+                do {
+                    result = try Utils.execute(
+                        executable: awsCLIPath,
+                        arguments: ["--profile", "default",
+                                    "configure",
+                                    "get", "region"],
+                        logLevel: verboseLogging ? .debug : .silent)
+                    
+                    result?.removeLast() // remove trailing newline char
+                } catch {
+                    print("Unexpected error : \(error)")
+                    throw DeployerPluginError.error(error)
+                }
                 
-                result?.removeLast() // remove trailing newline char
-            } catch {
-                print("Unexpected error : \(error)")
-                throw DeployerPluginError.error(error)
-            }
-            
-            guard result == nil else {
-                print("AWS Region : \(result!) (from AWS CLI configuration)")
-                return result!
+                guard result == nil else {
+                    print("AWS Region : \(result!) (from AWS CLI configuration)")
+                    return result!
+                }
+            } else {
+                print("AWS CLI is not configured. Type `aws configure` to create a profile.")
             }
         }
 
