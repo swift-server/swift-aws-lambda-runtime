@@ -11,7 +11,7 @@ let sharedEnvironmentVariables = ["LOG_LEVEL": "debug"]
 // the deployment descriptor
 DeploymentDescriptor {
 
-  // a mandatory description
+  // an optional description
   "Description of this deployment descriptor"
 
   // a lambda function

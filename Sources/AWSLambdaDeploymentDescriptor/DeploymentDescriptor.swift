@@ -28,7 +28,7 @@ public struct SAMDeploymentDescriptor: Encodable {
     var resources: [String: Resource<ResourceType>] = [:]
 
     public init(
-        description: String = "A SAM template to deploy a Swift Lambda function",
+        description: String,
         resources: [Resource<ResourceType>] = []
     ) {
         self.description = description

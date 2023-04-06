@@ -28,7 +28,7 @@ public struct DeploymentDescriptor {
     // MARK: Generation of the SAM Deployment Descriptor
 
     private init(
-        description: String,
+        description: String = "A SAM template to deploy a Swift Lambda function",
         resources: [Resource<ResourceType>]
     ) {
 
@@ -55,17 +55,18 @@ public struct DeploymentDescriptor {
         self = builder()
     }
     public static func buildBlock(_ description: String,
-                                  _ resources: [Resource<ResourceType>]...) -> (String, [Resource<ResourceType>]) {
+                                  _ resources: [Resource<ResourceType>]...) -> (String?, [Resource<ResourceType>]) {
         return (description, resources.flatMap { $0 })
     }
-    @available(*, unavailable,
-                message: "The first statement of DeploymentDescriptor must be its description String"
-    )
-    public static func buildBlock(_ resources: [Resource<ResourceType>]...) -> (String, [Resource<ResourceType>]) {
-        fatalError()
+    public static func buildBlock(_ resources: [Resource<ResourceType>]...) -> (String?, [Resource<ResourceType>]) {
+        return (nil, resources.flatMap { $0 })
     }
-    public static func buildFinalResult(_ function: (String, [Resource<ResourceType>])) -> DeploymentDescriptor {
-        return DeploymentDescriptor(description: function.0, resources: function.1)
+    public static func buildFinalResult(_ function: (String?, [Resource<ResourceType>])) -> DeploymentDescriptor {
+        if let description = function.0 {
+            return DeploymentDescriptor(description: description, resources: function.1)
+        } else {
+            return DeploymentDescriptor(resources: function.1)
+        }
     }
     public static func buildExpression(_ expression: String) -> String {
         return expression
