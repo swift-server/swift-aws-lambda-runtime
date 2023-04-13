@@ -15,28 +15,40 @@
 @testable import AWSLambdaDeploymentDescriptor
 import XCTest
 
-private enum TestError: Error {
-    case canNotCreateDummyPackage(uri: String)
-}
 class DeploymentDescriptorBaseTest: XCTestCase {
 
     var codeURI: String! = nil
     let fileManager = FileManager.default
+    let functionName = MockDeploymentDescriptorBuilder.functionName
 
     override func setUpWithError() throws {
         // create a fake lambda package zip file 
-        codeURI = "\(fileManager.temporaryDirectory.path)/fakeLambda.zip"
-        if !fileManager.createFile(atPath: codeURI!,
-                                   contents: codeURI.data(using: .utf8),
-                                   attributes: [.posixPermissions: 0o700]) {
-            throw TestError.canNotCreateDummyPackage(uri: codeURI)
-        }
+        let (_, tempFile) = try self.prepareTemporaryPackageFile()
+        self.codeURI = tempFile
     }
 
     override func tearDownWithError() throws {
         // delete the fake lambda package (silently ignore errors)
-        try? fileManager.removeItem(atPath: codeURI!)
-        codeURI = nil
+        try self.deleteTemporaryPackageFile(self.codeURI)
+        self.codeURI = nil
+    }
+    
+    @discardableResult
+    func prepareTemporaryPackageFile() throws -> (String, String) {
+        let fm = FileManager.default
+        let tempDir = fm.temporaryDirectory
+        let packageDir = MockDeploymentDescriptorBuilder.packageDir()
+        let packageZip = MockDeploymentDescriptorBuilder.packageZip()
+        try fm.createDirectory(atPath: tempDir.path + packageDir,
+                               withIntermediateDirectories: true)
+        let tempFile = tempDir.path + packageDir + packageZip
+        XCTAssertTrue(fm.createFile(atPath: tempFile, contents: nil))
+        return (tempDir.path, tempFile)
+    }
+
+    func deleteTemporaryPackageFile(_ file: String) {
+        let fm = FileManager.default
+        try? fm.removeItem(atPath: file)
     }
 
     // expected YAML values are either
@@ -122,7 +134,6 @@ class DeploymentDescriptorBaseTest: XCTestCase {
             Expected.keyValue(indent: 2, keyValue: ["Type": "AWS::Serverless::Function"]),
             Expected.keyOnly(indent: 2, key: "Properties"),
             Expected.keyValue(indent: 3, keyValue: [
-                "AutoPublishAlias": "Live",
                 "Handler": "Provided",
                 "CodeUri": self.codeURI,
                 "Runtime": "provided.al2"]),

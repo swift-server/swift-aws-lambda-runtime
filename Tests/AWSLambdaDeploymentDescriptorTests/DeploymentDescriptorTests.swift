@@ -41,13 +41,194 @@ final class DeploymentDescriptorTests: DeploymentDescriptorBaseTest {
     func testLambdaFunctionWithSpecificArchitectures() {
 
         // given
-        let expected = [expectedFunction(architecture: Architectures.x64.rawValue),
-                                  expectedSAMHeaders()]
-                                  .flatMap { $0 }
+        let expected = [expectedFunction(architecture: ServerlessFunctionProperties.Architectures.x64.rawValue),
+                        expectedSAMHeaders()]
+                        .flatMap { $0 }
 
+        // when
         let testDeployment = MockDeploymentDescriptor(withFunction: true,
                                                       architecture: .x64,
                                                       codeURI: self.codeURI)
+
+        // then 
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
+                                                               expected: expected))
+    }
+
+    func testAllFunctionProperties() {
+
+        // given
+        let expected = [Expected.keyValue(indent: 3,
+                                          keyValue: ["AutoPublishAliasAllProperties": "true",
+                                                     "AutoPublishAlias" : "alias",
+                                                     "AutoPublishCodeSha256" : "sha256",
+                                                     "Description" : "my function description"
+                                                    ] ),
+                        Expected.keyOnly(indent: 3, key: "EphemeralStorage"),
+                        Expected.keyValue(indent: 4, keyValue: ["Size": "1024"])
+        ]
+
+        // when                                                     
+        var functionProperties = ServerlessFunctionProperties(codeUri: self.codeURI, architecture: .arm64)
+        functionProperties.autoPublishAliasAllProperties = true
+        functionProperties.autoPublishAlias = "alias"
+        functionProperties.autoPublishCodeSha256 = "sha256"
+        functionProperties.description = "my function description"
+        functionProperties.ephemeralStorage = ServerlessFunctionProperties.EphemeralStorage(1024)
+        let functionToTest = Resource<ResourceType>(type: .serverlessFunction,
+                                                    properties: functionProperties,
+                                                    name: functionName)
+
+        // then
+        let testDeployment = MockDeploymentDescriptor(withFunction: false,
+                                                codeURI: self.codeURI,
+                                                additionalResources: [ functionToTest ])
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
+                                                               expected: expected))
+    }
+    
+    func testEventInvokeConfig() {
+        // given
+        let expected = [
+            Expected.keyOnly(indent: 3, key: "EventInvokeConfig"),
+            Expected.keyOnly(indent: 4, key: "DestinationConfig"),
+            Expected.keyOnly(indent: 5, key: "OnSuccess"),
+            Expected.keyValue(indent: 6, keyValue: ["Type" : "SNS"]),
+            Expected.keyOnly(indent: 5, key: "OnFailure"),
+            Expected.keyValue(indent: 6, keyValue: ["Destination" : "arn:aws:sqs:eu-central-1:012345678901:lambda-test"]),
+            Expected.keyValue(indent: 6, keyValue: ["Type" : "Lambda"])
+        ]
+        
+        // when
+        var functionProperties = ServerlessFunctionProperties(codeUri: self.codeURI, architecture: .arm64)
+        let validArn = "arn:aws:sqs:eu-central-1:012345678901:lambda-test"
+        let arn = Arn(validArn)
+        let destination1 = ServerlessFunctionProperties.EventInvokeConfiguration.EventInvokeDestination(destination: nil,
+                                                                                                        type: .sns)
+        let destination2 = ServerlessFunctionProperties.EventInvokeConfiguration.EventInvokeDestination(destination: .arn(arn!),
+                                                                                                        type: .lambda)
+        let destinations = ServerlessFunctionProperties.EventInvokeConfiguration.EventInvokeDestinationConfiguration(
+            onSuccess: destination1,
+            onFailure: destination2)
+        
+        let invokeConfig = ServerlessFunctionProperties.EventInvokeConfiguration(
+            destinationConfig: destinations,
+            maximumEventAgeInSeconds: 999,
+            maximumRetryAttempts: 33)
+        functionProperties.eventInvokeConfig = invokeConfig
+        let functionToTest = Resource<ResourceType>(type: .serverlessFunction,
+                                                    properties: functionProperties,
+                                                    name: functionName)
+
+        // then
+        let testDeployment = MockDeploymentDescriptor(withFunction: false,
+                                                codeURI: self.codeURI,
+                                                additionalResources: [ functionToTest ])
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
+                                                               expected: expected))
+
+    }
+
+    func testFileSystemConfig() {
+        // given
+        let validArn = "arn:aws:elasticfilesystem:eu-central-1:012345678901:access-point/fsap-abcdef01234567890"
+        let mount1 = "/mnt/path1"
+        let mount2 = "/mnt/path2"
+        let expected = [
+            Expected.keyOnly(indent: 3, key: "FileSystemConfigs"),
+            Expected.arrayKey(indent: 4, key: ""),
+            Expected.keyValue(indent: 5, keyValue: ["Arn":validArn,
+                                                    "LocalMountPath" : mount1]),
+            Expected.keyValue(indent: 5, keyValue: ["Arn":validArn,
+                                                    "LocalMountPath" : mount2])
+        ]
+        
+        // when
+        var functionProperties = ServerlessFunctionProperties(codeUri: self.codeURI, architecture: .arm64)
+        
+        if let fileSystemConfig1 = ServerlessFunctionProperties.FileSystemConfig(arn: validArn, localMountPath: mount1),
+           let fileSystemConfig2 = ServerlessFunctionProperties.FileSystemConfig(arn: validArn, localMountPath: mount2) {
+            functionProperties.fileSystemConfigs = [fileSystemConfig1, fileSystemConfig2]
+        } else {
+            XCTFail("Invalid Arn or MountPoint")
+        }
+
+        let functionToTest = Resource<ResourceType>(type: .serverlessFunction,
+                                                    properties: functionProperties,
+                                                    name: functionName)
+
+        // then
+        let testDeployment = MockDeploymentDescriptor(withFunction: false,
+                                                codeURI: self.codeURI,
+                                                additionalResources: [ functionToTest ])
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
+                                                               expected: expected))
+    }
+    
+    func testInvalidFileSystemConfig() {
+        // given
+        let validArn = "arn:aws:elasticfilesystem:eu-central-1:012345678901:access-point/fsap-abcdef01234567890"
+        let invalidArn1 = "arn:aws:sqs:eu-central-1:012345678901:lambda-test"
+        let invalidArn2 = "arn:aws:elasticfilesystem:eu-central-1:012345678901:access-point/fsap-abcdef01234"
+
+        // when
+        // mount path is not conform (should be /mnt/something)
+        let fileSystemConfig1 = ServerlessFunctionProperties.FileSystemConfig(arn: validArn, localMountPath: "/mnt1")
+        // arn is not conform (should be an elastic filesystem)
+        let fileSystemConfig2 = ServerlessFunctionProperties.FileSystemConfig(arn: invalidArn1, localMountPath: "/mnt/path1")
+        // arn is not conform (should have 17 digits in the ID)
+        let fileSystemConfig3 = ServerlessFunctionProperties.FileSystemConfig(arn: invalidArn2, localMountPath: "/mnt/path1")
+        // OK
+        let fileSystemConfig4 = ServerlessFunctionProperties.FileSystemConfig(arn: validArn, localMountPath: "/mnt/path1")
+
+        // then
+        XCTAssertNil(fileSystemConfig1)
+        XCTAssertNil(fileSystemConfig2)
+        XCTAssertNil(fileSystemConfig3)
+        XCTAssertNotNil(fileSystemConfig4)
+    }
+    
+    func testURLConfig() {
+        // given
+        let expected = [
+            Expected.keyOnly(indent: 3, key: "FunctionUrlConfig"),
+            Expected.keyValue(indent: 4, keyValue: ["AuthType" : "AWS_IAM"]),
+            Expected.keyValue(indent: 4, keyValue: ["InvokeMode" : "BUFFERED"]),
+            Expected.keyOnly(indent: 4, key: "Cors"),
+            Expected.keyValue(indent: 5, keyValue: ["MaxAge":"99",
+                                                    "AllowCredentials" : "true"]),
+            Expected.keyOnly(indent: 5, key: "AllowHeaders"),
+            Expected.arrayKey(indent: 6, key: "allowHeaders"),
+            Expected.keyOnly(indent: 5, key: "AllowMethods"),
+            Expected.arrayKey(indent: 6, key: "allowMethod"),
+            Expected.keyOnly(indent: 5, key: "AllowOrigins"),
+            Expected.arrayKey(indent: 6, key: "allowOrigin"),
+            Expected.keyOnly(indent: 5, key: "ExposeHeaders"),
+            Expected.arrayKey(indent: 6, key: "exposeHeaders")
+        ]
+        
+        // when
+        var functionProperties = ServerlessFunctionProperties(codeUri: self.codeURI, architecture: .arm64)
+        
+        let cors = ServerlessFunctionProperties.URLConfig.Cors(allowCredentials: true,
+                                                               allowHeaders: ["allowHeaders"],
+                                                               allowMethods: ["allowMethod"],
+                                                               allowOrigins: ["allowOrigin"],
+                                                               exposeHeaders: ["exposeHeaders"],
+                                                               maxAge: 99)
+        let config = ServerlessFunctionProperties.URLConfig(authType: .iam,
+                                                            cors: cors,
+                                                            invokeMode: .buffered)
+        functionProperties.functionUrlConfig = config
+
+        let functionToTest = Resource<ResourceType>(type: .serverlessFunction,
+                                                    properties: functionProperties,
+                                                    name: functionName)
+
+        // then
+        let testDeployment = MockDeploymentDescriptor(withFunction: false,
+                                                codeURI: self.codeURI,
+                                                additionalResources: [ functionToTest ])
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
                                                                expected: expected))
     }
@@ -109,7 +290,7 @@ final class DeploymentDescriptorTests: DeploymentDescriptorBaseTest {
 
         // given
         let expected = expectedSAMHeaders() +
-                       expectedFunction(architecture: Architectures.defaultArchitecture().rawValue) +
+        expectedFunction(architecture: ServerlessFunctionProperties.Architectures.defaultArchitecture().rawValue) +
         [
             Expected.keyOnly(indent: 4, key: "HttpApiEvent"),
             Expected.keyValue(indent: 5, keyValue: ["Type": "HttpApi"])
@@ -134,7 +315,7 @@ final class DeploymentDescriptorTests: DeploymentDescriptorBaseTest {
 
         // given
         let expected = expectedSAMHeaders() +
-                       expectedFunction(architecture: Architectures.defaultArchitecture().rawValue) +
+        expectedFunction(architecture: ServerlessFunctionProperties.Architectures.defaultArchitecture().rawValue) +
         [
             Expected.keyOnly(indent: 4, key: "HttpApiEvent"),
             Expected.keyValue(indent: 5, keyValue: ["Type": "HttpApi"]),
@@ -291,6 +472,18 @@ final class DeploymentDescriptorTests: DeploymentDescriptorBaseTest {
                                                                expected: expected))
     }
 
+    func testEncodeArn() throws {
+        // given
+        let validArn = "arn:aws:sqs:eu-central-1:012345678901:lambda-test"
+
+        // when
+        let arn = Arn(validArn)
+        let yaml = try YAMLEncoder().encode(arn)
+
+        // then
+        XCTAssertEqual(String(data: yaml, encoding: .utf8), arn?.arn)
+    }
+
     func testArnOK() {
         // given
         let validArn = "arn:aws:sqs:eu-central-1:012345678901:lambda-test"
@@ -311,6 +504,35 @@ final class DeploymentDescriptorTests: DeploymentDescriptorBaseTest {
 
         // then
         XCTAssertNil(arn)
+    }
+
+    func testServicefromArn() {
+        // given
+        var validArn = "arn:aws:sqs:eu-central-1:012345678901:lambda-test"
+
+        // when
+        var arn = Arn(validArn)
+
+        // then
+        XCTAssertEqual("sqs", arn!.service())
+
+        // given
+        validArn = "arn:aws:lambda:eu-central-1:012345678901:lambda-test"
+
+        // when
+        arn = Arn(validArn)
+
+        // then
+        XCTAssertEqual("lambda", arn!.service())
+
+        // given
+        validArn = "arn:aws:event-bridge:eu-central-1:012345678901:lambda-test"
+
+        // when
+        arn = Arn(validArn)
+
+        // then
+        XCTAssertEqual("event-bridge", arn!.service())
     }
 
 }

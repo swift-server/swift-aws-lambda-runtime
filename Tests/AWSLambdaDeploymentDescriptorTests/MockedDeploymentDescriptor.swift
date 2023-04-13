@@ -13,6 +13,7 @@
 // ===----------------------------------------------------------------------===//
 
 import Foundation
+import XCTest
 @testable import AWSLambdaDeploymentDescriptor
 
 protocol MockDeploymentDescriptorBehavior {
@@ -25,7 +26,7 @@ struct MockDeploymentDescriptor: MockDeploymentDescriptorBehavior {
     let deploymentDescriptor: SAMDeploymentDescriptor
 
     init(withFunction: Bool = true,
-         architecture: Architectures = Architectures.defaultArchitecture(),
+         architecture: ServerlessFunctionProperties.Architectures = .defaultArchitecture(),
          codeURI: String,
          eventSource: [Resource<EventSourceType>]? = nil,
          environmentVariable: SAMEnvironmentVariable? = nil,
@@ -67,8 +68,21 @@ struct MockDeploymentDescriptorBuilder: MockDeploymentDescriptorBehavior {
     static let functionName = "TestLambda"
     let deploymentDescriptor: DeploymentDescriptor
 
+    init(withResource function: Function) {
+        XCTAssert(function.resources().count == 1)
+        self.init(withResource: function.resources()[0])
+    }
+    init(withResource table: Table) {
+        self.init(withResource: table.resource())
+    }
+    init(withResource: Resource<ResourceType>) {
+        self.deploymentDescriptor = DeploymentDescriptor {
+            "A SAM template to deploy a Swift Lambda function"
+            withResource
+        }
+    }
     init(withFunction: Bool = true,
-         architecture: Architectures = Architectures.defaultArchitecture(),
+         architecture: ServerlessFunctionProperties.Architectures = .defaultArchitecture(),
          codeURI: String,
          eventSource: Resource<EventSourceType>,
          environmentVariable: [String: String]) {
