@@ -40,6 +40,14 @@ let package = Package(
       path: "./HttpApiLambda"
     ),
     .executableTarget(
+      name: "UrlLambda",
+      dependencies: [
+        .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+        .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events")
+      ],
+      path: "./UrlLambda"
+    ),
+    .executableTarget(
       name: "SQSLambda",
       dependencies: [
         .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
