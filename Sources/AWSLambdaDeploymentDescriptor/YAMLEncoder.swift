@@ -106,11 +106,19 @@ open class YAMLEncoder {
     public enum KeyEncodingStrategy {
         /// Use the keys specified by each type. This is the default strategy.
         case useDefaultKeys
+        
+        /// convert keyname to camelcase.
+        /// for example myMaxValue becomes MyMaxValue
+        case camelCase
 
         /// Provide a custom conversion to the key in the encoded YAML from the keys specified by the encoded types.
         /// The full path to the current encoding position is provided for context (in case you need to locate this key within the payload). The returned key is used in place of the last component in the coding path before encoding.
         /// If the result of the conversion is a duplicate key, then only one value will be present in the result.
         case custom((_ codingPath: [CodingKey]) -> CodingKey)
+        
+        fileprivate static func _convertToCamelCase(_ stringKey: String) -> String {
+            return stringKey.prefix(1).capitalized + stringKey.dropFirst()
+        }
     }
 
     /// The output format to produce. Defaults to `withoutEscapingSlashes` for YAML.
@@ -564,6 +572,9 @@ private struct YAMLKeyedEncodingContainer<K: CodingKey>: KeyedEncodingContainerP
         switch self.options.keyEncodingStrategy {
         case .useDefaultKeys:
             return key
+        case .camelCase:
+            let newKeyString = YAMLEncoder.KeyEncodingStrategy._convertToCamelCase(key.stringValue)
+            return _YAMLKey(stringValue: newKeyString, intValue: key.intValue)
         case .custom(let converter):
             return converter(codingPath + [key])
         }
