@@ -13,13 +13,13 @@
     
     Lambda is an ideal compute service for many application scenarios, as long as you can run your application code using the Lambda [standard runtime environment](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html and within the resources that Lambda provides. For example, you can use Lambda for:
 
-    - Mobile backends: Build backends using Lambda and Amazon API Gateway to authenticate and process API requests. Use AWS Amplify to easily integrate your backend with your iOS, Android, Web, and React Native frontends.
+    - Mobile backends: Build backends using Lambda and Amazon API Gateway to authenticate and process API requests. Use AWS Amplify to easily integrate your backend with your iOS, Android, Web, and React Native front ends.
 
     - Web applications: Combine Lambda with other AWS services to build powerful web applications that automatically scale up and down and run in a highly available configuration across multiple data centers.
 
     - File processing: Use Amazon Simple Storage Service (Amazon S3) to trigger Lambda data processing in real time after an upload.
 
-    - Stream processing: Use Lambda and Amazon Kinesis to process real-time streaming data for application activity tracking, transaction order processing, clickstream analysis, data cleansing, log filtering, indexing, social media analysis, Internet of Things (IoT) device data telemetry, and metering.
+    - Stream processing: Use Lambda and Amazon Kinesis to process real-time streaming data for application activity tracking, transaction order processing, click stream analysis, data cleansing, log filtering, indexing, social media analysis, Internet of Things (IoT) device data telemetry, and metering.
 
     - IoT backends: Build serverless backends using Lambda to handle web, mobile, IoT, and third-party API requests.
     

@@ -8,13 +8,13 @@ For a detailed step-by-step instruction, follow the tutorial instead.
 
 <doc:/tutorials/table-of-content>
 
-For the impatients, keep reading.
+For the impatient, keep reading.
 
 ## High-level instructions
 
 Follow these 6 steps to write, test, and deploy a Lambda function in Swift.
 
-1. Create a Swift project for an execyutable target 
+1. Create a Swift project for an executable target 
 
 ```sh
 swift package init --type executable 
@@ -23,6 +23,11 @@ swift package init --type executable
 2. Add dependencies on `AWSLambdaRuntime` library 
 
 ```swift
+// swift-tools-version:5.8
+// The swift-tools-version declares the minimum version of Swift required to build this package.
+
+import PackageDescription
+
 let package = Package(
     name: "YourProjetName",
     platforms: [
@@ -30,16 +35,17 @@ let package = Package(
     ],
     products: [
         .executable(name: "YourFunctionName", targets: ["YourFunctionName"]),
-    ],    
+    ],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", .upToNextMajor(from:"1.0.0")),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", .upToNextMajor(from: "1.0.0-alpha")),
     ],
     targets: [
         .executableTarget(
             name: "YourFunctionName",
             dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-            ]
+            ],
+            path: "."
         ),
     ]
 )

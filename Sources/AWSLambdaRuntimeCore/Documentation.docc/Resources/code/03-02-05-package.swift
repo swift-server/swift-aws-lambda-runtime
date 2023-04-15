@@ -12,14 +12,15 @@ let package = Package(
         .executable(name: "SquareNumberLambda", targets: ["SquareNumberLambda"]),
     ],    
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", .upToNextMajor(from:"1.0.0")),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", .upToNextMajor(from: "1.0.0-alpha")),
     ],
     targets: [
         .executableTarget(
             name: "SquareNumberLambda",
             dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-            ]
+            ],
+            path: "."
         ),
     ]
 )

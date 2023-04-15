@@ -52,6 +52,8 @@
                 In the Xcode editor, replace the content of `Package.swift` with the file on the right side of the screen.
 
                 It defines a package for a project named `SquareNumberLambda`. The package name only matters when you build a library that is used by other Swift packages.
+                
+                > Comments are important here, do not skip them. They define the minimum version of Swift to use.
                 @Code(name: "Package.swift", file: 03-02-01-package.swift)
             }
             @Step {
@@ -86,7 +88,7 @@
 
     @Section(title: "Write the function code") {
         @ContentAndMedia() {
-            Now that our project structure is ready, let's write the code of your Lambda function. Perform the follwoing steps in Xcode or another IDE of your choice.
+            Now that our project structure is ready, let's write the code of your Lambda function. Perform the following steps in Xcode or another IDE of your choice.
 
             @Image(source: 03-03-swift-code-xcode, alt: "Swift code in Xcode")
         }
