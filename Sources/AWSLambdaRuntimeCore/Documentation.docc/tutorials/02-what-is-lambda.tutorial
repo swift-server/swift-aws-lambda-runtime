@@ -5,13 +5,13 @@
 
     AWS Lambda is a compute service that lets you run code without provisioning or managing servers. Lambda runs your code on a high-availability compute infrastructure and performs all of the administration of the compute resources, including server and operating system maintenance, capacity provisioning and automatic scaling, and logging. With Lambda, you can run code for virtually any type of application or backend service. All you need to do is supply your code in [one of the languages that Lambda supports](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html), including Swift.
 
-    You organize your code into [Lambda functions](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-concepts.html#gettingstarted-concepts-function). Lambda runs your function only when needed and scales automatically, from a few requests per day to thousands per second. You pay only for the compute time that you consume—there is no charge when your code is not running. For more information, see [AWS Lambda Pricing](http://aws.amazon.com/lambda/pricing/.
+    You organize your code into [Lambda functions](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-concepts.html#gettingstarted-concepts-function). Lambda runs your function only when needed and scales automatically, from a few requests per day to thousands per second. You pay only for the compute time that you consume—there is no charge when your code is not running. For more information, see [AWS Lambda Pricing](http://aws.amazon.com/lambda/pricing/).
 
-    Lambda is a highly available service. For more information, see the AWS Lambda Service Level Agreement.
+    Lambda is a highly available service. For more information, see the [AWS Lambda Service Level Agreement](https://aws.amazon.com/lambda/sla/).
     
     ### When to use AWS Lambda
     
-    Lambda is an ideal compute service for many application scenarios, as long as you can run your application code using the Lambda [standard runtime environment](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html and within the resources that Lambda provides. For example, you can use Lambda for:
+    Lambda is an ideal compute service for many application scenarios, as long as you can run your application code using the Lambda [standard runtime environment](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html) and within the resources that Lambda provides. For example, you can use Lambda for:
 
     - Mobile backends: Build backends using Lambda and Amazon API Gateway to authenticate and process API requests. Use AWS Amplify to easily integrate your backend with your iOS, Android, Web, and React Native front ends.
 
