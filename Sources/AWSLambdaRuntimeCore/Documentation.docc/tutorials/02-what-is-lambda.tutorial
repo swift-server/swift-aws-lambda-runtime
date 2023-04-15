@@ -1,0 +1,28 @@
+@Article(time: 3) {
+
+    @Intro(title: "What is AWS Lambda")
+
+
+    AWS Lambda is a compute service that lets you run code without provisioning or managing servers. Lambda runs your code on a high-availability compute infrastructure and performs all of the administration of the compute resources, including server and operating system maintenance, capacity provisioning and automatic scaling, and logging. With Lambda, you can run code for virtually any type of application or backend service. All you need to do is supply your code in [one of the languages that Lambda supports](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html), including Swift.
+
+    You organize your code into [Lambda functions](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-concepts.html#gettingstarted-concepts-function). Lambda runs your function only when needed and scales automatically, from a few requests per day to thousands per second. You pay only for the compute time that you consume—there is no charge when your code is not running. For more information, see [AWS Lambda Pricing](http://aws.amazon.com/lambda/pricing/.
+
+    Lambda is a highly available service. For more information, see the AWS Lambda Service Level Agreement.
+    
+    ### When to use AWS Lambda
+    
+    Lambda is an ideal compute service for many application scenarios, as long as you can run your application code using the Lambda [standard runtime environment](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html and within the resources that Lambda provides. For example, you can use Lambda for:
+
+    - Mobile backends: Build backends using Lambda and Amazon API Gateway to authenticate and process API requests. Use AWS Amplify to easily integrate your backend with your iOS, Android, Web, and React Native frontends.
+
+    - Web applications: Combine Lambda with other AWS services to build powerful web applications that automatically scale up and down and run in a highly available configuration across multiple data centers.
+
+    - File processing: Use Amazon Simple Storage Service (Amazon S3) to trigger Lambda data processing in real time after an upload.
+
+    - Stream processing: Use Lambda and Amazon Kinesis to process real-time streaming data for application activity tracking, transaction order processing, clickstream analysis, data cleansing, log filtering, indexing, social media analysis, Internet of Things (IoT) device data telemetry, and metering.
+
+    - IoT backends: Build serverless backends using Lambda to handle web, mobile, IoT, and third-party API requests.
+    
+    When using Lambda, you are responsible only for your code. Lambda manages the compute fleet that offers a balance of memory, CPU, network, and other resources to run your code. Because Lambda manages these resources, you cannot log in to compute instances or customize the operating system on [provided runtimes](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html). Lambda performs operational and administrative activities on your behalf, including managing capacity, monitoring, and logging your Lambda functions.
+
+}

@@ -8,3 +8,6 @@
 xcuserdata
 Package.resolved
 .serverless
+.vscode
+Examples/SAM
+Makefile

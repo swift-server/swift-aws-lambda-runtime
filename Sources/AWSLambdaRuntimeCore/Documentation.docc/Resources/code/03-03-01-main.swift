@@ -1,0 +1,5 @@
+
+@main
+struct SquareNumberHandler: SimpleLambdaHandler {
+
+}

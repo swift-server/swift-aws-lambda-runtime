@@ -1,0 +1,175 @@
+@Tutorial(time: 15) {
+    @Intro(title: "Deploy your function to AWS Lambda") {
+        Learn how to package your code for AWS Lambda and to deploy it using the AWS Management Console        
+    }
+    
+    @Section(title: "Compile for Amazon Linux") {
+        @ContentAndMedia() {
+            Learn how to compile your code to run it on Amazon Linux.
+            
+            @Image(source: 04-01-compile-for-linux, alt: "Compile for Amazon Linux")
+        }
+        
+        @Steps {
+            
+            AWS Lambda runs on top of [Amazon Linux 2](https://aws.amazon.com/amazon-linux-2/). You must therefore compile your code for Linux. The AWS Lambda Runtime for Swift uses Docker to do so. Once the code is compiled, it must be assembled in a ZIP file before being deployed in the cloud.
+            The AWS Lambda Runtime for Swift provides a [Swift Package Manager plugin](https://github.com/apple/swift-package-manager/blob/main/Documentation/Plugins.md) to compile and zip your Lambda function in one simple step.
+
+            @Step {
+                Be sure Docker is started on your machine. On macOS, you can check the Docker icon in the menu bar.
+                
+                @Image(source: 04-01-01-docker-started.png, alt: "Docker icon and menu on macOS")
+            }
+            
+            @Step {
+                In a terminal, invoke the `archive` command to build and zip your Lambda function.
+                
+                @Code(name: "Commands in a Terminal", file: 04-01-02-plugin-archive.sh)
+            }
+            
+            @Step {
+                The plugin starts a Docker container running Amazon Linux 2 and compile your Lambda function code. It then creates a zip file. When everything goes well, you should see an ouput similar to this one. 
+
+                @Code(name: "Commands in a Terminal", file: 04-01-03-plugin-archive.sh)
+            }
+            
+            @Step {
+                Copy the generated zip files to your Desktop or Download directory for easy access. I choose the Desktop. 
+
+                @Code(name: "Commands in a Terminal", file: 04-01-04-plugin-archive.sh)
+            }
+        }
+    }
+    
+    @Section(title: "Create an Lambda Function") {
+        @ContentAndMedia() {
+            Learn how to create a Lambda function using the AWS Management Console and to deploy your zip file
+            
+            @Image(source: 04-02-create-lambda.png, alt: "Create a Lambda function")
+        }
+        
+        @Steps {
+            
+            You will now deploy your code to AWS Lambda. To complete the remaining steps in this tutorial, you must have an AWS Account.  You can [create an AWS Account by following these instructions](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html).
+            
+            @Step {
+                Open a web browser and navigate to [https://console.aws.amazon.com](https://console.aws.amazon.com).
+                
+                @Image(source: 04-02-01-console-login.png, alt: "AWS console login")
+            }
+            
+            @Step {
+                If you have an IAM user ID and password, select **IAM User**, otherwise proceed by entering your **Root user** email address and password. For this tutorial, I sign in using my IAM User ID.
+                
+                @Image(source: 04-02-02-console-login.png, alt: "AWS console login with IAM user")
+            }
+            
+            @Step {
+                On the top right side of the console, select the AWS Region where you want to deploy your Lambda function. You typically choose a Region close to your customers to minimize the network latency. For thsi demo, I selected **Oregon (us-west-2)**
+                
+                > AWS has multiple Regions across all continents. You can learn more about [AWS Global Infrastructure](https://aws.amazon.com/about-aws/global-infrastructure/regions_az/) here.
+                
+                @Image(source: 04-02-03-select-region.png, alt: "AWS console - Select Region")
+            }
+            
+            @Step {
+                On the top left side of the console, select the Lambda service to navigate to the Lambda section of the console.
+                
+                @Image(source: 04-02-04-select-lambda.png, alt: "AWS console - Select Lambda")
+            }
+            
+            @Step {
+                On the top right side of the console, select **Create function**.
+                
+                @Image(source: 04-02-05-create-function.png, alt: "Create function")
+            }
+
+            @Step {
+                Enter a **Function name**. I choose `SquaredNumberLambda`. Select `Provide your own bootstrap on Amazon Linux 2` as **Runtime**. And select `arm64` as **Architecture** when you build on a Mac with Apple Silicon. Leave all other parameter as default, and select **Create function** on the bottom right part.
+                
+                > The runtime architecture for Lambda (`arm64` or `x86_64`) must match the one of the machine where you compiled the code.  When you compiled on an Intel-based Mac, use `x86_64`. When compiling on an Apple Silicon-based Mac select `arm64`.
+                
+                
+                @Image(source: 04-02-06-create-function.png, alt: "Create function details")
+            }
+
+            @Step {
+                On the next screen, select **.zip file** from the **Upload from** selection.
+                
+                @Image(source: 04-02-07-upload-zip.png, alt: "Upload ")
+            }
+
+            @Step {
+                I select the zip file that was generated earlier and select **Save**.
+                
+                @Image(source: 04-02-08-upload-zip.png, alt: "Create function")
+            }
+
+            @Step {
+                To verify everything works well, I create a test event and invoke the function from the **Test** tab in the console. I enter `MyTestEvent` as **Event name**. I enter `{"number":3}` as **Event JSON**. Then I select **Test**.
+                
+                @Image(source: 04-02-09-test-lambda.png, alt: "Create function")
+            }
+            
+            @Step {
+                When the invocation succeeds, you can see the execution details and the result: `{ "result" : 9 }`. 
+                
+                > The execution result also shares the execution duration, the actual memory consumed and the logs generated by the function. These are important data to help you to fine-tune your function. Providing the function with more memory will also give it more compute power, resulting in lower execution time.
+                
+                @Image(source: 04-02-10-test-lambda-result.png, alt: "Create function")
+            }
+            
+        }
+    }
+
+    @Section(title: "Invoke your Lambda function") {
+        @ContentAndMedia() {
+            Learn how to invoke the Lambda function using the AWS Lambda API and the AWS command line.
+            
+            @Image(source: 04-03-invoke-lambda.png, alt: "Invoke a Lambda function")
+        }
+        
+        @Steps {
+            
+            Typically you will [associate an URL to your Lambda function](https://docs.aws.amazon.com/lambda/latest/dg/lambda-urls.html), or [you will expose the Lambda function through a REST API](https://docs.aws.amazon.com/apigateway/latest/developerguide/getting-started-with-lambda-integration.html). You might use the [Serverless Application Model (SAM)](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html) to do so. We'll leave tasks for another tutorial. 
+
+            In the remaining section of this tutorial, you will learn how to invoke your Lambda function from the AWS command-line tool.
+            
+            @Step {
+                First, check that you have the `aws` command line tool installed and configured.
+                
+                > You can install the `aws` CLI with the command `brew awscli`. You need to configure the `aws` CLI with your AWS credentials. You may use the command `aws configure` to configure the CLI. [The AWS CLI documentation has more details](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html).
+                
+                @Code(name: "Command to type in the Terminal", file: 04-03-01-aws-cli.sh)
+            }
+            
+            @Step {
+                Enter the following command to invoke your Lambda function.
+                
+                @Code(name: "Command to type in the Terminal", file: 04-03-02-lambda-invoke.sh, previousFile: 04-03-02-lambda-invoke-hidden.sh)
+                
+            }
+            
+            @Step {
+                The command returns with the invocation status.
+                
+                @Code(name: "Command to type in the Terminal", file: 04-03-03-lambda-invoke.sh)
+                
+            }
+            
+            @Step {
+                Type `cat result.json` to see the value returned by your function.
+                
+                @Code(name: "Command to type in the Terminal", file: 04-03-04-lambda-invoke.sh)
+                
+            }
+            @Step {
+                When everythign goes well, you will see `{ "result" : 9}`. Congratulation 🎉 !
+                
+                @Code(name: "Command to type in the Terminal", file: 04-03-05-lambda-invoke.sh)
+                
+            }
+        }
+    }
+    
+}
