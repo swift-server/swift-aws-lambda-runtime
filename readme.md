@@ -12,7 +12,7 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 
 ## Getting started
 
-If you have never used AWS Lambda or Docker before, check out this [getting started guide](https://fabianfett.de/getting-started-with-swift-aws-lambda-runtime) which helps you with every step from zero to a running Lambda.
+If you have never used AWS Lambda or Docker before, check out this [getting started guide](https://fabianfett.dev/getting-started-with-swift-aws-lambda-runtime) which helps you with every step from zero to a running Lambda.
 
 First, create a SwiftPM project and pull Swift AWS Lambda Runtime as dependency into your project
 
