@@ -37,7 +37,7 @@ let package = Package(
         .executable(name: "YourFunctionName", targets: ["YourFunctionName"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", .upToNextMajor(from: "1.0.0-alpha")),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "1.0.0-alpha"),
     ],
     targets: [
         .executableTarget(
