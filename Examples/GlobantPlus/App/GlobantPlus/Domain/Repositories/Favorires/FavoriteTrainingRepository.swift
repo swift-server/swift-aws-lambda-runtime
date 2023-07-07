@@ -1,5 +1,5 @@
 //
-//  FavoriteTrainingDELETERepository.swift
+//  FavoriteTrainingRepository.swift
 //  GlobantPlus
 //
 //  Created by Adolfo Vera Blasco on 15/3/23.
