@@ -1,6 +1,6 @@
 //
 //  DashboardViewModel.swift
-//  Premiere
+//  GlobantPlus
 //
 //  Created by Adolfo Vera Blasco on 4/1/23.
 //

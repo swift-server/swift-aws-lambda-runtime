@@ -1,6 +1,6 @@
 //
 //  PCDFavorite+CoreDataClass.swift
-//  Premiere
+//  GlobantPlus
 //
 //  Created by Adolfo Vera Blasco on 10/3/23.
 //

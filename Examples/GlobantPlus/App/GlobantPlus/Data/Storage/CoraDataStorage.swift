@@ -1,6 +1,6 @@
 //
 //  DeviceStorage.swift
-//  Palettte
+//  GlobantPlus
 //
 //  Created by Adolfo Vera Blasco on 09/09/2022
 //

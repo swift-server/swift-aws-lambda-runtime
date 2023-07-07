@@ -8,7 +8,7 @@
 import Foundation
 
 final class DefaultPopularDocumentaryListUseCase: PopularDocumentaryListUseCase {
-    let popularDocumentaryListRepository: PopularDocumentaryListRepository = TMDBPopularDocumentaryListRepository()
+    let popularDocumentaryListRepository: DashboardRepository = TMDBDashboardRepository()
     
     func fetchPopularDocumentaries() async throws -> [TrendingItem] {
         return try await popularDocumentaryListRepository.fetchPopularDocumentaries()

@@ -8,7 +8,7 @@
 import Foundation
 
 final class DefaultTrendingMovieListUseCase: TrendingMovieListUseCase {
-    let trendingMovieListRepository: TrendingMovieListRepository = TMDBTrendingMovieListRepository()
+    let trendingMovieListRepository: DashboardRepository = TMDBDashboardRepository()
     
     func fetchTrendingMovies() async throws -> [TrendingItem] {
         return try await trendingMovieListRepository.fetchTrendingMovies()

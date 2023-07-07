@@ -1,6 +1,6 @@
 //
 //  FavoriteUseCase.swift
-//  Premiere
+//  GlobantPlus
 //
 //  Created by Adolfo Vera Blasco on 11/3/23.
 //

@@ -1,6 +1,6 @@
 //
 //  SQSActivityQueue.swift
-//  Premiere
+//  GlobantPlus
 //
 //  Created by Adolfo Vera Blasco on 12/3/23.
 //

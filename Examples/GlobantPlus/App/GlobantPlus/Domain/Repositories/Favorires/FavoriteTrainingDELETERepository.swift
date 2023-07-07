@@ -7,6 +7,7 @@
 
 import Foundation
 
-protocol FavoriteTrainingDELETERepository {
+protocol FavoriteTrainingRepository {
+	func post(mediaID: Int, forUser userID: String) async throws
     func delete(mediaID: Int, forUser userID: String) async throws
 }
