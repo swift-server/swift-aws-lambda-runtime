@@ -286,7 +286,7 @@ class LambdaTest: XCTestCase {
                 logger: logger
             ).get()
 
-            try await runner.initialize(handlerType: CodableEventLoopLambdaHandler<Handler>.self, logger: logger, terminator: LambdaTerminator()).flatMap { handler2 in
+            try await runner.initialize(handlerProvider: CodableEventLoopLambdaHandler<Handler>.makeHandler, logger: logger, terminator: LambdaTerminator()).flatMap { handler2 in
                 runner.run(handler: handler2, logger: logger)
             }.get()
         }

@@ -33,7 +33,9 @@ internal final class LambdaRunner {
     /// Run the user provided initializer. This *must* only be called once.
     ///
     /// - Returns: An `EventLoopFuture<LambdaHandler>` fulfilled with the outcome of the initialization.
-    func initialize<Handler: ByteBufferLambdaHandler>(handlerType: Handler.Type, logger: Logger, terminator: LambdaTerminator) -> EventLoopFuture<Handler> {
+    func initialize<Handler: CoreByteBufferLambdaHandler>(handlerProvider: (LambdaInitializationContext) -> EventLoopFuture<Handler>,
+                                                          logger: Logger,
+                                                          terminator: LambdaTerminator) -> EventLoopFuture<Handler> {
         logger.debug("initializing lambda")
         // 1. create the handler from the factory
         // 2. report initialization error if one occurred
@@ -44,8 +46,8 @@ internal final class LambdaRunner {
             terminator: terminator
         )
 
-        return handlerType.makeHandler(context: context)
-            // Hopping back to "our" EventLoop is important in case the factory returns a future
+        return handlerProvider(context)
+            // Hopping back to "our" EventLoop is important in case the provider returns a future
             // that originated from a foreign EventLoop/EventLoopGroup.
             // This can happen if the factory uses a library (let's say a database client) that manages its own threads/loops
             // for whatever reason and returns a future that originated from that foreign EventLoop.
@@ -59,7 +61,7 @@ internal final class LambdaRunner {
             }
     }
 
-    func run(handler: some ByteBufferLambdaHandler, logger: Logger) -> EventLoopFuture<Void> {
+    func run(handler: some CoreByteBufferLambdaHandler, logger: Logger) -> EventLoopFuture<Void> {
         logger.debug("lambda invocation sequence starting")
         // 1. request invocation from lambda runtime engine
         self.isGettingNextInvocation = true

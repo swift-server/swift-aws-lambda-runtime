@@ -390,22 +390,15 @@ extension EventLoopLambdaHandler {
     }
 }
 
-// MARK: - ByteBufferLambdaHandler
+// MARK: - CoreByteBufferLambdaHandler
 
 /// An `EventLoopFuture` based processing protocol for a Lambda that takes a `ByteBuffer` and returns
 /// an optional `ByteBuffer` asynchronously.
 ///
-/// - note: This is a low level protocol designed to power the higher level ``EventLoopLambdaHandler`` and
-///         ``LambdaHandler`` based APIs.
-///         Most users are not expected to use this protocol.
-public protocol ByteBufferLambdaHandler {
-    /// Create a Lambda handler for the runtime.
-    ///
-    /// Use this to initialize all your resources that you want to cache between invocations. This could be database
-    /// connections and HTTP clients for example. It is encouraged to use the given `EventLoop`'s conformance
-    /// to `EventLoopGroup` when initializing NIO dependencies. This will improve overall performance, as it
-    /// minimizes thread hopping.
-    static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Self>
+/// - note: This is a low level protocol designed designed for use cases where the flexibility of the
+///         `LambdaRuntime` type is required directly. Applications can provide the runtime with a
+///         provider function that returns an instance of a type conforming to this protocol.
+public protocol CoreByteBufferLambdaHandler {
 
     /// The Lambda handling method.
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
@@ -419,6 +412,26 @@ public protocol ByteBufferLambdaHandler {
     func handle(_ buffer: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?>
 }
 
+// MARK: - ByteBufferLambdaHandler
+
+/// An extension of the `CoreByteBufferLambdaHandler` protocol that provides the ability for the conforming type to
+/// specify how it is instantiated. This allows conforming types to use the
+/// [@main](https://docs.swift.org/swift-book/ReferenceManual/Attributes.html#ID626)
+/// attribute directly.
+///
+/// - note: This is a low level protocol designed to power the higher level ``EventLoopLambdaHandler`` and
+///         ``LambdaHandler`` based APIs.
+///         Most users are not expected to use this protocol.
+public protocol ByteBufferLambdaHandler: CoreByteBufferLambdaHandler {
+    /// Create a Lambda handler for the runtime.
+    ///
+    /// Use this to initialize all your resources that you want to cache between invocations. This could be database
+    /// connections and HTTP clients for example. It is encouraged to use the given `EventLoop`'s conformance
+    /// to `EventLoopGroup` when initializing NIO dependencies. This will improve overall performance, as it
+    /// minimizes thread hopping.
+    static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<Self>
+}
+
 extension ByteBufferLambdaHandler {
     /// Initializes and runs the Lambda function.
     ///
@@ -429,7 +442,7 @@ extension ByteBufferLambdaHandler {
     /// The lambda runtime provides a default implementation of the method that manages the launch
     /// process.
     public static func main() {
-        _ = Lambda.run(configuration: .init(), handlerType: Self.self)
+        _ = Lambda.run(configuration: .init(), handlerProvider: Self.makeHandler)
     }
 }
 

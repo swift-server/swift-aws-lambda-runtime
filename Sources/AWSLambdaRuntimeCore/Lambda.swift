@@ -36,7 +36,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerType: CodableSimpleLambdaHandler<Handler>.self)
+        Self.run(configuration: configuration, handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler)
     }
 
     /// Run a Lambda defined by implementing the ``LambdaHandler`` protocol.
@@ -52,7 +52,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerType: CodableLambdaHandler<Handler>.self)
+        Self.run(configuration: configuration, handlerProvider: CodableLambdaHandler<Handler>.makeHandler)
     }
 
     /// Run a Lambda defined by implementing the ``EventLoopLambdaHandler`` protocol.
@@ -68,7 +68,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerType: CodableEventLoopLambdaHandler<Handler>.self)
+        Self.run(configuration: configuration, handlerProvider: CodableEventLoopLambdaHandler<Handler>.makeHandler)
     }
 
     /// Run a Lambda defined by implementing the ``ByteBufferLambdaHandler`` protocol.
@@ -77,12 +77,12 @@ public enum Lambda {
     ///
     /// - parameters:
     ///     - configuration: A Lambda runtime configuration object
-    ///     - handlerType: The Handler to create and invoke.
+    ///     - handlerProvider: Provides the Handler to invoke.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     internal static func run(
         configuration: LambdaConfiguration = .init(),
-        handlerType: (some ByteBufferLambdaHandler).Type
+        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some CoreByteBufferLambdaHandler>
     ) -> Result<Int, Error> {
         let _run = { (configuration: LambdaConfiguration) -> Result<Int, Error> in
             Backtrace.install()
@@ -91,7 +91,8 @@ public enum Lambda {
 
             var result: Result<Int, Error>!
             MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
-                let runtime = LambdaRuntime(handlerType: handlerType, eventLoop: eventLoop, logger: logger, configuration: configuration)
+                let runtime = LambdaRuntime(handlerProvider: handlerProvider, eventLoop: eventLoop,
+                                            logger: logger, configuration: configuration)
                 #if DEBUG
                 let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
                     logger.info("intercepted signal: \(signal)")
