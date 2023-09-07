@@ -1,6 +1,4 @@
 import AWSLambdaRuntime
 
 @main
-struct SquareNumberHandler: SimpleLambdaHandler {
-
-}
+struct SquareNumberHandler: SimpleLambdaHandler {}

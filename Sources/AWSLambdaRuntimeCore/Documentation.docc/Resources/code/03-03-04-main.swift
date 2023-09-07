@@ -10,8 +10,5 @@ struct Number: Codable {
 
 @main
 struct SquareNumberHandler: SimpleLambdaHandler {
-
-    func handle(_ event: Event, context: LambdaContext) async throws -> Output {
-
-    }
+    func handle(_ event: Event, context: LambdaContext) async throws -> Output {}
 }

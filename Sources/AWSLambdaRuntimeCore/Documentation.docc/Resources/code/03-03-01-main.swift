@@ -1,5 +1,3 @@
 
 @main
-struct SquareNumberHandler: SimpleLambdaHandler {
-
-}
+struct SquareNumberHandler: SimpleLambdaHandler {}

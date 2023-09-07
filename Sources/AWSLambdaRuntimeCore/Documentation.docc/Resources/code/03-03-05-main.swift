@@ -13,7 +13,5 @@ struct SquareNumberHandler: SimpleLambdaHandler {
     typealias Event = Input
     typealias Output = Number
 
-    func handle(_ event: Event, context: LambdaContext) async throws -> Output {
-
-    }
+    func handle(_ event: Event, context: LambdaContext) async throws -> Output {}
 }
