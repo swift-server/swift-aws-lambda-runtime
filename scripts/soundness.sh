@@ -130,6 +130,7 @@ EOF
     find . \
       \( \! -path '*/.build/*' -a \
       \( \! -path '*/.git/*' \) -a \
+      \( \! -path '*/Documentation.docc/*' \) -a \
       \( "${matching_files[@]}" \) -a \
       \( \! \( "${exceptions[@]}" \) \) \) | while read line; do
       if [[ "$(cat "$line" | replace_acceptable_years | head -n $expected_lines | shasum)" != "$expected_sha" ]]; then
