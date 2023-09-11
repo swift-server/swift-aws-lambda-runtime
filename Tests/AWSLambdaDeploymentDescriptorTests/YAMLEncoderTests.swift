@@ -708,8 +708,8 @@ class TestYAMLEncoder: XCTestCase {
       return
     }
     print(yaml)
-    XCTAssertTrue(yaml.contains("camelCaseKey:"))
-    XCTAssertTrue(yaml.contains("   nestedDictionary: 1"))
+    XCTAssertTrue(yaml.contains("CamelCaseKey:"))
+    XCTAssertTrue(yaml.contains("   NestedDictionary: 1"))
   }
 
   func test_OutputFormattingValues() {

@@ -18,7 +18,7 @@
 import Foundation
 
 /// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
-/// containing `Encodable` values (in which case it should be exempt from key conversion strategies).
+/// containing `Encodable` values
 ///
 private protocol _YAMLStringDictionaryEncodableMarker {}
 
@@ -107,14 +107,9 @@ open class YAMLEncoder {
     /// Use the keys specified by each type. This is the default strategy.
     case useDefaultKeys
 
-    /// convert keyname to camelcase.
+    /// convert keyname to camel case.
     /// for example myMaxValue becomes MyMaxValue
     case camelCase
-
-    /// Provide a custom conversion to the key in the encoded YAML from the keys specified by the encoded types.
-    /// The full path to the current encoding position is provided for context (in case you need to locate this key within the payload). The returned key is used in place of the last component in the coding path before encoding.
-    /// If the result of the conversion is a duplicate key, then only one value will be present in the result.
-    case custom((_ codingPath: [CodingKey]) -> CodingKey)
 
     fileprivate static func _convertToCamelCase(_ stringKey: String) -> String {
       return stringKey.prefix(1).capitalized + stringKey.dropFirst()
@@ -536,10 +531,15 @@ extension _SpecialTreatmentEncoder {
 
     try object.forEach { (key, value) in
       var elemCodingPath = baseCodingPath
-      elemCodingPath.append(_YAMLKey(stringValue: key, intValue: nil))
+      elemCodingPath.append(_YAMLKey(stringValue:key))
+
       let encoder = YAMLEncoderImpl(options: self.options, codingPath: elemCodingPath)
 
-      result[key] = try encoder.wrapUntyped(value)
+      var convertedKey = key
+      if self.options.keyEncodingStrategy == .camelCase {
+          convertedKey = YAMLEncoder.KeyEncodingStrategy._convertToCamelCase(key)
+      }
+      result[convertedKey] = try encoder.wrapUntyped(value)
     }
 
     return .object(result)
@@ -590,8 +590,6 @@ private struct YAMLKeyedEncodingContainer<K: CodingKey>: KeyedEncodingContainerP
     case .camelCase:
       let newKeyString = YAMLEncoder.KeyEncodingStrategy._convertToCamelCase(key.stringValue)
       return _YAMLKey(stringValue: newKeyString, intValue: key.intValue)
-    case .custom(let converter):
-      return converter(codingPath + [key])
     }
   }
 
@@ -1107,7 +1105,7 @@ internal struct _YAMLKey: CodingKey {
   public var stringValue: String
   public var intValue: Int?
 
-  public init?(stringValue: String) {
+  public init(stringValue: String) {
     self.stringValue = stringValue
     self.intValue = nil
   }
@@ -1127,7 +1125,7 @@ internal struct _YAMLKey: CodingKey {
     self.intValue = index
   }
 
-  internal static let `super` = _YAMLKey(stringValue: "super")!
+  internal static let `super` = _YAMLKey(stringValue: "super")
 }
 
 // ===----------------------------------------------------------------------===//
