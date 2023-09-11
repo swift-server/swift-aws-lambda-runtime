@@ -1,0 +1,28 @@
+@Tutorials(name: "AWS Lambda functions in Swift") {
+    @Intro(title: "Your First Lambda Function Written in Swift") {
+        A step-by-step tutorial to learn how to implement, build, test, and deploy your first Lambda function written in Swift.
+        @Image(source: "00-swift_on_lambda.png", alt: "Swift on AWS Lambda icons")
+    }
+    
+    @Chapter(name: "Before getting started") {
+
+        @Image(source: "01-swift_on_lambda.png", alt: "A Swift project open in Xcode")
+        An overview of what to expect and what you need before getting started.
+        @TutorialReference(tutorial: "doc:01-overview")
+        @TutorialReference(tutorial: "doc:02-what-is-lambda")
+        @TutorialReference(tutorial: "doc:03-prerequisites")
+    }
+    @Chapter(name: "Your first Lambda function in Swift") {
+
+        @Image(source: "03-swift_on_lambda.png", alt: "Swift Icon")
+        Create your first function and test it locally
+        @TutorialReference(tutorial: "doc:03-write-function")
+    }
+    @Chapter(name: "Deploy your code to the cloud") {
+
+        @Image(source: "04-swift_on_lambda.png", alt: "Deploying Swift into AWS Lambda")
+        Build, package, upload, and invoke your code on AWS Lambda.
+        @TutorialReference(tutorial: "doc:04-deploy-function")
+    }
+    
+}
