@@ -49,6 +49,20 @@ let package = Package(
                 )
             )
         ),
+        .target(
+            name: "AWSLambdaDeploymentDescriptor",
+            path: "Sources/AWSLambdaDeploymentDescriptor"
+        ),
+        .plugin(
+            name: "AWSLambdaDeployer",
+            capability: .command(
+                intent: .custom(
+                    verb: "deploy",
+                    description: "Deploy the Lambda ZIP created by the archive plugin. Generates SAM-compliant deployment files based on deployment struct passed by the developer and invoke the SAM command."
+                )
+//                permissions: [.writeToPackageDirectory(reason: "This plugin generates a SAM template to describe your deployment")]
+            )
+        ),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
             .product(name: "NIOTestUtils", package: "swift-nio"),
@@ -57,6 +71,9 @@ let package = Package(
         .testTarget(name: "AWSLambdaRuntimeTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
             .byName(name: "AWSLambdaRuntime"),
+        ]),
+        .testTarget(name: "AWSLambdaDeploymentDescriptorTests", dependencies: [
+            .byName(name: "AWSLambdaDeploymentDescriptor"),
         ]),
         // testing helper
         .target(name: "AWSLambdaTesting", dependencies: [
