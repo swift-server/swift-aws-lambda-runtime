@@ -122,9 +122,9 @@ internal struct UncheckedSendableHandler<Underlying: LambdaHandler, Event, Outpu
 /// ``LambdaHandler/Event`` and returns a user defined
 /// ``LambdaHandler/Output`` asynchronously.
 ///
-/// - note: Most users should implement this protocol instead of the lower
-///         level protocols ``EventLoopLambdaHandler`` and
-///         ``ByteBufferLambdaHandler``.
+/// Unlike the `LambdaHandler` and `SimpleLambdaHandler` protocols,
+/// this does not have any initialization requirement, allowing it to be used - along with
+/// the `NonFactoryByteBufferLambdaHandler` protocol with custom initialization.
 public protocol NonFactoryLambdaHandler {
     /// The lambda function's input. In most cases this should be `Codable`. If your event originates from an
     /// AWS service, have a look at [AWSLambdaEvents](https://github.com/swift-server/swift-aws-lambda-events),
@@ -163,6 +163,8 @@ public protocol NonFactoryLambdaHandler {
 }
 
 public extension NonFactoryLambdaHandler {
+    /// Creates a `NonFactoryByteBufferLambdaHandler` from the current instance that will handle
+    /// Codable serialization and deserialization.
     func withWrappingCodableHandler(allocator: ByteBufferAllocator) -> some NonFactoryByteBufferLambdaHandler {
         return NonFactoryCodableLambdaHandler(handler: self, allocator: allocator)
     }
@@ -337,7 +339,7 @@ extension EventLoopLambdaHandler {
 
 /// An `EventLoopFuture` based processing protocol for a Lambda that takes a `ByteBuffer` and returns
 /// an optional `ByteBuffer` asynchronously. Unlike the higher level `ByteBufferLambdaHandler` protocol,
-/// this protocol doesn't provide a factory method for creating an instance of itself.
+/// this doesn't provide a factory method for creating an instance of itself.
 ///
 /// - note: This is a low level protocol designed designed for use cases where the flexibility of the
 ///         `LambdaRuntime` type is required directly. Applications can provide the runtime with a
