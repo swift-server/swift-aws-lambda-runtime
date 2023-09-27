@@ -19,11 +19,11 @@ import NIOPosix
 import XCTest
 
 func runLambda<Handler: SimpleLambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
-    try runLambda(behavior: behavior, handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler)
+    try runLambda(behavior: behavior, handlerProvider: Handler.makeCodableHandler)
 }
 
 func runLambda<Handler: LambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
-    try runLambda(behavior: behavior, handlerProvider: CodableLambdaHandler<Handler>.makeHandler)
+    try runLambda(behavior: behavior, handlerProvider: Handler.makeCodableHandler)
 }
 
 func runLambda<Handler: EventLoopLambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
@@ -31,7 +31,7 @@ func runLambda<Handler: EventLoopLambdaHandler>(behavior: LambdaServerBehavior, 
 }
 
 func runLambda(behavior: LambdaServerBehavior,
-               handlerProvider: (LambdaInitializationContext) -> EventLoopFuture<some CoreByteBufferLambdaHandler>) throws {
+               handlerProvider: (LambdaInitializationContext) -> EventLoopFuture<some NonFactoryByteBufferLambdaHandler>) throws {
     let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")

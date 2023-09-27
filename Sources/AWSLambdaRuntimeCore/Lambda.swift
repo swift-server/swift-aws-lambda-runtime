@@ -36,7 +36,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler)
+        Self.run(configuration: configuration, handlerProvider: Handler.makeCodableHandler)
     }
 
     /// Run a Lambda defined by implementing the ``LambdaHandler`` protocol.
@@ -52,7 +52,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerProvider: CodableLambdaHandler<Handler>.makeHandler)
+        Self.run(configuration: configuration, handlerProvider: Handler.makeCodableHandler)
     }
 
     /// Run a Lambda defined by implementing the ``EventLoopLambdaHandler`` protocol.
@@ -82,7 +82,7 @@ public enum Lambda {
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     internal static func run(
         configuration: LambdaConfiguration = .init(),
-        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some CoreByteBufferLambdaHandler>
+        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some NonFactoryByteBufferLambdaHandler>
     ) -> Result<Int, Error> {
         let _run = { (configuration: LambdaConfiguration) -> Result<Int, Error> in
             Backtrace.install()

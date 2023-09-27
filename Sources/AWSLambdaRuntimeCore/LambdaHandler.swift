@@ -23,97 +23,20 @@ import NIOCore
 ///
 /// - note: Most users should implement the ``LambdaHandler`` protocol instead
 ///         which defines the Lambda initialization method.
-public protocol SimpleLambdaHandler {
-    /// The lambda function's input. In most cases this should be `Codable`. If your event originates from an
-    /// AWS service, have a look at [AWSLambdaEvents](https://github.com/swift-server/swift-aws-lambda-events),
-    /// which provides a number of commonly used AWS Event implementations.
-    associatedtype Event
-    /// The lambda function's output. Can be `Void`.
-    associatedtype Output
-
+public protocol SimpleLambdaHandler: NonFactoryLambdaHandler {
     init()
-
-    /// The Lambda handling method.
-    /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
-    ///
-    /// - parameters:
-    ///     - event: Event of type `Event` representing the event or request.
-    ///     - context: Runtime ``LambdaContext``.
-    ///
-    /// - Returns: A Lambda result ot type `Output`.
-    func handle(_ event: Event, context: LambdaContext) async throws -> Output
-
-    /// Encode a response of type ``Output`` to `ByteBuffer`.
-    /// Concrete Lambda handlers implement this method to provide coding functionality.
-    /// - parameters:
-    ///     - value: Response of type ``Output``.
-    ///     - buffer: A `ByteBuffer` to encode into, will be overwritten.
-    ///
-    /// - Returns: A `ByteBuffer` with the encoded version of the `value`.
-    func encode(value: Output, into buffer: inout ByteBuffer) throws
-
-    /// Decode a `ByteBuffer` to a request or event of type ``Event``.
-    /// Concrete Lambda handlers implement this method to provide coding functionality.
-    ///
-    /// - parameters:
-    ///     - buffer: The `ByteBuffer` to decode.
-    ///
-    /// - Returns: A request or event of type ``Event``.
-    func decode(buffer: ByteBuffer) throws -> Event
 }
 
-@usableFromInline
-final class CodableSimpleLambdaHandler<Underlying: SimpleLambdaHandler>: ByteBufferLambdaHandler {
-    @usableFromInline
-    let handler: Underlying
-    @usableFromInline
-    private(set) var outputBuffer: ByteBuffer
-
+extension SimpleLambdaHandler {
     @inlinable
-    static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<CodableSimpleLambdaHandler> {
-        let promise = context.eventLoop.makePromise(of: CodableSimpleLambdaHandler<Underlying>.self)
+    static func makeCodableHandler(context: LambdaInitializationContext) -> EventLoopFuture<NonFactoryCodableLambdaHandler<Self>> {
+        let promise = context.eventLoop.makePromise(of: NonFactoryCodableLambdaHandler<Self>.self)
         promise.completeWithTask {
-            let handler = Underlying()
-            return CodableSimpleLambdaHandler(handler: handler, allocator: context.allocator)
+            let handler = Self()
+            return NonFactoryCodableLambdaHandler(handler: handler, allocator: context.allocator)
         }
         return promise.futureResult
     }
-
-    @inlinable
-    init(handler: Underlying, allocator: ByteBufferAllocator) {
-        self.handler = handler
-        self.outputBuffer = allocator.buffer(capacity: 1024 * 1024)
-    }
-
-    @inlinable
-    func handle(_ buffer: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?> {
-        let promise = context.eventLoop.makePromise(of: ByteBuffer?.self)
-        promise.completeWithTask {
-            let input: Underlying.Event
-            do {
-                input = try self.handler.decode(buffer: buffer)
-            } catch {
-                throw CodecError.requestDecoding(error)
-            }
-
-            let output = try await self.handler.handle(input, context: context)
-
-            do {
-                self.outputBuffer.clear()
-                try self.handler.encode(value: output, into: &self.outputBuffer)
-                return self.outputBuffer
-            } catch {
-                throw CodecError.responseEncoding(error)
-            }
-        }
-        return promise.futureResult
-    }
-}
-
-/// Implementation of `ByteBuffer` to `Void` decoding.
-extension SimpleLambdaHandler where Output == Void {
-    @inlinable
-    public func encode(value: Output, into buffer: inout ByteBuffer) throws {}
 }
 
 extension SimpleLambdaHandler {
@@ -139,14 +62,7 @@ extension SimpleLambdaHandler {
 /// - note: Most users should implement this protocol instead of the lower
 ///         level protocols ``EventLoopLambdaHandler`` and
 ///         ``ByteBufferLambdaHandler``.
-public protocol LambdaHandler {
-    /// The lambda function's input. In most cases this should be `Codable`. If your event originates from an
-    /// AWS service, have a look at [AWSLambdaEvents](https://github.com/swift-server/swift-aws-lambda-events),
-    /// which provides a number of commonly used AWS Event implementations.
-    associatedtype Event
-    /// The lambda function's output. Can be `Void`.
-    associatedtype Output
-
+public protocol LambdaHandler: NonFactoryLambdaHandler {
     /// The Lambda initialization method.
     /// Use this method to initialize resources that will be used in every request.
     ///
@@ -154,88 +70,18 @@ public protocol LambdaHandler {
     /// - parameters:
     ///     - context: Runtime ``LambdaInitializationContext``.
     init(context: LambdaInitializationContext) async throws
-
-    /// The Lambda handling method.
-    /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
-    ///
-    /// - parameters:
-    ///     - event: Event of type `Event` representing the event or request.
-    ///     - context: Runtime ``LambdaContext``.
-    ///
-    /// - Returns: A Lambda result ot type `Output`.
-    func handle(_ event: Event, context: LambdaContext) async throws -> Output
-
-    /// Encode a response of type ``Output`` to `ByteBuffer`.
-    /// Concrete Lambda handlers implement this method to provide coding functionality.
-    /// - parameters:
-    ///     - value: Response of type ``Output``.
-    ///     - buffer: A `ByteBuffer` to encode into, will be overwritten.
-    ///
-    /// - Returns: A `ByteBuffer` with the encoded version of the `value`.
-    func encode(value: Output, into buffer: inout ByteBuffer) throws
-
-    /// Decode a `ByteBuffer` to a request or event of type ``Event``.
-    /// Concrete Lambda handlers implement this method to provide coding functionality.
-    ///
-    /// - parameters:
-    ///     - buffer: The `ByteBuffer` to decode.
-    ///
-    /// - Returns: A request or event of type ``Event``.
-    func decode(buffer: ByteBuffer) throws -> Event
 }
 
-@usableFromInline
-final class CodableLambdaHandler<Underlying: LambdaHandler>: ByteBufferLambdaHandler {
-    @usableFromInline
-    let handler: Underlying
-    @usableFromInline
-    private(set) var outputBuffer: ByteBuffer
-
+extension LambdaHandler {
     @inlinable
-    static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<CodableLambdaHandler> {
-        let promise = context.eventLoop.makePromise(of: CodableLambdaHandler<Underlying>.self)
+    static func makeCodableHandler(context: LambdaInitializationContext) -> EventLoopFuture<NonFactoryCodableLambdaHandler<Self>> {
+        let promise = context.eventLoop.makePromise(of: NonFactoryCodableLambdaHandler<Self>.self)
         promise.completeWithTask {
-            let handler = try await Underlying(context: context)
-            return CodableLambdaHandler(handler: handler, allocator: context.allocator)
+            let handler = try await Self(context: context)
+            return NonFactoryCodableLambdaHandler(handler: handler, allocator: context.allocator)
         }
         return promise.futureResult
     }
-
-    @inlinable
-    init(handler: Underlying, allocator: ByteBufferAllocator) {
-        self.handler = handler
-        self.outputBuffer = allocator.buffer(capacity: 1024 * 1024)
-    }
-
-    @inlinable
-    func handle(_ buffer: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?> {
-        let promise = context.eventLoop.makePromise(of: ByteBuffer?.self)
-        promise.completeWithTask {
-            let input: Underlying.Event
-            do {
-                input = try self.handler.decode(buffer: buffer)
-            } catch {
-                throw CodecError.requestDecoding(error)
-            }
-
-            let output = try await self.handler.handle(input, context: context)
-
-            do {
-                self.outputBuffer.clear()
-                try self.handler.encode(value: output, into: &self.outputBuffer)
-                return self.outputBuffer
-            } catch {
-                throw CodecError.responseEncoding(error)
-            }
-        }
-        return promise.futureResult
-    }
-}
-
-/// Implementation of `ByteBuffer` to `Void` decoding.
-extension LambdaHandler where Output == Void {
-    @inlinable
-    public func encode(value: Output, into buffer: inout ByteBuffer) throws {}
 }
 
 extension LambdaHandler {
@@ -269,6 +115,103 @@ internal struct UncheckedSendableHandler<Underlying: LambdaHandler, Event, Outpu
         try await self.underlying.handle(event, context: context)
     }
 }
+
+// MARK: - NonFactoryLambdaHandler
+
+/// Strongly typed, processing protocol for a Lambda that takes a user defined
+/// ``LambdaHandler/Event`` and returns a user defined
+/// ``LambdaHandler/Output`` asynchronously.
+///
+/// - note: Most users should implement this protocol instead of the lower
+///         level protocols ``EventLoopLambdaHandler`` and
+///         ``ByteBufferLambdaHandler``.
+public protocol NonFactoryLambdaHandler {
+    /// The lambda function's input. In most cases this should be `Codable`. If your event originates from an
+    /// AWS service, have a look at [AWSLambdaEvents](https://github.com/swift-server/swift-aws-lambda-events),
+    /// which provides a number of commonly used AWS Event implementations.
+    associatedtype Event
+    /// The lambda function's output. Can be `Void`.
+    associatedtype Output
+
+    /// The Lambda handling method.
+    /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
+    ///
+    /// - parameters:
+    ///     - event: Event of type `Event` representing the event or request.
+    ///     - context: Runtime ``LambdaContext``.
+    ///
+    /// - Returns: A Lambda result ot type `Output`.
+    func handle(_ event: Event, context: LambdaContext) async throws -> Output
+
+    /// Encode a response of type ``Output`` to `ByteBuffer`.
+    /// Concrete Lambda handlers implement this method to provide coding functionality.
+    /// - parameters:
+    ///     - value: Response of type ``Output``.
+    ///     - buffer: A `ByteBuffer` to encode into, will be overwritten.
+    ///
+    /// - Returns: A `ByteBuffer` with the encoded version of the `value`.
+    func encode(value: Output, into buffer: inout ByteBuffer) throws
+
+    /// Decode a `ByteBuffer` to a request or event of type ``Event``.
+    /// Concrete Lambda handlers implement this method to provide coding functionality.
+    ///
+    /// - parameters:
+    ///     - buffer: The `ByteBuffer` to decode.
+    ///
+    /// - Returns: A request or event of type ``Event``.
+    func decode(buffer: ByteBuffer) throws -> Event
+}
+
+public extension NonFactoryLambdaHandler {
+    func withWrappingCodableHandler(allocator: ByteBufferAllocator) -> some NonFactoryByteBufferLambdaHandler {
+        return NonFactoryCodableLambdaHandler(handler: self, allocator: allocator)
+    }
+}
+
+@usableFromInline
+final class NonFactoryCodableLambdaHandler<Underlying: NonFactoryLambdaHandler>: NonFactoryByteBufferLambdaHandler {
+    @usableFromInline
+    let handler: Underlying
+    @usableFromInline
+    private(set) var outputBuffer: ByteBuffer
+
+    @inlinable
+    init(handler: Underlying, allocator: ByteBufferAllocator) {
+        self.handler = handler
+        self.outputBuffer = allocator.buffer(capacity: 1024 * 1024)
+    }
+
+    @inlinable
+    func handle(_ buffer: ByteBuffer, context: LambdaContext) -> EventLoopFuture<ByteBuffer?> {
+        let promise = context.eventLoop.makePromise(of: ByteBuffer?.self)
+        promise.completeWithTask {
+            let input: Underlying.Event
+            do {
+                input = try self.handler.decode(buffer: buffer)
+            } catch {
+                throw CodecError.requestDecoding(error)
+            }
+
+            let output = try await self.handler.handle(input, context: context)
+
+            do {
+                self.outputBuffer.clear()
+                try self.handler.encode(value: output, into: &self.outputBuffer)
+                return self.outputBuffer
+            } catch {
+                throw CodecError.responseEncoding(error)
+            }
+        }
+        return promise.futureResult
+    }
+}
+
+/// Implementation of `ByteBuffer` to `Void` decoding.
+extension NonFactoryLambdaHandler where Output == Void {
+    @inlinable
+    public func encode(value: Output, into buffer: inout ByteBuffer) throws {}
+}
+
 
 // MARK: - EventLoopLambdaHandler
 
@@ -393,12 +336,13 @@ extension EventLoopLambdaHandler {
 // MARK: - CoreByteBufferLambdaHandler
 
 /// An `EventLoopFuture` based processing protocol for a Lambda that takes a `ByteBuffer` and returns
-/// an optional `ByteBuffer` asynchronously.
+/// an optional `ByteBuffer` asynchronously. Unlike the higher level `ByteBufferLambdaHandler` protocol,
+/// this protocol doesn't provide a factory method for creating an instance of itself.
 ///
 /// - note: This is a low level protocol designed designed for use cases where the flexibility of the
 ///         `LambdaRuntime` type is required directly. Applications can provide the runtime with a
 ///         provider function that returns an instance of a type conforming to this protocol.
-public protocol CoreByteBufferLambdaHandler {
+public protocol NonFactoryByteBufferLambdaHandler {
 
     /// The Lambda handling method.
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
@@ -422,7 +366,7 @@ public protocol CoreByteBufferLambdaHandler {
 /// - note: This is a low level protocol designed to power the higher level ``EventLoopLambdaHandler`` and
 ///         ``LambdaHandler`` based APIs.
 ///         Most users are not expected to use this protocol.
-public protocol ByteBufferLambdaHandler: CoreByteBufferLambdaHandler {
+public protocol ByteBufferLambdaHandler: NonFactoryByteBufferLambdaHandler {
     /// Create a Lambda handler for the runtime.
     ///
     /// Use this to initialize all your resources that you want to cache between invocations. This could be database

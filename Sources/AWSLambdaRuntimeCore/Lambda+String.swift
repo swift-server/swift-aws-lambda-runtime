@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
-// MARK: - SimpleLambdaHandler String support
+// MARK: - NonFactoryLambdaHandler String support
 
-extension SimpleLambdaHandler where Event == String {
+extension NonFactoryLambdaHandler where Event == String {
     /// Implementation of a `ByteBuffer` to `String` decoding.
     @inlinable
     public func decode(buffer: ByteBuffer) throws -> Event {
@@ -26,28 +26,7 @@ extension SimpleLambdaHandler where Event == String {
     }
 }
 
-extension SimpleLambdaHandler where Output == String {
-    /// Implementation of `String` to `ByteBuffer` encoding.
-    @inlinable
-    public func encode(value: Output, into buffer: inout ByteBuffer) throws {
-        buffer.writeString(value)
-    }
-}
-
-// MARK: - LambdaHandler String support
-
-extension LambdaHandler where Event == String {
-    /// Implementation of a `ByteBuffer` to `String` decoding.
-    @inlinable
-    public func decode(buffer: ByteBuffer) throws -> Event {
-        guard let value = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
-            throw CodecError.invalidString
-        }
-        return value
-    }
-}
-
-extension LambdaHandler where Output == String {
+extension NonFactoryLambdaHandler where Output == String {
     /// Implementation of `String` to `ByteBuffer` encoding.
     @inlinable
     public func encode(value: Output, into buffer: inout ByteBuffer) throws {
