@@ -19,18 +19,32 @@ import NIOPosix
 import XCTest
 
 func runLambda<Handler: SimpleLambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
-    try runLambda(behavior: behavior, handlerType: CodableSimpleLambdaHandler<Handler>.self)
+    try runLambda(behavior: behavior, handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler(context:))
 }
 
 func runLambda<Handler: LambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
-    try runLambda(behavior: behavior, handlerType: CodableLambdaHandler<Handler>.self)
+    try runLambda(behavior: behavior, handlerProvider: CodableLambdaHandler<Handler>.makeHandler(context:))
 }
 
 func runLambda<Handler: EventLoopLambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
-    try runLambda(behavior: behavior, handlerType: CodableEventLoopLambdaHandler<Handler>.self)
+    try runLambda(behavior: behavior, handlerProvider: CodableEventLoopLambdaHandler<Handler>.makeHandler(context:))
 }
 
-func runLambda(behavior: LambdaServerBehavior, handlerType: (some ByteBufferLambdaHandler).Type) throws {
+func runLambda<Handler: EventLoopLambdaHandler>(
+    behavior: LambdaServerBehavior,
+    handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<Handler>
+) throws {
+    try runLambda(behavior: behavior, handlerProvider: { context in
+        handlerProvider(context).map {
+            CodableEventLoopLambdaHandler(handler: $0, allocator: context.allocator)
+        }
+    })
+}
+
+func runLambda(
+    behavior: LambdaServerBehavior,
+    handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some ByteBufferLambdaHandler>
+) throws {
     let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
@@ -39,7 +53,7 @@ func runLambda(behavior: LambdaServerBehavior, handlerType: (some ByteBufferLamb
     let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration)
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer { XCTAssertNoThrow(try server.stop().wait()) }
-    try runner.initialize(handlerType: handlerType, logger: logger, terminator: terminator).flatMap { handler in
+    try runner.initialize(handlerProvider: handlerProvider, logger: logger, terminator: terminator).flatMap { handler in
         runner.run(handler: handler, logger: logger)
     }.wait()
 }
@@ -87,5 +101,16 @@ extension LambdaTerminator.TerminationError: Equatable {
         }
         // technically incorrect, but good enough for our tests
         return String(describing: lhs) == String(describing: rhs)
+    }
+}
+
+// for backward compatibility in tests
+extension LambdaRunner {
+    func initialize<Handler: ByteBufferLambdaHandler>(
+        handlerType: Handler.Type,
+        logger: Logger,
+        terminator: LambdaTerminator
+    ) -> EventLoopFuture<Handler> {
+        self.initialize(handlerProvider: handlerType.makeHandler(context:), logger: logger, terminator: terminator)
     }
 }
