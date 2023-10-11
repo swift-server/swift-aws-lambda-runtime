@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
@@ -10,9 +10,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
-import Dispatch
 import Foundation
 import PackagePlugin
 
@@ -25,7 +24,7 @@ struct AWSLambdaPackager: CommandPlugin {
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
         let configuration = try Configuration(context: context, arguments: arguments)
         guard !configuration.products.isEmpty else {
-            throw Errors.unknownProduct("no appropriate products found to package")
+            throw PackagerPluginErrors.unknownProduct("no appropriate products found to package")
         }
 
         if configuration.products.count > 1 && !configuration.explicitProducts {
@@ -88,7 +87,7 @@ struct AWSLambdaPackager: CommandPlugin {
 
         // update the underlying docker image, if necessary
         print("updating \"\(baseImage)\" docker image")
-        try self.execute(
+        try Utils.execute(
             executable: dockerToolPath,
             arguments: ["pull", baseImage],
             logLevel: .output
@@ -96,13 +95,13 @@ struct AWSLambdaPackager: CommandPlugin {
 
         // get the build output path
         let buildOutputPathCommand = "swift build -c \(buildConfiguration.rawValue) --show-bin-path"
-        let dockerBuildOutputPath = try self.execute(
+        let dockerBuildOutputPath = try Utils.execute(
             executable: dockerToolPath,
             arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildOutputPathCommand],
             logLevel: verboseLogging ? .debug : .silent
         )
         guard let buildPathOutput = dockerBuildOutputPath.split(separator: "\n").last else {
-            throw Errors.failedParsingDockerOutput(dockerBuildOutputPath)
+            throw PackagerPluginErrors.failedParsingDockerOutput(dockerBuildOutputPath)
         }
         let buildOutputPath = Path(buildPathOutput.replacingOccurrences(of: "/workspace", with: packageDirectory.string))
 
@@ -111,15 +110,28 @@ struct AWSLambdaPackager: CommandPlugin {
         for product in products {
             print("building \"\(product.name)\"")
             let buildCommand = "swift build -c \(buildConfiguration.rawValue) --product \(product.name) --static-swift-stdlib"
-            try self.execute(
-                executable: dockerToolPath,
-                arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildCommand],
-                logLevel: verboseLogging ? .debug : .output
-            )
+            if ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"] != nil {
+                // when developing locally, we must have the full swift-aws-lambda-runtime project in the container
+                // because Examples' Package.swift have a dependency on ../..
+                // just like Package.swift's examples assume ../.., we assume we are two levels below the root project
+                let lastComponent = packageDirectory.lastComponent
+                let beforeLastComponent = packageDirectory.removingLastComponent().lastComponent
+                try Utils.execute(
+                    executable: dockerToolPath,
+                    arguments: ["run", "--rm", "--env", "LAMBDA_USE_LOCAL_DEPS=true", "-v", "\(packageDirectory.string)/../..:/workspace", "-w", "/workspace/\(beforeLastComponent)/\(lastComponent)", baseImage, "bash", "-cl", buildCommand],
+                    logLevel: verboseLogging ? .debug : .output
+                )
+            } else {
+                try Utils.execute(
+                    executable: dockerToolPath,
+                    arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildCommand],
+                    logLevel: verboseLogging ? .debug : .output
+                )
+            }
             let productPath = buildOutputPath.appending(product.name)
             guard FileManager.default.fileExists(atPath: productPath.string) else {
                 Diagnostics.error("expected '\(product.name)' binary at \"\(productPath.string)\"")
-                throw Errors.productExecutableNotFound(product.name)
+                throw PackagerPluginErrors.productExecutableNotFound(product.name)
             }
             builtProducts[.init(product)] = productPath
         }
@@ -149,7 +161,7 @@ struct AWSLambdaPackager: CommandPlugin {
                 parameters: parameters
             )
             guard let artifact = result.executableArtifact(for: product) else {
-                throw Errors.productExecutableNotFound(product.name)
+                throw PackagerPluginErrors.productExecutableNotFound(product.name)
             }
             results[.init(product)] = artifact.path
         }
@@ -192,7 +204,7 @@ struct AWSLambdaPackager: CommandPlugin {
             #endif
 
             // run the zip tool
-            try self.execute(
+            try Utils.execute(
                 executable: zipToolPath,
                 arguments: arguments,
                 logLevel: verboseLogging ? .debug : .silent
@@ -201,77 +213,6 @@ struct AWSLambdaPackager: CommandPlugin {
             archives[product] = zipfilePath
         }
         return archives
-    }
-
-    @discardableResult
-    private func execute(
-        executable: Path,
-        arguments: [String],
-        customWorkingDirectory: Path? = .none,
-        logLevel: ProcessLogLevel
-    ) throws -> String {
-        if logLevel >= .debug {
-            print("\(executable.string) \(arguments.joined(separator: " "))")
-        }
-
-        var output = ""
-        let outputSync = DispatchGroup()
-        let outputQueue = DispatchQueue(label: "AWSLambdaPackager.output")
-        let outputHandler = { (data: Data?) in
-            dispatchPrecondition(condition: .onQueue(outputQueue))
-
-            outputSync.enter()
-            defer { outputSync.leave() }
-
-            guard let _output = data.flatMap({ String(data: $0, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(["\n"])) }), !_output.isEmpty else {
-                return
-            }
-
-            output += _output + "\n"
-
-            switch logLevel {
-            case .silent:
-                break
-            case .debug(let outputIndent), .output(let outputIndent):
-                print(String(repeating: " ", count: outputIndent), terminator: "")
-                print(_output)
-                fflush(stdout)
-            }
-        }
-
-        let pipe = Pipe()
-        pipe.fileHandleForReading.readabilityHandler = { fileHandle in outputQueue.async { outputHandler(fileHandle.availableData) } }
-
-        let process = Process()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        process.executableURL = URL(fileURLWithPath: executable.string)
-        process.arguments = arguments
-        if let workingDirectory = customWorkingDirectory {
-            process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory.string)
-        }
-        process.terminationHandler = { _ in
-            outputQueue.async {
-                outputHandler(try? pipe.fileHandleForReading.readToEnd())
-            }
-        }
-
-        try process.run()
-        process.waitUntilExit()
-
-        // wait for output to be full processed
-        outputSync.wait()
-
-        if process.terminationStatus != 0 {
-            // print output on failure and if not already printed
-            if logLevel < .output {
-                print(output)
-                fflush(stdout)
-            }
-            throw Errors.processFailed([executable.string] + arguments, process.terminationStatus)
-        }
-
-        return output
     }
 
     private func isAmazonLinux2() -> Bool {
@@ -308,7 +249,7 @@ private struct Configuration: CustomStringConvertible {
         if let outputPath = outputPathArgument.first {
             var isDirectory: ObjCBool = false
             guard FileManager.default.fileExists(atPath: outputPath, isDirectory: &isDirectory), isDirectory.boolValue else {
-                throw Errors.invalidArgument("invalid output directory '\(outputPath)'")
+                throw PackagerPluginErrors.invalidArgument("invalid output directory '\(outputPath)'")
             }
             self.outputDirectory = Path(outputPath)
         } else {
@@ -320,7 +261,7 @@ private struct Configuration: CustomStringConvertible {
             let products = try context.package.products(named: productsArgument)
             for product in products {
                 guard product is ExecutableProduct else {
-                    throw Errors.invalidArgument("product named '\(product.name)' is not an executable product")
+                    throw PackagerPluginErrors.invalidArgument("product named '\(product.name)' is not an executable product")
                 }
             }
             self.products = products
@@ -331,7 +272,7 @@ private struct Configuration: CustomStringConvertible {
 
         if let buildConfigurationName = configurationArgument.first {
             guard let buildConfiguration = PackageManager.BuildConfiguration(rawValue: buildConfigurationName) else {
-                throw Errors.invalidArgument("invalid build configuration named '\(buildConfigurationName)'")
+                throw PackagerPluginErrors.invalidArgument("invalid build configuration named '\(buildConfigurationName)'")
             }
             self.buildConfiguration = buildConfiguration
         } else {
@@ -339,7 +280,7 @@ private struct Configuration: CustomStringConvertible {
         }
 
         guard !(!swiftVersionArgument.isEmpty && !baseDockerImageArgument.isEmpty) else {
-            throw Errors.invalidArgument("--swift-version and --base-docker-image are mutually exclusive")
+            throw PackagerPluginErrors.invalidArgument("--swift-version and --base-docker-image are mutually exclusive")
         }
 
         let swiftVersion = swiftVersionArgument.first ?? .none // undefined version will yield the latest docker image
@@ -365,43 +306,13 @@ private struct Configuration: CustomStringConvertible {
     }
 }
 
-private enum ProcessLogLevel: Comparable {
-    case silent
-    case output(outputIndent: Int)
-    case debug(outputIndent: Int)
-
-    var naturalOrder: Int {
-        switch self {
-        case .silent:
-            return 0
-        case .output:
-            return 1
-        case .debug:
-            return 2
-        }
-    }
-
-    static var output: Self {
-        .output(outputIndent: 2)
-    }
-
-    static var debug: Self {
-        .debug(outputIndent: 2)
-    }
-
-    static func < (lhs: ProcessLogLevel, rhs: ProcessLogLevel) -> Bool {
-        lhs.naturalOrder < rhs.naturalOrder
-    }
-}
-
-private enum Errors: Error, CustomStringConvertible {
+private enum PackagerPluginErrors: Error, CustomStringConvertible {
     case invalidArgument(String)
     case unsupportedPlatform(String)
     case unknownProduct(String)
     case productExecutableNotFound(String)
     case failedWritingDockerfile
     case failedParsingDockerOutput(String)
-    case processFailed([String], Int32)
 
     var description: String {
         switch self {
@@ -417,8 +328,6 @@ private enum Errors: Error, CustomStringConvertible {
             return "failed writing dockerfile"
         case .failedParsingDockerOutput(let output):
             return "failed parsing docker output: '\(output)'"
-        case .processFailed(let arguments, let code):
-            return "\(arguments.joined(separator: " ")) failed with code \(code)"
         }
     }
 }
