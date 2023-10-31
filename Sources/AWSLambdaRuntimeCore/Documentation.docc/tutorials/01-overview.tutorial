@@ -1,0 +1,18 @@
+@Article(time: 1) {
+
+    @Intro(title: "Overview")
+
+This tutorial helps you to get started writing your first AWS Lambda function in Swift. You will use the `AWSLambdaRuntime` package to write code that can be deployed on AWS Lambda.
+
+You will learn three things:
+
+1. How to implement simple Lambda function and test it locally 
+2. How to build a Lambda function for deployment on AWS
+3. How to deploy your Lambda function on AWS and invoke it
+
+It's a beginners' tutorial. The business logic of the function is very simple, it computes the square of a number passed as input parameter. This simplicity allows you to focus on the project setup and the deployment. You will deploy your code using the AWS Management Console. It is the easiest way to get started with AWS Lambda. 
+
+If you have any questions or recommendations, please [leave your feedback on GitHub](https://github.com/swift-server/swift-aws-lambda-runtime/issues) so that you can get your question answered and this tutorial can be improved.
+
+*The following instructions were recorded on April 15, 2023 and the AWS Management Console may have changed since then. Feel free to raise an issue if you spot differences with our screenshots* 
+}
