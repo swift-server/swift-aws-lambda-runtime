@@ -38,7 +38,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerType: CodableSimpleLambdaHandler<Handler>.self)
+        Self.run(configuration: configuration, handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler(context:))
     }
 
     /// Run a Lambda defined by implementing the ``LambdaHandler`` protocol.
@@ -54,7 +54,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerType: CodableLambdaHandler<Handler>.self)
+        Self.run(configuration: configuration, handlerProvider: CodableLambdaHandler<Handler>.makeHandler(context:))
     }
 
     /// Run a Lambda defined by implementing the ``EventLoopLambdaHandler`` protocol.
@@ -70,7 +70,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerType: CodableEventLoopLambdaHandler<Handler>.self)
+        Self.run(configuration: configuration, handlerProvider: CodableEventLoopLambdaHandler<Handler>.makeHandler(context:))
     }
 
     /// Run a Lambda defined by implementing the ``ByteBufferLambdaHandler`` protocol.
@@ -100,7 +100,7 @@ public enum Lambda {
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     internal static func run(
         configuration: LambdaConfiguration = .init(),
-        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some ByteBufferLambdaHandler>
+        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some CoreByteBufferLambdaHandler>
     ) -> Result<Int, Error> {
         let _run = { (configuration: LambdaConfiguration) -> Result<Int, Error> in
             #if swift(<5.9)

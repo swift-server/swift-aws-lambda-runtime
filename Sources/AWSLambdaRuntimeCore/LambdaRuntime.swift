@@ -19,7 +19,7 @@ import NIOCore
 /// `LambdaRuntime` manages the Lambda process lifecycle.
 ///
 /// Use this API, if you build a higher level web framework which shall be able to run inside the Lambda environment.
-public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
+public final class LambdaRuntime<Handler: CoreByteBufferLambdaHandler> {
     private let eventLoop: EventLoop
     private let shutdownPromise: EventLoopPromise<Int>
     private let logger: Logger
@@ -37,20 +37,11 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     /// Create a new `LambdaRuntime`.
     ///
     /// - parameters:
-    ///     - handlerType: The ``ByteBufferLambdaHandler`` type the `LambdaRuntime` shall create and manage.
-    ///     - eventLoop: An `EventLoop` to run the Lambda on.
-    ///     - logger: A `Logger` to log the Lambda events.
-    public convenience init(_ handlerType: Handler.Type, eventLoop: EventLoop, logger: Logger) {
-        self.init(handlerProvider: handlerType.makeHandler(context:), eventLoop: eventLoop, logger: logger, configuration: .init())
-    }
-
-    /// Create a new `LambdaRuntime`.
-    ///
-    /// - parameters:
     ///     - handlerProvider: A provider of the ``ByteBufferLambdaHandler``  the `LambdaRuntime` will manage.
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
-    public convenience init(
+    @usableFromInline
+    convenience init(
         handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<Handler>,
         eventLoop: EventLoop,
         logger: Logger
@@ -63,6 +54,12 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
         )
     }
 
+    /// Create a new `LambdaRuntime`.
+    ///
+    /// - parameters:
+    ///     - handlerProvider: A provider of the ``ByteBufferLambdaHandler``  the `LambdaRuntime` will manage.
+    ///     - eventLoop: An `EventLoop` to run the Lambda on.
+    ///     - logger: A `Logger` to log the Lambda events.
     init(
         handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<Handler>,
         eventLoop: EventLoop,
@@ -203,7 +200,7 @@ public final class LambdaRuntime<Handler: ByteBufferLambdaHandler> {
     private enum State {
         case idle
         case initializing
-        case active(LambdaRunner, any ByteBufferLambdaHandler)
+        case active(LambdaRunner, any CoreByteBufferLambdaHandler)
         case shuttingdown
         case shutdown
 
@@ -232,8 +229,16 @@ public enum LambdaRuntimeFactory {
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
     @inlinable
-    public static func makeRuntime<H: SimpleLambdaHandler>(_ handlerType: H.Type, eventLoop: any EventLoop, logger: Logger) -> LambdaRuntime<some ByteBufferLambdaHandler> {
-        LambdaRuntime<CodableSimpleLambdaHandler<H>>(CodableSimpleLambdaHandler<H>.self, eventLoop: eventLoop, logger: logger)
+    public static func makeRuntime<Handler: SimpleLambdaHandler>(
+        _ handlerType: Handler.Type,
+        eventLoop: any EventLoop,
+        logger: Logger
+    ) -> LambdaRuntime<some ByteBufferLambdaHandler> {
+        LambdaRuntime<CodableSimpleLambdaHandler<Handler>>(
+            handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler(context:),
+            eventLoop: eventLoop,
+            logger: logger
+        )
     }
 
     /// Create a new `LambdaRuntime`.
@@ -243,8 +248,16 @@ public enum LambdaRuntimeFactory {
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
     @inlinable
-    public static func makeRuntime<H: LambdaHandler>(_ handlerType: H.Type, eventLoop: any EventLoop, logger: Logger) -> LambdaRuntime<some ByteBufferLambdaHandler> {
-        LambdaRuntime<CodableLambdaHandler<H>>(CodableLambdaHandler<H>.self, eventLoop: eventLoop, logger: logger)
+    public static func makeRuntime<Handler: LambdaHandler>(
+        _ handlerType: Handler.Type,
+        eventLoop: any EventLoop,
+        logger: Logger
+    ) -> LambdaRuntime<some CoreByteBufferLambdaHandler> {
+        LambdaRuntime<CodableLambdaHandler<Handler>>(
+            handlerProvider: CodableLambdaHandler<Handler>.makeHandler(context:),
+            eventLoop: eventLoop,
+            logger: logger
+        )
     }
 
     /// Create a new `LambdaRuntime`.
@@ -254,28 +267,13 @@ public enum LambdaRuntimeFactory {
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
     @inlinable
-    public static func makeRuntime<H: EventLoopLambdaHandler>(_ handlerType: H.Type, eventLoop: any EventLoop, logger: Logger) -> LambdaRuntime<some ByteBufferLambdaHandler> {
-        LambdaRuntime<CodableEventLoopLambdaHandler<H>>(CodableEventLoopLambdaHandler<H>.self, eventLoop: eventLoop, logger: logger)
-    }
-
-    /// Create a new `LambdaRuntime`.
-    ///
-    /// - parameters:
-    ///     - handlerProvider: A provider of the ``SimpleLambdaHandler``  the `LambdaRuntime` will manage.
-    ///     - eventLoop: An `EventLoop` to run the Lambda on.
-    ///     - logger: A `Logger` to log the Lambda events.
-    @inlinable
-    public static func makeRuntime<H: SimpleLambdaHandler>(
-        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<H>,
+    public static func makeRuntime<Handler: EventLoopLambdaHandler>(
+        _ handlerType: Handler.Type,
         eventLoop: any EventLoop,
         logger: Logger
-    ) -> LambdaRuntime<some ByteBufferLambdaHandler> {
-        LambdaRuntime(
-            handlerProvider: { context in
-                handlerProvider(context).map {
-                    CodableSimpleLambdaHandler(handler: $0, allocator: context.allocator)
-                }
-            },
+    ) -> LambdaRuntime<some CoreByteBufferLambdaHandler> {
+        LambdaRuntime<CodableEventLoopLambdaHandler<Handler>>(
+            handlerProvider: CodableEventLoopLambdaHandler<Handler>.makeHandler(context:),
             eventLoop: eventLoop,
             logger: logger
         )
@@ -284,21 +282,17 @@ public enum LambdaRuntimeFactory {
     /// Create a new `LambdaRuntime`.
     ///
     /// - parameters:
-    ///     - handlerProvider: A provider of the ``LambdaHandler``  the `LambdaRuntime` will manage.
+    ///     - handlerType: The ``EventLoopLambdaHandler`` type the `LambdaRuntime` shall create and manage.
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
     @inlinable
-    public static func makeRuntime<H: LambdaHandler>(
-        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<H>,
+    public static func makeRuntime<Handler: ByteBufferLambdaHandler>(
+        _ handlerType: Handler.Type,
         eventLoop: any EventLoop,
         logger: Logger
-    ) -> LambdaRuntime<some ByteBufferLambdaHandler> {
-        LambdaRuntime(
-            handlerProvider: { context in
-                handlerProvider(context).map {
-                    CodableLambdaHandler(handler: $0, allocator: context.allocator)
-                }
-            },
+    ) -> LambdaRuntime<some CoreByteBufferLambdaHandler> {
+        LambdaRuntime<Handler>(
+            handlerProvider: Handler.makeHandler(context:),
             eventLoop: eventLoop,
             logger: logger
         )
@@ -311,17 +305,13 @@ public enum LambdaRuntimeFactory {
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
     @inlinable
-    public static func makeRuntime<H: EventLoopLambdaHandler>(
-        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<H>,
+    public static func makeRuntime<Handler: CoreByteBufferLambdaHandler>(
+        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<Handler>,
         eventLoop: any EventLoop,
         logger: Logger
-    ) -> LambdaRuntime<some ByteBufferLambdaHandler> {
+    ) -> LambdaRuntime<Handler> {
         LambdaRuntime(
-            handlerProvider: { context in
-                handlerProvider(context).map {
-                    CodableEventLoopLambdaHandler(handler: $0, allocator: context.allocator)
-                }
-            },
+            handlerProvider: handlerProvider,
             eventLoop: eventLoop,
             logger: logger
         )
