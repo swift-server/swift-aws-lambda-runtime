@@ -51,6 +51,7 @@ struct AWSLambdaPackager: CommandPlugin {
                 toolsProvider: { name in try context.tool(named: name).path },
                 outputDirectory: configuration.outputDirectory,
                 baseImage: configuration.baseDockerImage,
+                disableDockerImageUpdate: configuration.disableDockerImageUpdate,
                 buildConfiguration: configuration.buildConfiguration,
                 verboseLogging: configuration.verboseLogging
             )
@@ -77,6 +78,7 @@ struct AWSLambdaPackager: CommandPlugin {
         toolsProvider: (String) throws -> Path,
         outputDirectory: Path,
         baseImage: String,
+        disableDockerImageUpdate: Bool,
         buildConfiguration: PackageManager.BuildConfiguration,
         verboseLogging: Bool
     ) throws -> [LambdaProduct: Path] {
@@ -86,13 +88,15 @@ struct AWSLambdaPackager: CommandPlugin {
         print("building \"\(packageIdentity)\" in docker")
         print("-------------------------------------------------------------------------")
 
-        // update the underlying docker image, if necessary
-        print("updating \"\(baseImage)\" docker image")
-        try self.execute(
-            executable: dockerToolPath,
-            arguments: ["pull", baseImage],
-            logLevel: .output
-        )
+        if !disableDockerImageUpdate {
+            // update the underlying docker image, if necessary
+            print("updating \"\(baseImage)\" docker image")
+            try self.execute(
+                executable: dockerToolPath,
+                arguments: ["pull", baseImage],
+                logLevel: .output
+            )
+        }
 
         // get the build output path
         let buildOutputPathCommand = "swift build -c \(buildConfiguration.rawValue) --show-bin-path"
@@ -290,6 +294,7 @@ private struct Configuration: CustomStringConvertible {
     public let buildConfiguration: PackageManager.BuildConfiguration
     public let verboseLogging: Bool
     public let baseDockerImage: String
+    public let disableDockerImageUpdate: Bool
 
     public init(
         context: PluginContext,
@@ -302,6 +307,7 @@ private struct Configuration: CustomStringConvertible {
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
         let swiftVersionArgument = argumentExtractor.extractOption(named: "swift-version")
         let baseDockerImageArgument = argumentExtractor.extractOption(named: "base-docker-image")
+        let disableDockerImageUpdateArgument = argumentExtractor.extractFlag(named: "disable-docker-image-update") > 0
 
         self.verboseLogging = verboseArgument
 
@@ -345,6 +351,8 @@ private struct Configuration: CustomStringConvertible {
         let swiftVersion = swiftVersionArgument.first ?? .none // undefined version will yield the latest docker image
         self.baseDockerImage = baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2"
 
+        self.disableDockerImageUpdate = disableDockerImageUpdateArgument
+
         if self.verboseLogging {
             print("-------------------------------------------------------------------------")
             print("configuration")
@@ -360,6 +368,7 @@ private struct Configuration: CustomStringConvertible {
           products: \(self.products.map(\.name))
           buildConfiguration: \(self.buildConfiguration)
           baseDockerImage: \(self.baseDockerImage)
+          disableDockerImageUpdate: \(self.disableDockerImageUpdate)
         }
         """
     }
