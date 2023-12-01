@@ -197,6 +197,7 @@ The `archive` command can be customized using the following parameters
     * `2` (Debug)
 * `--swift-version` Swift language version used to define the Amazon Linux 2 Docker image. For example "5.7.3"
 * `--base-docker-image` An Amazon Linux 2 docker image name available in your system.
+* `--disable-docker-image-update` If flag is set, docker image will not be updated and local image will be used.
 
 Both `--swift-version` and `--base-docker-image` are mutually exclusive
 
