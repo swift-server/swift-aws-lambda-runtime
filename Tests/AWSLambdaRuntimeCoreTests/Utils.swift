@@ -41,6 +41,33 @@ func runLambda<Handler: EventLoopLambdaHandler>(
     })
 }
 
+func runLambda<Handler: EventLoopLambdaHandler>(
+    behavior: LambdaServerBehavior,
+    handlerProvider: @escaping (LambdaInitializationContext) async throws -> Handler
+) throws {
+    try runLambda(behavior: behavior, handlerProvider: { context in
+        let handler = try await handlerProvider(context)
+        return CodableEventLoopLambdaHandler(handler: handler, allocator: context.allocator)
+    })
+}
+
+func runLambda<Handler: ByteBufferLambdaHandler>(
+    behavior: LambdaServerBehavior,
+    handlerProvider: @escaping (LambdaInitializationContext) async throws -> Handler
+) throws {
+    let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    try runLambda(
+        behavior: behavior,
+        handlerProvider: { context in
+            let promise = eventLoopGroup.next().makePromise(of: Handler.self)
+            promise.completeWithTask {
+                try await handlerProvider(context)
+            }
+            return promise.futureResult
+        }
+    )
+}
+
 func runLambda(
     behavior: LambdaServerBehavior,
     handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some ByteBufferLambdaHandler>

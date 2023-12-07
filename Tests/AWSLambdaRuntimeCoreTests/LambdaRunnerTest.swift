@@ -131,4 +131,66 @@ class LambdaRunnerTest: XCTestCase {
             XCTAssertNotNil(error as? CustomError, "expecting error to match")
         }
     }
+
+    func testCustomAsyncProviderSuccess() {
+        struct Behavior: LambdaServerBehavior {
+            let requestId = UUID().uuidString
+            let event = "hello"
+            func getInvocation() -> GetInvocationResult {
+                .success((self.requestId, self.event))
+            }
+
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+                XCTAssertEqual(self.requestId, requestId, "expecting requestId to match")
+                XCTAssertEqual(self.event, response, "expecting response to match")
+                return .success(())
+            }
+
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                XCTFail("should not report error")
+                return .failure(.internalServerError)
+            }
+
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                XCTFail("should not report init error")
+                return .failure(.internalServerError)
+            }
+        }
+        XCTAssertNoThrow(try runLambda(behavior: Behavior(), handlerProvider: { context async throws -> EchoHandler in
+            EchoHandler()
+        }))
+    }
+
+    func testCustomAsyncProviderFailure() {
+        struct Behavior: LambdaServerBehavior {
+            let requestId = UUID().uuidString
+            let event = "hello"
+            func getInvocation() -> GetInvocationResult {
+                .success((self.requestId, self.event))
+            }
+
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+                XCTFail("should not report processing")
+                return .failure(.internalServerError)
+            }
+
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                XCTFail("should not report error")
+                return .failure(.internalServerError)
+            }
+
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                XCTAssertEqual(String(describing: CustomError()), error.errorMessage, "expecting error to match")
+                return .success(())
+            }
+        }
+
+        struct CustomError: Error {}
+
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerProvider: { context async throws -> EchoHandler in
+            throw CustomError()
+        })) { error in
+            XCTAssertNotNil(error as? CustomError, "expecting error to match")
+        }
+    }
 }

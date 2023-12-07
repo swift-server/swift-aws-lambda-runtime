@@ -398,7 +398,7 @@ extension EventLoopLambdaHandler {
 /// - note: This is a low level protocol designed to power the higher level ``EventLoopLambdaHandler`` and
 ///         ``LambdaHandler`` based APIs.
 ///         Most users are not expected to use this protocol.
-public protocol ByteBufferLambdaHandler: CoreByteBufferLambdaHandler {
+public protocol ByteBufferLambdaHandler: NonInitializingByteBufferLambdaHandler {
     /// Create a Lambda handler for the runtime.
     ///
     /// Use this to initialize all your resources that you want to cache between invocations. This could be database
@@ -433,9 +433,16 @@ extension ByteBufferLambdaHandler {
     }
 }
 
-// MARK: - FIXME
+// MARK: - NonInitializingByteBufferLambdaHandler
 
-public protocol CoreByteBufferLambdaHandler {
+/// An `EventLoopFuture` based processing protocol for a Lambda that takes a `ByteBuffer` and returns
+/// an optional `ByteBuffer` asynchronously.
+///
+/// - note: This is a low level protocol designed to enable use cases where a frameworks initializes the 
+///         runtime with a handler outside the normal initialization of 
+///         ``ByteBufferLambdaHandler``, ``EventLoopLambdaHandler`` and ``LambdaHandler`` based APIs.
+///         Most users are not expected to use this protocol.
+public protocol NonInitializingByteBufferLambdaHandler {
     /// The Lambda handling method.
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
