@@ -18,7 +18,9 @@ import Glibc
 import Darwin.C
 #endif
 
+#if swift(<5.9)
 import Backtrace
+#endif
 import Logging
 import NIOCore
 import NIOPosix
@@ -85,7 +87,9 @@ public enum Lambda {
         handlerType: (some ByteBufferLambdaHandler).Type
     ) -> Result<Int, Error> {
         let _run = { (configuration: LambdaConfiguration) -> Result<Int, Error> in
+            #if swift(<5.9)
             Backtrace.install()
+            #endif
             var logger = Logger(label: "Lambda")
             logger.logLevel = configuration.general.logLevel
 
