@@ -64,7 +64,7 @@ internal final class LambdaRunner {
         // 1. request invocation from lambda runtime engine
         self.isGettingNextInvocation = true
         return self.runtimeClient.getNextInvocation(logger: logger).peekError { error in
-            logger.error("could not fetch work from lambda runtime engine: \(error)")
+            logger.debug("could not fetch work from lambda runtime engine: \(error)")
         }.flatMap { invocation, bytes in
             // 2. send invocation to handler
             self.isGettingNextInvocation = false
