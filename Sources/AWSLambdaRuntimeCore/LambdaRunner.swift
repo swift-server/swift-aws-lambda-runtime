@@ -33,7 +33,7 @@ internal final class LambdaRunner {
     /// Run the user provided initializer. This *must* only be called once.
     ///
     /// - Returns: An `EventLoopFuture<LambdaHandler>` fulfilled with the outcome of the initialization.
-    func initialize<Handler: NonInitializingByteBufferLambdaHandler>(
+    func initialize<Handler: LambdaRuntimeHandler>(
         handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<Handler>,
         logger: Logger,
         terminator: LambdaTerminator
@@ -63,7 +63,7 @@ internal final class LambdaRunner {
             }
     }
 
-    func run(handler: some NonInitializingByteBufferLambdaHandler, logger: Logger) -> EventLoopFuture<Void> {
+    func run(handler: some LambdaRuntimeHandler, logger: Logger) -> EventLoopFuture<Void> {
         logger.debug("lambda invocation sequence starting")
         // 1. request invocation from lambda runtime engine
         self.isGettingNextInvocation = true

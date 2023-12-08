@@ -89,18 +89,15 @@ public enum Lambda {
         Self.run(configuration: configuration, handlerProvider: handlerType.makeHandler(context:))
     }
 
-    /// Run a Lambda defined by implementing the ``ByteBufferLambdaHandler`` protocol.
-    /// The Runtime will manage the Lambdas application lifecycle automatically. It will invoke the
-    /// ``ByteBufferLambdaHandler/makeHandler(context:)`` to create a new Handler.
-    ///
+    /// Run a Lambda defined by implementing the ``LambdaRuntimeHandler`` protocol.
     /// - parameters:
     ///     - configuration: A Lambda runtime configuration object
-    ///     - handlerProvider: A provider of the Handler to invoke.
+    ///     - handlerProvider: A provider of the ``LambdaRuntimeHandler``` to invoke.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     internal static func run(
         configuration: LambdaConfiguration = .init(),
-        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some NonInitializingByteBufferLambdaHandler>
+        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some LambdaRuntimeHandler>
     ) -> Result<Int, Error> {
         let _run = { (configuration: LambdaConfiguration) -> Result<Int, Error> in
             #if swift(<5.9)

@@ -156,7 +156,7 @@ class LambdaRunnerTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        XCTAssertNoThrow(try runLambda(behavior: Behavior(), handlerProvider: { context async throws -> EchoHandler in
+        XCTAssertNoThrow(try runLambda(behavior: Behavior(), handlerProvider: { _ async throws -> EchoHandler in
             EchoHandler()
         }))
     }
@@ -187,7 +187,7 @@ class LambdaRunnerTest: XCTestCase {
 
         struct CustomError: Error {}
 
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerProvider: { context async throws -> EchoHandler in
+        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerProvider: { _ async throws -> EchoHandler in
             throw CustomError()
         })) { error in
             XCTAssertNotNil(error as? CustomError, "expecting error to match")
