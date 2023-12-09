@@ -92,7 +92,7 @@ public enum Lambda {
     /// Run a Lambda defined by implementing the ``LambdaRuntimeHandler`` protocol.
     /// - parameters:
     ///     - configuration: A Lambda runtime configuration object
-    ///     - handlerProvider: A provider of the ``LambdaRuntimeHandler``` to invoke.
+    ///     - handlerProvider: A provider of the ``LambdaRuntimeHandler`` to invoke.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
     internal static func run(
