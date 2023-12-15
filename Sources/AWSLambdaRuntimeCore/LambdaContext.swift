@@ -12,7 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if swift(<5.9)
 @preconcurrency import Dispatch
+#else
+import Dispatch
+#endif
+
 import Logging
 import NIOCore
 
