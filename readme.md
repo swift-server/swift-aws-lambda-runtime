@@ -174,6 +174,45 @@ Next, create a `MyLambda.swift` and implement your Lambda. Note that the file ca
 
  Beyond the small cognitive complexity of using the `EventLoopFuture` based APIs, note these APIs should be used with extra care. An `EventLoopLambdaHandler` will execute the user code on the same `EventLoop` (thread) as the library, making processing faster but requiring the user code to never call blocking APIs as it might prevent the underlying process from functioning.
 
+## Testing locally
+
+Before to deploy your code to AWS Lambda, you can test it locally with the command:
+
+```sh
+LOCAL_LAMBDA_SERVER_ENABLED=true swift run
+```
+
+This starts a local HTTP endpoint listening on port TCP 7000.  Your can invoke your code by sending an HTTP POST command to `http://127.0.0.1:7000/invoke`.
+
+For example:
+
+```sh
+curl -v --header "Content-Type:\ application/json" --data @events/create-session.json http://127.0.0.1:7000/invoke
+*   Trying 127.0.0.1:7000...
+* Connected to 127.0.0.1 (127.0.0.1) port 7000
+> POST /invoke HTTP/1.1
+> Host: 127.0.0.1:7000
+> User-Agent: curl/8.4.0
+> Accept: */*
+> Content-Type:\ application/json
+> Content-Length: 1160
+> 
+< HTTP/1.1 200 OK
+< content-length: 247
+< 
+* Connection #0 to host 127.0.0.1 left intact
+{"statusCode":200,"isBase64Encoded":false,"body":"...","headers":{"Access-Control-Allow-Origin":"*","Content-Type":"application\/json; charset=utf-8","Access-Control-Allow-Headers":"*"}}
+```
+
+## Increase logging verbosity 
+
+You can increase the verbosity of the runtime by changing the LOG_LEVEL environment variable.
+
+- `LOG_LEVEL=debug` displays information about the Swift AWS Lambda Runtime activity and lifecycle
+- `LOG_LEVEL=trace` displays a string representation of the input event as received from the AWS Lambda service (before invoking your handler).
+
+You can use the `LOG_LEVEL` environment variable both during your local testing (`LOG_LEVEL=trace LOCAL_LAMBDA_SERVER_ENABLED=true swift run`) or when you deploy your code on AWS Lambda. You can define [environment variables for your Lambda functions](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html) in the AWS console or programmatically.
+
 ## Deploying to AWS Lambda
 
 To deploy Lambda functions to AWS Lambda, you need to compile the code for Amazon Linux which is the OS used on AWS Lambda microVMs, package it as a Zip file, and upload to AWS.

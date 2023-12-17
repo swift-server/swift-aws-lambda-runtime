@@ -74,6 +74,7 @@ internal final class LambdaRunner {
                 allocator: self.allocator,
                 invocation: invocation
             )
+            logger.trace("Request", metadata: ["bytes": .string(String(buffer: bytes))])
             logger.debug("sending invocation to lambda handler")
             return handler.handle(bytes, context: context)
                 // Hopping back to "our" EventLoop is important in case the handler returns a future that
