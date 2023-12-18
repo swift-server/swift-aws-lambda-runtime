@@ -206,7 +206,7 @@ curl -v --header "Content-Type:\ application/json" --data @events/create-session
 
 ## Increase logging verbosity 
 
-You can increase the verbosity of the runtime by changing the LOG_LEVEL environment variable.
+You can increase the verbosity of the runtime using the `LOG_LEVEL` environment variable.
 
 - `LOG_LEVEL=debug` displays information about the Swift AWS Lambda Runtime activity and lifecycle
 - `LOG_LEVEL=trace` displays a string representation of the input event as received from the AWS Lambda service (before invoking your handler).
