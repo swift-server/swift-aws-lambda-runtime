@@ -184,7 +184,9 @@ LOCAL_LAMBDA_SERVER_ENABLED=true swift run
 
 This starts a local HTTP server listening on port 7000. You can invoke your local Lambda function by sending an HTTP POST request to `http://127.0.0.1:7000/invoke`.
 
-For example:
+The request must include the JSON payload expected as an `Event` by your function. You can create a text file with the JSON payload documented by AWS or captured from a trace.  In this example, we used [the APIGatewayv2 JSON payload from the documentation](https://docs.aws.amazon.com/lambda/latest/dg/services-apigateway.html#apigateway-example-event), saved as `events/create-session.json` text file.
+
+Then we use curl to invoke the local endpoint with the test JSON payload.
 
 ```sh
 curl -v --header "Content-Type:\ application/json" --data @events/create-session.json http://127.0.0.1:7000/invoke
@@ -211,7 +213,10 @@ You can increase the verbosity of the runtime using the `LOG_LEVEL` environment 
 - `LOG_LEVEL=debug` displays information about the Swift AWS Lambda Runtime activity and lifecycle
 - `LOG_LEVEL=trace` displays a string representation of the input event as received from the AWS Lambda service (before invoking your handler).
 
-You can use the `LOG_LEVEL` environment variable both during your local testing (`LOG_LEVEL=trace LOCAL_LAMBDA_SERVER_ENABLED=true swift run`) or when you deploy your code on AWS Lambda. You can define [environment variables for your Lambda functions](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html) in the AWS console or programmatically.
+You can modify the verbosity of a Lambda function by passing the LOG_LEVEL environment variable both during your local testing (LOG_LEVEL=trace LOCAL_LAMBDA_SERVER_ENABLED=true swift run) or when you deploy your code on AWS Lambda.
+You can [define environment variables for your Lambda functions](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html) in the AWS console or programmatically.
+
+This repository follows [Swift's Log Level Guidelines](https://www.swift.org/server/guides/libraries/log-levels.html). At `LOG_LEVEL=trace`, the AWS Lambda runtime will display a string representation of the input event as received from the AWS Lambda service before invoking your handler, for maximum debuggability.
 
 ## Deploying to AWS Lambda
 
