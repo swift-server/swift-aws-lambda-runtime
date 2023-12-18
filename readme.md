@@ -182,7 +182,7 @@ Before deploying your code to AWS Lambda, you can test it locally by setting the
 LOCAL_LAMBDA_SERVER_ENABLED=true swift run
 ```
 
-This starts a local HTTP endpoint listening on port TCP 7000.  Your can invoke your code by sending an HTTP POST command to `http://127.0.0.1:7000/invoke`.
+This starts a local HTTP server listening on port 7000. You can invoke your local Lambda function by sending an HTTP POST request to `http://127.0.0.1:7000/invoke`.
 
 For example:
 
