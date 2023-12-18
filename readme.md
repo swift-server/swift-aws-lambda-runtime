@@ -12,7 +12,7 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 
 ## Getting started
 
-If you have never used AWS Lambda or Docker before, check out this [getting started guide](https://fabianfett.de/getting-started-with-swift-aws-lambda-runtime) which helps you with every step from zero to a running Lambda.
+If you have never used AWS Lambda or Docker before, check out this [getting started guide](https://fabianfett.dev/getting-started-with-swift-aws-lambda-runtime) which helps you with every step from zero to a running Lambda.
 
 First, create a SwiftPM project and pull Swift AWS Lambda Runtime as dependency into your project
 
@@ -37,7 +37,7 @@ First, create a SwiftPM project and pull Swift AWS Lambda Runtime as dependency 
  )
  ```
 
-Next, create a `MyLambda.swift` and implement your Lambda.
+Next, create a `MyLambda.swift` and implement your Lambda. Note that the file can not be named `main.swift` or you will encounter the following error: `'main' attribute cannot be used in a module that contains top-level code`.
 
 ### Using async function
 
@@ -118,7 +118,7 @@ Next, create a `MyLambda.swift` and implement your Lambda.
  @main
  struct MyLambda: SimpleLambdaHandler {
      // In this example we are receiving a SQS Event, with no response (Void).
-     func handle(_ event: SQS.Event, context: LambdaContext) async throws -> Void {
+     func handle(_ event: SQSEvent, context: LambdaContext) async throws {
          ...
      }
  }
@@ -185,8 +185,34 @@ To build and package your Lambda, run the following command:
  swift package archive
  ```
 
+The `archive` command can be customized using the following parameters
+
+* `--output-path` A valid file system path where a folder with the archive operation result will be placed. This folder will contains the following elements:
+    * A file link named `bootstrap`
+    * An executable file
+    * A **Zip** file ready to be upload to AWS
+* `--verbose` A number that sets the command output detail level between the following values:
+    * `0` (Silent)
+    * `1` (Output)
+    * `2` (Debug)
+* `--swift-version` Swift language version used to define the Amazon Linux 2 Docker image. For example "5.7.3"
+* `--base-docker-image` An Amazon Linux 2 docker image name available in your system.
+* `--disable-docker-image-update` If flag is set, docker image will not be updated and local image will be used.
+
+Both `--swift-version` and `--base-docker-image` are mutually exclusive
+
+Here's an example
+
+```zsh
+swift package archive --output-path /Users/JohnAppleseed/Desktop --verbose 2
+```
+
+This command execution will generate a folder at `/Users/JohnAppleseed/Desktop` with the lambda zipped and ready to upload it and set the command detail output level to `2` (debug)
+
  on macOS, the archiving plugin uses docker to build the Lambda for Amazon Linux 2, and as such requires to communicate with Docker over the localhost network.
  At the moment, SwiftPM does not allow plugin communication over network, and as such the invocation requires breaking from the SwiftPM plugin sandbox. This limitation would be removed in the future.
+ 
+ 
 
 ```shell
  swift package --disable-sandbox archive
