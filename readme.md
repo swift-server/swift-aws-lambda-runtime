@@ -174,7 +174,7 @@ Next, create a `MyLambda.swift` and implement your Lambda. Note that the file ca
 
  Beyond the small cognitive complexity of using the `EventLoopFuture` based APIs, note these APIs should be used with extra care. An `EventLoopLambdaHandler` will execute the user code on the same `EventLoop` (thread) as the library, making processing faster but requiring the user code to never call blocking APIs as it might prevent the underlying process from functioning.
 
-## Testing locally
+## Testing Locally
 
 Before to deploy your code to AWS Lambda, you can test it locally with the command:
 
