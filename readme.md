@@ -176,7 +176,7 @@ Next, create a `MyLambda.swift` and implement your Lambda. Note that the file ca
 
 ## Testing Locally
 
-Before to deploy your code to AWS Lambda, you can test it locally with the command:
+Before deploying your code to AWS Lambda, you can test it locally by setting the `LOCAL_LAMBDA_SERVER_ENABLED` environment variable to true. It will look like this on CLI:
 
 ```sh
 LOCAL_LAMBDA_SERVER_ENABLED=true swift run
