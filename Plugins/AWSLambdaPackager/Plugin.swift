@@ -98,6 +98,12 @@ struct AWSLambdaPackager: CommandPlugin {
             )
         }
 
+      try self.execute(
+        executable: dockerToolPath.removingLastComponent().appending(subpath: "docker-buildx"),
+        arguments: ["build", "--platform=linux/arm64", ".", "-t", baseImage],
+        logLevel: .debug
+      )
+
         // get the build output path
         let buildOutputPathCommand = "swift build -c \(buildConfiguration.rawValue) --show-bin-path"
         let dockerBuildOutputPath = try self.execute(
