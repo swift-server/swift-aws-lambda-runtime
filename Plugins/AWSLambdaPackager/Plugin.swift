@@ -105,8 +105,8 @@ struct AWSLambdaPackager: CommandPlugin {
         if buildDockerImage {
             try self.execute(
               executable: dockerToolPath.removingLastComponent().appending(subpath: "docker-buildx"),
-              arguments: ["--platform=\(buildDockerImagePlatform)", ".", "-t", baseImage],
-              logLevel: .debug
+              arguments: ["build", "--platform=\(buildDockerImagePlatform)", ".", "-t", baseImage],
+              logLevel: verboseLogging ? .debug : .output
             )
         }
 
