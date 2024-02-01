@@ -52,6 +52,8 @@ struct AWSLambdaPackager: CommandPlugin {
                 outputDirectory: configuration.outputDirectory,
                 baseImage: configuration.baseDockerImage,
                 disableDockerImageUpdate: configuration.disableDockerImageUpdate,
+                buildDockerImage: configuration.buildDockerImage,
+                buildDockerImagePlatform: configuration.buildDockerPlatform,
                 buildConfiguration: configuration.buildConfiguration,
                 verboseLogging: configuration.verboseLogging
             )
@@ -79,6 +81,8 @@ struct AWSLambdaPackager: CommandPlugin {
         outputDirectory: Path,
         baseImage: String,
         disableDockerImageUpdate: Bool,
+        buildDockerImage: Bool = false,
+        buildDockerImagePlatform: String,
         buildConfiguration: PackageManager.BuildConfiguration,
         verboseLogging: Bool
     ) throws -> [LambdaProduct: Path] {
@@ -98,11 +102,13 @@ struct AWSLambdaPackager: CommandPlugin {
             )
         }
 
-      try self.execute(
-        executable: dockerToolPath.removingLastComponent().appending(subpath: "docker-buildx"),
-        arguments: ["build", "--platform=linux/arm64", ".", "-t", baseImage],
-        logLevel: .debug
-      )
+        if buildDockerImage {
+            try self.execute(
+              executable: dockerToolPath.removingLastComponent().appending(subpath: "docker-buildx"),
+              arguments: ["--platform=\(buildDockerImagePlatform)", ".", "-t", baseImage],
+              logLevel: .debug
+            )
+        }
 
         // get the build output path
         let buildOutputPathCommand = "swift build -c \(buildConfiguration.rawValue) --show-bin-path"
@@ -301,6 +307,8 @@ private struct Configuration: CustomStringConvertible {
     public let verboseLogging: Bool
     public let baseDockerImage: String
     public let disableDockerImageUpdate: Bool
+    public let buildDockerImage: Bool
+    public let buildDockerPlatform: String
 
     public init(
         context: PluginContext,
@@ -314,6 +322,8 @@ private struct Configuration: CustomStringConvertible {
         let swiftVersionArgument = argumentExtractor.extractOption(named: "swift-version")
         let baseDockerImageArgument = argumentExtractor.extractOption(named: "base-docker-image")
         let disableDockerImageUpdateArgument = argumentExtractor.extractFlag(named: "disable-docker-image-update") > 0
+        let buildDockerImage = argumentExtractor.extractFlag(named: "build-docker-image") > 0
+        let buildDockerPlatform = argumentExtractor.extractOption(named: "docker-image-platform")
 
         self.verboseLogging = verboseArgument
 
@@ -358,6 +368,8 @@ private struct Configuration: CustomStringConvertible {
         self.baseDockerImage = baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2"
 
         self.disableDockerImageUpdate = disableDockerImageUpdateArgument
+        self.buildDockerImage = buildDockerImage
+        self.buildDockerPlatform = buildDockerPlatform.first ?? "linux/arm64"
 
         if self.verboseLogging {
             print("-------------------------------------------------------------------------")
@@ -375,6 +387,8 @@ private struct Configuration: CustomStringConvertible {
           buildConfiguration: \(self.buildConfiguration)
           baseDockerImage: \(self.baseDockerImage)
           disableDockerImageUpdate: \(self.disableDockerImageUpdate)
+          buildDockerImage: \(self.buildDockerImage)
+          buildDockerImagePlatform: \(self.buildDockerPlatform)
         }
         """
     }
