@@ -187,10 +187,10 @@ To build and package your Lambda, run the following command:
 
 The `archive` command can be customized using the following parameters
 
-* `--output-path` A valid file system path where a folder with the archive operation result will be placed. This folder will contains the following elements:
+* `--output-path` A valid file system path where a folder with the archive operation result will be placed. This folder will contain the following elements:
     * A file link named `bootstrap`
     * An executable file
-    * A **Zip** file ready to be upload to AWS
+    * A **Zip** file ready to be uploaded to AWS
 * `--verbose` A number that sets the command output detail level between the following values:
     * `0` (Silent)
     * `1` (Output)
