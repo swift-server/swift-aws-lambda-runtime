@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>API_AUTH_KEY</key>
+        <string>$(TMDB_API_AUTH_KEY)</string>
+        <key>API_KEY</key>
+        <string>$(TMDB_API_KEY)</string>
+        <key>AWS_ACCESS_KEY_ID</key>
+        <string>$(AWS_ACCESS_KEY_ID)</string>
+        <key>AWS_SECRET_ACCESS_KEY</key>
+        <string>$(AWS_SECRET_ACCESS_KEY)</string>
+        <key>SQS_QUEUE_URL</key>
+        <string>$(AWS_SQS_QUEUE_URL)</string>
+        <key>API_GATEWAY_URL</key>
+        <string>$(AWS_API_GATEWAY_URL)</string>
+    </dict>
+</plist>
