@@ -143,7 +143,7 @@ public enum Lambda {
         #if DEBUG
         if Lambda.env("LOCAL_LAMBDA_SERVER_ENABLED").flatMap(Bool.init) ?? false {
             do {
-                return try Lambda.withLocalServer {
+                return try Lambda.withLocalServer(invocationEndpoint: Lambda.env("LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT")) {
                     _run(configuration)
                 }
             } catch {
