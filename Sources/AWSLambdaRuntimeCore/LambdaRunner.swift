@@ -33,7 +33,11 @@ internal final class LambdaRunner {
     /// Run the user provided initializer. This *must* only be called once.
     ///
     /// - Returns: An `EventLoopFuture<LambdaHandler>` fulfilled with the outcome of the initialization.
-    func initialize<Handler: ByteBufferLambdaHandler>(handlerType: Handler.Type, logger: Logger, terminator: LambdaTerminator) -> EventLoopFuture<Handler> {
+    func initialize<Handler: LambdaRuntimeHandler>(
+        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<Handler>,
+        logger: Logger,
+        terminator: LambdaTerminator
+    ) -> EventLoopFuture<Handler> {
         logger.debug("initializing lambda")
         // 1. create the handler from the factory
         // 2. report initialization error if one occurred
@@ -44,7 +48,7 @@ internal final class LambdaRunner {
             terminator: terminator
         )
 
-        return handlerType.makeHandler(context: context)
+        return handlerProvider(context)
             // Hopping back to "our" EventLoop is important in case the factory returns a future
             // that originated from a foreign EventLoop/EventLoopGroup.
             // This can happen if the factory uses a library (let's say a database client) that manages its own threads/loops
@@ -59,12 +63,12 @@ internal final class LambdaRunner {
             }
     }
 
-    func run(handler: some ByteBufferLambdaHandler, logger: Logger) -> EventLoopFuture<Void> {
+    func run(handler: some LambdaRuntimeHandler, logger: Logger) -> EventLoopFuture<Void> {
         logger.debug("lambda invocation sequence starting")
         // 1. request invocation from lambda runtime engine
         self.isGettingNextInvocation = true
         return self.runtimeClient.getNextInvocation(logger: logger).peekError { error in
-            logger.error("could not fetch work from lambda runtime engine: \(error)")
+            logger.debug("could not fetch work from lambda runtime engine: \(error)")
         }.flatMap { invocation, bytes in
             // 2. send invocation to handler
             self.isGettingNextInvocation = false
