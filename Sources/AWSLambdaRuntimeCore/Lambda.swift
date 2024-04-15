@@ -38,7 +38,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerType: CodableSimpleLambdaHandler<Handler>.self)
+        Self.run(configuration: configuration, handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler(context:))
     }
 
     /// Run a Lambda defined by implementing the ``LambdaHandler`` protocol.
@@ -54,7 +54,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerType: CodableLambdaHandler<Handler>.self)
+        Self.run(configuration: configuration, handlerProvider: CodableLambdaHandler<Handler>.makeHandler(context:))
     }
 
     /// Run a Lambda defined by implementing the ``EventLoopLambdaHandler`` protocol.
@@ -70,7 +70,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerType: CodableEventLoopLambdaHandler<Handler>.self)
+        Self.run(configuration: configuration, handlerProvider: CodableEventLoopLambdaHandler<Handler>.makeHandler(context:))
     }
 
     /// Run a Lambda defined by implementing the ``ByteBufferLambdaHandler`` protocol.
@@ -86,6 +86,19 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: (some ByteBufferLambdaHandler).Type
     ) -> Result<Int, Error> {
+        Self.run(configuration: configuration, handlerProvider: handlerType.makeHandler(context:))
+    }
+
+    /// Run a Lambda defined by implementing the ``LambdaRuntimeHandler`` protocol.
+    /// - parameters:
+    ///     - configuration: A Lambda runtime configuration object
+    ///     - handlerProvider: A provider of the ``LambdaRuntimeHandler`` to invoke.
+    ///
+    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
+    internal static func run(
+        configuration: LambdaConfiguration = .init(),
+        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some LambdaRuntimeHandler>
+    ) -> Result<Int, Error> {
         let _run = { (configuration: LambdaConfiguration) -> Result<Int, Error> in
             #if swift(<5.9)
             Backtrace.install()
@@ -95,7 +108,12 @@ public enum Lambda {
 
             var result: Result<Int, Error>!
             MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
-                let runtime = LambdaRuntime(handlerType: handlerType, eventLoop: eventLoop, logger: logger, configuration: configuration)
+                let runtime = LambdaRuntime(
+                    handlerProvider: handlerProvider,
+                    eventLoop: eventLoop,
+                    logger: logger,
+                    configuration: configuration
+                )
                 #if DEBUG
                 let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
                     logger.info("intercepted signal: \(signal)")
