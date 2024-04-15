@@ -27,9 +27,9 @@ public protocol SimpleLambdaHandler {
     /// The lambda function's input. In most cases this should be `Codable`. If your event originates from an
     /// AWS service, have a look at [AWSLambdaEvents](https://github.com/swift-server/swift-aws-lambda-events),
     /// which provides a number of commonly used AWS Event implementations.
-    associatedtype Event
+    associatedtype Event: Sendable
     /// The lambda function's output. Can be `Void`.
-    associatedtype Output
+    associatedtype Output: Sendable
 
     init()
 
@@ -143,9 +143,9 @@ public protocol LambdaHandler {
     /// The lambda function's input. In most cases this should be `Codable`. If your event originates from an
     /// AWS service, have a look at [AWSLambdaEvents](https://github.com/swift-server/swift-aws-lambda-events),
     /// which provides a number of commonly used AWS Event implementations.
-    associatedtype Event
+    associatedtype Event: Sendable
     /// The lambda function's output. Can be `Void`.
-    associatedtype Output
+    associatedtype Output: Sendable
 
     /// The Lambda initialization method.
     /// Use this method to initialize resources that will be used in every request.
@@ -287,9 +287,9 @@ public protocol EventLoopLambdaHandler {
     /// The lambda functions input. In most cases this should be `Codable`. If your event originates from an
     /// AWS service, have a look at [AWSLambdaEvents](https://github.com/swift-server/swift-aws-lambda-events),
     /// which provides a number of commonly used AWS Event implementations.
-    associatedtype Event
+    associatedtype Event: Sendable
     /// The lambda functions output. Can be `Void`.
-    associatedtype Output
+    associatedtype Output: Sendable
 
     /// Create a Lambda handler for the runtime.
     ///
