@@ -43,6 +43,19 @@ final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
         
     }
     
+    func testQueueResource() {
+        
+        // given
+        let expected = expectedQueue()
+        
+        let queue = Queue(logicalName: "QueueTestQueue", physicalName: "test-queue").resource()
+        
+        let testDeployment = MockDeploymentDescriptorBuilder(withResource: queue)
+        
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment,
+                                                               expected: expected))
+    }
+
     // check wether the builder creates additional queue resources
     func testLambdaCreateAdditionalResourceWithName() {
         
@@ -405,7 +418,7 @@ final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
         XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment, expected: expected))
     }
     
-    func testCapacityThroughput() {
+    func testSimpleTableCapacityThroughput() {
         // given
         let writeCapacity = 999
         let readCapacity = 666

@@ -27,10 +27,10 @@ struct MockDeploymentDescriptor: MockDeploymentDescriptorBehavior {
 
     init(withFunction: Bool = true,
          architecture: ServerlessFunctionProperties.Architectures = .defaultArchitecture(),
-         codeURI: String,
+         codeURI: String = "",
          eventSource: [Resource<EventSourceType>]? = nil,
          environmentVariable: SAMEnvironmentVariable? = nil,
-         additionalResources: [Resource<ResourceType>]? = nil) {
+         additionalResources: [Resource<ResourceType>] = []) {
         if withFunction {
 
             let properties = ServerlessFunctionProperties(
@@ -45,13 +45,13 @@ struct MockDeploymentDescriptor: MockDeploymentDescriptorBehavior {
 
             self.deploymentDescriptor = SAMDeploymentDescriptor(
                 description: "A SAM template to deploy a Swift Lambda function",
-                resources: [ serverlessFunction ] + (additionalResources ?? [])
+                resources: [ serverlessFunction ] + additionalResources
 
             )
         } else {
             self.deploymentDescriptor = SAMDeploymentDescriptor(
                 description: "A SAM template to deploy a Swift Lambda function",
-                resources: (additionalResources ?? [])
+                resources: additionalResources
             )
         }
     }
