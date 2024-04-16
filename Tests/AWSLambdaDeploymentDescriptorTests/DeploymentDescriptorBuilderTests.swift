@@ -384,6 +384,26 @@ final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
     }
     
     //MARK: SimpleTable resource
+    func testSimpleTable() {
+        // given
+        let expected = [
+            Expected.keyOnly(indent: 1, key: "SwiftLambdaTable"),
+            Expected.keyValue(indent: 2, keyValue: ["Type": "AWS::Serverless::SimpleTable"]),
+            Expected.keyValue(indent: 3, keyValue: ["TableName": "swift-lambda-table"]),
+            Expected.keyOnly(indent: 3, key: "PrimaryKey"),
+            Expected.keyValue(indent: 4, keyValue: ["Type": "String", "Name" : "id"]),
+        ]
+        
+        // when
+        let table = Table(logicalName: "SwiftLambdaTable",
+                          physicalName: "swift-lambda-table",
+                          primaryKeyName: "id",
+                          primaryKeyType: "String")
+        
+        // then
+        let testDeployment = MockDeploymentDescriptorBuilder(withResource: table)
+        XCTAssertTrue(self.generateAndTestDeploymentDescriptor(deployment: testDeployment, expected: expected))
+    }
     
     func testCapacityThroughput() {
         // given

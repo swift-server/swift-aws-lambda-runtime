@@ -75,7 +75,7 @@ final class DeploymentDescriptorTests: DeploymentDescriptorBaseTest {
         functionProperties.autoPublishCodeSha256 = "sha256"
         functionProperties.description = "my function description"
         functionProperties.ephemeralStorage = ServerlessFunctionProperties.EphemeralStorage(1024)
-        let functionToTest = Resource<ResourceType>(type: .serverlessFunction,
+        let functionToTest = Resource<ResourceType>(type: .function,
                                                     properties: functionProperties,
                                                     name: functionName)
 
@@ -116,7 +116,7 @@ final class DeploymentDescriptorTests: DeploymentDescriptorBaseTest {
             maximumEventAgeInSeconds: 999,
             maximumRetryAttempts: 33)
         functionProperties.eventInvokeConfig = invokeConfig
-        let functionToTest = Resource<ResourceType>(type: .serverlessFunction,
+        let functionToTest = Resource<ResourceType>(type: .function,
                                                     properties: functionProperties,
                                                     name: functionName)
 
@@ -153,7 +153,7 @@ final class DeploymentDescriptorTests: DeploymentDescriptorBaseTest {
             XCTFail("Invalid Arn or MountPoint")
         }
 
-        let functionToTest = Resource<ResourceType>(type: .serverlessFunction,
+        let functionToTest = Resource<ResourceType>(type: .function,
                                                     properties: functionProperties,
                                                     name: functionName)
 
@@ -221,7 +221,7 @@ final class DeploymentDescriptorTests: DeploymentDescriptorBaseTest {
                                                             invokeMode: .buffered)
         functionProperties.functionUrlConfig = config
 
-        let functionToTest = Resource<ResourceType>(type: .serverlessFunction,
+        let functionToTest = Resource<ResourceType>(type: .function,
                                                     properties: functionProperties,
                                                     name: functionName)
 

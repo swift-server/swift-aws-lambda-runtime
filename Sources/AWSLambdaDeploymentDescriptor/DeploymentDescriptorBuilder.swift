@@ -170,7 +170,7 @@ public struct Function {
 
     let functionResource = [
       Resource<ResourceType>(
-        type: .serverlessFunction,
+        type: .function,
         properties: self.properties,
         name: self.name)
     ]
@@ -407,13 +407,13 @@ public struct Function {
   ) -> Function {
 
     if let onSuccess {
-      guard onSuccess.type == .queue || onSuccess.type == .serverlessFunction else {
+      guard onSuccess.type == .queue || onSuccess.type == .function else {
         return self
       }
     }
 
     if let onFailure {
-      guard onFailure.type == .queue || onFailure.type == .serverlessFunction else {
+      guard onFailure.type == .queue || onFailure.type == .function else {
         return self
       }
     }
@@ -739,6 +739,8 @@ public struct Queue {
 }
 
 // MARK: Table top level resource
+// public typealias Table = Resource<ResourceType> where ResourceType ==  .table
+
 public struct Table {
   let logicalName: String
   let properties: SimpleTableProperties
@@ -782,8 +784,8 @@ public struct Table {
       logicalName: self.logicalName,
       properties: properties)
   }
-
 }
+
 
 // MARK: Serialization code
 

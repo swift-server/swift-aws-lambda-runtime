@@ -39,7 +39,7 @@ struct MockDeploymentDescriptor: MockDeploymentDescriptorBehavior {
                     eventSources: eventSource ?? [],
                     environment: environmentVariable ?? SAMEnvironmentVariable.none)
             let serverlessFunction = Resource<ResourceType>(
-                    type: .serverlessFunction,
+                    type: .function,
                     properties: properties,
                     name: "TestLambda")
 
