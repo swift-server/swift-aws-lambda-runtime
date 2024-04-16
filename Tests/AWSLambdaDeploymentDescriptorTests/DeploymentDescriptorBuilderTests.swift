@@ -48,7 +48,7 @@ final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
         // given
         let expected = expectedQueue()
         
-        let queue = Queue(logicalName: "QueueTestQueue", physicalName: "test-queue").resource()
+        let queue = Queue(logicalName: "QueueTestQueue", physicalName: "test-queue")
         
         let testDeployment = MockDeploymentDescriptorBuilder(withResource: queue)
         
@@ -210,7 +210,7 @@ final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
     
     func testeventInvokeConfigWithSuccessQueue() {
         // given
-        let queue1 = Queue(logicalName: "queue1", physicalName: "queue1").resource()
+        let queue1 = Queue(logicalName: "queue1", physicalName: "queue1")
         let expected = [
             Expected.keyOnly(indent: 3, key: "EventInvokeConfig"),
             Expected.keyValue(indent: 4, keyValue: ["MaximumEventAgeInSeconds": "900",
@@ -226,7 +226,7 @@ final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
         
         // when
         let function = Function(name: functionName, codeURI: self.codeURI)
-            .eventInvoke(onSuccess: queue1,
+            .eventInvoke(onSuccess: queue1.resource()[0],
                          onFailure: nil,
                          maximumEventAgeInSeconds: 900,
                          maximumRetryAttempts: 3)
@@ -239,7 +239,7 @@ final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
     
     func testeventInvokeConfigWithFailureQueue() {
         // given
-        let queue1 = Queue(logicalName: "queue1", physicalName: "queue1").resource()
+        let queue1 = Queue(logicalName: "queue1", physicalName: "queue1")
         let expected = [
             Expected.keyOnly(indent: 3, key: "EventInvokeConfig"),
             Expected.keyValue(indent: 4, keyValue: ["MaximumEventAgeInSeconds": "900",
@@ -256,7 +256,7 @@ final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
         // when
         let function = Function(name: functionName, codeURI: self.codeURI)
             .eventInvoke(onSuccess: nil,
-                         onFailure: queue1,
+                         onFailure: queue1.resource()[0],
                          maximumEventAgeInSeconds: 900,
                          maximumRetryAttempts: 3)
         
@@ -283,7 +283,7 @@ final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
         
         // when
         var function = Function(name: functionName, codeURI: self.codeURI)
-        let resource = function.resources()
+        let resource = function.resource()
         XCTAssertTrue(resource.count == 1)
         function = function.eventInvoke(onSuccess: resource[0],
                                         onFailure: nil,
@@ -320,7 +320,7 @@ final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
         
         // when
         var function = Function(name: functionName, codeURI: self.codeURI)
-        let resource = function.resources()
+        let resource = function.resource()
         XCTAssertTrue(resource.count == 1)
         function = function.urlConfig(authType: .iam,
                                       invokeMode: .buffered,
@@ -360,7 +360,7 @@ final class DeploymentDescriptorBuilderTests: DeploymentDescriptorBaseTest {
         
         // when
         var function = Function(name: functionName, codeURI: self.codeURI)
-        let resource = function.resources()
+        let resource = function.resource()
         XCTAssertTrue(resource.count == 1)
         function = function.urlConfig(authType: .iam,
                                       invokeMode: .buffered)

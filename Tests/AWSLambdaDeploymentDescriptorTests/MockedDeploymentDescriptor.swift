@@ -68,19 +68,14 @@ struct MockDeploymentDescriptorBuilder: MockDeploymentDescriptorBehavior {
     static let functionName = "TestLambda"
     let deploymentDescriptor: DeploymentDescriptor
 
-    init(withResource function: Function) {
-        XCTAssert(function.resources().count == 1)
-        self.init(withResource: function.resources()[0])
-    }
-    init(withResource table: Table) {
-        self.init(withResource: table.resource())
-    }
-    init(withResource: Resource<ResourceType>) {
+    init(withResource resource: any BuilderResource) {
+
         self.deploymentDescriptor = DeploymentDescriptor {
             "A SAM template to deploy a Swift Lambda function"
-            withResource
+            resource
         }
     }
+
     init(withFunction: Bool = true,
          architecture: ServerlessFunctionProperties.Architectures = .defaultArchitecture(),
          codeURI: String,
