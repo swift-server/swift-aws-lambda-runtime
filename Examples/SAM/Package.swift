@@ -24,10 +24,11 @@ let package = Package(
   ],
   products: [
     .executable(name: "HttpApiLambda", targets: ["HttpApiLambda"]),
-    .executable(name: "SQSLambda", targets: ["SQSLambda"])
+    .executable(name: "SQSLambda", targets: ["SQSLambda"]),
+    .executable(name: "UrlLambda", targets: ["UrlLambda"])
   ],
   dependencies: [
-    .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "1.0.0-alpha"),
+    .package(url: "../../../swift-aws-lambda-runtime", branch: "sebsto/deployerplugin_dsl"),
     .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", branch: "main")
   ],
   targets: [
