@@ -51,22 +51,6 @@ public protocol SAMResource: Encodable, Equatable {}
 public protocol SAMResourceType: Encodable, Equatable {}
 public protocol SAMResourceProperties: Encodable {}
 
-// public enum ResourceType: SAMResourceType {
-
-//   case type(_ name: String)
-
-//   static var serverlessFunction: Self { .type("AWS::Serverless::Function") }
-//   static var queue: Self { .type("AWS::SQS::Queue") }
-//   static var table: Self { .type("AWS::Serverless::SimpleTable") }
-
-//   public func encode(to encoder: Encoder) throws {
-//     if case let .type(value) = self {
-//       var container = encoder.singleValueContainer()
-//       try? container.encode(value)
-//     }
-//   }
-// }
-
 public enum ResourceType: String, SAMResourceType {
   case function = "AWS::Serverless::Function"
   case queue = "AWS::SQS::Queue"
