@@ -20,7 +20,7 @@ private var _deploymentDescriptor: SAMDeploymentDescriptor?
 
 // a top level DeploymentDescriptor DSL
 @resultBuilder
-struct DeploymentDescriptor {
+public struct DeploymentDescriptor {
     // capture the deployment descriptor for unit tests
     let samDeploymentDescriptor: SAMDeploymentDescriptor
 
@@ -76,13 +76,13 @@ struct DeploymentDescriptor {
         expression
     }
 
-    static func buildExpression(_ expression: any BuilderResource) -> [Resource<ResourceType>] {
+    public static func buildExpression(_ expression: any BuilderResource) -> [Resource<ResourceType>] {
         expression.resource()
     }
 
 }
 
-internal protocol BuilderResource {
+public protocol BuilderResource {
   func resource() -> [Resource<ResourceType>]
 }
 
@@ -163,7 +163,7 @@ public struct Function: BuilderResource {
     }
 
     // this method fails when the package does not exist at path
-    internal func resource() -> [Resource<ResourceType>] {
+    public func resource() -> [Resource<ResourceType>] {
         let functionResource = [ self._underlying ]
         let additionalQueueResources = self.collectQueueResources()
 
@@ -767,7 +767,7 @@ public struct Queue: BuilderResource {
         )
     }
 
-    internal func resource() -> [Resource<ResourceType>] { [_underlying] }
+    public func resource() -> [Resource<ResourceType>] { [_underlying] }
 }
 
 // MARK: Table top level resource
@@ -801,7 +801,7 @@ public struct Table: BuilderResource {
         self.init(logicalName: logicalName, properties: properties)
     }
 
-    internal func resource() -> [Resource<ResourceType>] { [ self._underlying ] }
+    public func resource() -> [Resource<ResourceType>] { [ self._underlying ] }
 
     public func provisionedThroughput(readCapacityUnits: Int, writeCapacityUnits: Int) -> Table {
         var properties = self._underlying.properties as! SimpleTableProperties // use as! is safe, it it fails, it is a programming error
