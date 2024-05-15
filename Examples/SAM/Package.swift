@@ -28,7 +28,7 @@ let package = Package(
     .executable(name: "UrlLambda", targets: ["UrlLambda"])
   ],
   dependencies: [
-    .package(url: "../../../swift-aws-lambda-runtime", branch: "sebsto/deployerplugin_dsl"),
+    .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
     .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", branch: "main")
   ],
   targets: [
