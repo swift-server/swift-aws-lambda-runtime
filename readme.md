@@ -174,6 +174,50 @@ Next, create a `MyLambda.swift` and implement your Lambda. Note that the file ca
 
  Beyond the small cognitive complexity of using the `EventLoopFuture` based APIs, note these APIs should be used with extra care. An `EventLoopLambdaHandler` will execute the user code on the same `EventLoop` (thread) as the library, making processing faster but requiring the user code to never call blocking APIs as it might prevent the underlying process from functioning.
 
+## Testing Locally
+
+Before deploying your code to AWS Lambda, you can test it locally by setting the `LOCAL_LAMBDA_SERVER_ENABLED` environment variable to true. It will look like this on CLI:
+
+```sh
+LOCAL_LAMBDA_SERVER_ENABLED=true swift run
+```
+
+This starts a local HTTP server listening on port 7000. You can invoke your local Lambda function by sending an HTTP POST request to `http://127.0.0.1:7000/invoke`.
+
+The request must include the JSON payload expected as an `Event` by your function. You can create a text file with the JSON payload documented by AWS or captured from a trace.  In this example, we used [the APIGatewayv2 JSON payload from the documentation](https://docs.aws.amazon.com/lambda/latest/dg/services-apigateway.html#apigateway-example-event), saved as `events/create-session.json` text file.
+
+Then we use curl to invoke the local endpoint with the test JSON payload.
+
+```sh
+curl -v --header "Content-Type:\ application/json" --data @events/create-session.json http://127.0.0.1:7000/invoke
+*   Trying 127.0.0.1:7000...
+* Connected to 127.0.0.1 (127.0.0.1) port 7000
+> POST /invoke HTTP/1.1
+> Host: 127.0.0.1:7000
+> User-Agent: curl/8.4.0
+> Accept: */*
+> Content-Type:\ application/json
+> Content-Length: 1160
+> 
+< HTTP/1.1 200 OK
+< content-length: 247
+< 
+* Connection #0 to host 127.0.0.1 left intact
+{"statusCode":200,"isBase64Encoded":false,"body":"...","headers":{"Access-Control-Allow-Origin":"*","Content-Type":"application\/json; charset=utf-8","Access-Control-Allow-Headers":"*"}}
+```
+
+## Increase logging verbosity 
+
+You can increase the verbosity of the runtime using the `LOG_LEVEL` environment variable.
+
+- `LOG_LEVEL=debug` displays information about the Swift AWS Lambda Runtime activity and lifecycle
+- `LOG_LEVEL=trace` displays a string representation of the input event as received from the AWS Lambda service (before invoking your handler).
+
+You can modify the verbosity of a Lambda function by passing the LOG_LEVEL environment variable both during your local testing (LOG_LEVEL=trace LOCAL_LAMBDA_SERVER_ENABLED=true swift run) or when you deploy your code on AWS Lambda.
+You can [define environment variables for your Lambda functions](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html) in the AWS console or programmatically.
+
+This repository follows [Swift's Log Level Guidelines](https://www.swift.org/server/guides/libraries/log-levels.html). At `LOG_LEVEL=trace`, the AWS Lambda runtime will display a string representation of the input event as received from the AWS Lambda service before invoking your handler, for maximum debuggability.
+
 ## Deploying to AWS Lambda
 
 To deploy Lambda functions to AWS Lambda, you need to compile the code for Amazon Linux which is the OS used on AWS Lambda microVMs, package it as a Zip file, and upload to AWS.
