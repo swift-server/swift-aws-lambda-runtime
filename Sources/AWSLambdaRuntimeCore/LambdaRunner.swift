@@ -78,7 +78,13 @@ internal final class LambdaRunner {
                 allocator: self.allocator,
                 invocation: invocation
             )
-            logger.debug("sending invocation to lambda handler")
+            // when log level is trace or lower, print the first Kb of the payload
+            if logger.logLevel <= .trace, let buffer = bytes.getSlice(at: 0, length: max(bytes.readableBytes, 1024)) {
+                logger.trace("sending invocation to lambda handler",
+                             metadata: ["1024 first bytes": .string(String(buffer: buffer))])
+            } else {
+                logger.debug("sending invocation to lambda handler")
+            }
             return handler.handle(bytes, context: context)
                 // Hopping back to "our" EventLoop is important in case the handler returns a future that
                 // originated from a foreign EventLoop/EventLoopGroup.

@@ -120,13 +120,13 @@ struct AWSLambdaPackager: CommandPlugin {
                 // just like Package.swift's examples assume ../.., we assume we are two levels below the root project
                 let lastComponent = packageDirectory.lastComponent
                 let beforeLastComponent = packageDirectory.removingLastComponent().lastComponent
-                try Utils.execute(
+                try self.execute(
                     executable: dockerToolPath,
                     arguments: ["run", "--rm", "--env", "LAMBDA_USE_LOCAL_DEPS=true", "-v", "\(packageDirectory.string)/../..:/workspace", "-w", "/workspace/\(beforeLastComponent)/\(lastComponent)", baseImage, "bash", "-cl", buildCommand],
                     logLevel: verboseLogging ? .debug : .output
                 )
             } else {
-                try Utils.execute(
+                try self.execute(
                     executable: dockerToolPath,
                     arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildCommand],
                     logLevel: verboseLogging ? .debug : .output
