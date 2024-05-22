@@ -205,6 +205,17 @@ curl -v --header "Content-Type:\ application/json" --data @events/create-session
 * Connection #0 to host 127.0.0.1 left intact
 {"statusCode":200,"isBase64Encoded":false,"body":"...","headers":{"Access-Control-Allow-Origin":"*","Content-Type":"application\/json; charset=utf-8","Access-Control-Allow-Headers":"*"}}
 ```
+### Modifying the local endpoint
+
+By default, when using the local Lambda server, it listens on the `/invoke` endpoint.
+
+Some testing tools, such as the [AWS Lambda runtime interface emulator](https://docs.aws.amazon.com/lambda/latest/dg/images-test.html), require a different endpoint. In that case, you can use the `LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT` environment variable to force the runtime to listen on a different endpoint.
+
+Example:
+
+```sh
+LOCAL_LAMBDA_SERVER_ENABLED=true LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT=/2015-03-31/functions/function/invocations swift run
+```
 
 ## Increase logging verbosity 
 
