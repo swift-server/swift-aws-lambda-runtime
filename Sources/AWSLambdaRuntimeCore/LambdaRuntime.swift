@@ -24,6 +24,7 @@ public final class LambdaRuntime<Handler: LambdaRuntimeHandler> {
     private let shutdownPromise: EventLoopPromise<Int>
     private let logger: Logger
     private let configuration: LambdaConfiguration
+    private let allocator: ByteBufferAllocator
 
     private let handlerProvider: (LambdaInitializationContext) -> EventLoopFuture<Handler>
 
@@ -44,11 +45,13 @@ public final class LambdaRuntime<Handler: LambdaRuntimeHandler> {
     convenience init(
         handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<Handler>,
         eventLoop: EventLoop,
+        allocator: ByteBufferAllocator,
         logger: Logger
     ) {
         self.init(
             handlerProvider: handlerProvider,
             eventLoop: eventLoop,
+            allocator: allocator,
             logger: logger,
             configuration: .init()
         )
@@ -63,11 +66,13 @@ public final class LambdaRuntime<Handler: LambdaRuntimeHandler> {
     init(
         handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<Handler>,
         eventLoop: EventLoop,
+        allocator: ByteBufferAllocator,
         logger: Logger,
         configuration: LambdaConfiguration
     ) {
         self.eventLoop = eventLoop
         self.shutdownPromise = eventLoop.makePromise(of: Int.self)
+        self.allocator = allocator
         self.logger = logger
         self.configuration = configuration
 
@@ -108,7 +113,7 @@ public final class LambdaRuntime<Handler: LambdaRuntimeHandler> {
         var logger = self.logger
         logger[metadataKey: "lifecycleId"] = .string(self.configuration.lifecycle.id)
         let terminator = LambdaTerminator()
-        let runner = LambdaRunner(eventLoop: self.eventLoop, configuration: self.configuration)
+        let runner = LambdaRunner(eventLoop: self.eventLoop, configuration: self.configuration, allocator: self.allocator)
 
         let startupFuture = runner.initialize(handlerProvider: self.handlerProvider, logger: logger, terminator: terminator)
         startupFuture.flatMap { handler -> EventLoopFuture<Result<Int, Error>> in
@@ -232,11 +237,13 @@ public enum LambdaRuntimeFactory {
     public static func makeRuntime<Handler: SimpleLambdaHandler>(
         _ handlerType: Handler.Type,
         eventLoop: any EventLoop,
+        allocator: ByteBufferAllocator = ByteBufferAllocator(),
         logger: Logger
     ) -> LambdaRuntime<some ByteBufferLambdaHandler> {
         LambdaRuntime<CodableSimpleLambdaHandler<Handler>>(
             handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler(context:),
             eventLoop: eventLoop,
+            allocator: allocator,
             logger: logger
         )
     }
@@ -251,11 +258,13 @@ public enum LambdaRuntimeFactory {
     public static func makeRuntime<Handler: LambdaHandler>(
         _ handlerType: Handler.Type,
         eventLoop: any EventLoop,
+        allocator: ByteBufferAllocator = ByteBufferAllocator(),
         logger: Logger
     ) -> LambdaRuntime<some LambdaRuntimeHandler> {
         LambdaRuntime<CodableLambdaHandler<Handler>>(
             handlerProvider: CodableLambdaHandler<Handler>.makeHandler(context:),
             eventLoop: eventLoop,
+            allocator: allocator,
             logger: logger
         )
     }
@@ -270,11 +279,13 @@ public enum LambdaRuntimeFactory {
     public static func makeRuntime<Handler: EventLoopLambdaHandler>(
         _ handlerType: Handler.Type,
         eventLoop: any EventLoop,
+        allocator: ByteBufferAllocator = ByteBufferAllocator(),
         logger: Logger
     ) -> LambdaRuntime<some LambdaRuntimeHandler> {
         LambdaRuntime<CodableEventLoopLambdaHandler<Handler>>(
             handlerProvider: CodableEventLoopLambdaHandler<Handler>.makeHandler(context:),
             eventLoop: eventLoop,
+            allocator: allocator,
             logger: logger
         )
     }
@@ -289,11 +300,13 @@ public enum LambdaRuntimeFactory {
     public static func makeRuntime<Handler: ByteBufferLambdaHandler>(
         _ handlerType: Handler.Type,
         eventLoop: any EventLoop,
+        allocator: ByteBufferAllocator = ByteBufferAllocator(),
         logger: Logger
     ) -> LambdaRuntime<some LambdaRuntimeHandler> {
         LambdaRuntime<Handler>(
             handlerProvider: Handler.makeHandler(context:),
             eventLoop: eventLoop,
+            allocator: allocator,
             logger: logger
         )
     }
@@ -308,11 +321,13 @@ public enum LambdaRuntimeFactory {
     public static func makeRuntime<Handler: LambdaRuntimeHandler>(
         handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<Handler>,
         eventLoop: any EventLoop,
+        allocator: ByteBufferAllocator = ByteBufferAllocator(),
         logger: Logger
     ) -> LambdaRuntime<Handler> {
         LambdaRuntime(
             handlerProvider: handlerProvider,
             eventLoop: eventLoop,
+            allocator: allocator,
             logger: logger
         )
     }
@@ -327,6 +342,7 @@ public enum LambdaRuntimeFactory {
     public static func makeRuntime<Handler: LambdaRuntimeHandler>(
         handlerProvider: @escaping (LambdaInitializationContext) async throws -> Handler,
         eventLoop: any EventLoop,
+        allocator: ByteBufferAllocator = ByteBufferAllocator(),
         logger: Logger
     ) -> LambdaRuntime<Handler> {
         LambdaRuntime(
@@ -338,6 +354,7 @@ public enum LambdaRuntimeFactory {
                 return promise.futureResult
             },
             eventLoop: eventLoop,
+            allocator: allocator,
             logger: logger
         )
     }

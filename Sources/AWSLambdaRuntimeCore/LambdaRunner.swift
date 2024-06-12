@@ -24,10 +24,10 @@ internal final class LambdaRunner {
 
     private var isGettingNextInvocation = false
 
-    init(eventLoop: EventLoop, configuration: LambdaConfiguration) {
+    init(eventLoop: EventLoop, configuration: LambdaConfiguration, allocator: ByteBufferAllocator) {
         self.eventLoop = eventLoop
         self.runtimeClient = LambdaRuntimeClient(eventLoop: self.eventLoop, configuration: configuration.runtimeEngine)
-        self.allocator = ByteBufferAllocator()
+        self.allocator = allocator
     }
 
     /// Run the user provided initializer. This *must* only be called once.

@@ -77,7 +77,7 @@ func runLambda(
     let logger = Logger(label: "TestLogger")
     let configuration = LambdaConfiguration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
     let terminator = LambdaTerminator()
-    let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration)
+    let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration, allocator: ByteBufferAllocator())
     let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer { XCTAssertNoThrow(try server.stop().wait()) }
     try runner.initialize(handlerProvider: handlerProvider, logger: logger, terminator: terminator).flatMap { handler in

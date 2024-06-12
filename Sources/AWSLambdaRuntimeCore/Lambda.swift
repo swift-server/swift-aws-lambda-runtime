@@ -111,6 +111,7 @@ public enum Lambda {
                 let runtime = LambdaRuntime(
                     handlerProvider: handlerProvider,
                     eventLoop: eventLoop,
+                    allocator: ByteBufferAllocator(),
                     logger: logger,
                     configuration: configuration
                 )
