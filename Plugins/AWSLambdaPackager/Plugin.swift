@@ -205,7 +205,8 @@ struct AWSLambdaPackager: CommandPlugin {
             #if os(macOS) || os(Linux)
             let arguments = ["--junk-paths", "--symlinks", zipfilePath.string, relocatedArtifactPath.string, symbolicLinkPath.string]
             #else
-            throw Error.unsupportedPlatform("can't or don't know how to create a zip file on this platform")
+            let arguments = [String]()
+            throw Errors.unsupportedPlatform("can't or don't know how to create a zip file on this platform")
             #endif
 
             // run the zip tool
