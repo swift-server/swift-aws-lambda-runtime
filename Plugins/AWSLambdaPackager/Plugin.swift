@@ -202,8 +202,27 @@ struct AWSLambdaPackager: CommandPlugin {
             try FileManager.default.copyItem(atPath: artifactPath.string, toPath: relocatedArtifactPath.string)
             try FileManager.default.createSymbolicLink(atPath: symbolicLinkPath.string, withDestinationPath: relocatedArtifactPath.lastComponent)
 
+            // add resources
+            let contentsDirectory = workingDirectory.appending("Contents")
+            try FileManager.default.createDirectory(atPath: contentsDirectory.string, withIntermediateDirectories: true)
+            let relocatedResourcesDirectory = contentsDirectory.appending("Resources")
+            let artifactDirectory = artifactPath.removingLastComponent()
+            let resourcesDirectoryName = try FileManager.default.contentsOfDirectory(atPath: artifactDirectory.string)
+                .first(where: { $0.hasSuffix(".resources") && $0.contains(product.name) })
+            if let resourcesDirectoryName {
+                let resourcesDirectory = artifactDirectory.appending(resourcesDirectoryName)
+                try FileManager.default.copyItem(atPath: resourcesDirectory.string, toPath: relocatedResourcesDirectory.string)
+            }
+
             #if os(macOS) || os(Linux)
-            let arguments = ["--junk-paths", "--symlinks", zipfilePath.string, relocatedArtifactPath.string, symbolicLinkPath.string]
+            let arguments = [
+                "--recurse-paths",
+                "--symlinks",
+                zipfilePath.lastComponent,
+                relocatedArtifactPath.lastComponent,
+                symbolicLinkPath.lastComponent,
+                contentsDirectory.lastComponent,
+            ]
             #else
             let arguments = [String]()
             throw Errors.unsupportedPlatform("can't or don't know how to create a zip file on this platform")
@@ -213,6 +232,7 @@ struct AWSLambdaPackager: CommandPlugin {
             try self.execute(
                 executable: zipToolPath,
                 arguments: arguments,
+                customWorkingDirectory: workingDirectory,
                 logLevel: verboseLogging ? .debug : .silent
             )
 
