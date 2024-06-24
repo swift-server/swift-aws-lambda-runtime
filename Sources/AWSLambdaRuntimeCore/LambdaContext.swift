@@ -81,6 +81,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         let logger: Logger
         let eventLoop: EventLoop
         let allocator: ByteBufferAllocator
+        let tasks: DetachedTasksContainer
 
         init(
             requestID: String,
@@ -91,7 +92,8 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             clientContext: String?,
             logger: Logger,
             eventLoop: EventLoop,
-            allocator: ByteBufferAllocator
+            allocator: ByteBufferAllocator,
+            tasks: DetachedTasksContainer
         ) {
             self.requestID = requestID
             self.traceID = traceID
@@ -102,6 +104,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             self.logger = logger
             self.eventLoop = eventLoop
             self.allocator = allocator
+            self.tasks = tasks
         }
     }
 
@@ -158,6 +161,10 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     public var allocator: ByteBufferAllocator {
         self.storage.allocator
     }
+    
+    public var tasks: DetachedTasksContainer {
+        self.storage.tasks
+    }
 
     init(requestID: String,
          traceID: String,
@@ -177,7 +184,13 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             clientContext: clientContext,
             logger: logger,
             eventLoop: eventLoop,
-            allocator: allocator
+            allocator: allocator,
+            tasks: DetachedTasksContainer(
+                context: DetachedTasksContainer.Context(
+                    eventLoop: eventLoop,
+                    logger: logger
+                )
+            )
         )
     }
 
@@ -209,7 +222,13 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             deadline: .now() + timeout,
             logger: logger,
             eventLoop: eventLoop,
-            allocator: ByteBufferAllocator()
+            allocator: ByteBufferAllocator(),
+            tasks: DetachedTasksContainer(
+                context: DetachedTasksContainer.Context(
+                    eventLoop: eventLoop,
+                    logger: logger
+                )
+            )
         )
     }
 }
