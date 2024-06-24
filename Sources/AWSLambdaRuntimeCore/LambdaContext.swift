@@ -222,13 +222,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             deadline: .now() + timeout,
             logger: logger,
             eventLoop: eventLoop,
-            allocator: ByteBufferAllocator(),
-            tasks: DetachedTasksContainer(
-                context: DetachedTasksContainer.Context(
-                    eventLoop: eventLoop,
-                    logger: logger
-                )
-            )
+            allocator: ByteBufferAllocator()
         )
     }
 }
