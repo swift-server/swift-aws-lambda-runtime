@@ -17,6 +17,10 @@ let package = Package(
         .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
         // plugin to package the lambda, creating an archive that can be uploaded to AWS
         .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
+        // plugin to deploy the lambda, relies on AWS SAM command line
+        .plugin(name: "AWSLambdaDeployer", targets: ["AWSLambdaDeployer"]),
+        // Shared Library to generate a SAM deployment descriptor
+        .library(name: "AWSLambdaDeploymentDescriptor", type: .dynamic, targets: ["AWSLambdaDeploymentDescriptor"]),
         // for testing only
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
@@ -47,6 +51,20 @@ let package = Package(
                 )
             )
         ),
+        .target(
+            name: "AWSLambdaDeploymentDescriptor",
+            path: "Sources/AWSLambdaDeploymentDescriptor"
+        ),
+        .plugin(
+            name: "AWSLambdaDeployer",
+            capability: .command(
+                intent: .custom(
+                    verb: "deploy",
+                    description: "Deploy the Lambda ZIP created by the archive plugin. Generates SAM-compliant deployment files based on deployment struct passed by the developer and invoke the SAM command."
+                )
+//                permissions: [.writeToPackageDirectory(reason: "This plugin generates a SAM template to describe your deployment")]
+            )
+        ),
         .testTarget(name: "AWSLambdaRuntimeCoreTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
             .product(name: "NIOTestUtils", package: "swift-nio"),
@@ -55,6 +73,9 @@ let package = Package(
         .testTarget(name: "AWSLambdaRuntimeTests", dependencies: [
             .byName(name: "AWSLambdaRuntimeCore"),
             .byName(name: "AWSLambdaRuntime"),
+        ]),
+        .testTarget(name: "AWSLambdaDeploymentDescriptorTests", dependencies: [
+            .byName(name: "AWSLambdaDeploymentDescriptor"),
         ]),
         // testing helper
         .target(name: "AWSLambdaTesting", dependencies: [
