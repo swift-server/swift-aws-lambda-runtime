@@ -276,7 +276,7 @@ class LambdaTest: XCTestCase {
         let task = Task.detached {
             print(configuration.description)
             logger.info("hello")
-            let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration)
+            let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration, allocator: ByteBufferAllocator())
 
             try await runner.run(
                 handler: CodableEventLoopLambdaHandler(
