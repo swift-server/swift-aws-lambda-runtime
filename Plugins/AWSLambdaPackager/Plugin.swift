@@ -16,8 +16,16 @@ import Dispatch
 import Foundation
 import PackagePlugin
 
-#if canImport(Glibc)
+#if os(macOS)
+import Darwin
+#elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(Windows)
+import ucrt
+#else
+#error("Unsupported platform")
 #endif
 
 @main
