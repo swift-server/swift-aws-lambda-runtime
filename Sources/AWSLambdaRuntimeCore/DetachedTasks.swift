@@ -33,22 +33,6 @@ public final class DetachedTasksContainer {
         self.context = context
     }
 
-    /// Adds a detached task that runs on the given event loop.
-    ///
-    /// - Parameters:
-    ///   - name: The name of the task.
-    ///   - task: The task to execute. It receives an `EventLoop` and returns an `EventLoopFuture<Void>`.
-    /// - Returns: A `RegistrationKey` for the registered task.
-    @discardableResult
-    public func detached(name: String, task: @escaping (EventLoop) -> EventLoopFuture<Void>) -> RegistrationKey {
-        let key = RegistrationKey()
-        let task = task(context.eventLoop).always { _ in
-            self.storage.remove(key)
-        }
-        self.storage.add(key: key, name: name, task: task)
-        return key
-    }
-    
     /// Adds a detached async task.
     ///
     /// - Parameters:
