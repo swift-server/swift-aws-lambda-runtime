@@ -20,11 +20,9 @@ import Foundation
 @main
 struct MyLambda: SimpleLambdaHandler {
     func handle(_ input: String, context: LambdaContext) async throws -> String {
-        let fileName = "hello.txt"
-        guard let resourceURL = Bundle.module.resourceURL else {
-            fatalError("unable to locate bundle resource url")
+        guard let fileURL = Bundle.module.url(forResource: "hello", withExtension: "txt") else {
+            fatalError("no file url")
         }
-        let fileURL = resourceURL.appendingPathComponent(fileName)
         return try String(contentsOf: fileURL)
     }
 }
