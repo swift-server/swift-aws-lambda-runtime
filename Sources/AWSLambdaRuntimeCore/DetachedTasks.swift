@@ -79,27 +79,6 @@ public final class DetachedTasksContainer {
         return key
     }
 
-    /// Informs the runtime that the specified task should not be awaited anymore.
-    ///
-    /// - Warning: This method does not actually stop the execution of the
-    ///   detached task, it only prevents the runtime from waiting for it before
-    ///   `/next` is invoked.
-    ///
-    /// - Parameter key: The `RegistrationKey` of the task to cancel.
-    public func unsafeCancel(_ key: RegistrationKey) {
-        // To discuss:
-        // Canceling the execution doesn't seem to be an easy
-        // task https://github.com/apple/swift-nio/issues/2087
-        //
-        // While removing the handler will allow the runtime
-        // to invoke `/next` without actually awaiting for the
-        // task to complete, it does not actually cancel
-        // the execution of the dispatched task.
-        // Since this is a bit counter-intuitive, we might not
-        // want this method to exist at all.
-        self.storage.remove(key)
-    }
-
     /// Awaits all registered tasks to complete.
     ///
     /// - Returns: An `EventLoopFuture<Void>` that completes when all tasks have finished.
