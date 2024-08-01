@@ -16,8 +16,16 @@ import Dispatch
 import Foundation
 import PackagePlugin
 
-#if canImport(Glibc)
+#if os(macOS)
+import Darwin
+#elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(Windows)
+import ucrt
+#else
+#error("Unsupported platform")
 #endif
 
 @main
@@ -205,7 +213,8 @@ struct AWSLambdaPackager: CommandPlugin {
             #if os(macOS) || os(Linux)
             let arguments = ["--junk-paths", "--symlinks", zipfilePath.string, relocatedArtifactPath.string, symbolicLinkPath.string]
             #else
-            throw Error.unsupportedPlatform("can't or don't know how to create a zip file on this platform")
+            let arguments = [String]()
+            throw Errors.unsupportedPlatform("can't or don't know how to create a zip file on this platform")
             #endif
 
             // run the zip tool

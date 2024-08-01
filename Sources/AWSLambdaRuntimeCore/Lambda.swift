@@ -12,10 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(Linux)
-import Glibc
-#else
+#if os(macOS)
 import Darwin.C
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(Windows)
+import ucrt
+#else
+#error("Unsupported platform")
 #endif
 
 #if swift(<5.9)
