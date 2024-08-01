@@ -56,23 +56,11 @@ public final class DetachedTasksContainer {
     ///   - task: The async task to execute.
     /// - Returns: A `RegistrationKey` for the registered task.
     @discardableResult
-    public func detached(name: String, task: @Sendable @escaping () async throws -> Void) -> RegistrationKey {
+    public func detached(name: String, task: @Sendable @escaping () async -> Void) -> RegistrationKey {
         let key = RegistrationKey()
         let promise = context.eventLoop.makePromise(of: Void.self)
         promise.completeWithTask(task)
         let task = promise.futureResult.always { result in
-            switch result {
-            case .success:
-                break
-            case .failure(let failure):
-                self.context.logger.warning(
-                    "Execution of detached task failed with error.",
-                    metadata: [
-                        "taskName": "\(name)",
-                        "error": "\(failure)"
-                    ]
-                )
-            }
             self.storage.remove(key)
         }
         self.storage.add(key: key, name: name, task: task)
