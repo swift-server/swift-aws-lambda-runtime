@@ -103,11 +103,19 @@ internal final class LambdaRunner {
                 logger.error("could not report results to lambda runtime engine: \(error)")
                 // To discuss:
                 // Do we want to await the tasks in this case?
-                return context.tasks.awaitAll()
+                let promise = context.eventLoop.makePromise(of: Void.self)
+                promise.completeWithTask {
+                    return try await context.tasks.awaitAll().get()
+                }
+                return promise.futureResult
             }.map { _ in context }
         }
         .flatMap { context in
-            context.tasks.awaitAll()
+            let promise = context.eventLoop.makePromise(of: Void.self)
+            promise.completeWithTask {
+                try await context.tasks.awaitAll().get()
+            }
+            return promise.futureResult
         }
     }
 
