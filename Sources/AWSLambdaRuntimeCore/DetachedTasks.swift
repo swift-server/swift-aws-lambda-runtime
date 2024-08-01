@@ -18,9 +18,9 @@ import Logging
 
 /// A container that allows tasks to finish after a synchronous invocation
 /// has produced its response.
-final class DetachedTasksContainer {
+actor DetachedTasksContainer: Sendable {
 
-    struct Context {
+    struct Context: Sendable {
         let eventLoop: EventLoop
         let logger: Logger
     }
@@ -38,28 +38,41 @@ final class DetachedTasksContainer {
     ///   - name: The name of the task.
     ///   - task: The async task to execute.
     /// - Returns: A `RegistrationKey` for the registered task.
-    @discardableResult
-    func detached(task: @Sendable @escaping () async -> Void) -> RegistrationKey {
+    func detached(task: @Sendable @escaping () async -> Void) {
         let key = RegistrationKey()
         let promise = context.eventLoop.makePromise(of: Void.self)
         promise.completeWithTask(task)
-        let task = promise.futureResult.always { result in
-            self.storage.removeValue(forKey: key)
+        let task = promise.futureResult.always { [weak self] result in
+            guard let self else { return }
+            Task {
+                await self.removeTask(forKey: key)
+            }
         }
         self.storage[key] = task
-        return key
+    }
+    
+    func removeTask(forKey key: RegistrationKey) {
+        self.storage.removeValue(forKey: key)
     }
 
     /// Awaits all registered tasks to complete.
     ///
     /// - Returns: An `EventLoopFuture<Void>` that completes when all tasks have finished.
-    internal func awaitAll() -> EventLoopFuture<Void> {
+    func awaitAll() -> EventLoopFuture<Void> {
         let tasks = storage.values
         if tasks.isEmpty {
             return context.eventLoop.makeSucceededVoidFuture()
         } else {
-            return EventLoopFuture.andAllComplete(Array(tasks), on: context.eventLoop).flatMap {
-                self.awaitAll()
+            let context = context
+            return EventLoopFuture.andAllComplete(Array(tasks), on: context.eventLoop).flatMap { [weak self] in
+                guard let self else {
+                    return context.eventLoop.makeSucceededFuture(())
+                }
+                let promise = context.eventLoop.makePromise(of: Void.self)
+                promise.completeWithTask {
+                    try await self.awaitAll().get()
+                }
+                return promise.futureResult
             }
         }
     }
@@ -67,7 +80,7 @@ final class DetachedTasksContainer {
 
 extension DetachedTasksContainer {
     /// Lambda detached task registration key.
-    struct RegistrationKey: Hashable, CustomStringConvertible {
+    struct RegistrationKey: Hashable, CustomStringConvertible, Sendable {
         var value: String
 
         init() {
@@ -80,8 +93,3 @@ extension DetachedTasksContainer {
         }
     }
 }
-
-// Ideally this would not be @unchecked Sendable, but Sendable checks do not understand locks
-// We can transition this to an actor once we drop support for older Swift versions
-extension DetachedTasksContainer: @unchecked Sendable {}
-extension DetachedTasksContainer.RegistrationKey: Sendable {}

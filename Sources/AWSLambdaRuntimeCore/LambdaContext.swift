@@ -203,7 +203,9 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     }
     
     func detachedBackgroundTask(_ body: @escaping @Sendable () async -> ()) {
-        self.tasks.detached(task: body)
+        Task {
+            await self.tasks.detached(task: body)
+        }
     }
 
     public var debugDescription: String {
