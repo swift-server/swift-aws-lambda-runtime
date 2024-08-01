@@ -18,7 +18,7 @@ import Logging
 
 /// A container that allows tasks to finish after a synchronous invocation
 /// has produced its response.
-public final class DetachedTasksContainer {
+final class DetachedTasksContainer {
 
     struct Context {
         let eventLoop: EventLoop
@@ -26,10 +26,9 @@ public final class DetachedTasksContainer {
     }
     
     private var context: Context
-    private var storage: Storage
+    private var storage: [RegistrationKey: EventLoopFuture<Void>] = [:]
 
     init(context: Context) {
-        self.storage = Storage()
         self.context = context
     }
 
@@ -40,14 +39,14 @@ public final class DetachedTasksContainer {
     ///   - task: The async task to execute.
     /// - Returns: A `RegistrationKey` for the registered task.
     @discardableResult
-    public func detached(name: String, task: @Sendable @escaping () async -> Void) -> RegistrationKey {
+    func detached(task: @Sendable @escaping () async -> Void) -> RegistrationKey {
         let key = RegistrationKey()
         let promise = context.eventLoop.makePromise(of: Void.self)
         promise.completeWithTask(task)
         let task = promise.futureResult.always { result in
-            self.storage.remove(key)
+            self.storage.removeValue(forKey: key)
         }
-        self.storage.add(key: key, name: name, task: task)
+        self.storage[key] = task
         return key
     }
 
@@ -55,11 +54,11 @@ public final class DetachedTasksContainer {
     ///
     /// - Returns: An `EventLoopFuture<Void>` that completes when all tasks have finished.
     internal func awaitAll() -> EventLoopFuture<Void> {
-        let tasks = storage.tasks
+        let tasks = storage.values
         if tasks.isEmpty {
             return context.eventLoop.makeSucceededVoidFuture()
         } else {
-            return EventLoopFuture.andAllComplete(tasks.map(\.value.task), on: context.eventLoop).flatMap {
+            return EventLoopFuture.andAllComplete(Array(tasks), on: context.eventLoop).flatMap {
                 self.awaitAll()
             }
         }
@@ -68,7 +67,7 @@ public final class DetachedTasksContainer {
 
 extension DetachedTasksContainer {
     /// Lambda detached task registration key.
-    public struct RegistrationKey: Hashable, CustomStringConvertible {
+    struct RegistrationKey: Hashable, CustomStringConvertible {
         var value: String
 
         init() {
@@ -76,39 +75,8 @@ extension DetachedTasksContainer {
             self.value = UUID().uuidString
         }
 
-        public var description: String {
+        var description: String {
             self.value
-        }
-    }
-}
-
-extension DetachedTasksContainer {
-    fileprivate final class Storage {
-        private let lock: NIOLock
-        
-        private var map: [RegistrationKey: (name: String, task: EventLoopFuture<Void>)]
-
-        init() {
-            self.lock = .init()
-            self.map = [:]
-        }
-
-        func add(key: RegistrationKey, name: String, task: EventLoopFuture<Void>) {
-            self.lock.withLock {
-                self.map[key] = (name: name, task: task)
-            }
-        }
-
-        func remove(_ key: RegistrationKey) {
-            self.lock.withLock {
-                self.map[key] = nil
-            }
-        }
-
-        var tasks: [RegistrationKey: (name: String, task: EventLoopFuture<Void>)] {
-            self.lock.withLock {
-                self.map
-            }
         }
     }
 }
@@ -116,5 +84,4 @@ extension DetachedTasksContainer {
 // Ideally this would not be @unchecked Sendable, but Sendable checks do not understand locks
 // We can transition this to an actor once we drop support for older Swift versions
 extension DetachedTasksContainer: @unchecked Sendable {}
-extension DetachedTasksContainer.Storage: @unchecked Sendable {}
 extension DetachedTasksContainer.RegistrationKey: Sendable {}

@@ -161,10 +161,6 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     public var allocator: ByteBufferAllocator {
         self.storage.allocator
     }
-    
-    public var tasks: DetachedTasksContainer {
-        self.storage.tasks
-    }
 
     init(requestID: String,
          traceID: String,
@@ -200,6 +196,14 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
 
         let remaining = deadline - now
         return .milliseconds(remaining)
+    }
+    
+    var tasks: DetachedTasksContainer {
+        self.storage.tasks
+    }
+    
+    func detachedBackgroundTask(_ body: @escaping @Sendable () async -> ()) {
+        self.tasks.detached(task: body)
     }
 
     public var debugDescription: String {
