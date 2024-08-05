@@ -67,6 +67,7 @@ struct AWSLambdaPackager: CommandPlugin {
 
         // create the archive
         let archives = try self.package(
+            packageName: context.package.displayName,
             products: builtProducts,
             toolsProvider: { name in try context.tool(named: name).path },
             outputDirectory: configuration.outputDirectory,
@@ -183,6 +184,7 @@ struct AWSLambdaPackager: CommandPlugin {
 
     // TODO: explore using ziplib or similar instead of shelling out
     private func package(
+        packageName: String,
         products: [LambdaProduct: Path],
         toolsProvider: (String) throws -> Path,
         outputDirectory: Path,
@@ -210,17 +212,34 @@ struct AWSLambdaPackager: CommandPlugin {
             try FileManager.default.copyItem(atPath: artifactPath.string, toPath: relocatedArtifactPath.string)
             try FileManager.default.createSymbolicLink(atPath: symbolicLinkPath.string, withDestinationPath: relocatedArtifactPath.lastComponent)
 
+            var arguments: [String] = []
             #if os(macOS) || os(Linux)
-            let arguments = ["--junk-paths", "--symlinks", zipfilePath.string, relocatedArtifactPath.string, symbolicLinkPath.string]
+            arguments = [
+                "--recurse-paths",
+                "--symlinks",
+                zipfilePath.lastComponent,
+                relocatedArtifactPath.lastComponent,
+                symbolicLinkPath.lastComponent,
+            ]
             #else
-            let arguments = [String]()
             throw Errors.unsupportedPlatform("can't or don't know how to create a zip file on this platform")
             #endif
+
+            // add resources
+            let artifactDirectory = artifactPath.removingLastComponent()
+            let resourcesDirectoryName = "\(packageName)_\(product.name).resources"
+            let resourcesDirectory = artifactDirectory.appending(resourcesDirectoryName)
+            let relocatedResourcesDirectory = workingDirectory.appending(resourcesDirectoryName)
+            if FileManager.default.fileExists(atPath: resourcesDirectory.string) {
+                try FileManager.default.copyItem(atPath: resourcesDirectory.string, toPath: relocatedResourcesDirectory.string)
+                arguments.append(resourcesDirectoryName)
+            }
 
             // run the zip tool
             try self.execute(
                 executable: zipToolPath,
                 arguments: arguments,
+                customWorkingDirectory: workingDirectory,
                 logLevel: verboseLogging ? .debug : .silent
             )
 
