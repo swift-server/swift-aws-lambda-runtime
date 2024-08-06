@@ -12,13 +12,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(Linux)
-import Glibc
-#else
+#if os(macOS)
 import Darwin.C
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(Windows)
+import ucrt
+#else
+#error("Unsupported platform")
 #endif
 
+#if swift(<5.9)
 import Backtrace
+#endif
 import Logging
 import NIOCore
 import NIOPosix
@@ -36,7 +44,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerType: CodableSimpleLambdaHandler<Handler>.self)
+        Self.run(configuration: configuration, handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler(context:))
     }
 
     /// Run a Lambda defined by implementing the ``LambdaHandler`` protocol.
@@ -52,7 +60,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerType: CodableLambdaHandler<Handler>.self)
+        Self.run(configuration: configuration, handlerProvider: CodableLambdaHandler<Handler>.makeHandler(context:))
     }
 
     /// Run a Lambda defined by implementing the ``EventLoopLambdaHandler`` protocol.
@@ -68,7 +76,7 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerType: CodableEventLoopLambdaHandler<Handler>.self)
+        Self.run(configuration: configuration, handlerProvider: CodableEventLoopLambdaHandler<Handler>.makeHandler(context:))
     }
 
     /// Run a Lambda defined by implementing the ``ByteBufferLambdaHandler`` protocol.
@@ -84,14 +92,34 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: (some ByteBufferLambdaHandler).Type
     ) -> Result<Int, Error> {
+        Self.run(configuration: configuration, handlerProvider: handlerType.makeHandler(context:))
+    }
+
+    /// Run a Lambda defined by implementing the ``LambdaRuntimeHandler`` protocol.
+    /// - parameters:
+    ///     - configuration: A Lambda runtime configuration object
+    ///     - handlerProvider: A provider of the ``LambdaRuntimeHandler`` to invoke.
+    ///
+    /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
+    internal static func run(
+        configuration: LambdaConfiguration = .init(),
+        handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some LambdaRuntimeHandler>
+    ) -> Result<Int, Error> {
         let _run = { (configuration: LambdaConfiguration) -> Result<Int, Error> in
+            #if swift(<5.9)
             Backtrace.install()
+            #endif
             var logger = Logger(label: "Lambda")
             logger.logLevel = configuration.general.logLevel
 
             var result: Result<Int, Error>!
             MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { eventLoop in
-                let runtime = LambdaRuntime(handlerType: handlerType, eventLoop: eventLoop, logger: logger, configuration: configuration)
+                let runtime = LambdaRuntime(
+                    handlerProvider: handlerProvider,
+                    eventLoop: eventLoop,
+                    logger: logger,
+                    configuration: configuration
+                )
                 #if DEBUG
                 let signalSource = trap(signal: configuration.lifecycle.stopSignal) { signal in
                     logger.info("intercepted signal: \(signal)")
@@ -121,7 +149,7 @@ public enum Lambda {
         #if DEBUG
         if Lambda.env("LOCAL_LAMBDA_SERVER_ENABLED").flatMap(Bool.init) ?? false {
             do {
-                return try Lambda.withLocalServer {
+                return try Lambda.withLocalServer(invocationEndpoint: Lambda.env("LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT")) {
                     _run(configuration)
                 }
             } catch {

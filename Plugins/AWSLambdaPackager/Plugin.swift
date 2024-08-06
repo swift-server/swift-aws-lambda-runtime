@@ -16,8 +16,16 @@ import Dispatch
 import Foundation
 import PackagePlugin
 
-#if canImport(Glibc)
+#if os(macOS)
+import Darwin
+#elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(Windows)
+import ucrt
+#else
+#error("Unsupported platform")
 #endif
 
 @main
@@ -51,6 +59,7 @@ struct AWSLambdaPackager: CommandPlugin {
                 toolsProvider: { name in try context.tool(named: name).path },
                 outputDirectory: configuration.outputDirectory,
                 baseImage: configuration.baseDockerImage,
+                disableDockerImageUpdate: configuration.disableDockerImageUpdate,
                 buildConfiguration: configuration.buildConfiguration,
                 verboseLogging: configuration.verboseLogging
             )
@@ -58,6 +67,7 @@ struct AWSLambdaPackager: CommandPlugin {
 
         // create the archive
         let archives = try self.package(
+            packageName: context.package.displayName,
             products: builtProducts,
             toolsProvider: { name in try context.tool(named: name).path },
             outputDirectory: configuration.outputDirectory,
@@ -77,6 +87,7 @@ struct AWSLambdaPackager: CommandPlugin {
         toolsProvider: (String) throws -> Path,
         outputDirectory: Path,
         baseImage: String,
+        disableDockerImageUpdate: Bool,
         buildConfiguration: PackageManager.BuildConfiguration,
         verboseLogging: Bool
     ) throws -> [LambdaProduct: Path] {
@@ -86,13 +97,15 @@ struct AWSLambdaPackager: CommandPlugin {
         print("building \"\(packageIdentity)\" in docker")
         print("-------------------------------------------------------------------------")
 
-        // update the underlying docker image, if necessary
-        print("updating \"\(baseImage)\" docker image")
-        try self.execute(
-            executable: dockerToolPath,
-            arguments: ["pull", baseImage],
-            logLevel: .output
-        )
+        if !disableDockerImageUpdate {
+            // update the underlying docker image, if necessary
+            print("updating \"\(baseImage)\" docker image")
+            try self.execute(
+                executable: dockerToolPath,
+                arguments: ["pull", baseImage],
+                logLevel: .output
+            )
+        }
 
         // get the build output path
         let buildOutputPathCommand = "swift build -c \(buildConfiguration.rawValue) --show-bin-path"
@@ -111,11 +124,24 @@ struct AWSLambdaPackager: CommandPlugin {
         for product in products {
             print("building \"\(product.name)\"")
             let buildCommand = "swift build -c \(buildConfiguration.rawValue) --product \(product.name) --static-swift-stdlib"
-            try self.execute(
-                executable: dockerToolPath,
-                arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildCommand],
-                logLevel: verboseLogging ? .debug : .output
-            )
+            if ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"] != nil {
+                // when developing locally, we must have the full swift-aws-lambda-runtime project in the container
+                // because Examples' Package.swift have a dependency on ../..
+                // just like Package.swift's examples assume ../.., we assume we are two levels below the root project
+                let lastComponent = packageDirectory.lastComponent
+                let beforeLastComponent = packageDirectory.removingLastComponent().lastComponent
+                try self.execute(
+                    executable: dockerToolPath,
+                    arguments: ["run", "--rm", "--env", "LAMBDA_USE_LOCAL_DEPS=true", "-v", "\(packageDirectory.string)/../..:/workspace", "-w", "/workspace/\(beforeLastComponent)/\(lastComponent)", baseImage, "bash", "-cl", buildCommand],
+                    logLevel: verboseLogging ? .debug : .output
+                )
+            } else {
+                try self.execute(
+                    executable: dockerToolPath,
+                    arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildCommand],
+                    logLevel: verboseLogging ? .debug : .output
+                )
+            }
             let productPath = buildOutputPath.appending(product.name)
             guard FileManager.default.fileExists(atPath: productPath.string) else {
                 Diagnostics.error("expected '\(product.name)' binary at \"\(productPath.string)\"")
@@ -158,6 +184,7 @@ struct AWSLambdaPackager: CommandPlugin {
 
     // TODO: explore using ziplib or similar instead of shelling out
     private func package(
+        packageName: String,
         products: [LambdaProduct: Path],
         toolsProvider: (String) throws -> Path,
         outputDirectory: Path,
@@ -185,16 +212,34 @@ struct AWSLambdaPackager: CommandPlugin {
             try FileManager.default.copyItem(atPath: artifactPath.string, toPath: relocatedArtifactPath.string)
             try FileManager.default.createSymbolicLink(atPath: symbolicLinkPath.string, withDestinationPath: relocatedArtifactPath.lastComponent)
 
+            var arguments: [String] = []
             #if os(macOS) || os(Linux)
-            let arguments = ["--junk-paths", "--symlinks", zipfilePath.string, relocatedArtifactPath.string, symbolicLinkPath.string]
+            arguments = [
+                "--recurse-paths",
+                "--symlinks",
+                zipfilePath.lastComponent,
+                relocatedArtifactPath.lastComponent,
+                symbolicLinkPath.lastComponent,
+            ]
             #else
-            throw Error.unsupportedPlatform("can't or don't know how to create a zip file on this platform")
+            throw Errors.unsupportedPlatform("can't or don't know how to create a zip file on this platform")
             #endif
+
+            // add resources
+            let artifactDirectory = artifactPath.removingLastComponent()
+            let resourcesDirectoryName = "\(packageName)_\(product.name).resources"
+            let resourcesDirectory = artifactDirectory.appending(resourcesDirectoryName)
+            let relocatedResourcesDirectory = workingDirectory.appending(resourcesDirectoryName)
+            if FileManager.default.fileExists(atPath: resourcesDirectory.string) {
+                try FileManager.default.copyItem(atPath: resourcesDirectory.string, toPath: relocatedResourcesDirectory.string)
+                arguments.append(resourcesDirectoryName)
+            }
 
             // run the zip tool
             try self.execute(
                 executable: zipToolPath,
                 arguments: arguments,
+                customWorkingDirectory: workingDirectory,
                 logLevel: verboseLogging ? .debug : .silent
             )
 
@@ -290,6 +335,7 @@ private struct Configuration: CustomStringConvertible {
     public let buildConfiguration: PackageManager.BuildConfiguration
     public let verboseLogging: Bool
     public let baseDockerImage: String
+    public let disableDockerImageUpdate: Bool
 
     public init(
         context: PluginContext,
@@ -302,6 +348,7 @@ private struct Configuration: CustomStringConvertible {
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
         let swiftVersionArgument = argumentExtractor.extractOption(named: "swift-version")
         let baseDockerImageArgument = argumentExtractor.extractOption(named: "base-docker-image")
+        let disableDockerImageUpdateArgument = argumentExtractor.extractFlag(named: "disable-docker-image-update") > 0
 
         self.verboseLogging = verboseArgument
 
@@ -345,6 +392,8 @@ private struct Configuration: CustomStringConvertible {
         let swiftVersion = swiftVersionArgument.first ?? .none // undefined version will yield the latest docker image
         self.baseDockerImage = baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2"
 
+        self.disableDockerImageUpdate = disableDockerImageUpdateArgument
+
         if self.verboseLogging {
             print("-------------------------------------------------------------------------")
             print("configuration")
@@ -360,6 +409,7 @@ private struct Configuration: CustomStringConvertible {
           products: \(self.products.map(\.name))
           buildConfiguration: \(self.buildConfiguration)
           baseDockerImage: \(self.baseDockerImage)
+          disableDockerImageUpdate: \(self.disableDockerImageUpdate)
         }
         """
     }

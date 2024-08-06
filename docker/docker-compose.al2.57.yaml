@@ -11,7 +11,7 @@ services:
   test:
     image: swift-aws-lambda:al2-5.7
 
-  test-samples:
+  test-examples:
     image: swift-aws-lambda:al2-5.7
 
   shell:

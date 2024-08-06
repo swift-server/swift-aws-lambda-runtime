@@ -1,4 +1,4 @@
-// swift-tools-version:5.7
+// swift-tools-version:5.9
 
 import PackageDescription
 
@@ -21,9 +21,8 @@ let package = Package(
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.43.1")),
-        .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.4.2")),
-        .package(url: "https://github.com/swift-server/swift-backtrace.git", .upToNextMajor(from: "1.2.3")),
+        .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.67.0")),
+        .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.5.4")),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
     ],
     targets: [
@@ -34,7 +33,6 @@ let package = Package(
         ]),
         .target(name: "AWSLambdaRuntimeCore", dependencies: [
             .product(name: "Logging", package: "swift-log"),
-            .product(name: "Backtrace", package: "swift-backtrace"),
             .product(name: "NIOHTTP1", package: "swift-nio"),
             .product(name: "NIOCore", package: "swift-nio"),
             .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),

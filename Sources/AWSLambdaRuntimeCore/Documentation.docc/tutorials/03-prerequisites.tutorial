@@ -1,0 +1,18 @@
+@Article(time: 3) {
+
+    @Intro(title: "Prerequisites")
+
+
+This tutorial has been tested on macOS, since this is what most Swift developers work on. It should also work on Linux.
+
+To follow the instructions provided by this tutorial you'll need to meet a couple of prerequisites.
+
+- We expect you to have a basic understanding of the Swift programming language and be somewhat familiar with the terminal/console. You can follow this [guided tour to have an overview of Swift](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/guidedtour). [You can follow this short tutorial to learn about macOS commands and the Terminal](https://support.apple.com/guide/terminal/open-or-quit-terminal-apd5265185d-f365-44cb-8b09-71a064a42125/mac).
+
+- You'll need to have a text editor and the Swift toolchain installed.  On macOS, you can use [Xcode](https://developer.apple.com/xcode/). On Linux, you must install [the Swift runtime and toolchain](https://www.swift.org/download/). On macOS and Linux, you may also use [VSCode](https://code.visualstudio.com/download) and the [Swift extension for VSCode](https://www.swift.org/blog/vscode-extension/).
+
+- To compile your Lambda function to run on AWS Lambda, you will need to install [Docker](https://docs.docker.com/desktop/install/mac-install/). This tutorial doesn't go into much detail what Docker is and what it does. Just remember that AWS Lambda functions run on Linux. Therefore, you have to compile your Swift Lambda function code for Linux. Docker allows you to start a Linux virtual machine where you will compile your Swift code before to deploy it on AWS Lambda. This tutorial contains all the commands you will have to type to interact with Docker. Follow [the instructions provided by Docker](https://docs.docker.com/desktop/install/mac-install/) to install Docker on your machine.
+
+- To deploy your Lambda function on AWS you need an [Amazon Web Service (AWS)](https://aws.amazon.com/what-is-aws/) account. [Follow these instructions to create an AWS account](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html).
+
+}
