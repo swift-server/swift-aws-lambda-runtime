@@ -81,6 +81,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         let logger: Logger
         let eventLoop: EventLoop
         let allocator: ByteBufferAllocator
+        let tasks: DetachedTasksContainer
 
         init(
             requestID: String,
@@ -91,7 +92,8 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             clientContext: String?,
             logger: Logger,
             eventLoop: EventLoop,
-            allocator: ByteBufferAllocator
+            allocator: ByteBufferAllocator,
+            tasks: DetachedTasksContainer
         ) {
             self.requestID = requestID
             self.traceID = traceID
@@ -102,6 +104,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             self.logger = logger
             self.eventLoop = eventLoop
             self.allocator = allocator
+            self.tasks = tasks
         }
     }
 
@@ -177,7 +180,13 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             clientContext: clientContext,
             logger: logger,
             eventLoop: eventLoop,
-            allocator: allocator
+            allocator: allocator,
+            tasks: DetachedTasksContainer(
+                context: DetachedTasksContainer.Context(
+                    eventLoop: eventLoop,
+                    logger: logger
+                )
+            )
         )
     }
 
@@ -187,6 +196,16 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
 
         let remaining = deadline - now
         return .milliseconds(remaining)
+    }
+    
+    var tasks: DetachedTasksContainer {
+        self.storage.tasks
+    }
+    
+    func detachedBackgroundTask(_ body: @escaping @Sendable () async -> ()) {
+        Task {
+            await self.tasks.detached(task: body)
+        }
     }
 
     public var debugDescription: String {
