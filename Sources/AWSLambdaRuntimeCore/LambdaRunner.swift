@@ -110,7 +110,7 @@ internal final class LambdaRunner {
                 return promise.futureResult
             }.map { _ in context }
         }
-        .flatMap { context in
+        .flatMap { (context: LambdaContext) -> EventLoopFuture<Void> in
             let promise = context.eventLoop.makePromise(of: Void.self)
             promise.completeWithTask {
                 try await context.tasks.awaitAll().get()
