@@ -15,6 +15,7 @@
 import Dispatch
 import Foundation
 import PackagePlugin
+import Synchronization
 
 #if os(macOS)
 import Darwin
@@ -28,6 +29,7 @@ import ucrt
 #error("Unsupported platform")
 #endif
 
+@available(macOS 15.0, *)
 @main
 struct AWSLambdaPackager: CommandPlugin {
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
@@ -282,10 +284,10 @@ struct AWSLambdaPackager: CommandPlugin {
             print("\(executable.string) \(arguments.joined(separator: " "))")
         }
 
-        var output = ""
+        let outputMutex = Mutex("")
         let outputSync = DispatchGroup()
         let outputQueue = DispatchQueue(label: "AWSLambdaPackager.output")
-        let outputHandler = { (data: Data?) in
+        let outputHandler = { @Sendable (data: Data?) in
             dispatchPrecondition(condition: .onQueue(outputQueue))
 
             outputSync.enter()
@@ -299,7 +301,9 @@ struct AWSLambdaPackager: CommandPlugin {
                 return
             }
 
-            output += _output + "\n"
+            outputMutex.withLock { output in
+                output += _output + "\n"
+            }
 
             switch logLevel {
             case .silent:
@@ -336,6 +340,8 @@ struct AWSLambdaPackager: CommandPlugin {
         // wait for output to be full processed
         outputSync.wait()
 
+        let output = outputMutex.withLock { $0 }
+
         if process.terminationStatus != 0 {
             // print output on failure and if not already printed
             if logLevel < .output {
@@ -359,6 +365,7 @@ struct AWSLambdaPackager: CommandPlugin {
     }
 }
 
+@available(macOS 15.0, *)
 private struct Configuration: CustomStringConvertible {
     public let outputDirectory: Path
     public let products: [Product]
