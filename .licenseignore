@@ -13,7 +13,6 @@ Package.swift
 Package.resolved
 README.md
 SECURITY.md
-docker/*
 **/*.docc/*
 **/.gitignore
 **/Package.swift
@@ -22,6 +21,7 @@ docker/*
 **/docker-compose.yaml
 **/docker/*
 **/.dockerignore
+**/Dockerfile
 **/Makefile
 **/*.html
 .mailmap
