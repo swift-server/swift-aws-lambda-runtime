@@ -17,7 +17,7 @@ import Logging
 import NIOCore
 
 /// LambdaRunner manages the Lambda runtime workflow, or business logic.
-internal final class LambdaRunner {
+final class LambdaRunner {
     private let runtimeClient: LambdaRuntimeClient
     private let eventLoop: EventLoop
     private let allocator: ByteBufferAllocator
@@ -105,7 +105,7 @@ internal final class LambdaRunner {
                 // Do we want to await the tasks in this case?
                 let promise = context.eventLoop.makePromise(of: Void.self)
                 promise.completeWithTask {
-                    return try await context.tasks.awaitAll().get()
+                    try await context.tasks.awaitAll().get()
                 }
                 return promise.futureResult
             }.map { _ in context }

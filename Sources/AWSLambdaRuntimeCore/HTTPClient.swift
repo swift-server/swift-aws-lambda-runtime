@@ -20,7 +20,7 @@ import NIOPosix
 /// A barebone HTTP client to interact with AWS Runtime Engine which is an HTTP server.
 /// Note that Lambda Runtime API dictate that only one requests runs at a time.
 /// This means we can avoid locks and other concurrency concern we would otherwise need to build into the client
-internal final class HTTPClient {
+final class HTTPClient {
     private let eventLoop: EventLoop
     private let configuration: LambdaConfiguration.RuntimeEngine
     private let targetHost: String
@@ -120,7 +120,7 @@ internal final class HTTPClient {
         }
     }
 
-    internal struct Request: Equatable {
+    struct Request: Equatable {
         let url: String
         let method: HTTPMethod
         let targetHost: String
@@ -138,14 +138,14 @@ internal final class HTTPClient {
         }
     }
 
-    internal struct Response: Equatable {
+    struct Response: Equatable {
         var version: HTTPVersion
         var status: HTTPResponseStatus
         var headers: HTTPHeaders
         var body: ByteBuffer?
     }
 
-    internal enum Errors: Error {
+    enum Errors: Error {
         case connectionResetByPeer
         case timeout
         case cancelled
@@ -277,6 +277,7 @@ private final class LambdaChannelHandler: ChannelDuplexHandler {
         switch self.state {
         case .idle:
             break
+
         case .running(let promise, let timeout):
             self.state = .idle
             timeout?.cancel()

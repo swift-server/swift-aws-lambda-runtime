@@ -197,19 +197,18 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         let remaining = deadline - now
         return .milliseconds(remaining)
     }
-    
+
     var tasks: DetachedTasksContainer {
         self.storage.tasks
     }
-    
-    
+
     /// Registers a background task that continues running after the synchronous invocation has completed.
     /// This is useful for tasks like flushing metrics or performing clean-up operations without delaying the response.
     ///
     /// - Parameter body: An asynchronous closure that performs the background task.
     /// - Warning: You will be billed for the milliseconds of Lambda execution time until the very last
     ///   background task is finished.
-    public func detachedBackgroundTask(_ body: @escaping @Sendable () async -> ()) {
+    public func detachedBackgroundTask(_ body: @escaping @Sendable () async -> Void) {
         Task {
             await self.tasks.detached(task: body)
         }

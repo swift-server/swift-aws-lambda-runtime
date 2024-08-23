@@ -16,7 +16,7 @@ import Dispatch
 import Logging
 import NIOCore
 
-internal struct LambdaConfiguration: CustomStringConvertible {
+struct LambdaConfiguration: CustomStringConvertible {
     let general: General
     let lifecycle: Lifecycle
     let runtimeEngine: RuntimeEngine
