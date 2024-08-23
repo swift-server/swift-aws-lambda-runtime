@@ -95,13 +95,27 @@ internal final class LambdaRunner {
                     if case .failure(let error) = result {
                         logger.warning("lambda handler returned an error: \(error)")
                     }
-                    return (invocation, result)
+                    return (invocation, result, context)
                 }
-        }.flatMap { invocation, result in
+        }.flatMap { invocation, result, context in
             // 3. report results to runtime engine
             self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError { error in
                 logger.error("could not report results to lambda runtime engine: \(error)")
+                // To discuss:
+                // Do we want to await the tasks in this case?
+                let promise = context.eventLoop.makePromise(of: Void.self)
+                promise.completeWithTask {
+                    return try await context.tasks.awaitAll().get()
+                }
+                return promise.futureResult
+            }.map { _ in context }
+        }
+        .flatMap { (context: LambdaContext) -> EventLoopFuture<Void> in
+            let promise = context.eventLoop.makePromise(of: Void.self)
+            promise.completeWithTask {
+                try await context.tasks.awaitAll().get()
             }
+            return promise.futureResult
         }
     }
 

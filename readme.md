@@ -474,7 +474,7 @@ public protocol SimpleLambdaHandler {
 
 ### Context
 
-When calling the user provided Lambda function, the library provides a `LambdaContext` class that provides metadata about the execution context, as well as utilities for logging and allocating buffers.
+When calling the user provided Lambda function, the library provides a `LambdaContext` class that provides metadata about the execution context, as well as utilities for logging, allocating buffers and dispatch background tasks.
 
 ```swift
 public struct LambdaContext: CustomDebugStringConvertible, Sendable {
@@ -553,6 +553,25 @@ public struct LambdaInitializationContext: Sendable {
     /// ``LambdaTerminator`` to register shutdown operations.
     public let terminator: LambdaTerminator
 }
+```
+
+### Background tasks
+
+The detachedBackgroundTask method allows you to register background tasks that continue running even after the Lambda runtime has reported the result of a synchronous invocation. This is particularly useful for integrations with services like API Gateway or CloudFront, where you can quickly return a response without waiting for non-essential tasks such as flushing metrics or performing non-critical clean-up operations.
+
+```swift
+    @main
+    struct MyLambda: SimpleLambdaHandler {
+        func handle(_ request: APIGatewayV2Request, context: LambdaContext) async throws -> APIGatewayV2Response {
+            let response = makeResponse()
+            context.detachedBackgroundTask {
+                try? await Task.sleep(for: .seconds(3))
+                print("Background task completed")
+            }
+            print("Returning response")
+            return response
+        }
+    }
 ```
 
 ### Configuration
