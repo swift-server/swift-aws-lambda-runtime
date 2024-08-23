@@ -48,8 +48,6 @@ public protocol SimpleLambdaHandler {
     /// - parameters:
     ///     - value: Response of type ``Output``.
     ///     - buffer: A `ByteBuffer` to encode into, will be overwritten.
-    ///
-    /// - Returns: A `ByteBuffer` with the encoded version of the `value`.
     func encode(value: Output, into buffer: inout ByteBuffer) throws
 
     /// Decode a `ByteBuffer` to a request or event of type ``Event``.
@@ -170,8 +168,6 @@ public protocol LambdaHandler {
     /// - parameters:
     ///     - value: Response of type ``Output``.
     ///     - buffer: A `ByteBuffer` to encode into, will be overwritten.
-    ///
-    /// - Returns: A `ByteBuffer` with the encoded version of the `value`.
     func encode(value: Output, into buffer: inout ByteBuffer) throws
 
     /// Decode a `ByteBuffer` to a request or event of type ``Event``.
@@ -411,8 +407,8 @@ public protocol ByteBufferLambdaHandler: LambdaRuntimeHandler {
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
+    ///     - buffer: The event or input payload encoded as `ByteBuffer`.
     ///     - context: Runtime ``LambdaContext``.
-    ///     - event: The event or input payload encoded as `ByteBuffer`.
     ///
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     ///            The `EventLoopFuture` should be completed with either a response encoded as `ByteBuffer` or an `Error`.
@@ -447,8 +443,8 @@ public protocol LambdaRuntimeHandler {
     /// Concrete Lambda handlers implement this method to provide the Lambda functionality.
     ///
     /// - parameters:
+    ///     - buffer: The event or input payload encoded as `ByteBuffer`.
     ///     - context: Runtime ``LambdaContext``.
-    ///     - event: The event or input payload encoded as `ByteBuffer`.
     ///
     /// - Returns: An `EventLoopFuture` to report the result of the Lambda back to the runtime engine.
     ///            The `EventLoopFuture` should be completed with either a response encoded as `ByteBuffer` or an `Error`.

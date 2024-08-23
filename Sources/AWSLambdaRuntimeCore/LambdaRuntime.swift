@@ -164,8 +164,9 @@ public final class LambdaRuntime<Handler: LambdaRuntimeHandler> {
                 if self.configuration.lifecycle.maxTimes > 0, count >= self.configuration.lifecycle.maxTimes {
                     return promise.succeed(count)
                 }
-                var logger = self.logger
-                logger[metadataKey: "lifecycleIteration"] = "\(count)"
+                var mlogger = self.logger
+                mlogger[metadataKey: "lifecycleIteration"] = "\(count)"
+                let logger = mlogger
                 runner.run(handler: handler, logger: logger).whenComplete { result in
                     switch result {
                     case .success:
@@ -301,7 +302,7 @@ public enum LambdaRuntimeFactory {
     /// Create a new `LambdaRuntime`.
     ///
     /// - parameters:
-    ///     - handlerProvider: A provider of the ``Handler`` the `LambdaRuntime` will manage.
+    ///     - handlerProvider: A provider of the ``LambdaRuntimeHandler`` the `LambdaRuntime` will manage.
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
     @inlinable
@@ -320,7 +321,7 @@ public enum LambdaRuntimeFactory {
     /// Create a new `LambdaRuntime`.
     ///
     /// - parameters:
-    ///     - handlerProvider: A provider of the ``Handler`` the `LambdaRuntime` will manage.
+    ///     - handlerProvider: A provider of the ``LambdaRuntimeHandler`` the `LambdaRuntime` will manage.
     ///     - eventLoop: An `EventLoop` to run the Lambda on.
     ///     - logger: A `Logger` to log the Lambda events.
     @inlinable
