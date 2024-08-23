@@ -29,5 +29,6 @@ SECURITY.md
 **/*.xcodeproj/*
 **/*.xcassets/*
 **/*.appiconset/*
+**/ResourcePackaging/hello.txt
 .mailmap
 .swiftformat
