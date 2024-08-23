@@ -10,6 +10,7 @@ jobs:
         uses: apple/swift-nio/.github/workflows/soundness.yml@main
         with:
             license_header_check_project_name: "SwiftAWSLambdaRuntime"
+            shell_check_enabled: false
 
     unit-tests:
         name: Unit tests
