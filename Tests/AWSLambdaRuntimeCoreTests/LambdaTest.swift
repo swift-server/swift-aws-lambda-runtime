@@ -93,7 +93,7 @@ class LambdaTest: XCTestCase {
             // we need to schedule the signal before we start the long running `Lambda.run`, since
             // `Lambda.run` will block the main thread.
             usleep(100_000)
-            kill(getpid(), signal.rawValue)
+            kill(getpid(), signal.rawValue) // ignore-unacceptable-language
         }
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
 

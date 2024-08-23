@@ -31,7 +31,7 @@ swift build --package-path Examples/Echo -c release -Xswiftc -g
 swift build --package-path Examples/JSON -c release -Xswiftc -g
 
 cleanup() {
-  kill -9 $server_pid
+  kill -9 $server_pid # ignore-unacceptable-language
 }
 
 trap "cleanup" ERR
@@ -47,12 +47,12 @@ results=()
 export MODE=string
 
 # start (fork) mock server
-pkill -9 MockServer && echo "killed previous servers" && sleep 1
+pkill -9 MockServer && echo "killed previous servers" && sleep 1 # ignore-unacceptable-language
 echo "starting server in $MODE mode"
 (./.build/release/MockServer) &
 server_pid=$!
 sleep 1
-kill -0 $server_pid # check server is alive
+kill -0 $server_pid # check server is alive # ignore-unacceptable-language
 
 # cold start
 echo "running $MODE mode cold test"
@@ -85,12 +85,12 @@ results+=( "$MODE, warm: $avg_warm (ns)" )
 export MODE=json
 
 # start (fork) mock server
-pkill -9 MockServer && echo "killed previous servers" && sleep 1
+pkill -9 MockServer && echo "killed previous servers" && sleep 1 # ignore-unacceptable-language
 echo "starting server in $MODE mode"
 (./.build/release/MockServer) &
 server_pid=$!
 sleep 1
-kill -0 $server_pid # check server is alive
+kill -0 $server_pid # check server is alive # ignore-unacceptable-language
 
 # cold start
 echo "running $MODE mode cold test"
