@@ -24,5 +24,6 @@ SECURITY.md
 **/Dockerfile
 **/Makefile
 **/*.html
+**/*-template.yml
 .mailmap
 .swiftformat
