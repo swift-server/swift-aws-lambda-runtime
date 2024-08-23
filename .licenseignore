@@ -27,5 +27,6 @@ SECURITY.md
 **/*-template.yml
 **/*.xcworkspace/*
 **/*.xcodeproj/*
+**/*.appiconset/*
 .mailmap
 .swiftformat
