@@ -10,6 +10,9 @@ jobs:
         uses: apple/swift-nio/.github/workflows/soundness.yml@main
         with:
             license_header_check_project_name: "SwiftAWSLambdaRuntime"
+            # remove "kill killed" from the default list for now
+            unacceptable_language_check_word_list:
+                "blacklist whitelist slave master sane sanity insane insanity killing hang hung hanged hanging"
 
     unit-tests:
         name: Unit tests

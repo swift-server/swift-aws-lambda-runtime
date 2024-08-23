@@ -24,3 +24,4 @@ docker/*
 **/.dockerignore
 **/Makefile
 **/*.html
+.mailmap
