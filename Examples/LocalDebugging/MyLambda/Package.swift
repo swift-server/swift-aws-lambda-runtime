@@ -1,15 +1,16 @@
 // swift-tools-version:5.7
 
-import class Foundation.ProcessInfo // needed for CI to test the local version of the library
 import PackageDescription
+
+import class Foundation.ProcessInfo  // needed for CI to test the local version of the library
 
 let package = Package(
     name: "MyLambda",
     platforms: [
-        .macOS(.v12),
+        .macOS(.v12)
     ],
     products: [
-        .executable(name: "MyLambda", targets: ["MyLambda"]),
+        .executable(name: "MyLambda", targets: ["MyLambda"])
     ],
     dependencies: [
         .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "1.0.0-alpha"),
@@ -24,7 +25,7 @@ let package = Package(
             ],
             path: ".",
             exclude: ["scripts/", "Dockerfile"]
-        ),
+        )
     ]
 )
 

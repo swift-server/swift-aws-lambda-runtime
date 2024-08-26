@@ -57,7 +57,11 @@ struct LambdaRuntimeClient {
     }
 
     /// Reports a result to the Runtime Engine.
-    func reportResults(logger: Logger, invocation: Invocation, result: Result<ByteBuffer?, Error>) -> EventLoopFuture<Void> {
+    func reportResults(
+        logger: Logger,
+        invocation: Invocation,
+        result: Result<ByteBuffer?, Error>
+    ) -> EventLoopFuture<Void> {
         var url = Consts.invocationURLPrefix + "/" + invocation.requestID
         var body: ByteBuffer?
         let headers: HTTPHeaders
@@ -101,7 +105,8 @@ struct LambdaRuntimeClient {
         var body = self.allocator.buffer(capacity: bytes.count)
         body.writeBytes(bytes)
         logger.warning("reporting initialization error to lambda runtime engine using \(url)")
-        return self.httpClient.post(url: url, headers: LambdaRuntimeClient.errorHeaders, body: body).flatMapThrowing { response in
+        return self.httpClient.post(url: url, headers: LambdaRuntimeClient.errorHeaders, body: body).flatMapThrowing {
+            response in
             guard response.status == .accepted else {
                 throw LambdaRuntimeError.badStatusCode(response.status)
             }

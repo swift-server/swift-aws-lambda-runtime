@@ -15,11 +15,12 @@
 import AWSLambdaRuntime
 import Dispatch
 import Foundation
+import Logging
+
 #if canImport(FoundationNetworking) && canImport(FoundationXML)
 import FoundationNetworking
 import FoundationXML
 #endif
-import Logging
 
 // MARK: - Run Lambda
 
@@ -71,15 +72,17 @@ struct ExchangeRatesCalculator {
 
     func run(logger: Logger, callback: @escaping (Result<[Exchange], Swift.Error>) -> Void) {
         let startDate = Date()
-        let months = (1 ... 12).map {
+        let months = (1...12).map {
             self.calendar.date(byAdding: DateComponents(month: -$0), to: startDate)!
         }
 
-        self.download(logger: logger,
-                      months: months,
-                      monthIndex: months.startIndex,
-                      currencies: Self.currencies,
-                      state: [:]) { result in
+        self.download(
+            logger: logger,
+            months: months,
+            monthIndex: months.startIndex,
+            currencies: Self.currencies,
+            state: [:]
+        ) { result in
 
             switch result {
             case .failure(let error):
@@ -89,7 +92,9 @@ struct ExchangeRatesCalculator {
 
                 var result = [Exchange]()
                 var previousData: [String: Decimal?] = [:]
-                for (_, exchangeRateData) in downloadedDataByMonth.filter({ $1.period != nil }).sorted(by: { $0.key < $1.key }) {
+                for (_, exchangeRateData) in downloadedDataByMonth.filter({ $1.period != nil }).sorted(by: {
+                    $0.key < $1.key
+                }) {
                     for (currencyCode, rate) in exchangeRateData.ratesByCurrencyCode.sorted(by: { $0.key < $1.key }) {
                         if let rate = rate, let currencyEmoji = Self.currenciesEmojies[currencyCode] {
                             let change: Exchange.Change
@@ -103,11 +108,15 @@ struct ExchangeRatesCalculator {
                             default:
                                 change = .unknown
                             }
-                            result.append(Exchange(date: exchangeRateData.period!.start,
-                                                   from: .init(symbol: "GBP", emoji: "💷"),
-                                                   to: .init(symbol: currencyCode, emoji: currencyEmoji),
-                                                   rate: rate,
-                                                   change: change))
+                            result.append(
+                                Exchange(
+                                    date: exchangeRateData.period!.start,
+                                    from: .init(symbol: "GBP", emoji: "💷"),
+                                    to: .init(symbol: currencyCode, emoji: currencyEmoji),
+                                    rate: rate,
+                                    change: change
+                                )
+                            )
                         }
                     }
                     previousData = exchangeRateData.ratesByCurrencyCode
@@ -117,12 +126,14 @@ struct ExchangeRatesCalculator {
         }
     }
 
-    private func download(logger: Logger,
-                          months: [Date],
-                          monthIndex: Array<Date>.Index,
-                          currencies: [String],
-                          state: [Date: ExchangeRates],
-                          callback: @escaping ((Result<[Date: ExchangeRates], Swift.Error>) -> Void)) {
+    private func download(
+        logger: Logger,
+        months: [Date],
+        monthIndex: Array<Date>.Index,
+        currencies: [String],
+        state: [Date: ExchangeRates],
+        callback: @escaping ((Result<[Date: ExchangeRates], Swift.Error>) -> Void)
+    ) {
         if monthIndex == months.count {
             return callback(.success(state))
         }
@@ -146,12 +157,14 @@ struct ExchangeRatesCalculator {
             } catch {
                 return callback(.failure(error))
             }
-            self.download(logger: logger,
-                          months: months,
-                          monthIndex: monthIndex.advanced(by: 1),
-                          currencies: currencies,
-                          state: newState,
-                          callback: callback)
+            self.download(
+                logger: logger,
+                months: months,
+                monthIndex: monthIndex.advanced(by: 1),
+                currencies: currencies,
+                state: newState,
+                callback: callback
+            )
         }
         dataTask.resume()
     }
@@ -163,16 +176,18 @@ struct ExchangeRatesCalculator {
         dateFormatter.dateFormat = "dd/MMM/yy"
         let interval: DateInterval?
         if let period = try document.nodes(forXPath: "/exchangeRateMonthList/@Period").first?.stringValue,
-           period.count == 26 {
+            period.count == 26
+        {
             // "01/Sep/2018 to 30/Sep/2018"
-            let startString = period[period.startIndex ..< period.index(period.startIndex, offsetBy: 11)]
-            let to = period[startString.endIndex ..< period.index(startString.endIndex, offsetBy: 4)]
-            let endString = period[to.endIndex ..< period.index(to.endIndex, offsetBy: 11)]
+            let startString = period[period.startIndex..<period.index(period.startIndex, offsetBy: 11)]
+            let to = period[startString.endIndex..<period.index(startString.endIndex, offsetBy: 4)]
+            let endString = period[to.endIndex..<period.index(to.endIndex, offsetBy: 11)]
             if let startDate = dateFormatter.date(from: String(startString)),
-               let startDay = calendar.dateInterval(of: .day, for: startDate),
-               to == " to ",
-               let endDate = dateFormatter.date(from: String(endString)),
-               let endDay = calendar.dateInterval(of: .day, for: endDate) {
+                let startDay = calendar.dateInterval(of: .day, for: startDate),
+                to == " to ",
+                let endDate = dateFormatter.date(from: String(endString)),
+                let endDay = calendar.dateInterval(of: .day, for: endDate)
+            {
                 interval = DateInterval(start: startDay.start, end: endDay.end)
             } else {
                 interval = nil
@@ -181,16 +196,22 @@ struct ExchangeRatesCalculator {
             interval = nil
         }
 
-        let ratesByCurrencyCode: [String: Decimal?] = try Dictionary(uniqueKeysWithValues: currencyCodes.map {
-            let xpathCurrency = $0.replacingOccurrences(of: "'", with: "&apos;")
-            if let rateString = try document.nodes(forXPath: "/exchangeRateMonthList/exchangeRate/currencyCode[text()='\(xpathCurrency)']/../rateNew/text()").first?.stringValue,
-               // We must parse the decimal data using the UK locale, not the system one.
-               let rate = Decimal(string: rateString, locale: self.locale) {
-                return ($0, rate)
-            } else {
-                return ($0, nil)
+        let ratesByCurrencyCode: [String: Decimal?] = try Dictionary(
+            uniqueKeysWithValues: currencyCodes.map {
+                let xpathCurrency = $0.replacingOccurrences(of: "'", with: "&apos;")
+                if let rateString = try document.nodes(
+                    forXPath:
+                        "/exchangeRateMonthList/exchangeRate/currencyCode[text()='\(xpathCurrency)']/../rateNew/text()"
+                ).first?.stringValue,
+                    // We must parse the decimal data using the UK locale, not the system one.
+                    let rate = Decimal(string: rateString, locale: self.locale)
+                {
+                    return ($0, rate)
+                } else {
+                    return ($0, nil)
+                }
             }
-        })
+        )
 
         return (period: interval, ratesByCurrencyCode: ratesByCurrencyCode)
     }

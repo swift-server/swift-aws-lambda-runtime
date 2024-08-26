@@ -12,14 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
+import NIOCore
+
 #if swift(<5.9)
 @preconcurrency import Dispatch
 #else
 import Dispatch
 #endif
-
-import Logging
-import NIOCore
 
 // MARK: - InitializationContext
 
@@ -162,15 +162,17 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         self.storage.allocator
     }
 
-    init(requestID: String,
-         traceID: String,
-         invokedFunctionARN: String,
-         deadline: DispatchWallTime,
-         cognitoIdentity: String? = nil,
-         clientContext: String? = nil,
-         logger: Logger,
-         eventLoop: EventLoop,
-         allocator: ByteBufferAllocator) {
+    init(
+        requestID: String,
+        traceID: String,
+        invokedFunctionARN: String,
+        deadline: DispatchWallTime,
+        cognitoIdentity: String? = nil,
+        clientContext: String? = nil,
+        logger: Logger,
+        eventLoop: EventLoop,
+        allocator: ByteBufferAllocator
+    ) {
         self.storage = _Storage(
             requestID: requestID,
             traceID: traceID,

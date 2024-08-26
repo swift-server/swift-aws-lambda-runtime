@@ -6,11 +6,10 @@ import PackageDescription
 let package = Package(
     name: "Shared",
     products: [
-        .library(name: "Shared", targets: ["Shared"]),
+        .library(name: "Shared", targets: ["Shared"])
     ],
-    dependencies: [
-    ],
+    dependencies: [],
     targets: [
-        .target(name: "Shared", dependencies: []),
+        .target(name: "Shared", dependencies: [])
     ]
 )

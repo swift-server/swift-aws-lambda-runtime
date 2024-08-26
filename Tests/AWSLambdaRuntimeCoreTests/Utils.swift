@@ -12,11 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntimeCore
 import Logging
 import NIOCore
 import NIOPosix
 import XCTest
+
+@testable import AWSLambdaRuntimeCore
 
 func runLambda<Handler: SimpleLambdaHandler>(behavior: LambdaServerBehavior, handlerType: Handler.Type) throws {
     try runLambda(behavior: behavior, handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler(context:))
@@ -34,21 +35,27 @@ func runLambda<Handler: EventLoopLambdaHandler>(
     behavior: LambdaServerBehavior,
     handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<Handler>
 ) throws {
-    try runLambda(behavior: behavior, handlerProvider: { context in
-        handlerProvider(context).map {
-            CodableEventLoopLambdaHandler(handler: $0, allocator: context.allocator)
+    try runLambda(
+        behavior: behavior,
+        handlerProvider: { context in
+            handlerProvider(context).map {
+                CodableEventLoopLambdaHandler(handler: $0, allocator: context.allocator)
+            }
         }
-    })
+    )
 }
 
 func runLambda<Handler: EventLoopLambdaHandler>(
     behavior: LambdaServerBehavior,
     handlerProvider: @escaping (LambdaInitializationContext) async throws -> Handler
 ) throws {
-    try runLambda(behavior: behavior, handlerProvider: { context in
-        let handler = try await handlerProvider(context)
-        return CodableEventLoopLambdaHandler(handler: handler, allocator: context.allocator)
-    })
+    try runLambda(
+        behavior: behavior,
+        handlerProvider: { context in
+            let handler = try await handlerProvider(context)
+            return CodableEventLoopLambdaHandler(handler: handler, allocator: context.allocator)
+        }
+    )
 }
 
 func runLambda<Handler: ByteBufferLambdaHandler>(
@@ -85,7 +92,13 @@ func runLambda(
     }.wait()
 }
 
-func assertLambdaRuntimeResult(_ result: Result<Int, Error>, shouldHaveRun: Int = 0, shouldFailWithError: Error? = nil, file: StaticString = #file, line: UInt = #line) {
+func assertLambdaRuntimeResult(
+    _ result: Result<Int, Error>,
+    shouldHaveRun: Int = 0,
+    shouldFailWithError: Error? = nil,
+    file: StaticString = #file,
+    line: UInt = #line
+) {
     switch result {
     case .success where shouldFailWithError != nil:
         XCTFail("should fail with \(shouldFailWithError!)", file: file, line: line)
@@ -94,7 +107,13 @@ func assertLambdaRuntimeResult(_ result: Result<Int, Error>, shouldHaveRun: Int 
     case .failure(let error) where shouldFailWithError == nil:
         XCTFail("should succeed, but failed with \(error)", file: file, line: line)
     case .failure(let error) where shouldFailWithError != nil:
-        XCTAssertEqual(String(describing: shouldFailWithError!), String(describing: error), "expected error to mactch", file: file, line: line)
+        XCTAssertEqual(
+            String(describing: shouldFailWithError!),
+            String(describing: error),
+            "expected error to mactch",
+            file: file,
+            line: line
+        )
     default:
         XCTFail("invalid state")
     }

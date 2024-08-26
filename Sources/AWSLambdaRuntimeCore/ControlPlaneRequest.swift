@@ -42,7 +42,7 @@ struct Invocation: Hashable {
         }
 
         guard let deadline = headers.first(name: AmazonHeaders.deadline),
-              let unixTimeInMilliseconds = Int64(deadline)
+            let unixTimeInMilliseconds = Int64(deadline)
         else {
             throw LambdaRuntimeError.invocationMissingHeader(AmazonHeaders.deadline)
         }
@@ -54,7 +54,8 @@ struct Invocation: Hashable {
         self.requestID = requestID
         self.deadlineInMillisSinceEpoch = unixTimeInMilliseconds
         self.invokedFunctionARN = invokedFunctionARN
-        self.traceID = headers.first(name: AmazonHeaders.traceID) ?? "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=0"
+        self.traceID =
+            headers.first(name: AmazonHeaders.traceID) ?? "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=0"
         self.clientContext = headers["Lambda-Runtime-Client-Context"].first
         self.cognitoIdentity = headers["Lambda-Runtime-Cognito-Identity"].first
     }

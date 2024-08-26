@@ -12,13 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntime
-@testable import AWSLambdaRuntimeCore
 import Logging
 import NIOCore
 import NIOFoundationCompat
 import NIOPosix
 import XCTest
+
+@testable import AWSLambdaRuntime
+@testable import AWSLambdaRuntimeCore
 
 class CodableLambdaTest: XCTestCase {
     var eventLoopGroup: EventLoopGroup!

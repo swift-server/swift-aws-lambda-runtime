@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntimeCore
 import NIOCore
 import XCTest
+
+@testable import AWSLambdaRuntimeCore
 
 class LambdaRunnerTest: XCTestCase {
     func testSuccess() {
@@ -94,9 +95,14 @@ class LambdaRunnerTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        XCTAssertNoThrow(try runLambda(behavior: Behavior(), handlerProvider: { context in
-            context.eventLoop.makeSucceededFuture(EchoHandler())
-        }))
+        XCTAssertNoThrow(
+            try runLambda(
+                behavior: Behavior(),
+                handlerProvider: { context in
+                    context.eventLoop.makeSucceededFuture(EchoHandler())
+                }
+            )
+        )
     }
 
     func testCustomProviderFailure() {
@@ -125,9 +131,14 @@ class LambdaRunnerTest: XCTestCase {
 
         struct CustomError: Error {}
 
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerProvider: { context -> EventLoopFuture<EchoHandler> in
-            context.eventLoop.makeFailedFuture(CustomError())
-        })) { error in
+        XCTAssertThrowsError(
+            try runLambda(
+                behavior: Behavior(),
+                handlerProvider: { context -> EventLoopFuture<EchoHandler> in
+                    context.eventLoop.makeFailedFuture(CustomError())
+                }
+            )
+        ) { error in
             XCTAssertNotNil(error as? CustomError, "expecting error to match")
         }
     }
@@ -156,9 +167,14 @@ class LambdaRunnerTest: XCTestCase {
                 return .failure(.internalServerError)
             }
         }
-        XCTAssertNoThrow(try runLambda(behavior: Behavior(), handlerProvider: { _ async throws -> EchoHandler in
-            EchoHandler()
-        }))
+        XCTAssertNoThrow(
+            try runLambda(
+                behavior: Behavior(),
+                handlerProvider: { _ async throws -> EchoHandler in
+                    EchoHandler()
+                }
+            )
+        )
     }
 
     func testCustomAsyncProviderFailure() {
@@ -187,9 +203,14 @@ class LambdaRunnerTest: XCTestCase {
 
         struct CustomError: Error {}
 
-        XCTAssertThrowsError(try runLambda(behavior: Behavior(), handlerProvider: { _ async throws -> EchoHandler in
-            throw CustomError()
-        })) { error in
+        XCTAssertThrowsError(
+            try runLambda(
+                behavior: Behavior(),
+                handlerProvider: { _ async throws -> EchoHandler in
+                    throw CustomError()
+                }
+            )
+        ) { error in
             XCTAssertNotNil(error as? CustomError, "expecting error to match")
         }
     }

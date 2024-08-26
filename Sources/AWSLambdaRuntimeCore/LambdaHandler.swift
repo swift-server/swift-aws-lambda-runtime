@@ -251,7 +251,8 @@ extension LambdaHandler {
 /// unchecked sendable wrapper for the handler
 /// this is safe since lambda runtime is designed to calls the handler serially
 @usableFromInline
-struct UncheckedSendableHandler<Underlying: LambdaHandler, Event, Output>: @unchecked Sendable where Event == Underlying.Event, Output == Underlying.Output {
+struct UncheckedSendableHandler<Underlying: LambdaHandler, Event, Output>: @unchecked Sendable
+where Event == Underlying.Event, Output == Underlying.Output {
     @usableFromInline
     let underlying: Underlying
 

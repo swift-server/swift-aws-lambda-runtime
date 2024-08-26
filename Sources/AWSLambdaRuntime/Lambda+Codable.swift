@@ -13,11 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 @_exported import AWSLambdaRuntimeCore
+import NIOCore
+import NIOFoundationCompat
+
 import struct Foundation.Data
 import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
-import NIOCore
-import NIOFoundationCompat
 
 // MARK: - SimpleLambdaHandler Codable support
 

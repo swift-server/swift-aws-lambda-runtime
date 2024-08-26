@@ -35,20 +35,33 @@ final class HTTPClient {
     }
 
     func get(url: String, headers: HTTPHeaders, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
-        self.execute(Request(targetHost: self.targetHost,
-                             url: url,
-                             method: .GET,
-                             headers: headers,
-                             timeout: timeout ?? self.configuration.requestTimeout))
+        self.execute(
+            Request(
+                targetHost: self.targetHost,
+                url: url,
+                method: .GET,
+                headers: headers,
+                timeout: timeout ?? self.configuration.requestTimeout
+            )
+        )
     }
 
-    func post(url: String, headers: HTTPHeaders, body: ByteBuffer?, timeout: TimeAmount? = nil) -> EventLoopFuture<Response> {
-        self.execute(Request(targetHost: self.targetHost,
-                             url: url,
-                             method: .POST,
-                             headers: headers,
-                             body: body,
-                             timeout: timeout ?? self.configuration.requestTimeout))
+    func post(
+        url: String,
+        headers: HTTPHeaders,
+        body: ByteBuffer?,
+        timeout: TimeAmount? = nil
+    ) -> EventLoopFuture<Response> {
+        self.execute(
+            Request(
+                targetHost: self.targetHost,
+                url: url,
+                method: .POST,
+                headers: headers,
+                body: body,
+                timeout: timeout ?? self.configuration.requestTimeout
+            )
+        )
     }
 
     /// cancels the current request if there is one
@@ -103,7 +116,8 @@ final class HTTPClient {
                     // Lambda quotas... An invocation payload is maximal 6MB in size:
                     //   https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
                     try channel.pipeline.syncOperations.addHandler(
-                        NIOHTTPClientResponseAggregator(maxContentLength: 6 * 1024 * 1024))
+                        NIOHTTPClientResponseAggregator(maxContentLength: 6 * 1024 * 1024)
+                    )
                     try channel.pipeline.syncOperations.addHandler(LambdaChannelHandler())
                     return channel.eventLoop.makeSucceededFuture(())
                 } catch {
@@ -128,7 +142,14 @@ final class HTTPClient {
         let body: ByteBuffer?
         let timeout: TimeAmount?
 
-        init(targetHost: String, url: String, method: HTTPMethod = .GET, headers: HTTPHeaders = HTTPHeaders(), body: ByteBuffer? = nil, timeout: TimeAmount?) {
+        init(
+            targetHost: String,
+            url: String,
+            method: HTTPMethod = .GET,
+            headers: HTTPHeaders = HTTPHeaders(),
+            body: ByteBuffer? = nil,
+            timeout: TimeAmount?
+        ) {
             self.targetHost = targetHost
             self.url = url
             self.method = method

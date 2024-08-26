@@ -110,7 +110,11 @@ public final class LambdaRuntime<Handler: LambdaRuntimeHandler> {
         let terminator = LambdaTerminator()
         let runner = LambdaRunner(eventLoop: self.eventLoop, configuration: self.configuration)
 
-        let startupFuture = runner.initialize(handlerProvider: self.handlerProvider, logger: logger, terminator: terminator)
+        let startupFuture = runner.initialize(
+            handlerProvider: self.handlerProvider,
+            logger: logger,
+            terminator: terminator
+        )
         startupFuture.flatMap { handler -> EventLoopFuture<Result<Int, Error>> in
             // after the startup future has succeeded, we have a handler that we can use
             // to `run` the lambda.

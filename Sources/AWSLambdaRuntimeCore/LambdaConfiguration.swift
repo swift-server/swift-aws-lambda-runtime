@@ -51,7 +51,8 @@ struct LambdaConfiguration: CustomStringConvertible {
         init(id: String? = nil, maxTimes: Int? = nil, stopSignal: Signal? = nil) {
             self.id = id ?? "\(DispatchTime.now().uptimeNanoseconds)"
             self.maxTimes = maxTimes ?? Lambda.env("MAX_REQUESTS").flatMap(Int.init) ?? 0
-            self.stopSignal = stopSignal ?? Lambda.env("STOP_SIGNAL").flatMap(Int32.init).flatMap(Signal.init) ?? Signal.TERM
+            self.stopSignal =
+                stopSignal ?? Lambda.env("STOP_SIGNAL").flatMap(Int32.init).flatMap(Signal.init) ?? Signal.TERM
             precondition(self.maxTimes >= 0, "maxTimes must be equal or larger than 0")
         }
 
@@ -66,13 +67,15 @@ struct LambdaConfiguration: CustomStringConvertible {
         let requestTimeout: TimeAmount?
 
         init(address: String? = nil, keepAlive: Bool? = nil, requestTimeout: TimeAmount? = nil) {
-            let ipPort = (address ?? Lambda.env("AWS_LAMBDA_RUNTIME_API"))?.split(separator: ":") ?? ["127.0.0.1", "7000"]
+            let ipPort =
+                (address ?? Lambda.env("AWS_LAMBDA_RUNTIME_API"))?.split(separator: ":") ?? ["127.0.0.1", "7000"]
             guard ipPort.count == 2, let port = Int(ipPort[1]) else {
                 preconditionFailure("invalid ip+port configuration \(ipPort)")
             }
             self.ip = String(ipPort[0])
             self.port = port
-            self.requestTimeout = requestTimeout ?? Lambda.env("REQUEST_TIMEOUT").flatMap(Int64.init).flatMap { .milliseconds($0) }
+            self.requestTimeout =
+                requestTimeout ?? Lambda.env("REQUEST_TIMEOUT").flatMap(Int64.init).flatMap { .milliseconds($0) }
         }
 
         var description: String {
