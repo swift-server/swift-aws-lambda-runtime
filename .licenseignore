@@ -10,6 +10,7 @@ CONTRIBUTORS.txt
 LICENSE.txt
 NOTICE.txt
 Package.swift
+Package@swift-*.swift
 Package.resolved
 **/*.docc/*
 **/.gitignore
