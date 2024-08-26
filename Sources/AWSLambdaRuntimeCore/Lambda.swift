@@ -12,6 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
+import NIOCore
+import NIOPosix
+
 #if os(macOS)
 import Darwin.C
 #elseif canImport(Glibc)
@@ -27,9 +31,6 @@ import ucrt
 #if swift(<5.9)
 import Backtrace
 #endif
-import Logging
-import NIOCore
-import NIOPosix
 
 public enum Lambda {
     /// Run a Lambda defined by implementing the ``SimpleLambdaHandler`` protocol.
@@ -44,7 +45,10 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        self.run(configuration: configuration, handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler(context:))
+        self.run(
+            configuration: configuration,
+            handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler(context:)
+        )
     }
 
     /// Run a Lambda defined by implementing the ``LambdaHandler`` protocol.
@@ -76,7 +80,10 @@ public enum Lambda {
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        self.run(configuration: configuration, handlerProvider: CodableEventLoopLambdaHandler<Handler>.makeHandler(context:))
+        self.run(
+            configuration: configuration,
+            handlerProvider: CodableEventLoopLambdaHandler<Handler>.makeHandler(context:)
+        )
     }
 
     /// Run a Lambda defined by implementing the ``ByteBufferLambdaHandler`` protocol.
@@ -149,7 +156,9 @@ public enum Lambda {
         #if DEBUG
         if Lambda.env("LOCAL_LAMBDA_SERVER_ENABLED").flatMap(Bool.init) ?? false {
             do {
-                return try Lambda.withLocalServer(invocationEndpoint: Lambda.env("LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT")) {
+                return try Lambda.withLocalServer(
+                    invocationEndpoint: Lambda.env("LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT")
+                ) {
                     _run(configuration)
                 }
             } catch {

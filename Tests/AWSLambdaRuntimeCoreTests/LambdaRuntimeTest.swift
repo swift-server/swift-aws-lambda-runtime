@@ -12,12 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntimeCore
 import Logging
 import NIOCore
 import NIOHTTP1
 import NIOPosix
 import XCTest
+
+@testable import AWSLambdaRuntimeCore
 
 class LambdaRuntimeTest: XCTestCase {
     func testShutdownFutureIsFulfilledWithStartUpError() {
@@ -37,7 +38,7 @@ class LambdaRuntimeTest: XCTestCase {
             XCTAssert($0 is StartupError)
         }
 
-        XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) {
+        XCTAssertThrowsError(try runtime.shutdownFuture.wait()) {
             XCTAssert($0 is StartupError)
         }
     }
@@ -54,7 +55,7 @@ class LambdaRuntimeTest: XCTestCase {
         let runtime = LambdaRuntimeFactory.makeRuntime(EchoHandler.self, eventLoop: eventLoop, logger: logger)
 
         XCTAssertNoThrow(_ = try eventLoop.flatSubmit { runtime.start() }.wait())
-        XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) {
+        XCTAssertThrowsError(try runtime.shutdownFuture.wait()) {
             XCTAssertEqual(.badStatusCode(HTTPResponseStatus.internalServerError), $0 as? LambdaRuntimeError)
         }
     }
@@ -73,21 +74,36 @@ class LambdaRuntimeTest: XCTestCase {
         struct ShutdownErrorHandler: EventLoopLambdaHandler {
             static func makeHandler(context: LambdaInitializationContext) -> EventLoopFuture<ShutdownErrorHandler> {
                 // register shutdown operation
-                context.terminator.register(name: "test 1", handler: { eventLoop in
-                    eventLoop.makeFailedFuture(ShutdownError(description: "error 1"))
-                })
-                context.terminator.register(name: "test 2", handler: { eventLoop in
-                    eventLoop.makeSucceededVoidFuture()
-                })
-                context.terminator.register(name: "test 3", handler: { eventLoop in
-                    eventLoop.makeFailedFuture(ShutdownError(description: "error 2"))
-                })
-                context.terminator.register(name: "test 4", handler: { eventLoop in
-                    eventLoop.makeSucceededVoidFuture()
-                })
-                context.terminator.register(name: "test 5", handler: { eventLoop in
-                    eventLoop.makeFailedFuture(ShutdownError(description: "error 3"))
-                })
+                context.terminator.register(
+                    name: "test 1",
+                    handler: { eventLoop in
+                        eventLoop.makeFailedFuture(ShutdownError(description: "error 1"))
+                    }
+                )
+                context.terminator.register(
+                    name: "test 2",
+                    handler: { eventLoop in
+                        eventLoop.makeSucceededVoidFuture()
+                    }
+                )
+                context.terminator.register(
+                    name: "test 3",
+                    handler: { eventLoop in
+                        eventLoop.makeFailedFuture(ShutdownError(description: "error 2"))
+                    }
+                )
+                context.terminator.register(
+                    name: "test 4",
+                    handler: { eventLoop in
+                        eventLoop.makeSucceededVoidFuture()
+                    }
+                )
+                context.terminator.register(
+                    name: "test 5",
+                    handler: { eventLoop in
+                        eventLoop.makeFailedFuture(ShutdownError(description: "error 3"))
+                    }
+                )
                 return context.eventLoop.makeSucceededFuture(ShutdownErrorHandler())
             }
 
@@ -103,14 +119,18 @@ class LambdaRuntimeTest: XCTestCase {
         XCTAssertNoThrow(try eventLoop.flatSubmit { runtime.start() }.wait())
         XCTAssertThrowsError(try runtime.shutdownFuture.wait()) { error in
             guard case LambdaRuntimeError.shutdownError(let shutdownError, .failure(let runtimeError)) = error else {
-                XCTFail("Unexpected error: \(error)"); return
+                XCTFail("Unexpected error: \(error)")
+                return
             }
 
-            XCTAssertEqual(shutdownError as? LambdaTerminator.TerminationError, LambdaTerminator.TerminationError(underlying: [
-                ShutdownError(description: "error 3"),
-                ShutdownError(description: "error 2"),
-                ShutdownError(description: "error 1"),
-            ]))
+            XCTAssertEqual(
+                shutdownError as? LambdaTerminator.TerminationError,
+                LambdaTerminator.TerminationError(underlying: [
+                    ShutdownError(description: "error 3"),
+                    ShutdownError(description: "error 2"),
+                    ShutdownError(description: "error 1"),
+                ])
+            )
             XCTAssertEqual(runtimeError as? LambdaRuntimeError, .badStatusCode(.internalServerError))
         }
     }

@@ -12,12 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntimeCore
-import Foundation // for JSON
+import Foundation  // for JSON
 import Logging
 import NIOCore
 import NIOHTTP1
 import NIOPosix
+
+@testable import AWSLambdaRuntimeCore
 
 final class MockLambdaServer {
     private let logger = Logger(label: "MockLambdaServer")
@@ -47,7 +48,9 @@ final class MockLambdaServer {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap { _ in
-                    channel.pipeline.addHandler(HTTPHandler(logger: self.logger, keepAlive: self.keepAlive, behavior: self.behavior))
+                    channel.pipeline.addHandler(
+                        HTTPHandler(logger: self.logger, keepAlive: self.keepAlive, behavior: self.behavior)
+                    )
                 }
             }
         return bootstrap.bind(host: self.host, port: self.port).flatMap { channel in
@@ -163,8 +166,8 @@ final class HTTPHandler: ChannelInboundHandler {
             }
         } else if request.head.uri.hasSuffix(Consts.postErrorURLSuffix) {
             guard let requestId = request.head.uri.split(separator: "/").dropFirst(3).first,
-                  let json = requestBody,
-                  let error = ErrorResponse.fromJson(json)
+                let json = requestBody,
+                let error = ErrorResponse.fromJson(json)
             else {
                 return self.writeResponse(context: context, status: .badRequest)
             }
@@ -180,7 +183,12 @@ final class HTTPHandler: ChannelInboundHandler {
         self.writeResponse(context: context, status: responseStatus, headers: responseHeaders, body: responseBody)
     }
 
-    func writeResponse(context: ChannelHandlerContext, status: HTTPResponseStatus, headers: [(String, String)]? = nil, body: String? = nil) {
+    func writeResponse(
+        context: ChannelHandlerContext,
+        status: HTTPResponseStatus,
+        headers: [(String, String)]? = nil,
+        body: String? = nil
+    ) {
         var headers = HTTPHeaders(headers ?? [])
         headers.add(name: "Content-Length", value: "\(body?.utf8.count ?? 0)")
         if !self.keepAlive {

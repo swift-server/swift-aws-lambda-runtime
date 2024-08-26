@@ -18,7 +18,9 @@ import NIOCore
 // https://github.com/swift-extras/swift-extras-uuid
 
 struct LambdaRequestID {
-    typealias uuid_t = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
+    typealias uuid_t = (
+        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8
+    )
 
     var uuid: uuid_t {
         self._uuid
@@ -114,22 +116,12 @@ struct LambdaRequestID {
 extension LambdaRequestID: Equatable {
     // sadly no auto conformance from the compiler
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs._uuid.0 == rhs._uuid.0 &&
-            lhs._uuid.1 == rhs._uuid.1 &&
-            lhs._uuid.2 == rhs._uuid.2 &&
-            lhs._uuid.3 == rhs._uuid.3 &&
-            lhs._uuid.4 == rhs._uuid.4 &&
-            lhs._uuid.5 == rhs._uuid.5 &&
-            lhs._uuid.6 == rhs._uuid.6 &&
-            lhs._uuid.7 == rhs._uuid.7 &&
-            lhs._uuid.8 == rhs._uuid.8 &&
-            lhs._uuid.9 == rhs._uuid.9 &&
-            lhs._uuid.10 == rhs._uuid.10 &&
-            lhs._uuid.11 == rhs._uuid.11 &&
-            lhs._uuid.12 == rhs._uuid.12 &&
-            lhs._uuid.13 == rhs._uuid.13 &&
-            lhs._uuid.14 == rhs._uuid.14 &&
-            lhs._uuid.15 == rhs._uuid.15
+        lhs._uuid.0 == rhs._uuid.0 && lhs._uuid.1 == rhs._uuid.1 && lhs._uuid.2 == rhs._uuid.2
+            && lhs._uuid.3 == rhs._uuid.3 && lhs._uuid.4 == rhs._uuid.4 && lhs._uuid.5 == rhs._uuid.5
+            && lhs._uuid.6 == rhs._uuid.6 && lhs._uuid.7 == rhs._uuid.7 && lhs._uuid.8 == rhs._uuid.8
+            && lhs._uuid.9 == rhs._uuid.9 && lhs._uuid.10 == rhs._uuid.10 && lhs._uuid.11 == rhs._uuid.11
+            && lhs._uuid.12 == rhs._uuid.12 && lhs._uuid.13 == rhs._uuid.13 && lhs._uuid.14 == rhs._uuid.14
+            && lhs._uuid.15 == rhs._uuid.15
     }
 }
 
@@ -160,7 +152,10 @@ extension LambdaRequestID: Decodable {
         let uuidString = try container.decode(String.self)
 
         guard let uuid = LambdaRequestID.fromString(uuidString) else {
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Attempted to decode UUID from invalid UUID string.")
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Attempted to decode UUID from invalid UUID string."
+            )
         }
 
         self = uuid
@@ -270,11 +265,11 @@ extension LambdaRequestID {
     static func fromPointer(_ ptr: UnsafeRawBufferPointer) -> LambdaRequestID? {
         func uint4Value(from value: UInt8, valid: inout Bool) -> UInt8 {
             switch value {
-            case UInt8(ascii: "0") ... UInt8(ascii: "9"):
+            case UInt8(ascii: "0")...UInt8(ascii: "9"):
                 return value &- UInt8(ascii: "0")
-            case UInt8(ascii: "a") ... UInt8(ascii: "f"):
+            case UInt8(ascii: "a")...UInt8(ascii: "f"):
                 return value &- UInt8(ascii: "a") &+ 10
-            case UInt8(ascii: "A") ... UInt8(ascii: "F"):
+            case UInt8(ascii: "A")...UInt8(ascii: "F"):
                 return value &- UInt8(ascii: "A") &+ 10
             default:
                 valid = false
@@ -365,7 +360,7 @@ extension ByteBuffer {
             return nil
         }
 
-        let upperBound = indexFromReaderIndex &+ length // safe, can't overflow, we checked it above.
+        let upperBound = indexFromReaderIndex &+ length  // safe, can't overflow, we checked it above.
 
         // uncheckedBounds is safe because `length` is >= 0, so the lower bound will always be lower/equal to upper
         return Range<Int>(uncheckedBounds: (lower: indexFromReaderIndex, upper: upperBound))

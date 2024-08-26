@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntimeCore
 import NIOCore
 import XCTest
+
+@testable import AWSLambdaRuntimeCore
 
 final class LambdaRequestIDTest: XCTestCase {
     func testInitFromStringSuccess() {
@@ -190,7 +191,10 @@ final class LambdaRequestIDTest: XCTestCase {
 
         var data: Data?
         XCTAssertNoThrow(data = try JSONEncoder().encode(test))
-        XCTAssertEqual(try String(decoding: XCTUnwrap(data), as: Unicode.UTF8.self), #"{"requestID":"\#(requestID.uuidString)"}"#)
+        XCTAssertEqual(
+            try String(decoding: XCTUnwrap(data), as: Unicode.UTF8.self),
+            #"{"requestID":"\#(requestID.uuidString)"}"#
+        )
     }
 
     func testDecodingSuccess() {
@@ -214,7 +218,7 @@ final class LambdaRequestIDTest: XCTestCase {
         _ = requestIDString.removeLast()
         let data = #"{"requestID":"\#(requestIDString)"}"#.data(using: .utf8)
 
-        XCTAssertThrowsError(_ = try JSONDecoder().decode(Test.self, from: XCTUnwrap(data))) { error in
+        XCTAssertThrowsError(try JSONDecoder().decode(Test.self, from: XCTUnwrap(data))) { error in
             XCTAssertNotNil(error as? DecodingError)
         }
     }

@@ -53,7 +53,7 @@ enum Signal: Int32 {
     case INT = 2
     case QUIT = 3
     case ABRT = 6
-    case KILL = 9
+    case KILL = 9  // ignore-unacceptable-language
     case ALRM = 14
     case TERM = 15
 }
@@ -80,7 +80,7 @@ extension String {
 
         while nextIndex != stringBytes.endIndex {
             switch stringBytes[nextIndex] {
-            case 0 ..< 32, UInt8(ascii: "\""), UInt8(ascii: "\\"):
+            case 0..<32, UInt8(ascii: "\""), UInt8(ascii: "\\"):
                 // All Unicode characters may be placed within the
                 // quotation marks, except for the characters that MUST be escaped:
                 // quotation mark, reverse solidus, and the control characters (U+0000
@@ -88,7 +88,7 @@ extension String {
                 // https://tools.ietf.org/html/rfc7159#section-7
 
                 // copy the current range over
-                bytes.append(contentsOf: stringBytes[startCopyIndex ..< nextIndex])
+                bytes.append(contentsOf: stringBytes[startCopyIndex..<nextIndex])
                 bytes.append(UInt8(ascii: "\\"))
                 bytes.append(stringBytes[nextIndex])
 
@@ -100,7 +100,7 @@ extension String {
         }
 
         // copy everything, that hasn't been copied yet
-        bytes.append(contentsOf: stringBytes[startCopyIndex ..< nextIndex])
+        bytes.append(contentsOf: stringBytes[startCopyIndex..<nextIndex])
         bytes.append(UInt8(ascii: "\""))
     }
 }
@@ -125,8 +125,9 @@ extension AmazonHeaders {
         let dateValue = String(now, radix: 16, uppercase: false)
         let datePadding = String(repeating: "0", count: max(0, 8 - dateValue.count))
         // A 96-bit identifier for the trace, globally unique, in 24 hexadecimal digits.
-        let identifier = String(UInt64.random(in: UInt64.min ... UInt64.max) | 1 << 63, radix: 16, uppercase: false)
-            + String(UInt32.random(in: UInt32.min ... UInt32.max) | 1 << 31, radix: 16, uppercase: false)
+        let identifier =
+            String(UInt64.random(in: UInt64.min...UInt64.max) | 1 << 63, radix: 16, uppercase: false)
+            + String(UInt32.random(in: UInt32.min...UInt32.max) | 1 << 31, radix: 16, uppercase: false)
         return "\(version)-\(datePadding)\(dateValue)-\(identifier)"
     }
 }

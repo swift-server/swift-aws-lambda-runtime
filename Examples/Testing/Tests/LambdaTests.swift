@@ -14,8 +14,9 @@
 
 import AWSLambdaRuntime
 import AWSLambdaTesting
-@testable import MyLambda
 import XCTest
+
+@testable import MyLambda
 
 class LambdaTest: XCTestCase {
     func testIt() async throws {

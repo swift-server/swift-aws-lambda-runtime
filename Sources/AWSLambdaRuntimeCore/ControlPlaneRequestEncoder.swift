@@ -24,7 +24,11 @@ struct ControlPlaneRequestEncoder: _EmittingChannelHandler {
         self.host = host
     }
 
-    mutating func writeRequest(_ request: ControlPlaneRequest, context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+    mutating func writeRequest(
+        _ request: ControlPlaneRequest,
+        context: ChannelHandlerContext,
+        promise: EventLoopPromise<Void>?
+    ) {
         self.byteBuffer.clear(minimumCapacity: self.byteBuffer.storageCapacity)
 
         switch request {
@@ -32,7 +36,7 @@ struct ControlPlaneRequestEncoder: _EmittingChannelHandler {
             self.byteBuffer.writeString(.nextInvocationRequestLine)
             self.byteBuffer.writeHostHeader(host: self.host)
             self.byteBuffer.writeString(.userAgentHeader)
-            self.byteBuffer.writeString(.CRLF) // end of head
+            self.byteBuffer.writeString(.CRLF)  // end of head
             context.write(self.wrapOutboundOut(self.byteBuffer), promise: promise)
             context.flush()
 
@@ -42,7 +46,7 @@ struct ControlPlaneRequestEncoder: _EmittingChannelHandler {
             self.byteBuffer.writeHostHeader(host: self.host)
             self.byteBuffer.writeString(.userAgentHeader)
             self.byteBuffer.writeContentLengthHeader(length: contentLength)
-            self.byteBuffer.writeString(.CRLF) // end of head
+            self.byteBuffer.writeString(.CRLF)  // end of head
             if let payload = payload, contentLength > 0 {
                 context.write(self.wrapOutboundOut(self.byteBuffer), promise: nil)
                 context.write(self.wrapOutboundOut(payload), promise: promise)
@@ -58,7 +62,7 @@ struct ControlPlaneRequestEncoder: _EmittingChannelHandler {
             self.byteBuffer.writeHostHeader(host: self.host)
             self.byteBuffer.writeString(.userAgentHeader)
             self.byteBuffer.writeString(.unhandledErrorHeader)
-            self.byteBuffer.writeString(.CRLF) // end of head
+            self.byteBuffer.writeString(.CRLF)  // end of head
             self.byteBuffer.writeBytes(payload)
             context.write(self.wrapOutboundOut(self.byteBuffer), promise: promise)
             context.flush()
@@ -70,7 +74,7 @@ struct ControlPlaneRequestEncoder: _EmittingChannelHandler {
             self.byteBuffer.writeHostHeader(host: self.host)
             self.byteBuffer.writeString(.userAgentHeader)
             self.byteBuffer.writeString(.unhandledErrorHeader)
-            self.byteBuffer.writeString(.CRLF) // end of head
+            self.byteBuffer.writeString(.CRLF)  // end of head
             self.byteBuffer.writeBytes(payload)
             context.write(self.wrapOutboundOut(self.byteBuffer), promise: promise)
             context.flush()

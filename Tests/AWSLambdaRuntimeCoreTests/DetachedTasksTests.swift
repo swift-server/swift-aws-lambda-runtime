@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntimeCore
 import Logging
 import NIO
 import XCTest
+
+@testable import AWSLambdaRuntimeCore
 
 class DetachedTasksTest: XCTestCase {
     actor Expectation {

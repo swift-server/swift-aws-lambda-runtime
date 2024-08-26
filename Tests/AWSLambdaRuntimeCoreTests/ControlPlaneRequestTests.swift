@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntimeCore
 import NIOHTTP1
 import XCTest
+
+@testable import AWSLambdaRuntimeCore
 
 class InvocationTest: XCTestCase {
     func testInvocationTraceID() throws {

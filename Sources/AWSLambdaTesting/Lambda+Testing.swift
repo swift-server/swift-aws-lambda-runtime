@@ -33,12 +33,13 @@
 //     XCTAssertEqual(result, "echo" + input)
 // }
 
-@testable import AWSLambdaRuntime
-@testable import AWSLambdaRuntimeCore
 import Dispatch
 import Logging
 import NIOCore
 import NIOPosix
+
+@testable import AWSLambdaRuntime
+@testable import AWSLambdaRuntimeCore
 
 extension Lambda {
     public struct TestConfig {
@@ -47,10 +48,14 @@ extension Lambda {
         public var invokedFunctionARN: String
         public var timeout: DispatchTimeInterval
 
-        public init(requestID: String = "\(DispatchTime.now().uptimeNanoseconds)",
-                    traceID: String = "Root=\(DispatchTime.now().uptimeNanoseconds);Parent=\(DispatchTime.now().uptimeNanoseconds);Sampled=1",
-                    invokedFunctionARN: String = "arn:aws:lambda:us-west-1:\(DispatchTime.now().uptimeNanoseconds):function:custom-runtime",
-                    timeout: DispatchTimeInterval = .seconds(5)) {
+        public init(
+            requestID: String = "\(DispatchTime.now().uptimeNanoseconds)",
+            traceID: String =
+                "Root=\(DispatchTime.now().uptimeNanoseconds);Parent=\(DispatchTime.now().uptimeNanoseconds);Sampled=1",
+            invokedFunctionARN: String =
+                "arn:aws:lambda:us-west-1:\(DispatchTime.now().uptimeNanoseconds):function:custom-runtime",
+            timeout: DispatchTimeInterval = .seconds(5)
+        ) {
             self.requestID = requestID
             self.traceID = traceID
             self.invokedFunctionARN = invokedFunctionARN

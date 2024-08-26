@@ -109,7 +109,12 @@ final class HTTPHandler: ChannelInboundHandler {
         self.writeResponse(context: context, status: responseStatus, headers: responseHeaders, body: responseBody)
     }
 
-    func writeResponse(context: ChannelHandlerContext, status: HTTPResponseStatus, headers: [(String, String)]? = nil, body: String? = nil) {
+    func writeResponse(
+        context: ChannelHandlerContext,
+        status: HTTPResponseStatus,
+        headers: [(String, String)]? = nil,
+        body: String? = nil
+    ) {
         var headers = HTTPHeaders(headers ?? [])
         headers.add(name: "content-length", value: "\(body?.utf8.count ?? 0)")
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: status, headers: headers)

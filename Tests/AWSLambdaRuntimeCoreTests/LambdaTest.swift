@@ -12,11 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntimeCore
 import Logging
 import NIOCore
 import NIOPosix
 import XCTest
+
+@testable import AWSLambdaRuntimeCore
 
 class LambdaTest: XCTestCase {
     func testSuccess() {
@@ -24,7 +25,7 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let maxTimes = Int.random(in: 10 ... 20)
+        let maxTimes = Int.random(in: 10...20)
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
@@ -35,7 +36,7 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let maxTimes = Int.random(in: 10 ... 20)
+        let maxTimes = Int.random(in: 10...20)
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
         let result = Lambda.run(configuration: configuration, handlerType: RuntimeErrorHandler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
@@ -93,7 +94,7 @@ class LambdaTest: XCTestCase {
             // we need to schedule the signal before we start the long running `Lambda.run`, since
             // `Lambda.run` will block the main thread.
             usleep(100_000)
-            kill(getpid(), signal.rawValue)
+            kill(getpid(), signal.rawValue)  // ignore-unacceptable-language
         }
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
 
@@ -112,8 +113,10 @@ class LambdaTest: XCTestCase {
         XCTAssertNoThrow(try server.start().wait())
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: 1),
-                                                runtimeEngine: .init(requestTimeout: .milliseconds(timeout)))
+        let configuration = LambdaConfiguration(
+            lifecycle: .init(maxTimes: 1),
+            runtimeEngine: .init(requestTimeout: .milliseconds(timeout))
+        )
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
         assertLambdaRuntimeResult(result, shouldFailWithError: LambdaRuntimeError.upstreamError("timeout"))
     }
@@ -125,7 +128,10 @@ class LambdaTest: XCTestCase {
 
         let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: 1))
         let result = Lambda.run(configuration: configuration, handlerType: EchoHandler.self)
-        assertLambdaRuntimeResult(result, shouldFailWithError: LambdaRuntimeError.upstreamError("connectionResetByPeer"))
+        assertLambdaRuntimeResult(
+            result,
+            shouldFailWithError: LambdaRuntimeError.upstreamError("connectionResetByPeer")
+        )
     }
 
     func testBigEvent() {
@@ -190,7 +196,7 @@ class LambdaTest: XCTestCase {
     }
 
     func testDeadline() {
-        let delta = Int.random(in: 1 ... 600)
+        let delta = Int.random(in: 1...600)
 
         let milli1 = Date(timeIntervalSinceNow: Double(delta)).millisSinceEpoch
         let milli2 = (DispatchWallTime.now() + .seconds(delta)).millisSinceEpoch
@@ -286,7 +292,11 @@ class LambdaTest: XCTestCase {
                 logger: logger
             ).get()
 
-            try await runner.initialize(handlerType: CodableEventLoopLambdaHandler<Handler>.self, logger: logger, terminator: LambdaTerminator()).flatMap { handler2 in
+            try await runner.initialize(
+                handlerType: CodableEventLoopLambdaHandler<Handler>.self,
+                logger: logger,
+                terminator: LambdaTerminator()
+            ).flatMap { handler2 in
                 runner.run(handler: handler2, logger: logger)
             }.get()
         }
@@ -301,7 +311,11 @@ private struct Behavior: LambdaServerBehavior {
     let event: String
     let result: Result<String?, RuntimeError>
 
-    init(requestId: String = UUID().uuidString, event: String = "hello", result: Result<String?, RuntimeError> = .success("hello")) {
+    init(
+        requestId: String = UUID().uuidString,
+        event: String = "hello",
+        result: Result<String?, RuntimeError> = .success("hello")
+    ) {
         self.requestId = requestId
         self.event = event
         self.result = result

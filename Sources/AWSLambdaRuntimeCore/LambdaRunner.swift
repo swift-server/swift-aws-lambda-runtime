@@ -80,8 +80,10 @@ final class LambdaRunner {
             )
             // when log level is trace or lower, print the first Kb of the payload
             if logger.logLevel <= .trace, let buffer = bytes.getSlice(at: 0, length: max(bytes.readableBytes, 1024)) {
-                logger.trace("sending invocation to lambda handler",
-                             metadata: ["1024 first bytes": .string(String(buffer: buffer))])
+                logger.trace(
+                    "sending invocation to lambda handler",
+                    metadata: ["1024 first bytes": .string(String(buffer: buffer))]
+                )
             } else {
                 logger.debug("sending invocation to lambda handler")
             }
@@ -99,7 +101,8 @@ final class LambdaRunner {
                 }
         }.flatMap { invocation, result, context in
             // 3. report results to runtime engine
-            self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError { error in
+            self.runtimeClient.reportResults(logger: logger, invocation: invocation, result: result).peekError {
+                error in
                 logger.error("could not report results to lambda runtime engine: \(error)")
                 // To discuss:
                 // Do we want to await the tasks in this case?
@@ -130,15 +133,17 @@ final class LambdaRunner {
 
 extension LambdaContext {
     init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Invocation) {
-        self.init(requestID: invocation.requestID,
-                  traceID: invocation.traceID,
-                  invokedFunctionARN: invocation.invokedFunctionARN,
-                  deadline: DispatchWallTime(millisSinceEpoch: invocation.deadlineInMillisSinceEpoch),
-                  cognitoIdentity: invocation.cognitoIdentity,
-                  clientContext: invocation.clientContext,
-                  logger: logger,
-                  eventLoop: eventLoop,
-                  allocator: allocator)
+        self.init(
+            requestID: invocation.requestID,
+            traceID: invocation.traceID,
+            invokedFunctionARN: invocation.invokedFunctionARN,
+            deadline: DispatchWallTime(millisSinceEpoch: invocation.deadlineInMillisSinceEpoch),
+            cognitoIdentity: invocation.cognitoIdentity,
+            clientContext: invocation.clientContext,
+            logger: logger,
+            eventLoop: eventLoop,
+            allocator: allocator
+        )
     }
 }
 

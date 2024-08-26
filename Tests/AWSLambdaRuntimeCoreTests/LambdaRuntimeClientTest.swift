@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntimeCore
 import Logging
 import NIOCore
 import NIOFoundationCompat
@@ -20,6 +19,8 @@ import NIOHTTP1
 import NIOPosix
 import NIOTestUtils
 import XCTest
+
+@testable import AWSLambdaRuntimeCore
 
 class LambdaRuntimeClientTest: XCTestCase {
     func testSuccess() {
@@ -204,7 +205,10 @@ class LambdaRuntimeClientTest: XCTestCase {
             errorMessage: #"underlyingError: "An error with a windows path C:\Windows\""#
         )
         let windowsBytes = windowsError.toJSONBytes()
-        XCTAssertEqual(#"{"errorType":"error","errorMessage":"underlyingError: \"An error with a windows path C:\\Windows\\\""}"#, String(decoding: windowsBytes, as: Unicode.UTF8.self))
+        XCTAssertEqual(
+            #"{"errorType":"error","errorMessage":"underlyingError: \"An error with a windows path C:\\Windows\\\""}"#,
+            String(decoding: windowsBytes, as: Unicode.UTF8.self)
+        )
 
         // we want to check if unicode sequences work
         let emojiError = ErrorResponse(
@@ -212,7 +216,10 @@ class LambdaRuntimeClientTest: XCTestCase {
             errorMessage: #"🥑👨‍👩‍👧‍👧👩‍👩‍👧‍👧👨‍👨‍👧"#
         )
         let emojiBytes = emojiError.toJSONBytes()
-        XCTAssertEqual(#"{"errorType":"error","errorMessage":"🥑👨‍👩‍👧‍👧👩‍👩‍👧‍👧👨‍👨‍👧"}"#, String(decoding: emojiBytes, as: Unicode.UTF8.self))
+        XCTAssertEqual(
+            #"{"errorType":"error","errorMessage":"🥑👨‍👩‍👧‍👧👩‍👩‍👧‍👧👨‍👨‍👧"}"#,
+            String(decoding: emojiBytes, as: Unicode.UTF8.self)
+        )
     }
 
     func testInitializationErrorReport() {
@@ -223,18 +230,27 @@ class LambdaRuntimeClientTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop()) }
 
         let logger = Logger(label: "TestLogger")
-        let client = LambdaRuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(address: "127.0.0.1:\(server.serverPort)"))
+        let client = LambdaRuntimeClient(
+            eventLoop: eventLoopGroup.next(),
+            configuration: .init(address: "127.0.0.1:\(server.serverPort)")
+        )
         let result = client.reportInitializationError(logger: logger, error: TestError("boom"))
 
         var inboundHeader: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundHeader = try server.readInbound())
-        guard case .head(let head) = try? XCTUnwrap(inboundHeader) else { XCTFail("Expected to get a head first"); return }
+        guard case .head(let head) = try? XCTUnwrap(inboundHeader) else {
+            XCTFail("Expected to get a head first")
+            return
+        }
         XCTAssertEqual(head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
         XCTAssertEqual(head.headers["user-agent"], ["Swift-Lambda/Unknown"])
 
         var inboundBody: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundBody = try server.readInbound())
-        guard case .body(let body) = try? XCTUnwrap(inboundBody) else { XCTFail("Expected body after head"); return }
+        guard case .body(let body) = try? XCTUnwrap(inboundBody) else {
+            XCTFail("Expected body after head")
+            return
+        }
         XCTAssertEqual(try JSONDecoder().decode(ErrorResponse.self, from: body).errorMessage, "boom")
 
         XCTAssertEqual(try server.readInbound(), .end(nil))
@@ -252,7 +268,10 @@ class LambdaRuntimeClientTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop()) }
 
         let logger = Logger(label: "TestLogger")
-        let client = LambdaRuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(address: "127.0.0.1:\(server.serverPort)"))
+        let client = LambdaRuntimeClient(
+            eventLoop: eventLoopGroup.next(),
+            configuration: .init(address: "127.0.0.1:\(server.serverPort)")
+        )
 
         let header = HTTPHeaders([
             (AmazonHeaders.requestID, "test"),
@@ -264,17 +283,27 @@ class LambdaRuntimeClientTest: XCTestCase {
         XCTAssertNoThrow(inv = try Invocation(headers: header))
         guard let invocation = inv else { return }
 
-        let result = client.reportResults(logger: logger, invocation: invocation, result: Result.failure(TestError("boom")))
+        let result = client.reportResults(
+            logger: logger,
+            invocation: invocation,
+            result: Result.failure(TestError("boom"))
+        )
 
         var inboundHeader: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundHeader = try server.readInbound())
-        guard case .head(let head) = try? XCTUnwrap(inboundHeader) else { XCTFail("Expected to get a head first"); return }
+        guard case .head(let head) = try? XCTUnwrap(inboundHeader) else {
+            XCTFail("Expected to get a head first")
+            return
+        }
         XCTAssertEqual(head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
         XCTAssertEqual(head.headers["user-agent"], ["Swift-Lambda/Unknown"])
 
         var inboundBody: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundBody = try server.readInbound())
-        guard case .body(let body) = try? XCTUnwrap(inboundBody) else { XCTFail("Expected body after head"); return }
+        guard case .body(let body) = try? XCTUnwrap(inboundBody) else {
+            XCTFail("Expected body after head")
+            return
+        }
         XCTAssertEqual(try JSONDecoder().decode(ErrorResponse.self, from: body).errorMessage, "boom")
 
         XCTAssertEqual(try server.readInbound(), .end(nil))
@@ -292,7 +321,10 @@ class LambdaRuntimeClientTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop()) }
 
         let logger = Logger(label: "TestLogger")
-        let client = LambdaRuntimeClient(eventLoop: eventLoopGroup.next(), configuration: .init(address: "127.0.0.1:\(server.serverPort)"))
+        let client = LambdaRuntimeClient(
+            eventLoop: eventLoopGroup.next(),
+            configuration: .init(address: "127.0.0.1:\(server.serverPort)")
+        )
 
         let header = HTTPHeaders([
             (AmazonHeaders.requestID, "test"),
@@ -308,7 +340,10 @@ class LambdaRuntimeClientTest: XCTestCase {
 
         var inboundHeader: HTTPServerRequestPart?
         XCTAssertNoThrow(inboundHeader = try server.readInbound())
-        guard case .head(let head) = try? XCTUnwrap(inboundHeader) else { XCTFail("Expected to get a head first"); return }
+        guard case .head(let head) = try? XCTUnwrap(inboundHeader) else {
+            XCTFail("Expected to get a head first")
+            return
+        }
         XCTAssertFalse(head.headers.contains(name: "lambda-runtime-function-error-type"))
         XCTAssertEqual(head.headers["user-agent"], ["Swift-Lambda/Unknown"])
 

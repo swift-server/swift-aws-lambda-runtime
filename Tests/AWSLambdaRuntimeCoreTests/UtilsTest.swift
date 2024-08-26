@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntimeCore
 import XCTest
+
+@testable import AWSLambdaRuntimeCore
 
 class UtilsTest: XCTestCase {
     func testGenerateXRayTraceID() {
@@ -21,7 +22,7 @@ class UtilsTest: XCTestCase {
         let invalidCharacters = CharacterSet(charactersIn: "abcdef0123456789").inverted
         let numTests = 1000
         var values = Set<String>()
-        for _ in 0 ..< numTests {
+        for _ in 0..<numTests {
             // check the format, see https://docs.aws.amazon.com/xray/latest/devguide/xray-api-sendingdata.html#xray-api-traceids)
             let traceId = AmazonHeaders.generateXRayTraceID()
             let segments = traceId.split(separator: "-")
