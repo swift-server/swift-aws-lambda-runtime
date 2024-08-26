@@ -23,18 +23,18 @@ struct ContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            TextField("Username", text: $name)
-            SecureField("Password", text: $password)
-            let inputIncomplete = name.isEmpty || password.isEmpty
+            TextField("Username", text: self.$name)
+            SecureField("Password", text: self.$password)
+            let inputIncomplete = self.name.isEmpty || self.password.isEmpty
             Button {
                 Task {
-                    isLoading = true
+                    self.isLoading = true
                     do {
-                        response = try await self.register()
+                        self.response = try await self.register()
                     } catch {
-                        response = error.localizedDescription
+                        self.response = error.localizedDescription
                     }
-                    isLoading = false
+                    self.isLoading = false
                 }
             } label: {
                 Text("Register")
@@ -42,16 +42,16 @@ struct ContentView: View {
                     .foregroundColor(.white)
                     .background(.black)
                     .border(.black, width: 2)
-                    .opacity(isLoading ? 0 : 1)
+                    .opacity(self.isLoading ? 0 : 1)
                     .overlay {
-                        if isLoading {
+                        if self.isLoading {
                             ProgressView()
                         }
                     }
             }
-            .disabled(inputIncomplete || isLoading)
+            .disabled(inputIncomplete || self.isLoading)
             .opacity(inputIncomplete ? 0.5 : 1)
-            Text(response)
+            Text(self.response)
         }.padding(100)
     }
 

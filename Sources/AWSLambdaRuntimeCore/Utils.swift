@@ -15,7 +15,7 @@
 import Dispatch
 import NIOPosix
 
-internal enum Consts {
+enum Consts {
     static let apiPrefix = "/2018-06-01"
     static let invocationURLPrefix = "\(apiPrefix)/runtime/invocation"
     static let getNextInvocationURLSuffix = "/next"
@@ -27,7 +27,7 @@ internal enum Consts {
 }
 
 /// AWS Lambda HTTP Headers, used to populate the `LambdaContext` object.
-internal enum AmazonHeaders {
+enum AmazonHeaders {
     static let requestID = "Lambda-Runtime-Aws-Request-Id"
     static let traceID = "Lambda-Runtime-Trace-Id"
     static let clientContext = "X-Amz-Client-Context"
@@ -37,7 +37,7 @@ internal enum AmazonHeaders {
 }
 
 /// Helper function to trap signals
-internal func trap(signal sig: Signal, handler: @escaping (Signal) -> Void) -> DispatchSourceSignal {
+func trap(signal sig: Signal, handler: @escaping (Signal) -> Void) -> DispatchSourceSignal {
     let signalSource = DispatchSource.makeSignalSource(signal: sig.rawValue, queue: DispatchQueue.global())
     signal(sig.rawValue, SIG_IGN)
     signalSource.setEventHandler(handler: {
@@ -48,7 +48,7 @@ internal func trap(signal sig: Signal, handler: @escaping (Signal) -> Void) -> D
     return signalSource
 }
 
-internal enum Signal: Int32 {
+enum Signal: Int32 {
     case HUP = 1
     case INT = 2
     case QUIT = 3
@@ -59,14 +59,14 @@ internal enum Signal: Int32 {
 }
 
 extension DispatchWallTime {
-    internal init(millisSinceEpoch: Int64) {
+    init(millisSinceEpoch: Int64) {
         let nanoSinceEpoch = UInt64(millisSinceEpoch) * 1_000_000
         let seconds = UInt64(nanoSinceEpoch / 1_000_000_000)
         let nanoseconds = nanoSinceEpoch - (seconds * 1_000_000_000)
         self.init(timespec: timespec(tv_sec: Int(seconds), tv_nsec: Int(nanoseconds)))
     }
 
-    internal var millisSinceEpoch: Int64 {
+    var millisSinceEpoch: Int64 {
         Int64(bitPattern: self.rawValue) / -1_000_000
     }
 }
@@ -117,7 +117,7 @@ extension AmazonHeaders {
     /// # References
     /// - [Generating trace IDs](https://docs.aws.amazon.com/xray/latest/devguide/xray-api-sendingdata.html#xray-api-traceids)
     /// - [Tracing header](https://docs.aws.amazon.com/xray/latest/devguide/xray-concepts.html#xray-concepts-tracingheader)
-    internal static func generateXRayTraceID() -> String {
+    static func generateXRayTraceID() -> String {
         // The version number, that is, 1.
         let version: UInt = 1
         // The time of the original request, in Unix epoch time, in 8 hexadecimal digits.

@@ -21,7 +21,7 @@ import NIOHTTP1
 /// * /runtime/invocation/response
 /// * /runtime/invocation/error
 /// * /runtime/init/error
-internal struct LambdaRuntimeClient {
+struct LambdaRuntimeClient {
     private let eventLoop: EventLoop
     private let allocator = ByteBufferAllocator()
     private let httpClient: HTTPClient
@@ -124,7 +124,7 @@ internal struct LambdaRuntimeClient {
     }
 }
 
-internal enum LambdaRuntimeError: Error {
+enum LambdaRuntimeError: Error {
     case badStatusCode(HTTPResponseStatus)
     case upstreamError(String)
     case invocationMissingHeader(String)
@@ -134,10 +134,10 @@ internal enum LambdaRuntimeError: Error {
 }
 
 extension LambdaRuntimeClient {
-    internal static let defaultHeaders = HTTPHeaders([("user-agent", "Swift-Lambda/Unknown")])
+    static let defaultHeaders = HTTPHeaders([("user-agent", "Swift-Lambda/Unknown")])
 
     /// These headers must be sent along an invocation or initialization error report
-    internal static let errorHeaders = HTTPHeaders([
+    static let errorHeaders = HTTPHeaders([
         ("user-agent", "Swift-Lambda/Unknown"),
         ("lambda-runtime-function-error-type", "Unhandled"),
     ])

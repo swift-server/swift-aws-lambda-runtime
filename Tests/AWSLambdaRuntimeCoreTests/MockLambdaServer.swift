@@ -19,7 +19,7 @@ import NIOCore
 import NIOHTTP1
 import NIOPosix
 
-internal final class MockLambdaServer {
+final class MockLambdaServer {
     private let logger = Logger(label: "MockLambdaServer")
     private let behavior: LambdaServerBehavior
     private let host: String
@@ -72,7 +72,7 @@ internal final class MockLambdaServer {
     }
 }
 
-internal final class HTTPHandler: ChannelInboundHandler {
+final class HTTPHandler: ChannelInboundHandler {
     typealias InboundIn = HTTPServerRequestPart
     typealias OutboundOut = HTTPServerResponsePart
 
@@ -213,35 +213,35 @@ internal final class HTTPHandler: ChannelInboundHandler {
     }
 }
 
-internal protocol LambdaServerBehavior {
+protocol LambdaServerBehavior {
     func getInvocation() -> GetInvocationResult
     func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError>
     func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError>
     func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError>
 }
 
-internal typealias GetInvocationResult = Result<(String, String), GetWorkError>
+typealias GetInvocationResult = Result<(String, String), GetWorkError>
 
-internal enum GetWorkError: Int, Error {
+enum GetWorkError: Int, Error {
     case badRequest = 400
     case tooManyRequests = 429
     case internalServerError = 500
 }
 
-internal enum ProcessResponseError: Int, Error {
+enum ProcessResponseError: Int, Error {
     case badRequest = 400
     case payloadTooLarge = 413
     case tooManyRequests = 429
     case internalServerError = 500
 }
 
-internal enum ProcessErrorError: Int, Error {
+enum ProcessErrorError: Int, Error {
     case invalidErrorShape = 299
     case badRequest = 400
     case internalServerError = 500
 }
 
-internal enum ServerError: Error {
+enum ServerError: Error {
     case notReady
     case cantBind
 }
