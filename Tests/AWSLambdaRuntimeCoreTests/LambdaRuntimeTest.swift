@@ -37,7 +37,7 @@ class LambdaRuntimeTest: XCTestCase {
             XCTAssert($0 is StartupError)
         }
 
-        XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) {
+        XCTAssertThrowsError(try runtime.shutdownFuture.wait()) {
             XCTAssert($0 is StartupError)
         }
     }
@@ -54,7 +54,7 @@ class LambdaRuntimeTest: XCTestCase {
         let runtime = LambdaRuntimeFactory.makeRuntime(EchoHandler.self, eventLoop: eventLoop, logger: logger)
 
         XCTAssertNoThrow(_ = try eventLoop.flatSubmit { runtime.start() }.wait())
-        XCTAssertThrowsError(_ = try runtime.shutdownFuture.wait()) {
+        XCTAssertThrowsError(try runtime.shutdownFuture.wait()) {
             XCTAssertEqual(.badStatusCode(HTTPResponseStatus.internalServerError), $0 as? LambdaRuntimeError)
         }
     }

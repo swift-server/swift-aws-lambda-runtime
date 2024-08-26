@@ -7,5 +7,5 @@ let package = Package(
     name: "SquareNumberLambda",
     platforms: [
         .macOS(.v12),
-    ],
+    ]
 )

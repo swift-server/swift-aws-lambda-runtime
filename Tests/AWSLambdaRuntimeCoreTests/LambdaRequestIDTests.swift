@@ -214,7 +214,7 @@ final class LambdaRequestIDTest: XCTestCase {
         _ = requestIDString.removeLast()
         let data = #"{"requestID":"\#(requestIDString)"}"#.data(using: .utf8)
 
-        XCTAssertThrowsError(_ = try JSONDecoder().decode(Test.self, from: XCTUnwrap(data))) { error in
+        XCTAssertThrowsError(try JSONDecoder().decode(Test.self, from: XCTUnwrap(data))) { error in
             XCTAssertNotNil(error as? DecodingError)
         }
     }
