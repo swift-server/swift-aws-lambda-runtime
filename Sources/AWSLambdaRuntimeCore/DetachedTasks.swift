@@ -12,19 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 import Foundation
+import Logging
 import NIOConcurrencyHelpers
 import NIOCore
-import Logging
 
 /// A container that allows tasks to finish after a synchronous invocation
 /// has produced its response.
 actor DetachedTasksContainer: Sendable {
-
     struct Context: Sendable {
         let eventLoop: EventLoop
         let logger: Logger
     }
-    
+
     private var context: Context
     private var storage: [RegistrationKey: EventLoopFuture<Void>] = [:]
 
@@ -40,9 +39,9 @@ actor DetachedTasksContainer: Sendable {
     /// - Returns: A `RegistrationKey` for the registered task.
     func detached(task: @Sendable @escaping () async -> Void) {
         let key = RegistrationKey()
-        let promise = context.eventLoop.makePromise(of: Void.self)
+        let promise = self.context.eventLoop.makePromise(of: Void.self)
         promise.completeWithTask(task)
-        let task = promise.futureResult.always { [weak self] result in
+        let task = promise.futureResult.always { [weak self] _ in
             guard let self else { return }
             Task {
                 await self.removeTask(forKey: key)
@@ -50,7 +49,7 @@ actor DetachedTasksContainer: Sendable {
         }
         self.storage[key] = task
     }
-    
+
     func removeTask(forKey key: RegistrationKey) {
         self.storage.removeValue(forKey: key)
     }
@@ -59,9 +58,9 @@ actor DetachedTasksContainer: Sendable {
     ///
     /// - Returns: An `EventLoopFuture<Void>` that completes when all tasks have finished.
     func awaitAll() -> EventLoopFuture<Void> {
-        let tasks = storage.values
+        let tasks = self.storage.values
         if tasks.isEmpty {
-            return context.eventLoop.makeSucceededVoidFuture()
+            return self.context.eventLoop.makeSucceededVoidFuture()
         } else {
             let context = context
             return EventLoopFuture.andAllComplete(Array(tasks), on: context.eventLoop).flatMap { [weak self] in

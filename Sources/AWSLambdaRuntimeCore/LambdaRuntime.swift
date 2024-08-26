@@ -204,7 +204,7 @@ public final class LambdaRuntime<Handler: LambdaRuntimeHandler> {
         case shuttingdown
         case shutdown
 
-        internal var order: Int {
+        var order: Int {
             switch self {
             case .idle:
                 return 0

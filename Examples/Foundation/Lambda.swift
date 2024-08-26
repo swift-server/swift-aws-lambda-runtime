@@ -122,8 +122,7 @@ struct ExchangeRatesCalculator {
                           monthIndex: Array<Date>.Index,
                           currencies: [String],
                           state: [Date: ExchangeRates],
-                          callback: @escaping ((Result<[Date: ExchangeRates], Swift.Error>) -> Void))
-    {
+                          callback: @escaping ((Result<[Date: ExchangeRates], Swift.Error>) -> Void)) {
         if monthIndex == months.count {
             return callback(.success(state))
         }
@@ -182,7 +181,7 @@ struct ExchangeRatesCalculator {
             interval = nil
         }
 
-        let ratesByCurrencyCode: [String: Decimal?] = Dictionary(uniqueKeysWithValues: try currencyCodes.map {
+        let ratesByCurrencyCode: [String: Decimal?] = try Dictionary(uniqueKeysWithValues: currencyCodes.map {
             let xpathCurrency = $0.replacingOccurrences(of: "'", with: "&apos;")
             if let rateString = try document.nodes(forXPath: "/exchangeRateMonthList/exchangeRate/currencyCode[text()='\(xpathCurrency)']/../rateNew/text()").first?.stringValue,
                // We must parse the decimal data using the UK locale, not the system one.

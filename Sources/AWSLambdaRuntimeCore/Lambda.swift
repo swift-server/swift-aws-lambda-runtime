@@ -40,11 +40,11 @@ public enum Lambda {
     ///     - handlerType: The Handler to create and invoke.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    internal static func run<Handler: SimpleLambdaHandler>(
+    static func run<Handler: SimpleLambdaHandler>(
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler(context:))
+        self.run(configuration: configuration, handlerProvider: CodableSimpleLambdaHandler<Handler>.makeHandler(context:))
     }
 
     /// Run a Lambda defined by implementing the ``LambdaHandler`` protocol.
@@ -56,11 +56,11 @@ public enum Lambda {
     ///     - handlerType: The Handler to create and invoke.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    internal static func run<Handler: LambdaHandler>(
+    static func run<Handler: LambdaHandler>(
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerProvider: CodableLambdaHandler<Handler>.makeHandler(context:))
+        self.run(configuration: configuration, handlerProvider: CodableLambdaHandler<Handler>.makeHandler(context:))
     }
 
     /// Run a Lambda defined by implementing the ``EventLoopLambdaHandler`` protocol.
@@ -72,11 +72,11 @@ public enum Lambda {
     ///     - handlerType: The Handler to create and invoke.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    internal static func run<Handler: EventLoopLambdaHandler>(
+    static func run<Handler: EventLoopLambdaHandler>(
         configuration: LambdaConfiguration = .init(),
         handlerType: Handler.Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerProvider: CodableEventLoopLambdaHandler<Handler>.makeHandler(context:))
+        self.run(configuration: configuration, handlerProvider: CodableEventLoopLambdaHandler<Handler>.makeHandler(context:))
     }
 
     /// Run a Lambda defined by implementing the ``ByteBufferLambdaHandler`` protocol.
@@ -88,11 +88,11 @@ public enum Lambda {
     ///     - handlerType: The Handler to create and invoke.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    internal static func run(
+    static func run(
         configuration: LambdaConfiguration = .init(),
         handlerType: (some ByteBufferLambdaHandler).Type
     ) -> Result<Int, Error> {
-        Self.run(configuration: configuration, handlerProvider: handlerType.makeHandler(context:))
+        self.run(configuration: configuration, handlerProvider: handlerType.makeHandler(context:))
     }
 
     /// Run a Lambda defined by implementing the ``LambdaRuntimeHandler`` protocol.
@@ -101,7 +101,7 @@ public enum Lambda {
     ///     - handlerProvider: A provider of the ``LambdaRuntimeHandler`` to invoke.
     ///
     /// - note: This is a blocking operation that will run forever, as its lifecycle is managed by the AWS Lambda Runtime Engine.
-    internal static func run(
+    static func run(
         configuration: LambdaConfiguration = .init(),
         handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some LambdaRuntimeHandler>
     ) -> Result<Int, Error> {

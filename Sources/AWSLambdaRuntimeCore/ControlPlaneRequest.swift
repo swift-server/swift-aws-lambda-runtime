@@ -66,7 +66,7 @@ struct ErrorResponse: Hashable, Codable {
 }
 
 extension ErrorResponse {
-    internal func toJSONBytes() -> [UInt8] {
+    func toJSONBytes() -> [UInt8] {
         var bytes = [UInt8]()
         bytes.append(UInt8(ascii: "{"))
         bytes.append(contentsOf: #""errorType":"#.utf8)

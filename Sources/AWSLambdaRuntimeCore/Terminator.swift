@@ -56,7 +56,7 @@ public final class LambdaTerminator {
     ///     - eventLoop: The `EventLoop` to run the termination on.
     ///
     /// - Returns: An `EventLoopFuture` with the result of the termination cycle.
-    internal func terminate(eventLoop: EventLoop) -> EventLoopFuture<Void> {
+    func terminate(eventLoop: EventLoop) -> EventLoopFuture<Void> {
         func terminate(_ iterator: IndexingIterator<[(name: String, handler: Handler)]>, errors: [Error], promise: EventLoopPromise<Void>) {
             var iterator = iterator
             guard let handler = iterator.next()?.handler else {

@@ -13,51 +13,50 @@
 //===----------------------------------------------------------------------===//
 
 @testable import AWSLambdaRuntimeCore
+import Logging
 import NIO
 import XCTest
-import Logging
 
 class DetachedTasksTest: XCTestCase {
-    
     actor Expectation {
         var isFulfilled = false
         func fulfill() {
-            isFulfilled = true
+            self.isFulfilled = true
         }
     }
-    
+
     func testAwaitTasks() async throws {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-        
+
         let context = DetachedTasksContainer.Context(
             eventLoop: eventLoopGroup.next(),
             logger: Logger(label: "test")
         )
         let expectation = Expectation()
-        
+
         let container = DetachedTasksContainer(context: context)
         await container.detached {
             try! await Task.sleep(for: .milliseconds(200))
             await expectation.fulfill()
         }
-        
+
         try await container.awaitAll().get()
         let isFulfilled = await expectation.isFulfilled
         XCTAssert(isFulfilled)
     }
-    
+
     func testAwaitChildrenTasks() async throws {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
-        
+
         let context = DetachedTasksContainer.Context(
             eventLoop: eventLoopGroup.next(),
             logger: Logger(label: "test")
         )
         let expectation1 = Expectation()
         let expectation2 = Expectation()
-        
+
         let container = DetachedTasksContainer(context: context)
         await container.detached {
             await container.detached {
@@ -70,7 +69,7 @@ class DetachedTasksTest: XCTestCase {
                 await expectation2.fulfill()
             }
         }
-        
+
         try await container.awaitAll().get()
         let isFulfilled1 = await expectation1.isFulfilled
         let isFulfilled2 = await expectation2.isFulfilled
