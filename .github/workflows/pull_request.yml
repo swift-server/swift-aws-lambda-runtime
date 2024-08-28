@@ -11,6 +11,8 @@ jobs:
         with:
             license_header_check_project_name: "SwiftAWSLambdaRuntime"
             shell_check_enabled: false
+            api_breakage_check_container_image: "swiftlang/swift:nightly-6.0-jammy"
+            docs_check_container_image: "swiftlang/swift:nightly-6.0-jammy"
 
     unit-tests:
         name: Unit tests
