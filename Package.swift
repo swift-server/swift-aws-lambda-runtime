@@ -2,11 +2,15 @@
 
 import PackageDescription
 
+#if os(macOS)
+let platforms: [PackageDescription.SupportedPlatform]? = [.macOS(.v15)]
+#else
+let platforms: [PackageDescription.SupportedPlatform]? = nil
+#endif
+
 let package = Package(
     name: "swift-aws-lambda-runtime",
-    platforms: [
-        .macOS(.v15)
-    ],
+    platforms: platforms,
     products: [
         // this library exports `AWSLambdaRuntimeCore` and adds Foundation convenience methods
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
@@ -21,7 +25,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.67.0")),
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.5.4")),
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-docc-plugin.git", from: "1.0.0"),
     ],
     targets: [
         .target(
