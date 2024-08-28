@@ -132,7 +132,7 @@ final class LambdaRunner {
 }
 
 extension LambdaContext {
-    init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: Invocation) {
+    init(logger: Logger, eventLoop: EventLoop, allocator: ByteBufferAllocator, invocation: InvocationMetadata) {
         self.init(
             requestID: invocation.requestID,
             traceID: invocation.traceID,

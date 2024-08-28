@@ -279,8 +279,8 @@ class LambdaRuntimeClientTest: XCTestCase {
             (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),
             (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
         ])
-        var inv: Invocation?
-        XCTAssertNoThrow(inv = try Invocation(headers: header))
+        var inv: InvocationMetadata?
+        XCTAssertNoThrow(inv = try InvocationMetadata(headers: header))
         guard let invocation = inv else { return }
 
         let result = client.reportResults(
@@ -332,8 +332,8 @@ class LambdaRuntimeClientTest: XCTestCase {
             (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),
             (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
         ])
-        var inv: Invocation?
-        XCTAssertNoThrow(inv = try Invocation(headers: header))
+        var inv: InvocationMetadata?
+        XCTAssertNoThrow(inv = try InvocationMetadata(headers: header))
         guard let invocation = inv else { return }
 
         let result = client.reportResults(logger: logger, invocation: invocation, result: Result.success(nil))

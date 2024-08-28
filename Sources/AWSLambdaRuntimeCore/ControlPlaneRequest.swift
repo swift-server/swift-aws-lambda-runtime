@@ -23,20 +23,20 @@ enum ControlPlaneRequest: Hashable {
 }
 
 enum ControlPlaneResponse: Hashable {
-    case next(Invocation, ByteBuffer)
+    case next(InvocationMetadata, ByteBuffer)
     case accepted
     case error(ErrorResponse)
 }
 
-struct Invocation: Hashable {
-    let requestID: String
-    let deadlineInMillisSinceEpoch: Int64
-    let invokedFunctionARN: String
-    let traceID: String
-    let clientContext: String?
-    let cognitoIdentity: String?
+package struct InvocationMetadata: Hashable {
+    package let requestID: String
+    package let deadlineInMillisSinceEpoch: Int64
+    package let invokedFunctionARN: String
+    package let traceID: String
+    package let clientContext: String?
+    package let cognitoIdentity: String?
 
-    init(headers: HTTPHeaders) throws {
+    package init(headers: HTTPHeaders) throws {
         guard let requestID = headers.first(name: AmazonHeaders.requestID), !requestID.isEmpty else {
             throw LambdaRuntimeError.invocationMissingHeader(AmazonHeaders.requestID)
         }
