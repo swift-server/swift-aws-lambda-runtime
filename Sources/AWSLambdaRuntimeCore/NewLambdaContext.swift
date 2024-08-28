@@ -12,14 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Dispatch
 import Logging
 import NIOCore
-
-#if swift(<5.9)
-@preconcurrency import Dispatch
-#else
-import Dispatch
-#endif
 
 // MARK: - Context
 
