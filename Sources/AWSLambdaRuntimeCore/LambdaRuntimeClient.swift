@@ -59,7 +59,7 @@ struct LambdaRuntimeClient {
     /// Reports a result to the Runtime Engine.
     func reportResults(
         logger: Logger,
-        invocation: Invocation,
+        invocation: InvocationMetadata,
         result: Result<ByteBuffer?, Error>
     ) -> EventLoopFuture<Void> {
         var url = Consts.invocationURLPrefix + "/" + invocation.requestID
