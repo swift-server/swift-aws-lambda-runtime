@@ -32,14 +32,14 @@ struct LambdaRuntimeClient {
     }
 
     /// Requests invocation from the control plane.
-    func getNextInvocation(logger: Logger) -> EventLoopFuture<(Invocation, ByteBuffer)> {
+    func getNextInvocation(logger: Logger) -> EventLoopFuture<(InvocationMetadata, ByteBuffer)> {
         let url = Consts.invocationURLPrefix + Consts.getNextInvocationURLSuffix
         logger.debug("requesting work from lambda runtime engine using \(url)")
         return self.httpClient.get(url: url, headers: LambdaRuntimeClient.defaultHeaders).flatMapThrowing { response in
             guard response.status == .ok else {
                 throw LambdaRuntimeError.badStatusCode(response.status)
             }
-            let invocation = try Invocation(headers: response.headers)
+            let invocation = try InvocationMetadata(headers: response.headers)
             guard let event = response.body else {
                 throw LambdaRuntimeError.noBody
             }

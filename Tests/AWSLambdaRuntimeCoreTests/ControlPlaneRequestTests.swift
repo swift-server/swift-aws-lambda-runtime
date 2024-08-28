@@ -25,9 +25,9 @@ class InvocationTest: XCTestCase {
             (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),
         ])
 
-        var invocation: Invocation?
+        var invocation: InvocationMetadata?
 
-        XCTAssertNoThrow(invocation = try Invocation(headers: headers))
+        XCTAssertNoThrow(invocation = try InvocationMetadata(headers: headers))
         XCTAssertNotNil(invocation)
 
         guard !invocation!.traceID.isEmpty else {
