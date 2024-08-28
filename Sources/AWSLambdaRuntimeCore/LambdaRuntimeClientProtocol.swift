@@ -28,6 +28,11 @@ package protocol LambdaRuntimeClientProtocol {
 }
 
 package struct Invocation {
-    package let metadata: InvocationMetadata
-    package let event: ByteBuffer
+    package var metadata: InvocationMetadata
+    package var event: ByteBuffer
+
+    package init(metadata: InvocationMetadata, event: ByteBuffer) {
+        self.metadata = metadata
+        self.event = event
+    }
 }
