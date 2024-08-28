@@ -1,21 +1,23 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.0
 
 import PackageDescription
 
+#if os(macOS)
+let platforms: [PackageDescription.SupportedPlatform]? = [.macOS(.v15)]
+#else
+let platforms: [PackageDescription.SupportedPlatform]? = nil
+#endif
+
 let package = Package(
     name: "swift-aws-lambda-runtime",
-    platforms: [
-        .macOS(.v12),
-        .iOS(.v15),
-        .tvOS(.v15),
-        .watchOS(.v8),
-    ],
+    platforms: platforms,
     products: [
         // this library exports `AWSLambdaRuntimeCore` and adds Foundation convenience methods
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
         // this has all the main functionality for lambda and it does not link Foundation
         .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
         // plugin to package the lambda, creating an archive that can be uploaded to AWS
+        // requires Linux or at least macOS v15
         .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
         // for testing only
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
@@ -23,7 +25,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.67.0")),
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.5.4")),
-        .package(url: "https://github.com/apple/swift-docc-plugin", exact: "1.3.0"),
+        .package(url: "https://github.com/apple/swift-docc-plugin.git", from: "1.0.0"),
     ],
     targets: [
         .target(
@@ -32,7 +34,8 @@ let package = Package(
                 .byName(name: "AWSLambdaRuntimeCore"),
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
-            ]
+            ],
+            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .target(
             name: "AWSLambdaRuntimeCore",
@@ -42,7 +45,8 @@ let package = Package(
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
-            ]
+            ],
+            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .plugin(
             name: "AWSLambdaPackager",
@@ -60,14 +64,16 @@ let package = Package(
                 .byName(name: "AWSLambdaRuntimeCore"),
                 .product(name: "NIOTestUtils", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
-            ]
+            ],
+            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(
             name: "AWSLambdaRuntimeTests",
             dependencies: [
                 .byName(name: "AWSLambdaRuntimeCore"),
                 .byName(name: "AWSLambdaRuntime"),
-            ]
+            ],
+            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         // testing helper
         .target(
@@ -75,16 +81,22 @@ let package = Package(
             dependencies: [
                 .byName(name: "AWSLambdaRuntime"),
                 .product(name: "NIO", package: "swift-nio"),
-            ]
+            ],
+            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
-        .testTarget(name: "AWSLambdaTestingTests", dependencies: ["AWSLambdaTesting"]),
+        .testTarget(
+            name: "AWSLambdaTestingTests",
+            dependencies: ["AWSLambdaTesting"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
         // for perf testing
         .executableTarget(
             name: "MockServer",
             dependencies: [
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIO", package: "swift-nio"),
-            ]
+            ],
+            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
     ]
 )

@@ -15,19 +15,9 @@
 import Dispatch
 import Foundation
 import PackagePlugin
+import Synchronization
 
-#if os(macOS)
-import Darwin
-#elseif canImport(Glibc)
-import Glibc
-#elseif canImport(Musl)
-import Musl
-#elseif os(Windows)
-import ucrt
-#else
-#error("Unsupported platform")
-#endif
-
+@available(macOS 15.0, *)
 @main
 struct AWSLambdaPackager: CommandPlugin {
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
@@ -282,10 +272,23 @@ struct AWSLambdaPackager: CommandPlugin {
             print("\(executable.string) \(arguments.joined(separator: " "))")
         }
 
-        var output = ""
+        let fd = dup(1)
+        let stdout = fdopen(fd, "rw")!
+        defer { fclose(stdout) }
+
+        // We need to use an unsafe transfer here to get the fd into our Sendable closure.
+        // This transfer is fine, because we guarantee that the code in the outputHandler
+        // is run before we continue the functions execution, where the fd is used again.
+        // See `process.waitUntilExit()` and the following `outputSync.wait()`
+        struct UnsafeTransfer<Value>: @unchecked Sendable {
+            let value: Value
+        }
+
+        let outputMutex = Mutex("")
         let outputSync = DispatchGroup()
         let outputQueue = DispatchQueue(label: "AWSLambdaPackager.output")
-        let outputHandler = { (data: Data?) in
+        let unsafeTransfer = UnsafeTransfer(value: stdout)
+        let outputHandler = { @Sendable (data: Data?) in
             dispatchPrecondition(condition: .onQueue(outputQueue))
 
             outputSync.enter()
@@ -299,7 +302,9 @@ struct AWSLambdaPackager: CommandPlugin {
                 return
             }
 
-            output += _output + "\n"
+            outputMutex.withLock { output in
+                output += _output + "\n"
+            }
 
             switch logLevel {
             case .silent:
@@ -307,7 +312,7 @@ struct AWSLambdaPackager: CommandPlugin {
             case .debug(let outputIndent), .output(let outputIndent):
                 print(String(repeating: " ", count: outputIndent), terminator: "")
                 print(_output)
-                fflush(stdout)
+                fflush(unsafeTransfer.value)
             }
         }
 
@@ -336,6 +341,8 @@ struct AWSLambdaPackager: CommandPlugin {
         // wait for output to be full processed
         outputSync.wait()
 
+        let output = outputMutex.withLock { $0 }
+
         if process.terminationStatus != 0 {
             // print output on failure and if not already printed
             if logLevel < .output {
@@ -359,6 +366,7 @@ struct AWSLambdaPackager: CommandPlugin {
     }
 }
 
+@available(macOS 15.0, *)
 private struct Configuration: CustomStringConvertible {
     public let outputDirectory: Path
     public let products: [Product]
