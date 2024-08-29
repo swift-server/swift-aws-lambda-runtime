@@ -24,17 +24,17 @@ package protocol StreamingLambdaHandler {
     ) async throws
 }
 
-package enum NewLambda {
+extension Lambda {
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
         runtimeClient: RuntimeClient,
         handler: Handler,
         logger: Logger
-    ) async throws
-    where Handler: StreamingLambdaHandler {
+    ) async throws where Handler: StreamingLambdaHandler {
+        var handler = handler
+
         while !Task.isCancelled {
             let (invocation, writer) = try await runtimeClient.nextInvocation()
 
-            var handler = handler
             do {
                 try await handler.handle(
                     invocation.event,
