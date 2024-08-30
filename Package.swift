@@ -26,6 +26,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.67.0")),
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.5.4")),
         .package(url: "https://github.com/apple/swift-docc-plugin.git", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-testing.git", branch: "swift-DEVELOPMENT-SNAPSHOT-2024-08-29-a"),
     ],
     targets: [
         .target(
@@ -64,6 +65,7 @@ let package = Package(
                 .byName(name: "AWSLambdaRuntimeCore"),
                 .product(name: "NIOTestUtils", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
+                .product(name: "Testing", package: "swift-testing"),
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
@@ -72,6 +74,7 @@ let package = Package(
             dependencies: [
                 .byName(name: "AWSLambdaRuntimeCore"),
                 .byName(name: "AWSLambdaRuntime"),
+                .product(name: "Testing", package: "swift-testing"),
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
