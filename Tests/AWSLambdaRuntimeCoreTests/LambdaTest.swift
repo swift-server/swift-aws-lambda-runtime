@@ -272,11 +272,14 @@ class LambdaTest: XCTestCase {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
 
-        let server = try await MockLambdaServer(behavior: Behavior()).start().get()
+        let server = MockLambdaServer(behavior: Behavior(), port: 0)
+        var port: Int?
+        XCTAssertNoThrow(port = try server.start().wait())
+        guard let port else { return XCTFail("Expected the server to have started") }
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let logger = Logger(label: "TestLogger")
-        let configuration = LambdaConfiguration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
+        let configuration = LambdaConfiguration(runtimeEngine: .init(address: "127.0.0.1:\(port)", requestTimeout: .milliseconds(100)))
 
         let handler1 = Handler()
         let task = Task.detached {

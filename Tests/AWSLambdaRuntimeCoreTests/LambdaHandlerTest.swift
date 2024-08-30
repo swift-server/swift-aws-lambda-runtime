@@ -22,7 +22,9 @@ class LambdaHandlerTest: XCTestCase {
 
     func testBootstrapSimpleNoInit() {
         let server = MockLambdaServer(behavior: Behavior())
-        XCTAssertNoThrow(try server.start().wait())
+        var port: Int?
+        XCTAssertNoThrow(port = try server.start().wait())
+        guard let port else { return XCTFail("Expected the server to have started") }
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct TestBootstrapHandler: SimpleLambdaHandler {
@@ -32,14 +34,16 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 10...20)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
         let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
     func testBootstrapSimpleInit() {
         let server = MockLambdaServer(behavior: Behavior())
-        XCTAssertNoThrow(try server.start().wait())
+        var port: Int?
+        XCTAssertNoThrow(port = try server.start().wait())
+        guard let port else { return XCTFail("Expected the server to have started") }
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct TestBootstrapHandler: SimpleLambdaHandler {
@@ -56,7 +60,7 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 10...20)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
         let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
@@ -65,7 +69,9 @@ class LambdaHandlerTest: XCTestCase {
 
     func testBootstrapSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
-        XCTAssertNoThrow(try server.start().wait())
+        var port: Int?
+        XCTAssertNoThrow(port = try server.start().wait())
+        guard let port else { return XCTFail("Expected the server to have started") }
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct TestBootstrapHandler: LambdaHandler {
@@ -83,14 +89,16 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 10...20)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
         let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
     func testBootstrapFailure() {
         let server = MockLambdaServer(behavior: FailedBootstrapBehavior())
-        XCTAssertNoThrow(try server.start().wait())
+        var port: Int?
+        XCTAssertNoThrow(port = try server.start().wait())
+        guard let port else { return XCTFail("Expected the server to have started") }
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct TestBootstrapHandler: LambdaHandler {
@@ -108,14 +116,16 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 10...20)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
         let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
         assertLambdaRuntimeResult(result, shouldFailWithError: TestError("kaboom"))
     }
 
     func testHandlerSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
-        XCTAssertNoThrow(try server.start().wait())
+        var port: Int?
+        XCTAssertNoThrow(port = try server.start().wait())
+        guard let port else { return XCTFail("Expected the server to have started") }
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: SimpleLambdaHandler {
@@ -125,14 +135,16 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1...10)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
     func testVoidHandlerSuccess() {
         let server = MockLambdaServer(behavior: Behavior(result: .success(nil)))
-        XCTAssertNoThrow(try server.start().wait())
+        var port: Int?
+        XCTAssertNoThrow(port = try server.start().wait())
+        guard let port else { return XCTFail("Expected the server to have started") }
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: SimpleLambdaHandler {
@@ -140,7 +152,7 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1...10)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
 
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
@@ -148,7 +160,9 @@ class LambdaHandlerTest: XCTestCase {
 
     func testHandlerFailure() {
         let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
-        XCTAssertNoThrow(try server.start().wait())
+        var port: Int?
+        XCTAssertNoThrow(port = try server.start().wait())
+        guard let port else { return XCTFail("Expected the server to have started") }
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: SimpleLambdaHandler {
@@ -158,7 +172,7 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1...10)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
@@ -167,7 +181,9 @@ class LambdaHandlerTest: XCTestCase {
 
     func testEventLoopSuccess() {
         let server = MockLambdaServer(behavior: Behavior())
-        XCTAssertNoThrow(try server.start().wait())
+        var port: Int?
+        XCTAssertNoThrow(port = try server.start().wait())
+        guard let port else { return XCTFail("Expected the server to have started") }
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: EventLoopLambdaHandler {
@@ -181,14 +197,16 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1...10)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
     func testVoidEventLoopSuccess() {
         let server = MockLambdaServer(behavior: Behavior(result: .success(nil)))
-        XCTAssertNoThrow(try server.start().wait())
+        var port: Int?
+        XCTAssertNoThrow(port = try server.start().wait())
+        guard let port else { return XCTFail("Expected the server to have started") }
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: EventLoopLambdaHandler {
@@ -202,14 +220,16 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1...10)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
     func testEventLoopFailure() {
         let server = MockLambdaServer(behavior: Behavior(result: .failure(TestError("boom"))))
-        XCTAssertNoThrow(try server.start().wait())
+        var port: Int?
+        XCTAssertNoThrow(port = try server.start().wait())
+        guard let port else { return XCTFail("Expected the server to have started") }
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: EventLoopLambdaHandler {
@@ -223,14 +243,16 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1...10)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes))
+        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
 
     func testEventLoopBootstrapFailure() {
         let server = MockLambdaServer(behavior: FailedBootstrapBehavior())
-        XCTAssertNoThrow(try server.start().wait())
+        var port: Int?
+        XCTAssertNoThrow(port = try server.start().wait())
+        guard let port else { return XCTFail("Expected the server to have started") }
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         struct Handler: EventLoopLambdaHandler {
@@ -244,7 +266,8 @@ class LambdaHandlerTest: XCTestCase {
             }
         }
 
-        let result = Lambda.run(configuration: .init(), handlerType: Handler.self)
+        let configuration = LambdaConfiguration(runtimeEngine: .init(address: "127.0.0.1:\(port)"))
+        let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldFailWithError: TestError("kaboom"))
     }
 }
