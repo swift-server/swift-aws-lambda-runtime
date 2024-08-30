@@ -1,15 +1,24 @@
+//===----------------------------------------------------------------------===//
 //
-//  NewLambdaRuntimeClientTests.swift
-//  swift-aws-lambda-runtime
+// This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-//  Created by Fabian Fett on 28.08.24.
+// Copyright (c) 2024 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Licensed under Apache License v2.0
 //
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
 
-import Testing
+import Logging
 import NIOCore
 import NIOPosix
-import Logging
+import Testing
+
 import struct Foundation.UUID
+
 @testable import AWSLambdaRuntimeCore
 
 @Suite
@@ -52,7 +61,8 @@ struct NewLambdaRuntimeClientTests {
             let configuration = NewLambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: 7000)
 
             try await NewLambdaRuntimeClient.withRuntimeClient(
-                configuration: configuration, eventLoop: eventLoopGroup.next(),
+                configuration: configuration,
+                eventLoop: eventLoopGroup.next(),
                 logger: self.logger
             ) { runtimeClient in
                 do {
@@ -77,7 +87,10 @@ struct NewLambdaRuntimeClientTests {
         }
     }
 
-    func withMockServer<Result>(behaviour: some LambdaServerBehavior, _ body: (MockLambdaServer, MultiThreadedEventLoopGroup) async throws -> Result) async throws -> Result {
+    func withMockServer<Result>(
+        behaviour: some LambdaServerBehavior,
+        _ body: (MockLambdaServer, MultiThreadedEventLoopGroup) async throws -> Result
+    ) async throws -> Result {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let server = MockLambdaServer(behavior: behaviour)
         _ = try await server.start().get()

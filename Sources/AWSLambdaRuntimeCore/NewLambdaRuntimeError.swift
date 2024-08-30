@@ -18,10 +18,9 @@ struct NewLambdaRuntimeError: Error {
         case finishAfterFinishHasBeenSent
         case lostConnectionToControlPlane
         case unexpectedStatusCodeForRequest
-        
+
     }
 
     var code: Code
-
 
 }
