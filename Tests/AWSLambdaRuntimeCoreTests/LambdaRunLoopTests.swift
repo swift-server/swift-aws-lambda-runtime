@@ -19,6 +19,7 @@ import Testing
 
 @testable import AWSLambdaRuntimeCore
 
+@Suite
 struct LambdaRunLoopTests {
     struct MockEchoHandler: StreamingLambdaHandler {
         func handle(

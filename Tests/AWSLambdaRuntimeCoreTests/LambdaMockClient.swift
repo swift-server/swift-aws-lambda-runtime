@@ -20,24 +20,24 @@ import NIOCore
 struct LambdaMockWriter: LambdaResponseStreamWriter {
     var underlying: LambdaMockClient
 
-    package init(underlying: LambdaMockClient) {
+    init(underlying: LambdaMockClient) {
         self.underlying = underlying
     }
 
-    package mutating func write(_ buffer: ByteBuffer) async throws {
+    mutating func write(_ buffer: ByteBuffer) async throws {
         try await self.underlying.write(buffer)
     }
 
-    package consuming func finish() async throws {
+    consuming func finish() async throws {
         try await self.underlying.finish()
     }
 
-    package consuming func writeAndFinish(_ buffer: ByteBuffer) async throws {
+    consuming func writeAndFinish(_ buffer: ByteBuffer) async throws {
         try await self.write(buffer)
         try await self.finish()
     }
 
-    package func reportError(_ error: any Error) async throws {
+    func reportError(_ error: any Error) async throws {
     }
 }
 
