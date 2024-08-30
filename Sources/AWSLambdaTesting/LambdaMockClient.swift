@@ -17,7 +17,7 @@ import Foundation
 import Logging
 import NIOCore
 
-package struct LambdaMockWriter: LambdaResponseStreamWriter {
+struct LambdaMockWriter: LambdaResponseStreamWriter {
     var underlying: LambdaMockClient
 
     package init(underlying: LambdaMockClient) {
@@ -41,43 +41,14 @@ package struct LambdaMockWriter: LambdaResponseStreamWriter {
     }
 }
 
-package struct LambdaError: Error, Equatable {
-    private enum Code: Equatable {
-        case cannotCallNextEndpointWhenAlreadyWaitingForEvent
-        case cannotCallNextEndpointWhenAlreadyProcessingAnEvent
-        case cannotReportResultWhenNoEventHasBeenProcessed
-    }
-
-    private let code: Code
-
-    private init(code: Code) {
-        self.code = code
-    }
-
-    package func shortDescription() -> String {
-        switch self.code {
-        case .cannotCallNextEndpointWhenAlreadyWaitingForEvent:
-            "Cannot call the next endpoint when already waiting for an event"
-        case .cannotCallNextEndpointWhenAlreadyProcessingAnEvent:
-            "Cannot call the next endpoint when an event is already being processed"
-        case .cannotReportResultWhenNoEventHasBeenProcessed:
-            "Cannot report a result when no event has been processed"
-        }
-    }
-
-    package static let cannotCallNextEndpointWhenAlreadyWaitingForEvent = LambdaError(
-        code: .cannotCallNextEndpointWhenAlreadyWaitingForEvent
-    )
-    package static let cannotCallNextEndpointWhenAlreadyProcessingAnEvent = LambdaError(
-        code: .cannotCallNextEndpointWhenAlreadyProcessingAnEvent
-    )
-    package static let cannotReportResultWhenNoEventHasBeenProcessed = LambdaError(
-        code: .cannotReportResultWhenNoEventHasBeenProcessed
-    )
+enum LambdaError: Error, Equatable {
+    case cannotCallNextEndpointWhenAlreadyWaitingForEvent
+    case cannotCallNextEndpointWhenAlreadyProcessingAnEvent
+    case cannotReportResultWhenNoEventHasBeenProcessed
 }
 
-package final actor LambdaMockClient: LambdaRuntimeClientProtocol {
-    package typealias Writer = LambdaMockWriter
+final actor LambdaMockClient: LambdaRuntimeClientProtocol {
+    typealias Writer = LambdaMockWriter
 
     private struct StateMachine {
         private enum State {
@@ -203,7 +174,7 @@ package final actor LambdaMockClient: LambdaRuntimeClientProtocol {
         let eventProcessedHandler: CheckedContinuation<ByteBuffer, any Error>
     }
 
-    package func invoke(event: ByteBuffer) async throws -> ByteBuffer {
+    func invoke(event: ByteBuffer) async throws -> ByteBuffer {
         try await withCheckedThrowingContinuation { eventProcessedHandler in
             do {
                 let metadata = try InvocationMetadata(
@@ -236,7 +207,7 @@ package final actor LambdaMockClient: LambdaRuntimeClientProtocol {
         }
     }
 
-    package func nextInvocation() async throws -> (Invocation, Writer) {
+    func nextInvocation() async throws -> (Invocation, Writer) {
         let invocation = try await withCheckedThrowingContinuation { eventArrivedHandler in
             switch self.stateMachine.next(eventArrivedHandler) {
             case .readyToProcess(let event):
@@ -251,7 +222,7 @@ package final actor LambdaMockClient: LambdaRuntimeClientProtocol {
         return (invocation, Writer(underlying: self))
     }
 
-    package func write(_ buffer: ByteBuffer) async throws {
+    func write(_ buffer: ByteBuffer) async throws {
         switch self.stateMachine.writeResult(buffer: buffer) {
         case .readyForMore:
             break
@@ -260,7 +231,7 @@ package final actor LambdaMockClient: LambdaRuntimeClientProtocol {
         }
     }
 
-    package func finish() async throws {
+    func finish() async throws {
         try self.stateMachine.finish()
     }
 }

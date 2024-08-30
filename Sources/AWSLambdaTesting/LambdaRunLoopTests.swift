@@ -34,7 +34,7 @@ struct LambdaRunLoopTests {
     let mockEchoHandler = MockEchoHandler()
 
     @Test func testRunLoop() async throws {
-        _ = Task { () in
+        let runLoopTask = Task { () in
             try await Lambda.runLoop(
                 runtimeClient: self.mockClient,
                 handler: self.mockEchoHandler,
@@ -44,6 +44,8 @@ struct LambdaRunLoopTests {
 
         let inputEvent = ByteBuffer(string: "Test Invocation Event")
         let response = try await self.mockClient.invoke(event: inputEvent)
+
+        runLoopTask.cancel()
 
         #expect(response == inputEvent)
     }
