@@ -43,14 +43,18 @@ final class MockLambdaServer {
         assert(shutdown)
     }
 
-    func start() -> EventLoopFuture<MockLambdaServer> {
+    func start() -> EventLoopFuture<Int> {
         let bootstrap = ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap { _ in
-                    channel.pipeline.addHandler(
+                do {
+                    try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: true)
+                    try channel.pipeline.syncOperations.addHandler(
                         HTTPHandler(logger: self.logger, keepAlive: self.keepAlive, behavior: self.behavior)
                     )
+                    return channel.eventLoop.makeSucceededVoidFuture()
+                } catch {
+                    return channel.eventLoop.makeFailedFuture(error)
                 }
             }
         return bootstrap.bind(host: self.host, port: self.port).flatMap { channel in
@@ -59,7 +63,7 @@ final class MockLambdaServer {
                 return channel.eventLoop.makeFailedFuture(ServerError.cantBind)
             }
             self.logger.info("\(self) started and listening on \(localAddress)")
-            return channel.eventLoop.makeSucceededFuture(self)
+            return channel.eventLoop.makeSucceededFuture(localAddress.port!)
         }
     }
 
