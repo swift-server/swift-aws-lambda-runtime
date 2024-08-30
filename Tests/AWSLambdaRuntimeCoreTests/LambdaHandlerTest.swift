@@ -34,7 +34,10 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 10...20)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
+        let configuration = LambdaConfiguration(
+            lifecycle: .init(maxTimes: maxTimes),
+            runtimeEngine: .init(address: "127.0.0.1:\(port)")
+        )
         let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
@@ -60,7 +63,10 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 10...20)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
+        let configuration = LambdaConfiguration(
+            lifecycle: .init(maxTimes: maxTimes),
+            runtimeEngine: .init(address: "127.0.0.1:\(port)")
+        )
         let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
@@ -89,7 +95,10 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 10...20)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
+        let configuration = LambdaConfiguration(
+            lifecycle: .init(maxTimes: maxTimes),
+            runtimeEngine: .init(address: "127.0.0.1:\(port)")
+        )
         let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
@@ -116,7 +125,10 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 10...20)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
+        let configuration = LambdaConfiguration(
+            lifecycle: .init(maxTimes: maxTimes),
+            runtimeEngine: .init(address: "127.0.0.1:\(port)")
+        )
         let result = Lambda.run(configuration: configuration, handlerType: TestBootstrapHandler.self)
         assertLambdaRuntimeResult(result, shouldFailWithError: TestError("kaboom"))
     }
@@ -135,7 +147,10 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1...10)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
+        let configuration = LambdaConfiguration(
+            lifecycle: .init(maxTimes: maxTimes),
+            runtimeEngine: .init(address: "127.0.0.1:\(port)")
+        )
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
@@ -152,7 +167,10 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1...10)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
+        let configuration = LambdaConfiguration(
+            lifecycle: .init(maxTimes: maxTimes),
+            runtimeEngine: .init(address: "127.0.0.1:\(port)")
+        )
 
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
@@ -172,7 +190,10 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1...10)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
+        let configuration = LambdaConfiguration(
+            lifecycle: .init(maxTimes: maxTimes),
+            runtimeEngine: .init(address: "127.0.0.1:\(port)")
+        )
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
@@ -197,7 +218,10 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1...10)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
+        let configuration = LambdaConfiguration(
+            lifecycle: .init(maxTimes: maxTimes),
+            runtimeEngine: .init(address: "127.0.0.1:\(port)")
+        )
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
@@ -220,7 +244,10 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1...10)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
+        let configuration = LambdaConfiguration(
+            lifecycle: .init(maxTimes: maxTimes),
+            runtimeEngine: .init(address: "127.0.0.1:\(port)")
+        )
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }
@@ -243,7 +270,10 @@ class LambdaHandlerTest: XCTestCase {
         }
 
         let maxTimes = Int.random(in: 1...10)
-        let configuration = LambdaConfiguration(lifecycle: .init(maxTimes: maxTimes), runtimeEngine: .init(address: "127.0.0.1:\(port)"))
+        let configuration = LambdaConfiguration(
+            lifecycle: .init(maxTimes: maxTimes),
+            runtimeEngine: .init(address: "127.0.0.1:\(port)")
+        )
         let result = Lambda.run(configuration: configuration, handlerType: Handler.self)
         assertLambdaRuntimeResult(result, shouldHaveRun: maxTimes)
     }

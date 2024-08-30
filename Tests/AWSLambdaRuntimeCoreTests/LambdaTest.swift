@@ -279,7 +279,9 @@ class LambdaTest: XCTestCase {
         defer { XCTAssertNoThrow(try server.stop().wait()) }
 
         let logger = Logger(label: "TestLogger")
-        let configuration = LambdaConfiguration(runtimeEngine: .init(address: "127.0.0.1:\(port)", requestTimeout: .milliseconds(100)))
+        let configuration = LambdaConfiguration(
+            runtimeEngine: .init(address: "127.0.0.1:\(port)", requestTimeout: .milliseconds(100))
+        )
 
         let handler1 = Handler()
         let task = Task.detached {

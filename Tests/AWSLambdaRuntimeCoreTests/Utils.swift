@@ -84,7 +84,9 @@ func runLambda(
     let logger = Logger(label: "TestLogger")
     let server = MockLambdaServer(behavior: behavior, port: 0)
     let port = try server.start().wait()
-    let configuration = LambdaConfiguration(runtimeEngine: .init(address: "127.0.0.1:\(port)", requestTimeout: .milliseconds(100)))
+    let configuration = LambdaConfiguration(
+        runtimeEngine: .init(address: "127.0.0.1:\(port)", requestTimeout: .milliseconds(100))
+    )
     let terminator = LambdaTerminator()
     let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration)
     defer { XCTAssertNoThrow(try server.stop().wait()) }
