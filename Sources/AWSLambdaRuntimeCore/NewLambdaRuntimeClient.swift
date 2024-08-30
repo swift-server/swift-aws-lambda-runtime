@@ -118,6 +118,8 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
             self.connectionState = .connecting([])
             break
         case .connecting(var array):
+            // Since we do get sequential invocations this case normally should never be hit.
+            // We'll support it anyway.
             return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<LambdaChannelHandler, any Error>) in
                 array.append(continuation)
                 self.connectionState = .connecting(array)
