@@ -14,15 +14,6 @@
 
 import Dispatch
 import Logging
-import NIOCore
-
-package protocol StreamingLambdaHandler {
-    mutating func handle(
-        _ event: ByteBuffer,
-        responseWriter: some LambdaResponseStreamWriter,
-        context: NewLambdaContext
-    ) async throws
-}
 
 extension Lambda {
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
