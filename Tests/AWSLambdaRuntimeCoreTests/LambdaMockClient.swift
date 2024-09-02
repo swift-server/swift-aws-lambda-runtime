@@ -194,7 +194,8 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
         mutating func failProcessing() -> FailProcessingAction {
             switch self.state {
             case .initialState, .waitingForNextEvent:
-                return .none
+                // Cannot report an error for an event if the event is not currently being processed.
+                fatalError()
             case .handlerIsProcessing(_, let eventProcessedHandler):
                 return .throwContinuation(eventProcessedHandler)
             }
