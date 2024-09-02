@@ -202,7 +202,7 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
         }
     }
 
-    private var stateMachine: StateMachine = .init()
+    private var stateMachine = StateMachine()
 
     struct Event {
         let invocation: Invocation
