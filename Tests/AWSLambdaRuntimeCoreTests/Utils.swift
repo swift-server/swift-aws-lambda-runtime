@@ -82,10 +82,13 @@ func runLambda(
     let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
-    let configuration = LambdaConfiguration(runtimeEngine: .init(requestTimeout: .milliseconds(100)))
+    let server = MockLambdaServer(behavior: behavior, port: 0)
+    let port = try server.start().wait()
+    let configuration = LambdaConfiguration(
+        runtimeEngine: .init(address: "127.0.0.1:\(port)", requestTimeout: .milliseconds(100))
+    )
     let terminator = LambdaTerminator()
     let runner = LambdaRunner(eventLoop: eventLoopGroup.next(), configuration: configuration)
-    let server = try MockLambdaServer(behavior: behavior).start().wait()
     defer { XCTAssertNoThrow(try server.stop().wait()) }
     try runner.initialize(handlerProvider: handlerProvider, logger: logger, terminator: terminator).flatMap { handler in
         runner.run(handler: handler, logger: logger)
