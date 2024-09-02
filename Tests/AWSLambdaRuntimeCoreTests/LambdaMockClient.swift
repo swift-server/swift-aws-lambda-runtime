@@ -104,10 +104,10 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
             case fail(LambdaError)
         }
 
-        enum CancelProcessingAction {
+        enum FailProcessingAction {
             case none
 
-            case cancelContinuation(CheckedContinuation<ByteBuffer, any Error>)
+            case throwContinuation(CheckedContinuation<ByteBuffer, any Error>)
         }
 
         mutating func next(_ eventArrivedHandler: CheckedContinuation<Invocation, any Error>) -> NextAction {
@@ -191,12 +191,12 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
             }
         }
 
-        mutating func cancelProcessing() -> CancelProcessingAction {
+        mutating func cancelProcessing() -> FailProcessingAction {
             switch self.state {
             case .initialState, .waitingForNextEvent:
                 return .none
             case .handlerIsProcessing(_, let eventProcessedHandler):
-                return .cancelContinuation(eventProcessedHandler)
+                return .throwContinuation(eventProcessedHandler)
             }
         }
     }
@@ -287,7 +287,7 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
         switch self.stateMachine.cancelProcessing() {
         case .none:
             break
-        case .cancelContinuation(let continuation):
+        case .throwContinuation(let continuation):
             continuation.resume(throwing: error)
         }
     }
