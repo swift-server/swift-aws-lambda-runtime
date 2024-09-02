@@ -67,7 +67,7 @@ struct LambdaRunLoopTests {
     @Test func testRunLoopError() async throws {
         let inputEvent = ByteBuffer(string: "Test Invocation Event")
 
-        try await withThrowingTaskGroup(of: Void.self) { group in
+        await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
                 try await Lambda.runLoop(
                     runtimeClient: self.mockClient,
@@ -76,8 +76,12 @@ struct LambdaRunLoopTests {
                 )
             }
 
-            let response = try await self.mockClient.invoke(event: inputEvent)
-            #expect(String(buffer: response) == "\(LambdaError.handlerError)")
+            await #expect(
+                throws: LambdaError.handlerError,
+                performing: {
+                    try await self.mockClient.invoke(event: inputEvent)
+                }
+            )
 
             group.cancelAll()
         }

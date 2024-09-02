@@ -38,8 +38,7 @@ struct LambdaMockWriter: LambdaResponseStreamWriter {
     }
 
     func reportError(_ error: any Error) async throws {
-        try await self.underlying.write(ByteBuffer(string: "\(error)"))
-        try await self.underlying.finish()
+        await self.underlying.reportError(error)
     }
 }
 
@@ -103,6 +102,12 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
             case readyForMore
 
             case fail(LambdaError)
+        }
+
+        enum CancelProcessingAction {
+            case none
+
+            case cancelContinuation(CheckedContinuation<ByteBuffer, any Error>)
         }
 
         mutating func next(_ eventArrivedHandler: CheckedContinuation<Invocation, any Error>) -> NextAction {
@@ -183,6 +188,15 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
             case .waitingForNextEvent(let eventArrivedHandler):
                 self.state = .initialState
                 return .cancelContinuation(eventArrivedHandler)
+            }
+        }
+
+        mutating func cancelProcessing() -> CancelProcessingAction {
+            switch self.state {
+            case .initialState, .waitingForNextEvent:
+                return .none
+            case .handlerIsProcessing(_, let eventProcessedHandler):
+                return .cancelContinuation(eventProcessedHandler)
             }
         }
     }
@@ -267,5 +281,14 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
 
     func finish() async throws {
         try self.stateMachine.finish()
+    }
+
+    func reportError(_ error: any Error) {
+        switch self.stateMachine.cancelProcessing() {
+        case .none:
+            break
+        case .cancelContinuation(let continuation):
+            continuation.resume(throwing: error)
+        }
     }
 }
