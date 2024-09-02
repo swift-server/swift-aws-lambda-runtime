@@ -191,7 +191,7 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
             }
         }
 
-        mutating func cancelProcessing() -> FailProcessingAction {
+        mutating func failProcessing() -> FailProcessingAction {
             switch self.state {
             case .initialState, .waitingForNextEvent:
                 return .none
@@ -284,7 +284,7 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
     }
 
     func reportError(_ error: any Error) {
-        switch self.stateMachine.cancelProcessing() {
+        switch self.stateMachine.failProcessing() {
         case .none:
             break
         case .throwContinuation(let continuation):
