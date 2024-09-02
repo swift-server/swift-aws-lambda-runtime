@@ -31,23 +31,55 @@ struct LambdaRunLoopTests {
         }
     }
 
+    struct FailingHandler: StreamingLambdaHandler {
+        func handle(
+            _ event: ByteBuffer,
+            responseWriter: some LambdaResponseStreamWriter,
+            context: NewLambdaContext
+        ) async throws {
+            throw LambdaError.handlerError
+        }
+    }
+
     let mockClient = LambdaMockClient()
     let mockEchoHandler = MockEchoHandler()
+    let failingHandler = FailingHandler()
 
     @Test func testRunLoop() async throws {
-        let runLoopTask = Task { () in
-            try await Lambda.runLoop(
-                runtimeClient: self.mockClient,
-                handler: self.mockEchoHandler,
-                logger: Logger(label: "RunLoopTest")
-            )
-        }
-
         let inputEvent = ByteBuffer(string: "Test Invocation Event")
-        let response = try await self.mockClient.invoke(event: inputEvent)
 
-        runLoopTask.cancel()
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await Lambda.runLoop(
+                    runtimeClient: self.mockClient,
+                    handler: self.mockEchoHandler,
+                    logger: Logger(label: "RunLoopTest")
+                )
+            }
 
-        #expect(response == inputEvent)
+            let response = try await self.mockClient.invoke(event: inputEvent)
+            #expect(response == inputEvent)
+
+            group.cancelAll()
+        }
+    }
+
+    @Test func testRunLoopError() async throws {
+        let inputEvent = ByteBuffer(string: "Test Invocation Event")
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await Lambda.runLoop(
+                    runtimeClient: self.mockClient,
+                    handler: self.failingHandler,
+                    logger: Logger(label: "RunLoopTest")
+                )
+            }
+
+            let response = try await self.mockClient.invoke(event: inputEvent)
+            #expect(String(buffer: response) == "\(LambdaError.handlerError)")
+
+            group.cancelAll()
+        }
     }
 }

@@ -28,16 +28,18 @@ struct LambdaMockWriter: LambdaResponseStreamWriter {
         try await self.underlying.write(buffer)
     }
 
-    consuming func finish() async throws {
+    func finish() async throws {
         try await self.underlying.finish()
     }
 
-    consuming func writeAndFinish(_ buffer: ByteBuffer) async throws {
-        try await self.write(buffer)
-        try await self.finish()
+    func writeAndFinish(_ buffer: ByteBuffer) async throws {
+        try await self.underlying.write(buffer)
+        try await self.underlying.finish()
     }
 
     func reportError(_ error: any Error) async throws {
+        try await self.underlying.write(ByteBuffer(string: "\(error)"))
+        try await self.underlying.finish()
     }
 }
 
@@ -45,6 +47,8 @@ enum LambdaError: Error, Equatable {
     case cannotCallNextEndpointWhenAlreadyWaitingForEvent
     case cannotCallNextEndpointWhenAlreadyProcessingAnEvent
     case cannotReportResultWhenNoEventHasBeenProcessed
+    case cancelError
+    case handlerError
 }
 
 final actor LambdaMockClient: LambdaRuntimeClientProtocol {
@@ -87,6 +91,12 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
             case wait
 
             case fail(LambdaError)
+        }
+
+        enum CancelNextAction {
+            case none
+
+            case cancelContinuation(CheckedContinuation<Invocation, any Error>)
         }
 
         enum ResultAction {
@@ -165,6 +175,16 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
                 throw LambdaError.cannotReportResultWhenNoEventHasBeenProcessed
             }
         }
+
+        mutating func cancelNext() -> CancelNextAction {
+            switch self.state {
+            case .initialState, .handlerIsProcessing:
+                return .none
+            case .waitingForNextEvent(let eventArrivedHandler):
+                self.state = .initialState
+                return .cancelContinuation(eventArrivedHandler)
+            }
+        }
     }
 
     private var stateMachine: StateMachine = .init()
@@ -208,18 +228,32 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
     }
 
     func nextInvocation() async throws -> (Invocation, Writer) {
-        let invocation = try await withCheckedThrowingContinuation { eventArrivedHandler in
-            switch self.stateMachine.next(eventArrivedHandler) {
-            case .readyToProcess(let event):
-                eventArrivedHandler.resume(returning: event)
-            case .fail(let error):
-                eventArrivedHandler.resume(throwing: error)
-            case .wait:
-                break
+        try await withTaskCancellationHandler {
+            let invocation = try await withCheckedThrowingContinuation { eventArrivedHandler in
+                switch self.stateMachine.next(eventArrivedHandler) {
+                case .readyToProcess(let event):
+                    eventArrivedHandler.resume(returning: event)
+                case .fail(let error):
+                    eventArrivedHandler.resume(throwing: error)
+                case .wait:
+                    break
+                }
+            }
+            return (invocation, Writer(underlying: self))
+        } onCancel: {
+            Task {
+                await self.cancelNextInvocation()
             }
         }
+    }
 
-        return (invocation, Writer(underlying: self))
+    private func cancelNextInvocation() {
+        switch self.stateMachine.cancelNext() {
+        case .none:
+            break
+        case .cancelContinuation(let continuation):
+            continuation.resume(throwing: LambdaError.cancelError)
+        }
     }
 
     func write(_ buffer: ByteBuffer) async throws {
