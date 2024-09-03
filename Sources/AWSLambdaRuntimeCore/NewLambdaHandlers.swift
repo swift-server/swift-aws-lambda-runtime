@@ -109,7 +109,7 @@ package protocol LambdaWithBackgroundProcessingHandler {
 /// Used with ``LambdaWithBackgroundProcessingHandler``.
 /// A mechanism to "return" an output from ``LambdaWithBackgroundProcessingHandler/handle(_:outputWriter:context:)`` without the function needing to
 /// have a return type and exit at that point. This allows for background work to be executed _after_ a response has been sent to the AWS Lambda response endpoint.
-package protocol LambdaResponseWriter<Output>: ~Copyable {
+package protocol LambdaResponseWriter<Output> {
     associatedtype Output
     /// Sends the generic ``Output`` object (representing the computed result of the handler)
     /// to the AWS Lambda response endpoint.

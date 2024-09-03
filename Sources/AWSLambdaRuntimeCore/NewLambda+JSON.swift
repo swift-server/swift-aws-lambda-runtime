@@ -29,17 +29,20 @@ package protocol LambdaEventDecoder {
 /// The protocol an encoder must conform to so that it can be used with ``LambdaCodableAdapter`` to encode the generic
 /// ``Output`` object into a ``ByteBuffer``.
 package protocol LambdaOutputEncoder {
+    associatedtype Output
+
     /// Encode the generic type `Output` the handler has returned into a ``ByteBuffer``.
     /// - Parameters:
     ///   - value: The object to encode into a ``ByteBuffer``.
     ///   - buffer: The ``ByteBuffer`` where the encoded value will be written to.
-    func encode<Output: Encodable>(_ value: Output, into buffer: inout ByteBuffer) throws
+    func encode(_ value: Output, into buffer: inout ByteBuffer) throws
 }
 
 package struct VoidEncoder: LambdaOutputEncoder {
-    package func encode<Output>(_ value: Output, into buffer: inout NIOCore.ByteBuffer) throws where Output: Encodable {
+    package typealias Output = Void
 
-    }
+    @inlinable
+    package func encode(_ value: Void, into buffer: inout NIOCore.ByteBuffer) throws {}
 }
 
 /// Adapts a ``NewLambdaHandler`` conforming handler to conform to ``LambdaWithBackgroundProcessingHandler``.
@@ -48,10 +51,11 @@ package struct LambdaHandlerAdapter<
     Output,
     Handler: NewLambdaHandler
 >: LambdaWithBackgroundProcessingHandler where Handler.Event == Event, Handler.Output == Output {
-    let handler: Handler
+    @usableFromInline let handler: Handler
 
     /// Initializes an instance given a concrete handler.
     /// - Parameter handler: The ``NewLambdaHandler`` conforming handler that is to be adapted to ``LambdaWithBackgroundProcessingHandler``.
+    @inlinable
     package init(handler: Handler) {
         self.handler = handler
     }
@@ -62,9 +66,10 @@ package struct LambdaHandlerAdapter<
     ///   - event: The received event.
     ///   - outputWriter: The writer to write the computed response to.
     ///   - context: The ``NewLambdaContext`` containing the invocation's metadata.
+    @inlinable
     package func handle(
         _ event: Event,
-        outputWriter: consuming some LambdaResponseWriter<Output>,
+        outputWriter: some LambdaResponseWriter<Output>,
         context: NewLambdaContext
     ) async throws {
         let output = try await self.handler.handle(event, context: context)
@@ -79,17 +84,18 @@ package struct LambdaCodableAdapter<
     Output,
     Decoder: LambdaEventDecoder,
     Encoder: LambdaOutputEncoder
->: StreamingLambdaHandler where Handler.Event == Event, Handler.Output == Output {
-    let handler: Handler
-    let encoder: Encoder
-    let decoder: Decoder
-    private var byteBuffer: ByteBuffer = .init()
+>: StreamingLambdaHandler where Handler.Event == Event, Handler.Output == Output, Encoder.Output == Output {
+    @usableFromInline let handler: Handler
+    @usableFromInline let encoder: Encoder
+    @usableFromInline let decoder: Decoder
+    /*private*/ @usableFromInline var byteBuffer: ByteBuffer = .init()
 
     /// Initializes an instance given an encoder, decoder, and a handler with a non-`Void` output.
     ///   - Parameters:
     ///   - encoder: The encoder object that will be used to encode the generic ``Output`` obtained from the `handler`'s `outputWriter` into a ``ByteBuffer``.
     ///   - decoder: The decoder object that will be used to decode the received ``ByteBuffer`` event into the generic ``Event`` type served to the `handler`.
     ///   - handler: The handler object.
+    @inlinable
     package init(encoder: Encoder, decoder: Decoder, handler: Handler) where Output: Encodable {
         self.encoder = encoder
         self.decoder = decoder
@@ -100,6 +106,7 @@ package struct LambdaCodableAdapter<
     ///   - Parameters:
     ///   - decoder: The decoder object that will be used to decode the received ``ByteBuffer`` event into the generic ``Event`` type served to the `handler`.
     ///   - handler: The handler object.
+    @inlinable
     package init(decoder: Decoder, handler: Handler) where Output == Void, Encoder == VoidEncoder {
         self.encoder = VoidEncoder()
         self.decoder = decoder
@@ -111,43 +118,43 @@ package struct LambdaCodableAdapter<
     ///   - event: The received event.
     ///   - outputWriter: The writer to write the computed response to.
     ///   - context: The ``NewLambdaContext`` containing the invocation's metadata.
-    package mutating func handle(
+    @inlinable
+    package mutating func handle<Writer: LambdaResponseStreamWriter>(
         _ request: ByteBuffer,
-        responseWriter: some LambdaResponseStreamWriter,
+        responseWriter: Writer,
         context: NewLambdaContext
     ) async throws {
         let event = try self.decoder.decode(Event.self, from: request)
 
-        let writer = LambdaCodableResponseWriter<Output>(encoder: self.encoder, streamWriter: responseWriter)
+        let writer = LambdaCodableResponseWriter<Output, Encoder, Writer>(
+            encoder: self.encoder,
+            streamWriter: responseWriter
+        )
         try await self.handler.handle(event, outputWriter: writer, context: context)
     }
 }
 
 /// A ``LambdaResponseStreamWriter`` wrapper that conforms to ``LambdaResponseWriter``.
-package struct LambdaCodableResponseWriter<Output>: LambdaResponseWriter {
-    @usableFromInline let underlyingStreamWriter: LambdaResponseStreamWriter
-    @usableFromInline let encoder: LambdaOutputEncoder
+package struct LambdaCodableResponseWriter<Output, Encoder: LambdaOutputEncoder, Base: LambdaResponseStreamWriter>:
+    LambdaResponseWriter
+where Output == Encoder.Output {
+    @usableFromInline let underlyingStreamWriter: Base
+    @usableFromInline let encoder: Encoder
 
     /// Initializes an instance given an encoder and an underlying ``LambdaResponseStreamWriter``.
     /// - Parameters:
     ///   - encoder: The encoder object that will be used to encode the generic ``Output`` into a ``ByteBuffer``, which will then be passed to `streamWriter`.
     ///   - streamWriter: The underlying ``LambdaResponseStreamWriter`` that will be wrapped.
     @inlinable
-    package init(encoder: LambdaOutputEncoder, streamWriter: LambdaResponseStreamWriter) {
+    package init(encoder: Encoder, streamWriter: Base) {
         self.encoder = encoder
         self.underlyingStreamWriter = streamWriter
     }
 
-    ///  Passes the `output` argument to ``LambdaResponseStreamWriter/writeAndFinish(_:)``.
-    /// - Parameter output: The generic ``Output`` object that will be passed to ``LambdaResponseStreamWriter/writeAndFinish(_:)``.
     @inlinable
     package func write(_ output: Output) async throws {
-        if Output.self == Void.self {
-            try await self.underlyingStreamWriter.finish()
-        } else if let output = output as? Encodable {
-            var outputBuffer = ByteBuffer()
-            try self.encoder.encode(output, into: &outputBuffer)
-            try await self.underlyingStreamWriter.writeAndFinish(outputBuffer)
-        }
+        var outputBuffer = ByteBuffer()
+        try self.encoder.encode(output, into: &outputBuffer)
+        try await self.underlyingStreamWriter.writeAndFinish(outputBuffer)
     }
 }
