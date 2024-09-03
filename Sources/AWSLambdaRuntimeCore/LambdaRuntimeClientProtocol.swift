@@ -15,7 +15,7 @@
 import NIOCore
 
 package protocol LambdaRuntimeClientResponseStreamWriter: LambdaResponseStreamWriter {
-    mutating func write(_ buffer: ByteBuffer) async throws
+    func write(_ buffer: ByteBuffer) async throws
     func finish() async throws
     func writeAndFinish(_ buffer: ByteBuffer) async throws
     func reportError(_ error: any Error) async throws

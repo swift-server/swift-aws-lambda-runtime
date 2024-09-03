@@ -24,7 +24,7 @@ struct LambdaMockWriter: LambdaRuntimeClientResponseStreamWriter {
         self.underlying = underlying
     }
 
-    mutating func write(_ buffer: ByteBuffer) async throws {
+    func write(_ buffer: ByteBuffer) async throws {
         try await self.underlying.write(buffer)
     }
 
