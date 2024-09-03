@@ -115,7 +115,7 @@ package protocol LambdaResponseWriter<Output>: ~Copyable {
     /// to the AWS Lambda response endpoint.
     /// This function simply serves as a mechanism to return the computed result from a handler function
     /// without an explicit `return`.
-    mutating func write(response: Output) async throws
+    func write(_ output: Output) async throws
 }
 
 /// A ``StreamingLambdaHandler`` conforming handler object that can be constructed with a closure.

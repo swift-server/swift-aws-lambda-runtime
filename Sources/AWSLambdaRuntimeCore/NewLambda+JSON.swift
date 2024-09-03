@@ -38,7 +38,7 @@ package protocol LambdaOutputEncoder {
 
 package struct VoidEncoder: LambdaOutputEncoder {
     package func encode<Output>(_ value: Output, into buffer: inout NIOCore.ByteBuffer) throws where Output: Encodable {
-        fatalError("LambdaOutputEncoder must never be called on a void output")
+
     }
 }
 
@@ -67,8 +67,8 @@ package struct LambdaHandlerAdapter<
         outputWriter: consuming some LambdaResponseWriter<Output>,
         context: NewLambdaContext
     ) async throws {
-        let response = try await self.handler.handle(event, context: context)
-        try await outputWriter.write(response: response)
+        let output = try await self.handler.handle(event, context: context)
+        try await outputWriter.write(output)
     }
 }
 
@@ -118,34 +118,36 @@ package struct LambdaCodableAdapter<
     ) async throws {
         let event = try self.decoder.decode(Event.self, from: request)
 
-        let writer = ResponseWriter<Output>(encoder: self.encoder, streamWriter: responseWriter)
+        let writer = LambdaCodableResponseWriter<Output>(encoder: self.encoder, streamWriter: responseWriter)
         try await self.handler.handle(event, outputWriter: writer, context: context)
     }
 }
 
 /// A ``LambdaResponseStreamWriter`` wrapper that conforms to ``LambdaResponseWriter``.
-package struct ResponseWriter<Output>: LambdaResponseWriter {
-    let underlyingStreamWriter: LambdaResponseStreamWriter
-    let encoder: LambdaOutputEncoder
-    var byteBuffer = ByteBuffer()
+package struct LambdaCodableResponseWriter<Output>: LambdaResponseWriter {
+    @usableFromInline let underlyingStreamWriter: LambdaResponseStreamWriter
+    @usableFromInline let encoder: LambdaOutputEncoder
 
     /// Initializes an instance given an encoder and an underlying ``LambdaResponseStreamWriter``.
     /// - Parameters:
     ///   - encoder: The encoder object that will be used to encode the generic ``Output`` into a ``ByteBuffer``, which will then be passed to `streamWriter`.
     ///   - streamWriter: The underlying ``LambdaResponseStreamWriter`` that will be wrapped.
+    @inlinable
     package init(encoder: LambdaOutputEncoder, streamWriter: LambdaResponseStreamWriter) {
         self.encoder = encoder
         self.underlyingStreamWriter = streamWriter
     }
 
-    ///  Passes the `response` argument to ``LambdaResponseStreamWriter/writeAndFinish(_:)``.
-    /// - Parameter response: The generic ``Output`` object that will be passed to ``LambdaResponseStreamWriter/writeAndFinish(_:)``.
-    package mutating func write(response: Output) async throws {
+    ///  Passes the `output` argument to ``LambdaResponseStreamWriter/writeAndFinish(_:)``.
+    /// - Parameter output: The generic ``Output`` object that will be passed to ``LambdaResponseStreamWriter/writeAndFinish(_:)``.
+    @inlinable
+    package func write(_ output: Output) async throws {
         if Output.self == Void.self {
             try await self.underlyingStreamWriter.finish()
-        } else if let response = response as? Encodable {
-            try self.encoder.encode(response, into: &self.byteBuffer)
-            try await self.underlyingStreamWriter.writeAndFinish(self.byteBuffer)
+        } else if let output = output as? Encodable {
+            var outputBuffer = ByteBuffer()
+            try self.encoder.encode(output, into: &outputBuffer)
+            try await self.underlyingStreamWriter.writeAndFinish(outputBuffer)
         }
     }
 }
