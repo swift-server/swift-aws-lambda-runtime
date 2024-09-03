@@ -16,9 +16,13 @@
 import NIOCore
 import NIOFoundationCompat
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import struct Foundation.Data
 import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
+#endif
 
 // MARK: - SimpleLambdaHandler Codable support
 
@@ -138,3 +142,6 @@ extension Lambda {
 extension JSONDecoder: LambdaCodableDecoder {}
 
 extension JSONEncoder: LambdaCodableEncoder {}
+
+extension JSONDecoder: AWSLambdaRuntimeCore.LambdaEventDecoder {}
+extension JSONEncoder: AWSLambdaRuntimeCore.LambdaOutputEncoder {}

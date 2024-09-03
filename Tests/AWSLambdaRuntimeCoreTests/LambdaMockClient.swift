@@ -17,7 +17,7 @@ import Foundation
 import Logging
 import NIOCore
 
-struct LambdaMockWriter: LambdaResponseStreamWriter {
+struct LambdaMockWriter: LambdaRuntimeClientResponseStreamWriter {
     var underlying: LambdaMockClient
 
     init(underlying: LambdaMockClient) {
