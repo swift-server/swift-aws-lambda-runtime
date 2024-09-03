@@ -88,7 +88,8 @@ package struct LambdaCodableAdapter<
     @usableFromInline let handler: Handler
     @usableFromInline let encoder: Encoder
     @usableFromInline let decoder: Decoder
-    /*private*/ @usableFromInline var byteBuffer: ByteBuffer = .init()
+    //
+    @usableFromInline var byteBuffer: ByteBuffer = .init()
 
     /// Initializes an instance given an encoder, decoder, and a handler with a non-`Void` output.
     ///   - Parameters:
