@@ -80,7 +80,6 @@ func runLambda(
     handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some ByteBufferLambdaHandler>
 ) throws {
     let eventLoopGroup = NIOSingletons.posixEventLoopGroup.next()
-    defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
     let server = MockLambdaServer(behavior: behavior, port: 0)
     let port = try server.start().wait()
