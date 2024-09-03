@@ -113,9 +113,9 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
             return (invocation, Writer(runtimeClient: self))
 
         case .waitingForNextInvocation,
-             .waitingForResponse,
-             .sendingResponse,
-             .sentResponse:
+            .waitingForResponse,
+            .sendingResponse,
+            .sentResponse:
             fatalError("Invalid state: \(self.lambdaState)")
         }
 
@@ -219,7 +219,9 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
                     try channel.pipeline.syncOperations.addHandler(
                         NIOHTTPClientResponseAggregator(maxContentLength: 6 * 1024 * 1024)
                     )
-                    try channel.pipeline.syncOperations.addHandler(LambdaChannelHandler(delegate: self, logger: self.logger))
+                    try channel.pipeline.syncOperations.addHandler(
+                        LambdaChannelHandler(delegate: self, logger: self.logger)
+                    )
                     return channel.eventLoop.makeSucceededFuture(())
                 } catch {
                     return channel.eventLoop.makeFailedFuture(error)
@@ -230,7 +232,9 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
             // connect directly via socket address to avoid happy eyeballs (perf)
             let address = try SocketAddress(ipAddress: self.configuration.ip, port: self.configuration.port)
             let channel = try await bootstrap.connect(to: address).get()
-            let handler = try channel.pipeline.syncOperations.handler(type: LambdaChannelHandler<NewLambdaRuntimeClient>.self)
+            let handler = try channel.pipeline.syncOperations.handler(
+                type: LambdaChannelHandler<NewLambdaRuntimeClient>.self
+            )
             channel.closeFuture.whenComplete { result in
                 self.eventLoop.preconditionInEventLoop()
                 self.assumeIsolated { runtimeClient in
@@ -338,7 +342,11 @@ private final class LambdaChannelHandler<Delegate> {
         }
     }
 
-    func reportError(isolation: isolated (any Actor)? = #isolation, _ error: any Error, requestID: String) async throws {
+    func reportError(
+        isolation: isolated (any Actor)? = #isolation,
+        _ error: any Error,
+        requestID: String
+    ) async throws {
         switch self.state {
         case .connected(_, .waitingForNextInvocation):
             fatalError("Invalid state: \(self.state)")
@@ -376,7 +384,11 @@ private final class LambdaChannelHandler<Delegate> {
         }
     }
 
-    func writeResponseBodyPart(isolation: isolated (any Actor)? = #isolation, _ byteBuffer: ByteBuffer, requestID: String) async throws {
+    func writeResponseBodyPart(
+        isolation: isolated (any Actor)? = #isolation,
+        _ byteBuffer: ByteBuffer,
+        requestID: String
+    ) async throws {
         switch self.state {
         case .connected(_, .waitingForNextInvocation):
             fatalError("Invalid state: \(self.state)")
@@ -400,7 +412,11 @@ private final class LambdaChannelHandler<Delegate> {
         }
     }
 
-    func finishResponseRequest(isolation: isolated (any Actor)? = #isolation, finalData: ByteBuffer?, requestID: String) async throws {
+    func finishResponseRequest(
+        isolation: isolated (any Actor)? = #isolation,
+        finalData: ByteBuffer?,
+        requestID: String
+    ) async throws {
         switch self.state {
         case .connected(_, .idle),
             .connected(_, .waitingForNextInvocation):
@@ -583,7 +599,9 @@ extension LambdaChannelHandler: ChannelInboundHandler {
                 continuation.resume(returning: Invocation(metadata: metadata, event: response.body ?? ByteBuffer()))
             } catch {
                 self.state = .connected(context, .closing)
-                continuation.resume(throwing: NewLambdaRuntimeError(code: .invocationMissingMetadata, underlying: error))
+                continuation.resume(
+                    throwing: NewLambdaRuntimeError(code: .invocationMissingMetadata, underlying: error)
+                )
             }
 
         case .connected(let context, .sentResponse(let continuation)):
