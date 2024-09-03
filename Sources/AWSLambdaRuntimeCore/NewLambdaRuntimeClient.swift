@@ -38,7 +38,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
         }
 
         func finish() async throws {
-            try await self.runtimeClient.finish()
+            try await self.runtimeClient.writeAndFinish(nil)
         }
 
         func writeAndFinish(_ buffer: NIOCore.ByteBuffer) async throws {
@@ -52,14 +52,28 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
 
     private enum ConnectionState {
         case disconnected
-        case connecting([CheckedContinuation<LambdaChannelHandler, any Error>])
-        case connected(Channel, LambdaChannelHandler)
+        case connecting([CheckedContinuation<LambdaChannelHandler<NewLambdaRuntimeClient>, any Error>])
+        case connected(Channel, LambdaChannelHandler<NewLambdaRuntimeClient>)
+    }
+
+    enum LambdaState {
+        /// this is the "normal" state. Transitions to `waitingForNextInvocation`
+        case idle(previousRequestID: String?)
+        /// this is the state while we wait for an invocation. A next call is running.
+        /// Transitions to `waitingForResponse`
+        case waitingForNextInvocation
+        /// The invocation was forwarded to the handler and we wait for a response.
+        /// Transitions to `sendingResponse` or `sentResponse`.
+        case waitingForResponse(requestID: String)
+        case sendingResponse(requestID: String)
+        case sentResponse(requestID: String)
     }
 
     private let eventLoop: any EventLoop
     private let logger: Logger
     private let configuration: Configuration
     private var connectionState: ConnectionState = .disconnected
+    private var lambdaState: LambdaState = .idle(previousRequestID: nil)
 
     static func withRuntimeClient<Result>(
         configuration: Configuration,
@@ -87,32 +101,99 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
     }
 
     func nextInvocation() async throws -> (Invocation, Writer) {
-        let handler = try await self.makeOrGetConnection()
+        switch self.lambdaState {
+        case .idle:
+            self.lambdaState = .waitingForNextInvocation
+            let handler = try await self.makeOrGetConnection()
+            let invocation = try await handler.nextInvocation()
+            guard case .waitingForNextInvocation = self.lambdaState else {
+                fatalError("Invalid state: \(self.lambdaState)")
+            }
+            self.lambdaState = .waitingForResponse(requestID: invocation.metadata.requestID)
+            return (invocation, Writer(runtimeClient: self))
 
-        return try await (handler.nextInvocation(), Writer(runtimeClient: self))
+        case .waitingForNextInvocation,
+             .waitingForResponse,
+             .sendingResponse,
+             .sentResponse:
+            fatalError("Invalid state: \(self.lambdaState)")
+        }
+
     }
 
     private func write(_ buffer: NIOCore.ByteBuffer) async throws {
-        let handler = try await self.makeOrGetConnection()
-        return try await handler.writeResponseBodyPart(buffer)
+        switch self.lambdaState {
+        case .idle, .sentResponse:
+            throw NewLambdaRuntimeError(code: .writeAfterFinishHasBeenSent)
+
+        case .waitingForNextInvocation:
+            fatalError("Invalid state: \(self.lambdaState)")
+
+        case .waitingForResponse(let requestID):
+            self.lambdaState = .sendingResponse(requestID: requestID)
+            fallthrough
+
+        case .sendingResponse(let requestID):
+            let handler = try await self.makeOrGetConnection()
+            guard case .sendingResponse(requestID) = self.lambdaState else {
+                fatalError("Invalid state: \(self.lambdaState)")
+            }
+            return try await handler.writeResponseBodyPart(buffer, requestID: requestID)
+        }
     }
 
-    private func finish() async throws {
-        let handler = try await self.makeOrGetConnection()
-        return try await handler.finishResponseRequest(finalData: nil)
-    }
+    private func writeAndFinish(_ buffer: NIOCore.ByteBuffer?) async throws {
+        switch self.lambdaState {
+        case .idle, .sentResponse:
+            throw NewLambdaRuntimeError(code: .finishAfterFinishHasBeenSent)
 
-    private func writeAndFinish(_ buffer: NIOCore.ByteBuffer) async throws {
-        let handler = try await self.makeOrGetConnection()
-        return try await handler.finishResponseRequest(finalData: buffer)
+        case .waitingForNextInvocation:
+            fatalError("Invalid state: \(self.lambdaState)")
+
+        case .waitingForResponse(let requestID):
+            fallthrough
+
+        case .sendingResponse(let requestID):
+            self.lambdaState = .sentResponse(requestID: requestID)
+            let handler = try await self.makeOrGetConnection()
+            guard case .sentResponse(requestID) = self.lambdaState else {
+                fatalError("Invalid state: \(self.lambdaState)")
+            }
+            try await handler.finishResponseRequest(finalData: buffer, requestID: requestID)
+            guard case .sentResponse(requestID) = self.lambdaState else {
+                fatalError("Invalid state: \(self.lambdaState)")
+            }
+            self.lambdaState = .idle(previousRequestID: requestID)
+        }
     }
 
     private func reportError(_ error: any Error) async throws {
-        let handler = try await self.makeOrGetConnection()
-        return try await handler.reportError(error)
+        switch self.lambdaState {
+        case .idle, .waitingForNextInvocation, .sentResponse:
+            fatalError("Invalid state: \(self.lambdaState)")
+
+        case .waitingForResponse(let requestID):
+            fallthrough
+
+        case .sendingResponse(let requestID):
+            self.lambdaState = .sentResponse(requestID: requestID)
+            let handler = try await self.makeOrGetConnection()
+            guard case .sentResponse(requestID) = self.lambdaState else {
+                fatalError("Invalid state: \(self.lambdaState)")
+            }
+            try await handler.reportError(error, requestID: requestID)
+            guard case .sentResponse(requestID) = self.lambdaState else {
+                fatalError("Invalid state: \(self.lambdaState)")
+            }
+            self.lambdaState = .idle(previousRequestID: requestID)
+        }
     }
 
-    private func makeOrGetConnection() async throws -> LambdaChannelHandler {
+    private func channelClosed(_ channel: any Channel) {
+        // TODO: Fill out
+    }
+
+    private func makeOrGetConnection() async throws -> LambdaChannelHandler<NewLambdaRuntimeClient> {
         switch self.connectionState {
         case .disconnected:
             self.connectionState = .connecting([])
@@ -121,7 +202,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
             // Since we do get sequential invocations this case normally should never be hit.
             // We'll support it anyway.
             return try await withCheckedThrowingContinuation {
-                (continuation: CheckedContinuation<LambdaChannelHandler, any Error>) in
+                (continuation: CheckedContinuation<LambdaChannelHandler<NewLambdaRuntimeClient>, any Error>) in
                 array.append(continuation)
                 self.connectionState = .connecting(array)
             }
@@ -138,7 +219,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
                     try channel.pipeline.syncOperations.addHandler(
                         NIOHTTPClientResponseAggregator(maxContentLength: 6 * 1024 * 1024)
                     )
-                    try channel.pipeline.syncOperations.addHandler(LambdaChannelHandler(logger: self.logger))
+                    try channel.pipeline.syncOperations.addHandler(LambdaChannelHandler(delegate: self, logger: self.logger))
                     return channel.eventLoop.makeSucceededFuture(())
                 } catch {
                     return channel.eventLoop.makeFailedFuture(error)
@@ -149,7 +230,13 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
             // connect directly via socket address to avoid happy eyeballs (perf)
             let address = try SocketAddress(ipAddress: self.configuration.ip, port: self.configuration.port)
             let channel = try await bootstrap.connect(to: address).get()
-            let handler = try channel.pipeline.syncOperations.handler(type: LambdaChannelHandler.self)
+            let handler = try channel.pipeline.syncOperations.handler(type: LambdaChannelHandler<NewLambdaRuntimeClient>.self)
+            channel.closeFuture.whenComplete { result in
+                self.eventLoop.preconditionInEventLoop()
+                self.assumeIsolated { runtimeClient in
+                    runtimeClient.channelClosed(channel)
+                }
+            }
 
             switch self.connectionState {
             case .disconnected, .connected:
@@ -182,8 +269,22 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
     }
 }
 
-// no need in locks since we validate only one request can run at a time
-private final class LambdaChannelHandler {
+extension NewLambdaRuntimeClient: LambdaChannelHandlerDelegate {
+    nonisolated func connectionErrorHappened(_ error: any Error, channel: any Channel) {
+
+    }
+
+    nonisolated func connectionWillClose(channel: any Channel) {
+
+    }
+}
+
+private protocol LambdaChannelHandlerDelegate {
+    func connectionWillClose(channel: any Channel)
+    func connectionErrorHappened(_ error: any Error, channel: any Channel)
+}
+
+private final class LambdaChannelHandler<Delegate> {
     let nextInvocationPath = Consts.invocationURLPrefix + Consts.getNextInvocationURLSuffix
 
     enum State {
@@ -191,11 +292,16 @@ private final class LambdaChannelHandler {
         case connected(ChannelHandlerContext, LambdaState)
 
         enum LambdaState {
-            case idle(previousRequestID: String?)
+            /// this is the "normal" state. Transitions to `waitingForNextInvocation`
+            case idle
+            /// this is the state while we wait for an invocation. A next call is running.
+            /// Transitions to `waitingForResponse`
             case waitingForNextInvocation(CheckedContinuation<Invocation, any Error>)
-            case waitingForResponse(requestID: String)
-            case sendingResponse(requestID: String)
-            case sentResponse(requestID: String, CheckedContinuation<Void, any Error>)
+            /// The invocation was forwarded to the handler and we wait for a response.
+            /// Transitions to `sendingResponse` or `sentResponse`.
+            case waitingForResponse
+            case sendingResponse
+            case sentResponse(CheckedContinuation<Void, any Error>)
             case closing
         }
     }
@@ -204,8 +310,10 @@ private final class LambdaChannelHandler {
     private var lastError: Error?
     private var reusableErrorBuffer: ByteBuffer?
     private let logger: Logger
+    private let delegate: Delegate
 
-    init(logger: Logger) {
+    init(delegate: Delegate, logger: Logger) {
+        self.delegate = delegate
         self.logger = logger
     }
 
@@ -223,34 +331,32 @@ private final class LambdaChannelHandler {
             .connected(_, .sentResponse),
             .connected(_, .waitingForNextInvocation),
             .connected(_, .waitingForResponse):
-            fatalError()
+            fatalError("Invalid state: \(self.state)")
 
         case .disconnected:
-            // TODO: throw error here
-            fatalError()
+            throw NewLambdaRuntimeError(code: .connectionToControlPlaneLost)
         }
     }
 
-    func reportError(isolation: isolated (any Actor)? = #isolation, _ error: any Error) async throws {
+    func reportError(isolation: isolated (any Actor)? = #isolation, _ error: any Error, requestID: String) async throws {
         switch self.state {
-        case .connected(_, .idle(.none)),
-            .connected(_, .waitingForNextInvocation):
+        case .connected(_, .waitingForNextInvocation):
             fatalError("Invalid state: \(self.state)")
 
-        case .connected(let context, .waitingForResponse(let requestID)):
+        case .connected(let context, .waitingForResponse):
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-                self.state = .connected(context, .sentResponse(requestID: requestID, continuation))
+                self.state = .connected(context, .sentResponse(continuation))
                 self.sendReportErrorRequest(requestID: requestID, error: error, context: context)
             }
 
-        case .connected(let context, .sendingResponse(let requestID)):
+        case .connected(let context, .sendingResponse):
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-                self.state = .connected(context, .sentResponse(requestID: requestID, continuation))
+                self.state = .connected(context, .sentResponse(continuation))
                 self.sendResponseStreamingFailure(error: error, context: context)
             }
 
-        case .connected(_, .idle(previousRequestID: .some(let requestID))),
-            .connected(_, .sentResponse(let requestID, _)):
+        case .connected(_, .idle),
+            .connected(_, .sentResponse):
             // The final response has already been sent. The only way to report the unhandled error
             // now is to log it. Normally this library never logs higher than debug, we make an
             // exception here, as there is no other way of reporting the error otherwise.
@@ -262,62 +368,64 @@ private final class LambdaChannelHandler {
                 ]
             )
 
-        case .disconnected, .connected(_, .closing):
-            // TODO: throw error here
-            fatalError()
+        case .disconnected:
+            throw NewLambdaRuntimeError(code: .connectionToControlPlaneLost)
+
+        case .connected(_, .closing):
+            throw NewLambdaRuntimeError(code: .connectionToControlPlaneGoingAway)
         }
     }
 
-    func writeResponseBodyPart(isolation: isolated (any Actor)? = #isolation, _ byteBuffer: ByteBuffer) async throws {
+    func writeResponseBodyPart(isolation: isolated (any Actor)? = #isolation, _ byteBuffer: ByteBuffer, requestID: String) async throws {
         switch self.state {
-        case .connected(_, .idle(.none)),
-            .connected(_, .waitingForNextInvocation):
+        case .connected(_, .waitingForNextInvocation):
             fatalError("Invalid state: \(self.state)")
 
-        case .connected(let context, .waitingForResponse(let requestID)):
-            self.state = .connected(context, .sendingResponse(requestID: requestID))
+        case .connected(let context, .waitingForResponse):
+            self.state = .connected(context, .sendingResponse)
             try await self.sendResponseBodyPart(byteBuffer, sendHeadWithRequestID: requestID, context: context)
 
         case .connected(let context, .sendingResponse):
             try await self.sendResponseBodyPart(byteBuffer, sendHeadWithRequestID: nil, context: context)
 
-        case .connected(_, .idle(previousRequestID: .some(let requestID))),
-            .connected(_, .sentResponse(let requestID, _)):
-            // TODO: throw error here – user tries to write after the stream has been finished
-            fatalError()
+        case .connected(_, .idle),
+            .connected(_, .sentResponse):
+            throw NewLambdaRuntimeError(code: .writeAfterFinishHasBeenSent)
 
-        case .disconnected, .connected(_, .closing):
-            // TODO: throw error here
-            fatalError()
+        case .disconnected:
+            throw NewLambdaRuntimeError(code: .connectionToControlPlaneLost)
+
+        case .connected(_, .closing):
+            throw NewLambdaRuntimeError(code: .connectionToControlPlaneGoingAway)
         }
     }
 
-    func finishResponseRequest(isolation: isolated (any Actor)? = #isolation, finalData: ByteBuffer?) async throws {
+    func finishResponseRequest(isolation: isolated (any Actor)? = #isolation, finalData: ByteBuffer?, requestID: String) async throws {
         switch self.state {
-        case .connected(_, .idle(.none)),
+        case .connected(_, .idle),
             .connected(_, .waitingForNextInvocation):
             fatalError("Invalid state: \(self.state)")
 
-        case .connected(let context, .waitingForResponse(let requestID)):
+        case .connected(let context, .waitingForResponse):
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-                self.state = .connected(context, .sentResponse(requestID: requestID, continuation))
+                self.state = .connected(context, .sentResponse(continuation))
                 self.sendResponseFinish(finalData, sendHeadWithRequestID: requestID, context: context)
             }
 
-        case .connected(let context, .sendingResponse(let requestID)):
+        case .connected(let context, .sendingResponse):
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-                self.state = .connected(context, .sentResponse(requestID: requestID, continuation))
+                self.state = .connected(context, .sentResponse(continuation))
                 self.sendResponseFinish(finalData, sendHeadWithRequestID: nil, context: context)
             }
 
-        case .connected(_, .idle(previousRequestID: .some(let requestID))),
-            .connected(_, .sentResponse(let requestID, _)):
-            // TODO: throw error here – user tries to write after the stream has been finished
-            fatalError()
+        case .connected(_, .sentResponse):
+            throw NewLambdaRuntimeError(code: .finishAfterFinishHasBeenSent)
 
-        case .disconnected, .connected(_, .closing):
-            // TODO: throw error here
-            fatalError()
+        case .disconnected:
+            throw NewLambdaRuntimeError(code: .connectionToControlPlaneLost)
+
+        case .connected(_, .closing):
+            throw NewLambdaRuntimeError(code: .connectionToControlPlaneGoingAway)
         }
     }
 
@@ -353,11 +461,12 @@ private final class LambdaChannelHandler {
         sendHeadWithRequestID: String?,
         context: ChannelHandlerContext
     ) {
-
         if let requestID = sendHeadWithRequestID {
-            // TODO: This feels super expensive. We should be able to make this cheaper. requestIDs are fixed length
-            let url = Consts.invocationURLPrefix + "/" + requestID + Consts.postResponseURLSuffix
+            // TODO: This feels quite expensive. We should be able to make this cheaper. requestIDs are fixed length
+            let url = "\(Consts.invocationURLPrefix)/\(requestID)/\(Consts.postResponseURLSuffix)"
 
+            // If we have less than 6MB, we don't want to use the streaming API. If we have more
+            // than 6MB we must use the streaming mode.
             let headers: HTTPHeaders =
                 if byteBuffer?.readableBytes ?? 0 < 6_000_000 {
                     [
@@ -400,8 +509,8 @@ private final class LambdaChannelHandler {
     }
 
     private func sendReportErrorRequest(requestID: String, error: any Error, context: ChannelHandlerContext) {
-        // TODO: This feels super expensive. We should be able to make this cheaper. requestIDs are fixed length
-        let url = Consts.invocationURLPrefix + "/" + requestID + Consts.postErrorURLSuffix
+        // TODO: This feels quite expensive. We should be able to make this cheaper. requestIDs are fixed length
+        let url = "\(Consts.invocationURLPrefix)/\(requestID)/\(Consts.postErrorURLSuffix)"
 
         let httpRequest = HTTPRequestHead(
             version: .http1_1,
@@ -450,14 +559,14 @@ extension LambdaChannelHandler: ChannelInboundHandler {
 
     func handlerAdded(context: ChannelHandlerContext) {
         if context.channel.isActive {
-            self.state = .connected(context, .idle(previousRequestID: nil))
+            self.state = .connected(context, .idle)
         }
     }
 
     func channelActive(context: ChannelHandlerContext) {
         switch self.state {
         case .disconnected:
-            self.state = .connected(context, .idle(previousRequestID: nil))
+            self.state = .connected(context, .idle)
         case .connected:
             break
         }
@@ -470,16 +579,16 @@ extension LambdaChannelHandler: ChannelInboundHandler {
         case .connected(let context, .waitingForNextInvocation(let continuation)):
             do {
                 let metadata = try InvocationMetadata(headers: response.head.headers)
-                self.state = .connected(context, .waitingForResponse(requestID: metadata.requestID))
+                self.state = .connected(context, .waitingForResponse)
                 continuation.resume(returning: Invocation(metadata: metadata, event: response.body ?? ByteBuffer()))
             } catch {
                 self.state = .connected(context, .closing)
-                fatalError("TODO: fail continuation with better error")
+                continuation.resume(throwing: NewLambdaRuntimeError(code: .invocationMissingMetadata, underlying: error))
             }
 
-        case .connected(let context, .sentResponse(let requestID, let continuation)):
+        case .connected(let context, .sentResponse(let continuation)):
             if response.head.status == .accepted {
-                self.state = .connected(context, .idle(previousRequestID: requestID))
+                self.state = .connected(context, .idle)
                 continuation.resume()
             }
 

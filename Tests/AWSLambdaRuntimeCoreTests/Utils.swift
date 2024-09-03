@@ -62,7 +62,7 @@ func runLambda<Handler: ByteBufferLambdaHandler>(
     behavior: LambdaServerBehavior,
     handlerProvider: @escaping (LambdaInitializationContext) async throws -> Handler
 ) throws {
-    let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    let eventLoopGroup = NIOSingletons.posixEventLoopGroup.next()
     try runLambda(
         behavior: behavior,
         handlerProvider: { context in
@@ -79,7 +79,7 @@ func runLambda(
     behavior: LambdaServerBehavior,
     handlerProvider: @escaping (LambdaInitializationContext) -> EventLoopFuture<some ByteBufferLambdaHandler>
 ) throws {
-    let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    let eventLoopGroup = NIOSingletons.posixEventLoopGroup.next()
     defer { XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully()) }
     let logger = Logger(label: "TestLogger")
     let server = MockLambdaServer(behavior: behavior, port: 0)

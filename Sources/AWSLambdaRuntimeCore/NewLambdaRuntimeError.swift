@@ -14,6 +14,10 @@
 
 struct NewLambdaRuntimeError: Error {
     enum Code {
+        case connectionToControlPlaneLost
+        case connectionToControlPlaneGoingAway
+        case invocationMissingMetadata
+
         case writeAfterFinishHasBeenSent
         case finishAfterFinishHasBeenSent
         case lostConnectionToControlPlane
@@ -22,5 +26,6 @@ struct NewLambdaRuntimeError: Error {
     }
 
     var code: Code
+    var underlying: (any Error)?
 
 }
