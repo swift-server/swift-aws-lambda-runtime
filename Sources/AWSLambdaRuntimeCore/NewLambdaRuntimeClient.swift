@@ -463,7 +463,7 @@ private final class LambdaChannelHandler<Delegate> {
     ) {
         if let requestID = sendHeadWithRequestID {
             // TODO: This feels quite expensive. We should be able to make this cheaper. requestIDs are fixed length
-            let url = "\(Consts.invocationURLPrefix)/\(requestID)/\(Consts.postResponseURLSuffix)"
+            let url = "\(Consts.invocationURLPrefix)/\(requestID)\(Consts.postResponseURLSuffix)"
 
             // If we have less than 6MB, we don't want to use the streaming API. If we have more
             // than 6MB we must use the streaming mode.
@@ -510,7 +510,7 @@ private final class LambdaChannelHandler<Delegate> {
 
     private func sendReportErrorRequest(requestID: String, error: any Error, context: ChannelHandlerContext) {
         // TODO: This feels quite expensive. We should be able to make this cheaper. requestIDs are fixed length
-        let url = "\(Consts.invocationURLPrefix)/\(requestID)/\(Consts.postErrorURLSuffix)"
+        let url = "\(Consts.invocationURLPrefix)/\(requestID)\(Consts.postErrorURLSuffix)"
 
         let httpRequest = HTTPRequestHead(
             version: .http1_1,
