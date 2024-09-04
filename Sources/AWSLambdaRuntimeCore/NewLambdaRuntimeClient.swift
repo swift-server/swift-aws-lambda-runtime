@@ -390,6 +390,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
     enum State {
         case disconnected
         case connected(ChannelHandlerContext, LambdaState)
+        case closing
 
         enum LambdaState {
             /// this is the "normal" state. Transitions to `waitingForNextInvocation`
@@ -402,7 +403,6 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             case waitingForResponse
             case sendingResponse
             case sentResponse(CheckedContinuation<Void, any Error>)
-            case closing
         }
     }
 
@@ -426,11 +426,11 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
                 self.sendNextRequest(context: context)
             }
 
-        case .connected(_, .closing),
-            .connected(_, .sendingResponse),
+        case .connected(_, .sendingResponse),
             .connected(_, .sentResponse),
             .connected(_, .waitingForNextInvocation),
-            .connected(_, .waitingForResponse):
+            .connected(_, .waitingForResponse),
+            .closing:
             fatalError("Invalid state: \(self.state)")
 
         case .disconnected:
@@ -475,7 +475,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
         case .disconnected:
             throw NewLambdaRuntimeError(code: .connectionToControlPlaneLost)
 
-        case .connected(_, .closing):
+        case .closing:
             throw NewLambdaRuntimeError(code: .connectionToControlPlaneGoingAway)
         }
     }
@@ -503,7 +503,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
         case .disconnected:
             throw NewLambdaRuntimeError(code: .connectionToControlPlaneLost)
 
-        case .connected(_, .closing):
+        case .closing:
             throw NewLambdaRuntimeError(code: .connectionToControlPlaneGoingAway)
         }
     }
@@ -536,7 +536,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
         case .disconnected:
             throw NewLambdaRuntimeError(code: .connectionToControlPlaneLost)
 
-        case .connected(_, .closing):
+        case .closing:
             throw NewLambdaRuntimeError(code: .connectionToControlPlaneGoingAway)
         }
     }
@@ -681,11 +681,49 @@ extension LambdaChannelHandler: ChannelInboundHandler {
             self.state = .connected(context, .idle)
         case .connected:
             break
+        case .closing:
+            fatalError("Invalid state: \(self.state)")
         }
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let response = unwrapInboundIn(data)
+
+        // As defined in RFC 7230 Section 6.3:
+        // HTTP/1.1 defaults to the use of "persistent connections", allowing
+        // multiple requests and responses to be carried over a single
+        // connection.  The "close" connection option is used to signal that a
+        // connection will not persist after the current request/response.  HTTP
+        // implementations SHOULD support persistent connections.
+        //
+        // That's why we only assume the connection shall be closed if we receive
+        // a "connection = close" header.
+        let serverCloseConnection =
+            response.head.headers["connection"].contains(where: { $0.lowercased() == "close" })
+
+        let closeConnection = serverCloseConnection || response.head.version != .http1_1
+
+        if closeConnection {
+            // If we were succeeding the request promise here directly and closing the connection
+            // after succeeding the promise we may run into a race condition:
+            //
+            // The lambda runtime will ask for the next work item directly after a succeeded post
+            // response request. The desire for the next work item might be faster than the attempt
+            // to close the connection. This will lead to a situation where we try to the connection
+            // but the next request has already been scheduled on the connection that we want to
+            // close. For this reason we postpone succeeding the promise until the connection has
+            // been closed. This codepath will only be hit in the very, very unlikely event of the
+            // Lambda control plane demanding to close connection. (It's more or less only
+            // implemented to support http1.1 correctly.) This behavior is ensured with the test
+            // `LambdaTest.testNoKeepAliveServer`.
+            self.state = .closing
+            self.delegate.connectionWillClose(channel: context.channel)
+            context.close(promise: nil)
+        } else {
+            self.state = .connected(context, .idle)
+        }
+
+        // handle response content
 
         switch self.state {
         case .connected(let context, .waitingForNextInvocation(let continuation)):
@@ -694,7 +732,10 @@ extension LambdaChannelHandler: ChannelInboundHandler {
                 self.state = .connected(context, .waitingForResponse)
                 continuation.resume(returning: Invocation(metadata: metadata, event: response.body ?? ByteBuffer()))
             } catch {
-                self.state = .connected(context, .closing)
+                self.state = .closing
+
+                self.delegate.connectionWillClose(channel: context.channel)
+                context.close(promise: nil)
                 continuation.resume(
                     throwing: NewLambdaRuntimeError(code: .invocationMissingMetadata, underlying: error)
                 )
@@ -704,46 +745,14 @@ extension LambdaChannelHandler: ChannelInboundHandler {
             if response.head.status == .accepted {
                 self.state = .connected(context, .idle)
                 continuation.resume()
+            } else {
+                self.state = .connected(context, .idle)
+                continuation.resume(throwing: NewLambdaRuntimeError(code: .unexpectedStatusCodeForRequest))
             }
 
-        case .disconnected, .connected(_, _):
+        case .disconnected, .closing, .connected(_, _):
             break
         }
-
-        //        // As defined in RFC 7230 Section 6.3:
-        //        // HTTP/1.1 defaults to the use of "persistent connections", allowing
-        //        // multiple requests and responses to be carried over a single
-        //        // connection.  The "close" connection option is used to signal that a
-        //        // connection will not persist after the current request/response.  HTTP
-        //        // implementations SHOULD support persistent connections.
-        //        //
-        //        // That's why we only assume the connection shall be closed if we receive
-        //        // a "connection = close" header.
-        //        let serverCloseConnection =
-        //            response.head.headers["connection"].contains(where: { $0.lowercased() == "close" })
-        //
-        //        let closeConnection = serverCloseConnection || response.head.version != .http1_1
-        //
-        //        if closeConnection {
-        //            // If we were succeeding the request promise here directly and closing the connection
-        //            // after succeeding the promise we may run into a race condition:
-        //            //
-        //            // The lambda runtime will ask for the next work item directly after a succeeded post
-        //            // response request. The desire for the next work item might be faster than the attempt
-        //            // to close the connection. This will lead to a situation where we try to the connection
-        //            // but the next request has already been scheduled on the connection that we want to
-        //            // close. For this reason we postpone succeeding the promise until the connection has
-        //            // been closed. This codepath will only be hit in the very, very unlikely event of the
-        //            // Lambda control plane demanding to close connection. (It's more or less only
-        //            // implemented to support http1.1 correctly.) This behavior is ensured with the test
-        //            // `LambdaTest.testNoKeepAliveServer`.
-        //            self.state = .waitForConnectionClose(httpResponse, promise)
-        //            _ = context.channel.close()
-        //            return
-        //        } else {
-        //            self.state = .idle
-        //            promise.succeed(httpResponse)
-        //        }
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
