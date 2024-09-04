@@ -55,14 +55,13 @@ private enum LocalLambda {
         private let port: Int
         private let invocationEndpoint: String
 
-        public init(invocationEndpoint: String?) {
-            let configuration = LambdaConfiguration()
+        init(invocationEndpoint: String?) {
             var logger = Logger(label: "LocalLambdaServer")
-            logger.logLevel = configuration.general.logLevel
+            logger.logLevel = .info
             self.logger = logger
             self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-            self.host = configuration.runtimeEngine.ip
-            self.port = configuration.runtimeEngine.port
+            self.host = "127.0.0.1"
+            self.port = 0
             self.invocationEndpoint = invocationEndpoint ?? "/invoke"
         }
 
