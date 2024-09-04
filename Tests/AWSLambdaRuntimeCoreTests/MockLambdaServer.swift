@@ -53,7 +53,7 @@ final class MockLambdaServer {
     private var shutdown = false
 
     init(behavior: LambdaServerBehavior, host: String = "127.0.0.1", port: Int = 7000, keepAlive: Bool = true) {
-        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        self.group = NIOSingletons.posixEventLoopGroup
         self.behavior = behavior
         self.host = host
         self.port = port
