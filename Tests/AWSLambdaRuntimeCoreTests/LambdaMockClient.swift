@@ -17,14 +17,14 @@ import Foundation
 import Logging
 import NIOCore
 
-struct LambdaMockWriter: LambdaResponseStreamWriter {
+struct LambdaMockWriter: LambdaRuntimeClientResponseStreamWriter {
     var underlying: LambdaMockClient
 
     init(underlying: LambdaMockClient) {
         self.underlying = underlying
     }
 
-    mutating func write(_ buffer: ByteBuffer) async throws {
+    func write(_ buffer: ByteBuffer) async throws {
         try await self.underlying.write(buffer)
     }
 

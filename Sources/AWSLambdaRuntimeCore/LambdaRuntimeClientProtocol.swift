@@ -14,15 +14,15 @@
 
 import NIOCore
 
-package protocol LambdaResponseStreamWriter {
-    mutating func write(_ buffer: ByteBuffer) async throws
+package protocol LambdaRuntimeClientResponseStreamWriter: LambdaResponseStreamWriter {
+    func write(_ buffer: ByteBuffer) async throws
     func finish() async throws
     func writeAndFinish(_ buffer: ByteBuffer) async throws
     func reportError(_ error: any Error) async throws
 }
 
 package protocol LambdaRuntimeClientProtocol {
-    associatedtype Writer: LambdaResponseStreamWriter
+    associatedtype Writer: LambdaRuntimeClientResponseStreamWriter
 
     func nextInvocation() async throws -> (Invocation, Writer)
 }

@@ -126,8 +126,7 @@ package struct NewLambdaContext: CustomDebugStringConvertible, Sendable {
         traceID: String,
         invokedFunctionARN: String,
         timeout: DispatchTimeInterval,
-        logger: Logger,
-        eventLoop: EventLoop
+        logger: Logger
     ) -> NewLambdaContext {
         NewLambdaContext(
             requestID: requestID,
