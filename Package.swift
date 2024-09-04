@@ -25,7 +25,6 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.72.0")),
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.5.4")),
-        .package(url: "https://github.com/apple/swift-docc-plugin.git", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-testing.git", branch: "swift-DEVELOPMENT-SNAPSHOT-2024-08-29-a"),
     ],
     targets: [
@@ -84,13 +83,14 @@ let package = Package(
             dependencies: [
                 .byName(name: "AWSLambdaRuntime"),
                 .product(name: "NIO", package: "swift-nio"),
-            ],
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            ]
         ),
         .testTarget(
             name: "AWSLambdaTestingTests",
-            dependencies: ["AWSLambdaTesting"],
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            dependencies: [
+                .byName(name: "AWSLambdaTesting"),
+                .product(name: "Testing", package: "swift-testing"),
+            ]
         ),
         // for perf testing
         .executableTarget(
