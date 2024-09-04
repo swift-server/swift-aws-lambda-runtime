@@ -816,4 +816,3 @@ extension NewLambdaRuntimeClient {
     ]
 
 }
-
