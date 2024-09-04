@@ -20,6 +20,27 @@ import NIOPosix
 
 @testable import AWSLambdaRuntimeCore
 
+func withMockServer<Result>(
+    behaviour: some LambdaServerBehavior,
+    port: Int = 0,
+    keepAlive: Bool = true,
+    _ body: (_ port: Int) async throws -> Result
+) async throws -> Result {
+    let eventLoopGroup = NIOSingletons.posixEventLoopGroup
+    let server = MockLambdaServer(behavior: behaviour, port: port, keepAlive: keepAlive)
+    let port = try await server.start().get()
+
+    let result: Swift.Result<Result, any Error>
+    do {
+        result = .success(try await body(port))
+    } catch {
+        result = .failure(error)
+    }
+
+    try? await server.stop().get()
+    return try result.get()
+}
+
 final class MockLambdaServer {
     private let logger = Logger(label: "MockLambdaServer")
     private let behavior: LambdaServerBehavior
