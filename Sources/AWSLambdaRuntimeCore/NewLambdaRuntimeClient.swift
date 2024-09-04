@@ -689,6 +689,37 @@ extension LambdaChannelHandler: ChannelInboundHandler {
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let response = unwrapInboundIn(data)
 
+        // handle response content
+
+        switch self.state {
+        case .connected(let context, .waitingForNextInvocation(let continuation)):
+            do {
+                let metadata = try InvocationMetadata(headers: response.head.headers)
+                self.state = .connected(context, .waitingForResponse)
+                continuation.resume(returning: Invocation(metadata: metadata, event: response.body ?? ByteBuffer()))
+            } catch {
+                self.state = .closing
+
+                self.delegate.connectionWillClose(channel: context.channel)
+                context.close(promise: nil)
+                continuation.resume(
+                    throwing: NewLambdaRuntimeError(code: .invocationMissingMetadata, underlying: error)
+                )
+            }
+
+        case .connected(let context, .sentResponse(let continuation)):
+            if response.head.status == .accepted {
+                self.state = .connected(context, .idle)
+                continuation.resume()
+            } else {
+                self.state = .connected(context, .idle)
+                continuation.resume(throwing: NewLambdaRuntimeError(code: .unexpectedStatusCodeForRequest))
+            }
+
+        case .disconnected, .closing, .connected(_, _):
+            break
+        }
+
         // As defined in RFC 7230 Section 6.3:
         // HTTP/1.1 defaults to the use of "persistent connections", allowing
         // multiple requests and responses to be carried over a single
@@ -719,39 +750,6 @@ extension LambdaChannelHandler: ChannelInboundHandler {
             self.state = .closing
             self.delegate.connectionWillClose(channel: context.channel)
             context.close(promise: nil)
-        } else {
-            self.state = .connected(context, .idle)
-        }
-
-        // handle response content
-
-        switch self.state {
-        case .connected(let context, .waitingForNextInvocation(let continuation)):
-            do {
-                let metadata = try InvocationMetadata(headers: response.head.headers)
-                self.state = .connected(context, .waitingForResponse)
-                continuation.resume(returning: Invocation(metadata: metadata, event: response.body ?? ByteBuffer()))
-            } catch {
-                self.state = .closing
-
-                self.delegate.connectionWillClose(channel: context.channel)
-                context.close(promise: nil)
-                continuation.resume(
-                    throwing: NewLambdaRuntimeError(code: .invocationMissingMetadata, underlying: error)
-                )
-            }
-
-        case .connected(let context, .sentResponse(let continuation)):
-            if response.head.status == .accepted {
-                self.state = .connected(context, .idle)
-                continuation.resume()
-            } else {
-                self.state = .connected(context, .idle)
-                continuation.resume(throwing: NewLambdaRuntimeError(code: .unexpectedStatusCodeForRequest))
-            }
-
-        case .disconnected, .closing, .connected(_, _):
-            break
         }
     }
 
