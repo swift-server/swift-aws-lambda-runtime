@@ -84,13 +84,14 @@ let package = Package(
             dependencies: [
                 .byName(name: "AWSLambdaRuntime"),
                 .product(name: "NIO", package: "swift-nio"),
-            ],
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            ]
         ),
         .testTarget(
             name: "AWSLambdaTestingTests",
-            dependencies: ["AWSLambdaTesting"],
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            dependencies: [
+                .byName(name: "AWSLambdaTesting"),
+                .product(name: "Testing", package: "swift-testing"),
+            ]
         ),
         // for perf testing
         .executableTarget(
