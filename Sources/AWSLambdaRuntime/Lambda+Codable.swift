@@ -170,7 +170,13 @@ extension LambdaCodableAdapter {
         encoder: JSONEncoder,
         decoder: JSONDecoder,
         handler: Handler
-    ) where Output: Encodable, Output == Handler.Output, Encoder == LambdaJSONOutputEncoder<Output>, Decoder == JSONDecoder {
+    )
+    where
+        Output: Encodable,
+        Output == Handler.Output,
+        Encoder == LambdaJSONOutputEncoder<Output>,
+        Decoder == JSONDecoder
+    {
         self.init(
             encoder: LambdaJSONOutputEncoder(encoder),
             decoder: decoder,

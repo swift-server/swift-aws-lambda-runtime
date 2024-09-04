@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Testing
 import AWSLambdaRuntime
-import NIOCore
 import Logging
+import NIOCore
+import Testing
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -53,7 +54,11 @@ struct JSONTests {
             foo
         }
 
-        var handler = LambdaCodableAdapter(encoder: jsonEncoder, decoder: jsonDecoder, handler: LambdaHandlerAdapter(handler: closureHandler))
+        var handler = LambdaCodableAdapter(
+            encoder: jsonEncoder,
+            decoder: jsonDecoder,
+            handler: LambdaHandlerAdapter(handler: closureHandler)
+        )
 
         let event = ByteBuffer(string: #"{"bar":"baz"}"#)
         let writer = MockLambdaWriter()
