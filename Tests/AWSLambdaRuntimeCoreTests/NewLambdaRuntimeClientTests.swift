@@ -24,11 +24,11 @@ import struct Foundation.UUID
 @Suite
 struct NewLambdaRuntimeClientTests {
 
-    let logger = Logger(label: "NewLambdaClientRuntimeTest")
-
-    init() {
-
-    }
+    let logger = {
+        var logger = Logger(label: "NewLambdaClientRuntimeTest")
+        logger.logLevel = .trace
+        return logger
+    }()
 
     @Test
     func testSimpleInvocations() async throws {
@@ -57,12 +57,12 @@ struct NewLambdaRuntimeClientTests {
             }
         }
 
-        try await self.withMockServer(behaviour: HappyBehavior()) { mockServer, eventLoopGroup in
-            let configuration = NewLambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: 7000)
+        try await withMockServer(behaviour: HappyBehavior()) { port in
+            let configuration = NewLambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: port)
 
             try await NewLambdaRuntimeClient.withRuntimeClient(
                 configuration: configuration,
-                eventLoop: eventLoopGroup.next(),
+                eventLoop: NIOSingletons.posixEventLoopGroup.next(),
                 logger: self.logger
             ) { runtimeClient in
                 do {
@@ -86,26 +86,4 @@ struct NewLambdaRuntimeClientTests {
             }
         }
     }
-
-    func withMockServer<Result>(
-        behaviour: some LambdaServerBehavior,
-        _ body: (MockLambdaServer, MultiThreadedEventLoopGroup) async throws -> Result
-    ) async throws -> Result {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        let server = MockLambdaServer(behavior: behaviour)
-        _ = try await server.start().get()
-
-        let result: Swift.Result<Result, any Error>
-        do {
-            result = .success(try await body(server, eventLoopGroup))
-        } catch {
-            result = .failure(error)
-        }
-
-        try? await server.stop().get()
-        try? await eventLoopGroup.shutdownGracefully()
-
-        return try result.get()
-    }
-
 }

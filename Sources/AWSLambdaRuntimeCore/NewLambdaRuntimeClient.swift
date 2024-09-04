@@ -114,6 +114,8 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
     }
 
     private func close() async {
+        self.logger.trace("Close lambda runtime client")
+
         guard case .notClosing = self.closingState else {
             return
         }
@@ -229,9 +231,23 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
 
     private func channelClosed(_ channel: any Channel) {
         switch (self.connectionState, self.closingState) {
-        case (.disconnected, _),
-            (_, .closed):
+        case (_, .closed):
             fatalError("Invalid state: \(self.connectionState), \(self.closingState)")
+
+        case (.disconnected, .notClosing):
+            if let index = self.closingConnections.firstIndex(where: { $0 === channel }) {
+                self.closingConnections.remove(at: index)
+            }
+
+        case (.disconnected, .closing(let continuation)):
+            if let index = self.closingConnections.firstIndex(where: { $0 === channel }) {
+                self.closingConnections.remove(at: index)
+            }
+
+            if self.closingConnections.isEmpty {
+                self.closingState = .closed
+                continuation.resume()
+            }
 
         case (.connecting(let array), .notClosing):
             self.connectionState = .disconnected
@@ -303,8 +319,14 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
             let handler = try channel.pipeline.syncOperations.handler(
                 type: LambdaChannelHandler<NewLambdaRuntimeClient>.self
             )
+            self.logger.trace(
+                "Connection to control plane created",
+                metadata: [
+                    "lambda_port": "\(self.configuration.port)",
+                    "lambda_ip": "\(self.configuration.ip)",
+                ]
+            )
             channel.closeFuture.whenComplete { result in
-                self.eventLoop.preconditionInEventLoop()
                 self.assumeIsolated { runtimeClient in
                     runtimeClient.channelClosed(channel)
                 }
@@ -754,6 +776,12 @@ extension LambdaChannelHandler: ChannelInboundHandler {
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
+        self.logger.trace(
+            "Channel error caught",
+            metadata: [
+                "error": "\(error)"
+            ]
+        )
         // pending responses will fail with lastError in channelInactive since we are calling context.close
         self.delegate.connectionErrorHappened(error, channel: context.channel)
 
