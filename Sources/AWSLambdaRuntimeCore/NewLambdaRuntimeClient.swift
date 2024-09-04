@@ -25,7 +25,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
         var port: Int
     }
 
-    struct Writer: LambdaResponseStreamWriter {
+    struct Writer: LambdaRuntimeClientResponseStreamWriter {
         private var runtimeClient: NewLambdaRuntimeClient
 
         fileprivate init(runtimeClient: NewLambdaRuntimeClient) {
@@ -71,6 +71,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
     enum ClosingState {
         case notClosing
         case closing(CheckedContinuation<Void, Never>)
+        case closed
     }
 
     private let eventLoop: any EventLoop
@@ -121,7 +122,9 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
 
             switch self.connectionState {
             case .disconnected:
-                break
+                if self.closingConnections.isEmpty {
+                    return continuation.resume()
+                }
 
             case .connecting(let continuations):
                 for continuation in continuations {
@@ -129,12 +132,10 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
                 }
                 self.connectionState = .connecting([])
 
-            case .connected(let channel, let lambdaChannelHandler):
-                channel.clo
+            case .connected(let channel, _):
+                channel.close(mode: .all, promise: nil)
             }
         }
-
-
     }
 
     func nextInvocation() async throws -> (Invocation, Writer) {
@@ -227,19 +228,35 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
     }
 
     private func channelClosed(_ channel: any Channel) {
-        switch self.connectionState {
-        case .disconnected:
-            break
+        switch (self.connectionState, self.closingState) {
+        case (.disconnected, _),
+            (_, .closed):
+            fatalError("Invalid state: \(self.connectionState), \(self.closingState)")
 
-        case .connecting(let array):
+        case (.connecting(let array), .notClosing):
             self.connectionState = .disconnected
-
             for continuation in array {
                 continuation.resume(throwing: NewLambdaRuntimeError(code: .lostConnectionToControlPlane))
             }
 
-        case .connected:
+        case (.connecting(let array), .closing(let continuation)):
             self.connectionState = .disconnected
+            precondition(array.isEmpty, "If we are closing we should have failed all connection attempts already")
+            if self.closingConnections.isEmpty {
+                self.closingState = .closed
+                continuation.resume()
+            }
+
+        case (.connected, .notClosing):
+            self.connectionState = .disconnected
+
+        case (.connected, .closing(let continuation)):
+            self.connectionState = .disconnected
+
+            if self.closingConnections.isEmpty {
+                self.closingState = .closed
+                continuation.resume()
+            }
         }
     }
 
@@ -355,7 +372,6 @@ extension NewLambdaRuntimeClient: LambdaChannelHandlerDelegate {
                 }
 
                 isolated.connectionState = .disconnected
-
 
             }
         }
