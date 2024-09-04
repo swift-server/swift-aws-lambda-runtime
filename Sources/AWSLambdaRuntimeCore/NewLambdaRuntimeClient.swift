@@ -578,7 +578,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
                 version: .http1_1,
                 method: .POST,
                 uri: url,
-                headers: LambdaRuntimeClient.streamingHeaders
+                headers: NewLambdaRuntimeClient.streamingHeaders
             )
 
             context.write(self.wrapOutboundOut(.head(httpRequest)), promise: nil)
@@ -608,7 +608,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
                         "content-length": "\(byteBuffer?.readableBytes ?? 0)",
                     ]
                 } else {
-                    LambdaRuntimeClient.streamingHeaders
+                    NewLambdaRuntimeClient.streamingHeaders
                 }
 
             let httpRequest = HTTPRequestHead(
@@ -634,7 +634,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             version: .http1_1,
             method: .GET,
             uri: self.nextInvocationPath,
-            headers: LambdaRuntimeClient.defaultHeaders
+            headers: NewLambdaRuntimeClient.defaultHeaders
         )
 
         context.write(self.wrapOutboundOut(.head(httpRequest)), promise: nil)
@@ -650,7 +650,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             version: .http1_1,
             method: .POST,
             uri: url,
-            headers: LambdaRuntimeClient.errorHeaders
+            headers: NewLambdaRuntimeClient.errorHeaders
         )
 
         if self.reusableErrorBuffer == nil {
@@ -798,4 +798,21 @@ extension LambdaChannelHandler: ChannelInboundHandler {
     }
 }
 
-private struct RequestCancelEvent {}
+extension NewLambdaRuntimeClient {
+    static let defaultHeaders: HTTPHeaders = [
+        "user-agent": "Swift-Lambda/Unknown"
+    ]
+
+    /// These headers must be sent along an invocation or initialization error report
+    static let errorHeaders: HTTPHeaders = [
+        "user-agent": "Swift-Lambda/Unknown",
+        "lambda-runtime-function-error-type": "Unhandled",
+    ]
+
+    /// These headers must be sent along an invocation or initialization error report
+    static let streamingHeaders: HTTPHeaders = [
+        "user-agent": "Swift-Lambda/Unknown",
+        "transfer-encoding": "streaming",
+    ]
+
+}

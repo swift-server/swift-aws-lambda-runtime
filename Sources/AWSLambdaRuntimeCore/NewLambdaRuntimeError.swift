@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-struct NewLambdaRuntimeError: Error {
-    enum Code {
+package struct NewLambdaRuntimeError: Error {
+    package enum Code {
         case closingRuntimeClient
 
         case connectionToControlPlaneLost
@@ -25,9 +25,18 @@ struct NewLambdaRuntimeError: Error {
         case lostConnectionToControlPlane
         case unexpectedStatusCodeForRequest
 
+        case nextInvocationMissingHeaderRequestID
+        case nextInvocationMissingHeaderDeadline
+        case nextInvocationMissingHeaderInvokeFuctionARN
+
     }
 
-    var code: Code
-    var underlying: (any Error)?
+    package init(code: Code, underlying: (any Error)? = nil) {
+        self.code = code
+        self.underlying = underlying
+    }
+
+    package var code: Code
+    package var underlying: (any Error)?
 
 }
