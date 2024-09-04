@@ -16,7 +16,6 @@ import Logging
 import NIOCore
 import NIOHTTP1
 import NIOPosix
-import _NIOBase64
 
 final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
     nonisolated let unownedExecutor: UnownedSerialExecutor
@@ -69,11 +68,22 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
         case sentResponse(requestID: String)
     }
 
+    enum ClosingState {
+        case notClosing
+        case closing(CheckedContinuation<Void, Never>)
+    }
+
     private let eventLoop: any EventLoop
     private let logger: Logger
     private let configuration: Configuration
+
     private var connectionState: ConnectionState = .disconnected
     private var lambdaState: LambdaState = .idle(previousRequestID: nil)
+    private var closingState: ClosingState = .notClosing
+
+    // connections that are currently being closed. In the `run` method we must await all of them
+    // being fully closed before we can return from it.
+    private var closingConnections: [any Channel] = []
 
     static func withRuntimeClient<Result>(
         configuration: Configuration,
@@ -89,6 +99,8 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
             result = .failure(error)
         }
 
+        await runtime.close()
+
         //try? await runtime.close()
         return try result.get()
     }
@@ -98,6 +110,31 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
         self.configuration = configuration
         self.eventLoop = eventLoop
         self.logger = logger
+    }
+
+    private func close() async {
+        guard case .notClosing = self.closingState else {
+            return
+        }
+        await withCheckedContinuation { continuation in
+            self.closingState = .closing(continuation)
+
+            switch self.connectionState {
+            case .disconnected:
+                break
+
+            case .connecting(let continuations):
+                for continuation in continuations {
+                    continuation.resume(throwing: NewLambdaRuntimeError(code: .closingRuntimeClient))
+                }
+                self.connectionState = .connecting([])
+
+            case .connected(let channel, let lambdaChannelHandler):
+                channel.clo
+            }
+        }
+
+
     }
 
     func nextInvocation() async throws -> (Invocation, Writer) {
@@ -190,7 +227,20 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
     }
 
     private func channelClosed(_ channel: any Channel) {
-        // TODO: Fill out
+        switch self.connectionState {
+        case .disconnected:
+            break
+
+        case .connecting(let array):
+            self.connectionState = .disconnected
+
+            for continuation in array {
+                continuation.resume(throwing: NewLambdaRuntimeError(code: .lostConnectionToControlPlane))
+            }
+
+        case .connected:
+            self.connectionState = .disconnected
+        }
     }
 
     private func makeOrGetConnection() async throws -> LambdaChannelHandler<NewLambdaRuntimeClient> {
@@ -227,6 +277,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
                     return channel.eventLoop.makeFailedFuture(error)
                 }
             }
+            .connectTimeout(.seconds(2))
 
         do {
             // connect directly via socket address to avoid happy eyeballs (perf)
@@ -279,6 +330,35 @@ extension NewLambdaRuntimeClient: LambdaChannelHandlerDelegate {
     }
 
     nonisolated func connectionWillClose(channel: any Channel) {
+        self.assumeIsolated { isolated in
+            switch isolated.connectionState {
+            case .disconnected:
+                // this case should never happen. But whatever
+                if channel.isActive {
+                    isolated.closingConnections.append(channel)
+                }
+
+            case .connecting(let continuations):
+                // this case should never happen. But whatever
+                if channel.isActive {
+                    isolated.closingConnections.append(channel)
+                }
+
+                for continuation in continuations {
+                    continuation.resume(throwing: NewLambdaRuntimeError(code: .connectionToControlPlaneLost))
+                }
+
+            case .connected(let stateChannel, _):
+                guard channel === stateChannel else {
+                    isolated.closingConnections.append(channel)
+                    return
+                }
+
+                isolated.connectionState = .disconnected
+
+
+            }
+        }
 
     }
 }
@@ -288,7 +368,7 @@ private protocol LambdaChannelHandlerDelegate {
     func connectionErrorHappened(_ error: any Error, channel: any Channel)
 }
 
-private final class LambdaChannelHandler<Delegate> {
+private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate> {
     let nextInvocationPath = Consts.invocationURLPrefix + Consts.getNextInvocationURLSuffix
 
     enum State {
@@ -652,27 +732,18 @@ extension LambdaChannelHandler: ChannelInboundHandler {
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
         // pending responses will fail with lastError in channelInactive since we are calling context.close
+        self.delegate.connectionErrorHappened(error, channel: context.channel)
+
         self.lastError = error
         context.channel.close(promise: nil)
     }
 
     func channelInactive(context: ChannelHandlerContext) {
         // fail any pending responses with last error or assume peer disconnected
-        context.fireChannelInactive()
 
-        //        switch self.state {
-        //        case .idle:
-        //            break
-        //
-        //        case .running(let promise, let timeout):
-        //            self.state = .idle
-        //            timeout?.cancel()
-        //            promise.fail(self.lastError ?? HTTPClient.Errors.connectionResetByPeer)
-        //
-        //        case .waitForConnectionClose(let response, let promise):
-        //            self.state = .idle
-        //            promise.succeed(response)
-        //        }
+        // we don't need to forward channelInactive to the delegate, as the delegate observes the
+        // closeFuture
+        context.fireChannelInactive()
     }
 }
 

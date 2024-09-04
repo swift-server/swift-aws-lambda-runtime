@@ -14,6 +14,8 @@
 
 struct NewLambdaRuntimeError: Error {
     enum Code {
+        case closingRuntimeClient
+
         case connectionToControlPlaneLost
         case connectionToControlPlaneGoingAway
         case invocationMissingMetadata
