@@ -25,7 +25,6 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.72.0")),
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.5.4")),
-        .package(url: "https://github.com/apple/swift-docc-plugin.git", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-testing.git", branch: "swift-DEVELOPMENT-SNAPSHOT-2024-08-29-a"),
     ],
     targets: [
