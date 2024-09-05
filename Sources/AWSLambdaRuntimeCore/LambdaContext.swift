@@ -20,7 +20,7 @@ import NIOCore
 
 /// Lambda runtime context.
 /// The Lambda runtime generates and passes the `LambdaContext` to the Lambda handler as an argument.
-package struct NewLambdaContext: CustomDebugStringConvertible, Sendable {
+package struct LambdaContext: CustomDebugStringConvertible, Sendable {
     final class _Storage: Sendable {
         let requestID: String
         let traceID: String
@@ -127,8 +127,8 @@ package struct NewLambdaContext: CustomDebugStringConvertible, Sendable {
         invokedFunctionARN: String,
         timeout: DispatchTimeInterval,
         logger: Logger
-    ) -> NewLambdaContext {
-        NewLambdaContext(
+    ) -> LambdaContext {
+        LambdaContext(
             requestID: requestID,
             traceID: traceID,
             invokedFunctionARN: invokedFunctionARN,

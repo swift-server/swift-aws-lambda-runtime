@@ -44,7 +44,7 @@ enum Lambda {
                 try await handler.handle(
                     invocation.event,
                     responseWriter: writer,
-                    context: NewLambdaContext(
+                    context: LambdaContext(
                         requestID: invocation.metadata.requestID,
                         traceID: invocation.metadata.traceID,
                         invokedFunctionARN: invocation.metadata.invokedFunctionARN,

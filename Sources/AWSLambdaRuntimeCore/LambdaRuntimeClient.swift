@@ -17,7 +17,7 @@ import NIOCore
 import NIOHTTP1
 import NIOPosix
 
-final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
+final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
     nonisolated let unownedExecutor: UnownedSerialExecutor
 
     struct Configuration {
@@ -26,9 +26,9 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
     }
 
     struct Writer: LambdaRuntimeClientResponseStreamWriter {
-        private var runtimeClient: NewLambdaRuntimeClient
+        private var runtimeClient: LambdaRuntimeClient
 
-        fileprivate init(runtimeClient: NewLambdaRuntimeClient) {
+        fileprivate init(runtimeClient: LambdaRuntimeClient) {
             self.runtimeClient = runtimeClient
         }
 
@@ -51,8 +51,8 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
 
     private enum ConnectionState {
         case disconnected
-        case connecting([CheckedContinuation<LambdaChannelHandler<NewLambdaRuntimeClient>, any Error>])
-        case connected(Channel, LambdaChannelHandler<NewLambdaRuntimeClient>)
+        case connecting([CheckedContinuation<LambdaChannelHandler<LambdaRuntimeClient>, any Error>])
+        case connected(Channel, LambdaChannelHandler<LambdaRuntimeClient>)
     }
 
     enum LambdaState {
@@ -90,9 +90,9 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
         configuration: Configuration,
         eventLoop: any EventLoop,
         logger: Logger,
-        _ body: (NewLambdaRuntimeClient) async throws -> Result
+        _ body: (LambdaRuntimeClient) async throws -> Result
     ) async throws -> Result {
-        let runtime = NewLambdaRuntimeClient(configuration: configuration, eventLoop: eventLoop, logger: logger)
+        let runtime = LambdaRuntimeClient(configuration: configuration, eventLoop: eventLoop, logger: logger)
         let result: Swift.Result<Result, any Error>
         do {
             result = .success(try await body(runtime))
@@ -130,7 +130,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
 
             case .connecting(let continuations):
                 for continuation in continuations {
-                    continuation.resume(throwing: NewLambdaRuntimeError(code: .closingRuntimeClient))
+                    continuation.resume(throwing: LambdaRuntimeError(code: .closingRuntimeClient))
                 }
                 self.connectionState = .connecting([])
 
@@ -164,7 +164,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
     private func write(_ buffer: NIOCore.ByteBuffer) async throws {
         switch self.lambdaState {
         case .idle, .sentResponse:
-            throw NewLambdaRuntimeError(code: .writeAfterFinishHasBeenSent)
+            throw LambdaRuntimeError(code: .writeAfterFinishHasBeenSent)
 
         case .waitingForNextInvocation:
             fatalError("Invalid state: \(self.lambdaState)")
@@ -185,7 +185,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
     private func writeAndFinish(_ buffer: NIOCore.ByteBuffer?) async throws {
         switch self.lambdaState {
         case .idle, .sentResponse:
-            throw NewLambdaRuntimeError(code: .finishAfterFinishHasBeenSent)
+            throw LambdaRuntimeError(code: .finishAfterFinishHasBeenSent)
 
         case .waitingForNextInvocation:
             fatalError("Invalid state: \(self.lambdaState)")
@@ -252,7 +252,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
         case (.connecting(let array), .notClosing):
             self.connectionState = .disconnected
             for continuation in array {
-                continuation.resume(throwing: NewLambdaRuntimeError(code: .lostConnectionToControlPlane))
+                continuation.resume(throwing: LambdaRuntimeError(code: .lostConnectionToControlPlane))
             }
 
         case (.connecting(let array), .closing(let continuation)):
@@ -276,7 +276,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
         }
     }
 
-    private func makeOrGetConnection() async throws -> LambdaChannelHandler<NewLambdaRuntimeClient> {
+    private func makeOrGetConnection() async throws -> LambdaChannelHandler<LambdaRuntimeClient> {
         switch self.connectionState {
         case .disconnected:
             self.connectionState = .connecting([])
@@ -285,7 +285,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
             // Since we do get sequential invocations this case normally should never be hit.
             // We'll support it anyway.
             return try await withCheckedThrowingContinuation {
-                (continuation: CheckedContinuation<LambdaChannelHandler<NewLambdaRuntimeClient>, any Error>) in
+                (continuation: CheckedContinuation<LambdaChannelHandler<LambdaRuntimeClient>, any Error>) in
                 array.append(continuation)
                 self.connectionState = .connecting(array)
             }
@@ -317,7 +317,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
             let address = try SocketAddress(ipAddress: self.configuration.ip, port: self.configuration.port)
             let channel = try await bootstrap.connect(to: address).get()
             let handler = try channel.pipeline.syncOperations.handler(
-                type: LambdaChannelHandler<NewLambdaRuntimeClient>.self
+                type: LambdaChannelHandler<LambdaRuntimeClient>.self
             )
             self.logger.trace(
                 "Connection to control plane created",
@@ -363,7 +363,7 @@ final actor NewLambdaRuntimeClient: LambdaRuntimeClientProtocol {
     }
 }
 
-extension NewLambdaRuntimeClient: LambdaChannelHandlerDelegate {
+extension LambdaRuntimeClient: LambdaChannelHandlerDelegate {
     nonisolated func connectionErrorHappened(_ error: any Error, channel: any Channel) {
 
     }
@@ -384,7 +384,7 @@ extension NewLambdaRuntimeClient: LambdaChannelHandlerDelegate {
                 }
 
                 for continuation in continuations {
-                    continuation.resume(throwing: NewLambdaRuntimeError(code: .connectionToControlPlaneLost))
+                    continuation.resume(throwing: LambdaRuntimeError(code: .connectionToControlPlaneLost))
                 }
 
             case .connected(let stateChannel, _):
@@ -433,7 +433,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
     private var reusableErrorBuffer: ByteBuffer?
     private let logger: Logger
     private let delegate: Delegate
-    private let configuration: NewLambdaRuntimeClient.Configuration
+    private let configuration: LambdaRuntimeClient.Configuration
 
     /// These are the default headers that must be sent along an invocation
     let defaultHeaders: HTTPHeaders
@@ -442,7 +442,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
     /// These headers must be sent when streaming a response
     let streamingHeaders: HTTPHeaders
 
-    init(delegate: Delegate, logger: Logger, configuration: NewLambdaRuntimeClient.Configuration) {
+    init(delegate: Delegate, logger: Logger, configuration: LambdaRuntimeClient.Configuration) {
         self.delegate = delegate
         self.logger = logger
         self.configuration = configuration
@@ -479,7 +479,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             fatalError("Invalid state: \(self.state)")
 
         case .disconnected:
-            throw NewLambdaRuntimeError(code: .connectionToControlPlaneLost)
+            throw LambdaRuntimeError(code: .connectionToControlPlaneLost)
         }
     }
 
@@ -518,10 +518,10 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             )
 
         case .disconnected:
-            throw NewLambdaRuntimeError(code: .connectionToControlPlaneLost)
+            throw LambdaRuntimeError(code: .connectionToControlPlaneLost)
 
         case .closing:
-            throw NewLambdaRuntimeError(code: .connectionToControlPlaneGoingAway)
+            throw LambdaRuntimeError(code: .connectionToControlPlaneGoingAway)
         }
     }
 
@@ -543,13 +543,13 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
 
         case .connected(_, .idle),
             .connected(_, .sentResponse):
-            throw NewLambdaRuntimeError(code: .writeAfterFinishHasBeenSent)
+            throw LambdaRuntimeError(code: .writeAfterFinishHasBeenSent)
 
         case .disconnected:
-            throw NewLambdaRuntimeError(code: .connectionToControlPlaneLost)
+            throw LambdaRuntimeError(code: .connectionToControlPlaneLost)
 
         case .closing:
-            throw NewLambdaRuntimeError(code: .connectionToControlPlaneGoingAway)
+            throw LambdaRuntimeError(code: .connectionToControlPlaneGoingAway)
         }
     }
 
@@ -576,13 +576,13 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             }
 
         case .connected(_, .sentResponse):
-            throw NewLambdaRuntimeError(code: .finishAfterFinishHasBeenSent)
+            throw LambdaRuntimeError(code: .finishAfterFinishHasBeenSent)
 
         case .disconnected:
-            throw NewLambdaRuntimeError(code: .connectionToControlPlaneLost)
+            throw LambdaRuntimeError(code: .connectionToControlPlaneLost)
 
         case .closing:
-            throw NewLambdaRuntimeError(code: .connectionToControlPlaneGoingAway)
+            throw LambdaRuntimeError(code: .connectionToControlPlaneGoingAway)
         }
     }
 
@@ -749,7 +749,7 @@ extension LambdaChannelHandler: ChannelInboundHandler {
                 self.delegate.connectionWillClose(channel: context.channel)
                 context.close(promise: nil)
                 continuation.resume(
-                    throwing: NewLambdaRuntimeError(code: .invocationMissingMetadata, underlying: error)
+                    throwing: LambdaRuntimeError(code: .invocationMissingMetadata, underlying: error)
                 )
             }
 
@@ -759,7 +759,7 @@ extension LambdaChannelHandler: ChannelInboundHandler {
                 continuation.resume()
             } else {
                 self.state = .connected(context, .idle)
-                continuation.resume(throwing: NewLambdaRuntimeError(code: .unexpectedStatusCodeForRequest))
+                continuation.resume(throwing: LambdaRuntimeError(code: .unexpectedStatusCodeForRequest))
             }
 
         case .disconnected, .closing, .connected(_, _):

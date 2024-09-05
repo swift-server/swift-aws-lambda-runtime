@@ -22,7 +22,7 @@ import struct Foundation.UUID
 @testable import AWSLambdaRuntimeCore
 
 @Suite
-struct NewLambdaRuntimeClientTests {
+struct LambdaRuntimeClientTests {
 
     let logger = {
         var logger = Logger(label: "NewLambdaClientRuntimeTest")
@@ -58,9 +58,9 @@ struct NewLambdaRuntimeClientTests {
         }
 
         try await withMockServer(behaviour: HappyBehavior()) { port in
-            let configuration = NewLambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: port)
+            let configuration = LambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: port)
 
-            try await NewLambdaRuntimeClient.withRuntimeClient(
+            try await LambdaRuntimeClient.withRuntimeClient(
                 configuration: configuration,
                 eventLoop: NIOSingletons.posixEventLoopGroup.next(),
                 logger: self.logger

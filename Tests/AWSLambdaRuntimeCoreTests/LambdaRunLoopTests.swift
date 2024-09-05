@@ -25,7 +25,7 @@ struct LambdaRunLoopTests {
         func handle(
             _ event: ByteBuffer,
             responseWriter: some LambdaResponseStreamWriter,
-            context: NewLambdaContext
+            context: LambdaContext
         ) async throws {
             try await responseWriter.writeAndFinish(event)
         }
@@ -35,7 +35,7 @@ struct LambdaRunLoopTests {
         func handle(
             _ event: ByteBuffer,
             responseWriter: some LambdaResponseStreamWriter,
-            context: NewLambdaContext
+            context: LambdaContext
         ) async throws {
             throw LambdaError.handlerError
         }
