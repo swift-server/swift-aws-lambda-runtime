@@ -47,9 +47,5 @@ extension Lambda {
     }
 
     /// The default EventLoop the Lambda is scheduled on.
-    package static var defaultEventLoop: any EventLoop {
-        get {
-            NIOSingletons.posixEventLoopGroup.next()
-        }
-    }
+    package static var defaultEventLoop: any EventLoop = NIOSingletons.posixEventLoopGroup.next()
 }

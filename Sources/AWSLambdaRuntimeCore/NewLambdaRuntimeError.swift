@@ -29,6 +29,8 @@ package struct NewLambdaRuntimeError: Error {
         case nextInvocationMissingHeaderDeadline
         case nextInvocationMissingHeaderInvokeFuctionARN
 
+        case cannotStartLambdaRuntime
+        case runtimeCanOnlyBeStartedOnce
     }
 
     package init(code: Code, underlying: (any Error)? = nil) {
