@@ -159,13 +159,3 @@ where Output == Encoder.Output {
         try await self.underlyingStreamWriter.writeAndFinish(outputBuffer)
     }
 }
-
-extension NewLambdaRuntime {
-    /// Initialize an instance with a ``StreamingLambdaHandler`` in the form of a closure.
-    /// - Parameter body: The handler in the form of a closure.
-    package convenience init(
-        body: @Sendable @escaping (ByteBuffer, LambdaResponseStreamWriter, NewLambdaContext) async throws -> Void
-    ) where Handler == StreamingClosureHandler {
-        self.init(handler: StreamingClosureHandler(body: body))
-    }
-}
