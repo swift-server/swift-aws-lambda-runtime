@@ -60,7 +60,7 @@ public enum Lambda {
     }
 
     /// The default EventLoop the Lambda is scheduled on.
-    public static var defaultEventLoop: any EventLoop = NIOSingletons.posixEventLoopGroup.next()
+    public static let defaultEventLoop: any EventLoop = NIOSingletons.posixEventLoopGroup.next()
 }
 
 // MARK: - Public API

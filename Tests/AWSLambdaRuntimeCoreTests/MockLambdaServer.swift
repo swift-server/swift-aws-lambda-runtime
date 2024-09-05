@@ -27,7 +27,7 @@ func withMockServer<Result>(
     _ body: (_ port: Int) async throws -> Result
 ) async throws -> Result {
     let eventLoopGroup = NIOSingletons.posixEventLoopGroup
-    let server = MockLambdaServer(behavior: behaviour, port: port, keepAlive: keepAlive)
+    let server = MockLambdaServer(behavior: behaviour, port: port, keepAlive: keepAlive, eventLoopGroup: eventLoopGroup)
     let port = try await server.start().get()
 
     let result: Swift.Result<Result, any Error>
@@ -52,7 +52,13 @@ final class MockLambdaServer {
     private var channel: Channel?
     private var shutdown = false
 
-    init(behavior: LambdaServerBehavior, host: String = "127.0.0.1", port: Int = 7000, keepAlive: Bool = true) {
+    init(
+        behavior: LambdaServerBehavior,
+        host: String = "127.0.0.1",
+        port: Int = 7000,
+        keepAlive: Bool = true,
+        eventLoopGroup: MultiThreadedEventLoopGroup
+    ) {
         self.group = NIOSingletons.posixEventLoopGroup
         self.behavior = behavior
         self.host = host
@@ -233,11 +239,14 @@ final class HTTPHandler: ChannelInboundHandler {
             }
         }
 
+        let loopBoundContext = NIOLoopBound(context, eventLoop: context.eventLoop)
+
         context.writeAndFlush(wrapOutboundOut(.end(nil))).whenComplete { result in
             if case .failure(let error) = result {
                 self.logger.error("\(self) write error \(error)")
             }
             if !self.keepAlive {
+                let context = loopBoundContext.value
                 context.close().whenFailure { error in
                     self.logger.error("\(self) close error \(error)")
                 }

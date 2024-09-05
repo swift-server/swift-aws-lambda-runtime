@@ -71,7 +71,7 @@ extension LambdaRuntime {
     /// - Parameter encoder: The encoder object that will be used to encode the generic `Output` into a `ByteBuffer`. `JSONEncoder()` used as default.
     /// - Parameter decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type. `JSONDecoder()` used as default.
     public convenience init<Event: Decodable, Output>(
-        body: @escaping (Event, LambdaContext) async throws -> Output,
+        body: sending @escaping (Event, LambdaContext) async throws -> Output,
         encoder: JSONEncoder = JSONEncoder(),
         decoder: JSONDecoder = JSONDecoder()
     )
@@ -97,7 +97,7 @@ extension LambdaRuntime {
     /// - Parameter body: The handler in the form of a closure.
     /// - Parameter decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type. `JSONDecoder()` used as default.
     public convenience init<Event: Decodable>(
-        body: @escaping (Event, LambdaContext) async throws -> Void,
+        body: sending @escaping (Event, LambdaContext) async throws -> Void,
         decoder: JSONDecoder = JSONDecoder()
     )
     where
