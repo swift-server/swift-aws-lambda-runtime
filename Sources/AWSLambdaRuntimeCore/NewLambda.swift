@@ -14,6 +14,7 @@
 
 import Dispatch
 import Logging
+import NIOCore
 
 extension Lambda {
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
@@ -44,4 +45,7 @@ extension Lambda {
             }
         }
     }
+
+    /// The default EventLoop the Lambda is scheduled on.
+    package static var defaultEventLoop: any EventLoop = NIOSingletons.posixEventLoopGroup.next()
 }

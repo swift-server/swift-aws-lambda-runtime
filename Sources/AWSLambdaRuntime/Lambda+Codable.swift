@@ -65,3 +65,56 @@ extension LambdaCodableAdapter {
         )
     }
 }
+
+extension NewLambdaRuntime {
+    /// Initialize an instance with a ``NewLambdaHandler`` defined in the form of a closure **with a non-`Void` return type**.
+    /// - Parameter body: The handler in the form of a closure.
+    /// - Parameter encoder: The encoder object that will be used to encode the generic ``Output`` into a ``ByteBuffer``. ``JSONEncoder()`` used as default.
+    /// - Parameter decoder: The decoder object that will be used to decode the incoming ``ByteBuffer`` event into the generic ``Event`` type. ``JSONDecoder()`` used as default.
+    package convenience init<Event: Decodable, Output>(
+        body: @escaping (Event, NewLambdaContext) async throws -> Output,
+        encoder: JSONEncoder = JSONEncoder(),
+        decoder: JSONDecoder = JSONDecoder()
+    )
+    where
+        Handler == LambdaCodableAdapter<
+            LambdaHandlerAdapter<Event, Output, ClosureHandler<Event, Output>>,
+            Event,
+            Output,
+            JSONDecoder,
+            LambdaJSONOutputEncoder<Output>
+        >
+    {
+        let handler = LambdaCodableAdapter(
+            encoder: encoder,
+            decoder: decoder,
+            handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
+        )
+
+        self.init(handler: handler)
+    }
+
+    /// Initialize an instance with a ``NewLambdaHandler`` defined in the form of a closure **with a `Void` return type**.
+    /// - Parameter body: The handler in the form of a closure.
+    /// - Parameter decoder: The decoder object that will be used to decode the incoming ``ByteBuffer`` event into the generic ``Event`` type. ``JSONDecoder()`` used as default.
+    package convenience init<Event: Decodable>(
+        body: @escaping (Event, NewLambdaContext) async throws -> Void,
+        decoder: JSONDecoder = JSONDecoder()
+    )
+    where
+        Handler == LambdaCodableAdapter<
+            LambdaHandlerAdapter<Event, Void, ClosureHandler<Event, Void>>,
+            Event,
+            Void,
+            JSONDecoder,
+            VoidEncoder
+        >
+    {
+        let handler = LambdaCodableAdapter(
+            decoder: decoder,
+            handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
+        )
+
+        self.init(handler: handler)
+    }
+}
