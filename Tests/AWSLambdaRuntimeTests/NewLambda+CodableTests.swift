@@ -62,7 +62,7 @@ struct JSONTests {
 
         let event = ByteBuffer(string: #"{"bar":"baz"}"#)
         let writer = MockLambdaWriter()
-        let context = NewLambdaContext.__forTestsOnly(
+        let context = LambdaContext.__forTestsOnly(
             requestID: UUID().uuidString,
             traceID: UUID().uuidString,
             invokedFunctionARN: "arn:",

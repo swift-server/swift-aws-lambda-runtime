@@ -20,7 +20,7 @@ import NIOConcurrencyHelpers
 // We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
 // We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
 // sadly crashes the compiler today.
-package final class NewLambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
+package final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
     // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
     let handlerMutex: NIOLockedValueBox<Optional<Handler>>
     let logger: Logger
@@ -38,12 +38,12 @@ package final class NewLambdaRuntime<Handler>: @unchecked Sendable where Handler
 
     package func run() async throws {
         guard let runtimeEndpoint = Lambda.env("AWS_LAMBDA_RUNTIME_API") else {
-            throw NewLambdaRuntimeError(code: .missingLambdaRuntimeAPIEnvironmentVariable)
+            throw LambdaRuntimeError(code: .missingLambdaRuntimeAPIEnvironmentVariable)
         }
 
         let ipAndPort = runtimeEndpoint.split(separator: ":", maxSplits: 1)
         let ip = String(ipAndPort[0])
-        guard let port = Int(ipAndPort[1]) else { throw NewLambdaRuntimeError(code: .invalidPort) }
+        guard let port = Int(ipAndPort[1]) else { throw LambdaRuntimeError(code: .invalidPort) }
 
         let handler = self.handlerMutex.withLockedValue { handler in
             let result = handler
@@ -52,10 +52,10 @@ package final class NewLambdaRuntime<Handler>: @unchecked Sendable where Handler
         }
 
         guard let handler else {
-            throw NewLambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
+            throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
         }
 
-        try await NewLambdaRuntimeClient.withRuntimeClient(
+        try await LambdaRuntimeClient.withRuntimeClient(
             configuration: .init(ip: ip, port: port),
             eventLoop: self.eventLoop,
             logger: self.logger

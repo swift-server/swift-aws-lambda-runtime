@@ -45,32 +45,32 @@ package struct VoidEncoder: LambdaOutputEncoder {
     package func encode(_ value: Void, into buffer: inout NIOCore.ByteBuffer) throws {}
 }
 
-/// Adapts a ``NewLambdaHandler`` conforming handler to conform to ``LambdaWithBackgroundProcessingHandler``.
+/// Adapts a ``LambdaHandler`` conforming handler to conform to ``LambdaWithBackgroundProcessingHandler``.
 package struct LambdaHandlerAdapter<
     Event: Decodable,
     Output,
-    Handler: NewLambdaHandler
+    Handler: LambdaHandler
 >: LambdaWithBackgroundProcessingHandler where Handler.Event == Event, Handler.Output == Output {
     @usableFromInline let handler: Handler
 
     /// Initializes an instance given a concrete handler.
-    /// - Parameter handler: The ``NewLambdaHandler`` conforming handler that is to be adapted to ``LambdaWithBackgroundProcessingHandler``.
+    /// - Parameter handler: The ``LambdaHandler`` conforming handler that is to be adapted to ``LambdaWithBackgroundProcessingHandler``.
     @inlinable
     package init(handler: Handler) {
         self.handler = handler
     }
 
-    /// Passes the generic ``Event`` object to the ``NewLambdaHandler/handle(_:context:)`` function, and
+    /// Passes the generic ``Event`` object to the ``LambdaHandler/handle(_:context:)`` function, and
     /// the resulting output is then written to ``LambdaWithBackgroundProcessingHandler``'s `outputWriter`.
     /// - Parameters:
     ///   - event: The received event.
     ///   - outputWriter: The writer to write the computed response to.
-    ///   - context: The ``NewLambdaContext`` containing the invocation's metadata.
+    ///   - context: The ``LambdaContext`` containing the invocation's metadata.
     @inlinable
     package func handle(
         _ event: Event,
         outputWriter: some LambdaResponseWriter<Output>,
-        context: NewLambdaContext
+        context: LambdaContext
     ) async throws {
         let output = try await self.handler.handle(event, context: context)
         try await outputWriter.write(output)
@@ -118,12 +118,12 @@ package struct LambdaCodableAdapter<
     ///   - Parameters:
     ///   - event: The received event.
     ///   - outputWriter: The writer to write the computed response to.
-    ///   - context: The ``NewLambdaContext`` containing the invocation's metadata.
+    ///   - context: The ``LambdaContext`` containing the invocation's metadata.
     @inlinable
     package mutating func handle<Writer: LambdaResponseStreamWriter>(
         _ request: ByteBuffer,
         responseWriter: Writer,
-        context: NewLambdaContext
+        context: LambdaContext
     ) async throws {
         let event = try self.decoder.decode(Event.self, from: request)
 
