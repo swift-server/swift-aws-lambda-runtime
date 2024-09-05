@@ -13,13 +13,16 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-//import ServiceLifecycle
 import Logging
 import NIOCore
-import Synchronization
+import NIOConcurrencyHelpers
 
-package final class NewLambdaRuntime<Handler>: Sendable where Handler: StreamingLambdaHandler {
-    let handlerMutex: Mutex<Handler?>
+// We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
+// We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
+// sadly crashes the compiler today.
+package final class NewLambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
+    // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
+    let handlerMutex: NIOLockedValueBox<Optional<Handler>>
     let logger: Logger
     let eventLoop: EventLoop
 
@@ -28,7 +31,7 @@ package final class NewLambdaRuntime<Handler>: Sendable where Handler: Streaming
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
     ) {
-        self.handlerMutex = Mutex(handler)
+        self.handlerMutex = NIOLockedValueBox(handler)
         self.eventLoop = eventLoop
         self.logger = logger
     }
@@ -42,11 +45,10 @@ package final class NewLambdaRuntime<Handler>: Sendable where Handler: Streaming
         let ip = String(ipAndPort[0])
         guard let port = Int(ipAndPort[1]) else { throw NewLambdaRuntimeError(code: .invalidPort) }
 
-        let handler = self.handlerMutex.withLock { maybeHandler in
-            defer {
-                maybeHandler = nil
-            }
-            return maybeHandler
+        let handler = self.handlerMutex.withLockedValue { handler in
+            let result = handler
+            handler = nil
+            return result
         }
 
         guard let handler else {
