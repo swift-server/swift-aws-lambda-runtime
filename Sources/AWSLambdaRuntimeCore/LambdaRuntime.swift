@@ -20,13 +20,13 @@ import NIOConcurrencyHelpers
 // We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
 // We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
 // sadly crashes the compiler today.
-package final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
+public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
     // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
     let handlerMutex: NIOLockedValueBox<Optional<Handler>>
     let logger: Logger
     let eventLoop: EventLoop
 
-    package init(
+    public init(
         handler: sending Handler,
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
@@ -36,7 +36,7 @@ package final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: S
         self.logger = logger
     }
 
-    package func run() async throws {
+    public func run() async throws {
         guard let runtimeEndpoint = Lambda.env("AWS_LAMBDA_RUNTIME_API") else {
             throw LambdaRuntimeError(code: .missingLambdaRuntimeAPIEnvironmentVariable)
         }

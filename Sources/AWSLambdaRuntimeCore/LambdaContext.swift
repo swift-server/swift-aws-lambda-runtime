@@ -20,7 +20,7 @@ import NIOCore
 
 /// Lambda runtime context.
 /// The Lambda runtime generates and passes the `LambdaContext` to the Lambda handler as an argument.
-package struct LambdaContext: CustomDebugStringConvertible, Sendable {
+public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     final class _Storage: Sendable {
         let requestID: String
         let traceID: String
@@ -52,39 +52,39 @@ package struct LambdaContext: CustomDebugStringConvertible, Sendable {
     private var storage: _Storage
 
     /// The request ID, which identifies the request that triggered the function invocation.
-    package var requestID: String {
+    public var requestID: String {
         self.storage.requestID
     }
 
     /// The AWS X-Ray tracing header.
-    package var traceID: String {
+    public var traceID: String {
         self.storage.traceID
     }
 
     /// The ARN of the Lambda function, version, or alias that's specified in the invocation.
-    package var invokedFunctionARN: String {
+    public var invokedFunctionARN: String {
         self.storage.invokedFunctionARN
     }
 
     /// The timestamp that the function times out.
-    package var deadline: DispatchWallTime {
+    public var deadline: DispatchWallTime {
         self.storage.deadline
     }
 
     /// For invocations from the AWS Mobile SDK, data about the Amazon Cognito identity provider.
-    package var cognitoIdentity: String? {
+    public var cognitoIdentity: String? {
         self.storage.cognitoIdentity
     }
 
     /// For invocations from the AWS Mobile SDK, data about the client application and device.
-    package var clientContext: String? {
+    public var clientContext: String? {
         self.storage.clientContext
     }
 
     /// `Logger` to log with.
     ///
     /// - note: The `LogLevel` can be configured using the `LOG_LEVEL` environment variable.
-    package var logger: Logger {
+    public var logger: Logger {
         self.storage.logger
     }
 
@@ -108,7 +108,7 @@ package struct LambdaContext: CustomDebugStringConvertible, Sendable {
         )
     }
 
-    package func getRemainingTime() -> TimeAmount {
+    public func getRemainingTime() -> Duration {
         let deadline = self.deadline.millisSinceEpoch
         let now = DispatchWallTime.now().millisSinceEpoch
 
@@ -116,7 +116,7 @@ package struct LambdaContext: CustomDebugStringConvertible, Sendable {
         return .milliseconds(remaining)
     }
 
-    package var debugDescription: String {
+    public var debugDescription: String {
         "\(Self.self)(requestID: \(self.requestID), traceID: \(self.traceID), invokedFunctionARN: \(self.invokedFunctionARN), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(self.clientContext ?? "nil"), deadline: \(self.deadline))"
     }
 
