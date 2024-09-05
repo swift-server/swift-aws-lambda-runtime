@@ -67,14 +67,6 @@ extension LambdaCodableAdapter {
 }
 
 extension NewLambdaRuntime {
-    /// Initialize an instance with a ``StreamingLambdaHandler`` in the form of a closure.
-    /// - Parameter body: The handler in the form of a closure.
-    package convenience init(
-        body: @Sendable @escaping (ByteBuffer, LambdaResponseStreamWriter, NewLambdaContext) async throws -> Void
-    ) where Handler == StreamingClosureHandler {
-        self.init(handler: StreamingClosureHandler(body: body))
-    }
-
     /// Initialize an instance with a ``NewLambdaHandler`` defined in the form of a closure **with a non-`Void` return type**, an encoder, and a decoder.
     /// - Parameter body: The handler in the form of a closure.
     /// - Parameter encoder: The encoder object that will be used to encode the generic ``Output`` into a ``ByteBuffer``.
@@ -133,10 +125,13 @@ extension NewLambdaRuntime {
     }
 
     /// Initialize an instance with a ``NewLambdaHandler`` defined in the form of a closure **with a non-`Void` return type**.
-    /// - note: ``JSONEncoder`` and ``JSONDecoder`` are used as the encoder and decoder objects. Use ``init(encoder:decoder:body:)`` to specify custom encoder and decoder objects.
     /// - Parameter body: The handler in the form of a closure.
+    /// - Parameter encoder: The encoder object that will be used to encode the generic ``Output`` into a ``ByteBuffer``. ``JSONEncoder()`` used as default.
+    /// - Parameter decoder: The decoder object that will be used to decode the incoming ``ByteBuffer`` event into the generic ``Event`` type. ``JSONDecoder()`` used as default.
     package convenience init<Event: Decodable, Output>(
-        body: @escaping (Event, NewLambdaContext) async throws -> Output
+        body: @escaping (Event, NewLambdaContext) async throws -> Output,
+        encoder: JSONEncoder = JSONEncoder(),
+        decoder: JSONDecoder = JSONDecoder()
     )
     where
         Handler == LambdaCodableAdapter<
@@ -148,8 +143,8 @@ extension NewLambdaRuntime {
         >
     {
         let handler = LambdaCodableAdapter(
-            encoder: JSONEncoder(),
-            decoder: JSONDecoder(),
+            encoder: encoder,
+            decoder: decoder,
             handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
         )
 
@@ -157,10 +152,11 @@ extension NewLambdaRuntime {
     }
 
     /// Initialize an instance with a ``NewLambdaHandler`` defined in the form of a closure **with a `Void` return type**.
-    /// - note: ``JSONDecoder`` is used as the decoder object. Use ``init(decoder:body:)`` to specify a custom decoder object.
     /// - Parameter body: The handler in the form of a closure.
+    /// - Parameter decoder: The decoder object that will be used to decode the incoming ``ByteBuffer`` event into the generic ``Event`` type. ``JSONDecoder()`` used as default.
     package convenience init<Event: Decodable>(
-        body: @escaping (Event, NewLambdaContext) async throws -> Void
+        body: @escaping (Event, NewLambdaContext) async throws -> Void,
+        decoder: JSONDecoder = JSONDecoder()
     )
     where
         Handler == LambdaCodableAdapter<
@@ -172,7 +168,7 @@ extension NewLambdaRuntime {
         >
     {
         let handler = LambdaCodableAdapter(
-            decoder: JSONDecoder(),
+            decoder: decoder,
             handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
         )
 
