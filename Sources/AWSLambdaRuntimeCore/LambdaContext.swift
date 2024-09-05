@@ -108,7 +108,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         )
     }
 
-    public func getRemainingTime() -> TimeAmount {
+    public func getRemainingTime() -> Duration {
         let deadline = self.deadline.millisSinceEpoch
         let now = DispatchWallTime.now().millisSinceEpoch
 
