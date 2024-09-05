@@ -16,7 +16,7 @@ import NIOCore
 
 /// The protocol a decoder must conform to so that it can be used with ``LambdaCodableAdapter`` to decode incoming
 /// ``ByteBuffer`` events.
-package protocol LambdaEventDecoder {
+public protocol LambdaEventDecoder {
     /// Decode the ``ByteBuffer`` representing the received event into the generic ``Event`` type
     /// the handler will receive.
     /// - Parameters:
@@ -28,7 +28,7 @@ package protocol LambdaEventDecoder {
 
 /// The protocol an encoder must conform to so that it can be used with ``LambdaCodableAdapter`` to encode the generic
 /// ``Output`` object into a ``ByteBuffer``.
-package protocol LambdaOutputEncoder {
+public protocol LambdaOutputEncoder {
     associatedtype Output
 
     /// Encode the generic type `Output` the handler has returned into a ``ByteBuffer``.
@@ -38,15 +38,17 @@ package protocol LambdaOutputEncoder {
     func encode(_ value: Output, into buffer: inout ByteBuffer) throws
 }
 
-package struct VoidEncoder: LambdaOutputEncoder {
-    package typealias Output = Void
+public struct VoidEncoder: LambdaOutputEncoder {
+    public typealias Output = Void
+
+    public init() {}
 
     @inlinable
-    package func encode(_ value: Void, into buffer: inout NIOCore.ByteBuffer) throws {}
+    public func encode(_ value: Void, into buffer: inout NIOCore.ByteBuffer) throws {}
 }
 
 /// Adapts a ``LambdaHandler`` conforming handler to conform to ``LambdaWithBackgroundProcessingHandler``.
-package struct LambdaHandlerAdapter<
+public struct LambdaHandlerAdapter<
     Event: Decodable,
     Output,
     Handler: LambdaHandler
@@ -67,7 +69,7 @@ package struct LambdaHandlerAdapter<
     ///   - outputWriter: The writer to write the computed response to.
     ///   - context: The ``LambdaContext`` containing the invocation's metadata.
     @inlinable
-    package func handle(
+    public func handle(
         _ event: Event,
         outputWriter: some LambdaResponseWriter<Output>,
         context: LambdaContext
@@ -78,7 +80,7 @@ package struct LambdaHandlerAdapter<
 }
 
 /// Adapts a ``LambdaWithBackgroundProcessingHandler`` conforming handler to conform to ``StreamingLambdaHandler``.
-package struct LambdaCodableAdapter<
+public struct LambdaCodableAdapter<
     Handler: LambdaWithBackgroundProcessingHandler,
     Event: Decodable,
     Output,
@@ -88,7 +90,6 @@ package struct LambdaCodableAdapter<
     @usableFromInline let handler: Handler
     @usableFromInline let encoder: Encoder
     @usableFromInline let decoder: Decoder
-    //
     @usableFromInline var byteBuffer: ByteBuffer = .init()
 
     /// Initializes an instance given an encoder, decoder, and a handler with a non-`Void` output.
@@ -120,7 +121,7 @@ package struct LambdaCodableAdapter<
     ///   - outputWriter: The writer to write the computed response to.
     ///   - context: The ``LambdaContext`` containing the invocation's metadata.
     @inlinable
-    package mutating func handle<Writer: LambdaResponseStreamWriter>(
+    public mutating func handle<Writer: LambdaResponseStreamWriter>(
         _ request: ByteBuffer,
         responseWriter: Writer,
         context: LambdaContext
@@ -136,7 +137,7 @@ package struct LambdaCodableAdapter<
 }
 
 /// A ``LambdaResponseStreamWriter`` wrapper that conforms to ``LambdaResponseWriter``.
-package struct LambdaCodableResponseWriter<Output, Encoder: LambdaOutputEncoder, Base: LambdaResponseStreamWriter>:
+public struct LambdaCodableResponseWriter<Output, Encoder: LambdaOutputEncoder, Base: LambdaResponseStreamWriter>:
     LambdaResponseWriter
 where Output == Encoder.Output {
     @usableFromInline let underlyingStreamWriter: Base
@@ -153,7 +154,7 @@ where Output == Encoder.Output {
     }
 
     @inlinable
-    package func write(_ output: Output) async throws {
+    public func write(_ output: Output) async throws {
         var outputBuffer = ByteBuffer()
         try self.encoder.encode(output, into: &outputBuffer)
         try await self.underlyingStreamWriter.writeAndFinish(outputBuffer)

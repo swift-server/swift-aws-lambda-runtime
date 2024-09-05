@@ -20,7 +20,7 @@ import NIOCore
 /// Background work can also be executed after returning the response. After closing the response stream by calling
 /// ``LambdaResponseStreamWriter/finish()`` or ``LambdaResponseStreamWriter/writeAndFinish(_:)``,
 /// the ``handle(_:responseWriter:context:)`` function is free to execute any background work.
-package protocol StreamingLambdaHandler {
+public protocol StreamingLambdaHandler {
     /// The handler function -- implement the business logic of the Lambda function here.
     /// - Parameters:
     ///   - event: The invocation's input data.
@@ -45,7 +45,7 @@ package protocol StreamingLambdaHandler {
 
 /// A writer object to write the Lambda response stream into. The HTTP response is started lazily.
 /// before the first call to ``write(_:)`` or ``writeAndFinish(_:)``.
-package protocol LambdaResponseStreamWriter {
+public protocol LambdaResponseStreamWriter {
     /// Write a response part into the stream. Bytes written are streamed continually.
     /// - Parameter buffer: The buffer to write.
     func write(_ buffer: ByteBuffer) async throws
@@ -64,7 +64,7 @@ package protocol LambdaResponseStreamWriter {
 ///
 /// - note: This handler protocol does not support response streaming because the output has to be encoded prior to it being sent, e.g. it is not possible to encode a partial/incomplete JSON string.
 /// This protocol also does not support the execution of background work after the response has been returned -- the ``LambdaWithBackgroundProcessingHandler`` protocol caters for such use-cases.
-package protocol LambdaHandler {
+public protocol LambdaHandler {
     /// Generic input type.
     /// The body of the request sent to Lambda will be decoded into this type for the handler to consume.
     associatedtype Event: Decodable
@@ -85,7 +85,7 @@ package protocol LambdaHandler {
 /// This is achieved by not having a return type in the `handle` function. The output is instead written into a
 /// ``LambdaResponseWriter``that is passed in as an argument, meaning that the ``handle(_:)`` function is then free to implement
 /// any background work after the result has been sent to the AWS Lambda control plane.
-package protocol LambdaWithBackgroundProcessingHandler {
+public protocol LambdaWithBackgroundProcessingHandler {
     /// Generic input type.
     /// The body of the request sent to Lambda will be decoded into this type for the handler to consume.
     associatedtype Event: Decodable
@@ -109,7 +109,7 @@ package protocol LambdaWithBackgroundProcessingHandler {
 /// Used with ``LambdaWithBackgroundProcessingHandler``.
 /// A mechanism to "return" an output from ``LambdaWithBackgroundProcessingHandler/handle(_:outputWriter:context:)`` without the function needing to
 /// have a return type and exit at that point. This allows for background work to be executed _after_ a response has been sent to the AWS Lambda response endpoint.
-package protocol LambdaResponseWriter<Output> {
+public protocol LambdaResponseWriter<Output> {
     associatedtype Output
     /// Sends the generic ``Output`` object (representing the computed result of the handler)
     /// to the AWS Lambda response endpoint.
@@ -120,12 +120,12 @@ package protocol LambdaResponseWriter<Output> {
 
 /// A ``StreamingLambdaHandler`` conforming handler object that can be constructed with a closure.
 /// Allows for a handler to be defined in a clean manner, leveraging Swift's trailing closure syntax.
-package struct StreamingClosureHandler: StreamingLambdaHandler {
+public struct StreamingClosureHandler: StreamingLambdaHandler {
     let body: @Sendable (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
 
     /// Initialize an instance from a handler function in the form of a closure.
     /// - Parameter body: The handler function written as a closure.
-    package init(
+    public init(
         body: @Sendable @escaping (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
     ) {
         self.body = body
@@ -137,7 +137,7 @@ package struct StreamingClosureHandler: StreamingLambdaHandler {
     ///   - responseWriter: A ``LambdaResponseStreamWriter`` to write the invocation's response to.
     ///   If no response or error is written to `responseWriter` an error will be reported to the invoker.
     ///   - context: The ``LambdaContext`` containing the invocation's metadata.
-    package func handle(
+    public func handle(
         _ request: ByteBuffer,
         responseWriter: some LambdaResponseStreamWriter,
         context: LambdaContext
@@ -148,18 +148,18 @@ package struct StreamingClosureHandler: StreamingLambdaHandler {
 
 /// A ``LambdaHandler`` conforming handler object that can be constructed with a closure.
 /// Allows for a handler to be defined in a clean manner, leveraging Swift's trailing closure syntax.
-package struct ClosureHandler<Event: Decodable, Output>: LambdaHandler {
+public struct ClosureHandler<Event: Decodable, Output>: LambdaHandler {
     let body: (Event, LambdaContext) async throws -> Output
 
     /// Initialize with a closure handler over generic `Input` and `Output` types.
     /// - Parameter body: The handler function written as a closure.
-    package init(body: @escaping (Event, LambdaContext) async throws -> Output) where Output: Encodable {
+    public init(body: @escaping (Event, LambdaContext) async throws -> Output) where Output: Encodable {
         self.body = body
     }
 
     /// Initialize with a closure handler over a generic `Input` type, and a `Void` `Output`.
     /// - Parameter body: The handler function written as a closure.
-    package init(body: @escaping (Event, LambdaContext) async throws -> Void) where Output == Void {
+    public init(body: @escaping (Event, LambdaContext) async throws -> Void) where Output == Void {
         self.body = body
     }
 
@@ -167,7 +167,7 @@ package struct ClosureHandler<Event: Decodable, Output>: LambdaHandler {
     /// - Parameters:
     ///   - event: The generic ``Event`` object representing the invocation's input data.
     ///   - context: The ``LambdaContext`` containing the invocation's metadata.
-    package func handle(_ event: Event, context: LambdaContext) async throws -> Output {
+    public func handle(_ event: Event, context: LambdaContext) async throws -> Output {
         try await self.body(event, context)
     }
 }
@@ -175,7 +175,7 @@ package struct ClosureHandler<Event: Decodable, Output>: LambdaHandler {
 extension LambdaRuntime {
     /// Initialize an instance with a ``StreamingLambdaHandler`` in the form of a closure.
     /// - Parameter body: The handler in the form of a closure.
-    package convenience init(
+    public convenience init(
         body: @Sendable @escaping (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
     ) where Handler == StreamingClosureHandler {
         self.init(handler: StreamingClosureHandler(body: body))
@@ -185,7 +185,7 @@ extension LambdaRuntime {
     /// - Parameter body: The handler in the form of a closure.
     /// - Parameter encoder: The encoder object that will be used to encode the generic ``Output`` into a ``ByteBuffer``.
     /// - Parameter decoder: The decoder object that will be used to decode the incoming ``ByteBuffer`` event into the generic ``Event`` type.
-    package convenience init<
+    public convenience init<
         Event: Decodable,
         Output: Encodable,
         Encoder: LambdaOutputEncoder,
@@ -217,7 +217,7 @@ extension LambdaRuntime {
     /// - Parameter body: The handler in the form of a closure.
     /// - Parameter encoder: The encoder object that will be used to encode the generic ``Output`` into a ``ByteBuffer``.
     /// - Parameter decoder: The decoder object that will be used to decode the incoming ``ByteBuffer`` event into the generic ``Event`` type.
-    package convenience init<Event: Decodable, Decoder: LambdaEventDecoder>(
+    public convenience init<Event: Decodable, Decoder: LambdaEventDecoder>(
         decoder: Decoder,
         body: @escaping (Event, LambdaContext) async throws -> Void
     )
