@@ -28,7 +28,7 @@ func withMockServer<Result>(
 ) async throws -> Result {
     let eventLoopGroup = NIOSingletons.posixEventLoopGroup
     let server = MockLambdaServer(behavior: behaviour, port: port, keepAlive: keepAlive, eventLoopGroup: eventLoopGroup)
-    let port = try await server.start().get()
+    let port = try await server.start()
 
     let result: Swift.Result<Result, any Error>
     do {
@@ -41,19 +41,19 @@ func withMockServer<Result>(
     return try result.get()
 }
 
-final class MockLambdaServer {
+final class MockLambdaServer<Behavior: LambdaServerBehavior> {
     private let logger = Logger(label: "MockLambdaServer")
-    private let behavior: LambdaServerBehavior
+    private let behavior: Behavior
     private let host: String
     private let port: Int
     private let keepAlive: Bool
     private let group: EventLoopGroup
 
     private var channel: Channel?
-    private var shutdown = false
+    private var shutdown = false, n,m
 
     init(
-        behavior: LambdaServerBehavior,
+        behavior: Behavior,
         host: String = "127.0.0.1",
         port: Int = 7000,
         keepAlive: Bool = true,
@@ -70,28 +70,33 @@ final class MockLambdaServer {
         assert(shutdown)
     }
 
-    func start() -> EventLoopFuture<Int> {
-        let bootstrap = ServerBootstrap(group: group)
+    func start() async throws -> Int {
+        let logger = self.logger
+        let keepAlive = self.keepAlive
+        let behavior = self.behavior
+
+        let channel = try await ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 do {
                     try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: true)
                     try channel.pipeline.syncOperations.addHandler(
-                        HTTPHandler(logger: self.logger, keepAlive: self.keepAlive, behavior: self.behavior)
+                        HTTPHandler(logger: logger, keepAlive: keepAlive, behavior: behavior)
                     )
                     return channel.eventLoop.makeSucceededVoidFuture()
                 } catch {
                     return channel.eventLoop.makeFailedFuture(error)
                 }
             }
-        return bootstrap.bind(host: self.host, port: self.port).flatMap { channel in
-            self.channel = channel
-            guard let localAddress = channel.localAddress else {
-                return channel.eventLoop.makeFailedFuture(ServerError.cantBind)
-            }
-            self.logger.info("\(self) started and listening on \(localAddress)")
-            return channel.eventLoop.makeSucceededFuture(localAddress.port!)
+            .bind(host: self.host, port: self.port)
+            .get()
+
+        self.channel = channel
+        guard let localAddress = channel.localAddress else {
+            throw ServerError.cantBind
         }
+        self.logger.info("\(self) started and listening on \(localAddress)")
+        return localAddress.port!
     }
 
     func stop() -> EventLoopFuture<Void> {
@@ -255,7 +260,7 @@ final class HTTPHandler: ChannelInboundHandler {
     }
 }
 
-protocol LambdaServerBehavior {
+protocol LambdaServerBehavior: Sendable {
     func getInvocation() -> GetInvocationResult
     func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError>
     func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError>
