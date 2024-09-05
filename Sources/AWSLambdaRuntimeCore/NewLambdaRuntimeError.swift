@@ -31,6 +31,7 @@ package struct NewLambdaRuntimeError: Error {
 
         case cannotStartLambdaRuntime
         case runtimeCanOnlyBeStartedOnce
+        case invalidPort
     }
 
     package init(code: Code, underlying: (any Error)? = nil) {

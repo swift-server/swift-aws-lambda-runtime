@@ -40,7 +40,7 @@ package final class NewLambdaRuntime<Handler>: Sendable where Handler: Streaming
 
         let ipAndPort = runtimeEndpoint.split(separator: ":", maxSplits: 1)
         let ip = String(ipAndPort[0])
-        let port = Int(ipAndPort[1])!
+        guard let port = Int(ipAndPort[1]) else { throw NewLambdaRuntimeError(code: .invalidPort) }
 
         let handler = self.handlerMutex.withLock { maybeHandler in
             defer {
