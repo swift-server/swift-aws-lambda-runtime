@@ -435,10 +435,11 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
     private let delegate: Delegate
     private let configuration: NewLambdaRuntimeClient.Configuration
 
+    /// These are the default headers that must be sent along an invocation
     let defaultHeaders: HTTPHeaders
     /// These headers must be sent along an invocation or initialization error report
     let errorHeaders: HTTPHeaders
-    /// These headers must be sent along an invocation or initialization error report
+    /// These headers must be sent when streaming a response
     let streamingHeaders: HTTPHeaders
 
     init(delegate: Delegate, logger: Logger, configuration: NewLambdaRuntimeClient.Configuration) {
@@ -457,7 +458,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
         self.streamingHeaders = [
             "host": "\(self.configuration.ip):\(self.configuration.port)",
             "user-agent": "Swift-Lambda/Unknown",
-            "transfer-encoding": "streaming",
+            "transfer-encoding": "chunked",
         ]
     }
 

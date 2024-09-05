@@ -29,7 +29,7 @@ package struct NewLambdaRuntimeError: Error {
         case nextInvocationMissingHeaderDeadline
         case nextInvocationMissingHeaderInvokeFuctionARN
 
-        case cannotStartLambdaRuntime
+        case missingLambdaRuntimeAPIEnvironmentVariable
         case runtimeCanOnlyBeStartedOnce
         case invalidPort
     }

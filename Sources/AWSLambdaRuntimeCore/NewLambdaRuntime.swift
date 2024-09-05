@@ -35,7 +35,7 @@ package final class NewLambdaRuntime<Handler>: Sendable where Handler: Streaming
 
     package func run() async throws {
         guard let runtimeEndpoint = Lambda.env("AWS_LAMBDA_RUNTIME_API") else {
-            throw NewLambdaRuntimeError(code: .cannotStartLambdaRuntime)
+            throw NewLambdaRuntimeError(code: .missingLambdaRuntimeAPIEnvironmentVariable)
         }
 
         let ipAndPort = runtimeEndpoint.split(separator: ":", maxSplits: 1)
