@@ -58,7 +58,7 @@ public struct LambdaHandlerAdapter<
     /// Initializes an instance given a concrete handler.
     /// - Parameter handler: The ``LambdaHandler`` conforming handler that is to be adapted to ``LambdaWithBackgroundProcessingHandler``.
     @inlinable
-    package init(handler: Handler) {
+    public init(handler: Handler) {
         self.handler = handler
     }
 
@@ -98,7 +98,7 @@ public struct LambdaCodableAdapter<
     ///   - decoder: The decoder object that will be used to decode the received ``ByteBuffer`` event into the generic ``Event`` type served to the `handler`.
     ///   - handler: The handler object.
     @inlinable
-    package init(encoder: Encoder, decoder: Decoder, handler: Handler) where Output: Encodable {
+    public init(encoder: Encoder, decoder: Decoder, handler: Handler) where Output: Encodable {
         self.encoder = encoder
         self.decoder = decoder
         self.handler = handler
@@ -109,7 +109,7 @@ public struct LambdaCodableAdapter<
     ///   - decoder: The decoder object that will be used to decode the received ``ByteBuffer`` event into the generic ``Event`` type served to the `handler`.
     ///   - handler: The handler object.
     @inlinable
-    package init(decoder: Decoder, handler: Handler) where Output == Void, Encoder == VoidEncoder {
+    public init(decoder: Decoder, handler: Handler) where Output == Void, Encoder == VoidEncoder {
         self.encoder = VoidEncoder()
         self.decoder = decoder
         self.handler = handler
@@ -148,7 +148,7 @@ where Output == Encoder.Output {
     ///   - encoder: The encoder object that will be used to encode the generic ``Output`` into a ``ByteBuffer``, which will then be passed to `streamWriter`.
     ///   - streamWriter: The underlying ``LambdaResponseStreamWriter`` that will be wrapped.
     @inlinable
-    package init(encoder: Encoder, streamWriter: Base) {
+    public init(encoder: Encoder, streamWriter: Base) {
         self.encoder = encoder
         self.underlyingStreamWriter = streamWriter
     }
