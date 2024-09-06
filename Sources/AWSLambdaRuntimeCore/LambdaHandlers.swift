@@ -194,7 +194,7 @@ extension LambdaRuntime {
     >(
         encoder: Encoder,
         decoder: Decoder,
-        body: @escaping (Event, LambdaContext) async throws -> Output
+        body: sending @escaping (Event, LambdaContext) async throws -> Output
     )
     where
         Handler == LambdaCodableAdapter<
@@ -220,7 +220,7 @@ extension LambdaRuntime {
     ///   - body: The handler in the form of a closure.
     public convenience init<Event: Decodable, Decoder: LambdaEventDecoder>(
         decoder: Decoder,
-        body: @escaping (Event, LambdaContext) async throws -> Void
+        body: sending @escaping (Event, LambdaContext) async throws -> Void
     )
     where
         Handler == LambdaCodableAdapter<
