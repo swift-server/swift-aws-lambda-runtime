@@ -14,45 +14,54 @@
 
 import Dispatch
 import PackagePlugin
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import struct Foundation.URL
-import struct Foundation.Data
-import struct Foundation.CharacterSet
-import class Foundation.Process
-import class Foundation.Pipe
-#endif
+import Synchronization
+import Foundation
 
 struct Utils {
     @discardableResult
     static func execute(
         executable: URL,
         arguments: [String],
-        customWorkingDirectory: URL? = nil,
+        customWorkingDirectory: URL? = .none,
         logLevel: ProcessLogLevel
     ) throws -> String {
         if logLevel >= .debug {
             print("\(executable.absoluteString) \(arguments.joined(separator: " "))")
         }
 
-        // this shared global variable is safe because we're mutating it in a dispatch group
-        // https://developer.apple.com/documentation/foundation/process/1408746-terminationhandler
-        nonisolated(unsafe) var output = ""
+        let fd = dup(1)
+        let stdout = fdopen(fd, "rw")
+        defer { fclose(stdout) }
+
+        // We need to use an unsafe transfer here to get the fd into our Sendable closure.
+        // This transfer is fine, because we guarantee that the code in the outputHandler
+        // is run before we continue the functions execution, where the fd is used again.
+        // See `process.waitUntilExit()` and the following `outputSync.wait()`
+        struct UnsafeTransfer<Value>: @unchecked Sendable {
+            let value: Value
+        }
+
+        let outputMutex = Mutex("")
         let outputSync = DispatchGroup()
-        let outputQueue = DispatchQueue(label: "AWSLambdaPlugin.output")
+        let outputQueue = DispatchQueue(label: "AWSLambdaPackager.output")
+        let unsafeTransfer = UnsafeTransfer(value: stdout)
         let outputHandler = { @Sendable (data: Data?) in
             dispatchPrecondition(condition: .onQueue(outputQueue))
 
             outputSync.enter()
             defer { outputSync.leave() }
 
-            guard let _output = data.flatMap({ String(decoding: $0, as: UTF8.self).trimmingCharacters(in: CharacterSet(["\n"])) }), !_output.isEmpty else {
+            guard
+                let _output = data.flatMap({
+                    String(data: $0, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(["\n"]))
+                }), !_output.isEmpty
+            else {
                 return
             }
 
-            output += _output + "\n"
+            outputMutex.withLock { output in
+                output += _output + "\n"
+            }
 
             switch logLevel {
             case .silent:
@@ -60,24 +69,22 @@ struct Utils {
             case .debug(let outputIndent), .output(let outputIndent):
                 print(String(repeating: " ", count: outputIndent), terminator: "")
                 print(_output)
-                fflush(stdout)
+                fflush(unsafeTransfer.value)
             }
         }
 
         let pipe = Pipe()
         pipe.fileHandleForReading.readabilityHandler = { fileHandle in
-            outputQueue.async {
-                outputHandler(fileHandle.availableData)
-            }
+            outputQueue.async { outputHandler(fileHandle.availableData) }
         }
 
         let process = Process()
         process.standardOutput = pipe
         process.standardError = pipe
-        process.executableURL = executable
+        process.executableURL = URL(fileURLWithPath: executable.description)
         process.arguments = arguments
-        if let customWorkingDirectory {
-            process.currentDirectoryURL = customWorkingDirectory
+        if let workingDirectory = customWorkingDirectory {
+            process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory.path())
         }
         process.terminationHandler = { _ in
             outputQueue.async {
@@ -91,24 +98,26 @@ struct Utils {
         // wait for output to be full processed
         outputSync.wait()
 
+        let output = outputMutex.withLock { $0 }
+
         if process.terminationStatus != 0 {
             // print output on failure and if not already printed
             if logLevel < .output {
                 print(output)
                 fflush(stdout)
             }
-            throw ProcessError.processFailed([executable.absoluteString] + arguments, process.terminationStatus, output)
+            throw ProcessError.processFailed([executable.path()] + arguments, process.terminationStatus)
         }
 
         return output
     }
 
     enum ProcessError: Error, CustomStringConvertible {
-        case processFailed([String], Int32, String)
+        case processFailed([String], Int32)
 
         var description: String {
             switch self {
-            case .processFailed(let arguments, let code, _):
+            case .processFailed(let arguments, let code):
                 return "\(arguments.joined(separator: " ")) failed with code \(code)"
             }
         }
