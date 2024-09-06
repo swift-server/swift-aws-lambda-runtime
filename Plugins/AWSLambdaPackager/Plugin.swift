@@ -273,7 +273,7 @@ struct AWSLambdaPackager: CommandPlugin {
         }
 
         let fd = dup(1)
-        let stdout = fdopen(fd, "rw")!
+        let stdout = fdopen(fd, "rw")
         defer { fclose(stdout) }
 
         // We need to use an unsafe transfer here to get the fd into our Sendable closure.
