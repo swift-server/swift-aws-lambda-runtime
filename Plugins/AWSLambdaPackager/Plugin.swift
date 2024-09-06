@@ -16,6 +16,7 @@ import PackagePlugin
 import Foundation
 
 @main
+@available(macOS 15.0, *)
 struct AWSLambdaPackager: CommandPlugin {
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
         let configuration = try Configuration(context: context, arguments: arguments)
