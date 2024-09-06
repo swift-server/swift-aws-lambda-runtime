@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-//import Dispatch
 import PackagePlugin
 import Synchronization
 
@@ -250,9 +249,7 @@ struct AWSLambdaPackager: CommandPlugin {
             let resourcesDirectoryName = "\(packageName)_\(product.name).resources"
             let resourcesDirectory = artifactDirectory.appending(resourcesDirectoryName)
             let relocatedResourcesDirectory = workingDirectory.appending(path: resourcesDirectoryName)
-            print("--------- resources ----------")
             if FileManager.default.fileExists(atPath: resourcesDirectory) {
-                print("--------- copying resources ----------")
                 try FileManager.default.copyItem(
                     atPath: resourcesDirectory,
                     toPath: relocatedResourcesDirectory.path()
