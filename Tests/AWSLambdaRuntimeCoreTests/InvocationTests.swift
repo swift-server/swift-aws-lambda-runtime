@@ -12,12 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Foundation
 import NIOHTTP1
-import XCTest
+import Testing
 
 @testable import AWSLambdaRuntimeCore
 
-class InvocationTest: XCTestCase {
+@Suite
+struct InvocationTest {
+    @Test
     func testInvocationTraceID() throws {
         let headers = HTTPHeaders([
             (AmazonHeaders.requestID, "test"),
@@ -25,14 +28,10 @@ class InvocationTest: XCTestCase {
             (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),
         ])
 
-        var invocation: InvocationMetadata?
+        var maybeInvocation: InvocationMetadata?
 
-        XCTAssertNoThrow(invocation = try InvocationMetadata(headers: headers))
-        XCTAssertNotNil(invocation)
-
-        guard !invocation!.traceID.isEmpty else {
-            XCTFail("Invocation traceID is empty")
-            return
-        }
+        #expect(throws: Never.self) { maybeInvocation = try InvocationMetadata(headers: headers) }
+        let invocation = try #require(maybeInvocation)
+        #expect(!invocation.traceID.isEmpty)
     }
 }
