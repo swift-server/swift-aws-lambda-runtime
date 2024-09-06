@@ -14,15 +14,7 @@
 
 import PackagePlugin
 import Synchronization
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import struct Foundation.URL
-import class Foundation.ProcessInfo
-import class Foundation.FileManager
-import struct Foundation.ObjCBool
-#endif
+import Foundation
 
 @available(macOS 15.0, *)
 @main
