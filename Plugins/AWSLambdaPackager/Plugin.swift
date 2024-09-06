@@ -307,8 +307,12 @@ private struct Configuration: CustomStringConvertible {
         self.verboseLogging = verboseArgument
 
         if let outputPath = outputPathArgument.first {
+            #if os(Linux)
+            var isDirectory: Bool = false
+            #else
             var isDirectory: ObjCBool = false
-            guard FileManager.default.fileExists(atPath: outputPath, isDirectory: &isDirectory), isDirectory.boolValue
+            #endif 
+            guard FileManager.default.fileExists(atPath: outputPath, isDirectory: &isDirectory)
             else {
                 throw Errors.invalidArgument("invalid output directory '\(outputPath)'")
             }
