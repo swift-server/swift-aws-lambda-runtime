@@ -37,7 +37,7 @@ func withMockServer<Result>(
         result = .failure(error)
     }
 
-    try? await server.stop().get()
+    try? await server.stop()
     return try result.get()
 }
 
@@ -50,7 +50,7 @@ final class MockLambdaServer<Behavior: LambdaServerBehavior> {
     private let group: EventLoopGroup
 
     private var channel: Channel?
-    private var shutdown = false, n,m
+    private var shutdown = false
 
     init(
         behavior: Behavior,
@@ -70,7 +70,7 @@ final class MockLambdaServer<Behavior: LambdaServerBehavior> {
         assert(shutdown)
     }
 
-    func start() async throws -> Int {
+    fileprivate func start() async throws -> Int {
         let logger = self.logger
         let keepAlive = self.keepAlive
         let behavior = self.behavior
@@ -99,15 +99,12 @@ final class MockLambdaServer<Behavior: LambdaServerBehavior> {
         return localAddress.port!
     }
 
-    func stop() -> EventLoopFuture<Void> {
+    fileprivate func stop() async throws {
         self.logger.info("stopping \(self)")
-        guard let channel = self.channel else {
-            return self.group.next().makeFailedFuture(ServerError.notReady)
-        }
-        return channel.close().always { _ in
-            self.shutdown = true
-            self.logger.info("\(self) stopped")
-        }
+        let channel = self.channel!
+        try? await channel.close().get()
+        self.shutdown = true
+        self.logger.info("\(self) stopped")
     }
 }
 
@@ -232,28 +229,30 @@ final class HTTPHandler: ChannelInboundHandler {
         }
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: status, headers: headers)
 
+        let logger = self.logger
         context.write(wrapOutboundOut(.head(head))).whenFailure { error in
-            self.logger.error("\(self) write error \(error)")
+            logger.error("write error \(error)")
         }
 
         if let b = body {
             var buffer = context.channel.allocator.buffer(capacity: b.utf8.count)
             buffer.writeString(b)
             context.write(wrapOutboundOut(.body(.byteBuffer(buffer)))).whenFailure { error in
-                self.logger.error("\(self) write error \(error)")
+                logger.error("write error \(error)")
             }
         }
 
         let loopBoundContext = NIOLoopBound(context, eventLoop: context.eventLoop)
 
+        let keepAlive = self.keepAlive
         context.writeAndFlush(wrapOutboundOut(.end(nil))).whenComplete { result in
             if case .failure(let error) = result {
-                self.logger.error("\(self) write error \(error)")
+                logger.error("write error \(error)")
             }
-            if !self.keepAlive {
+            if !keepAlive {
                 let context = loopBoundContext.value
                 context.close().whenFailure { error in
-                    self.logger.error("\(self) close error \(error)")
+                    logger.error("close error \(error)")
                 }
             }
         }
