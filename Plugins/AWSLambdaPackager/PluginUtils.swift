@@ -17,6 +17,7 @@ import PackagePlugin
 import Synchronization
 import Foundation
 
+@available(macOS 15.0, *)
 struct Utils {
     @discardableResult
     static func execute(

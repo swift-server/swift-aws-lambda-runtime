@@ -13,10 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import PackagePlugin
-import Synchronization
 import Foundation
 
-@available(macOS 15.0, *)
 @main
 struct AWSLambdaPackager: CommandPlugin {
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
