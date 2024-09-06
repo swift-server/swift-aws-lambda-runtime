@@ -12,16 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Foundation
 import NIOCore
 import Testing
 
 @testable import AWSLambdaRuntimeCore
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 
 @Suite("LambdaRequestID tests")
 struct LambdaRequestIDTest {
