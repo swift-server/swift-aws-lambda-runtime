@@ -19,7 +19,8 @@ let package = Package(
         .executable(name: "MyLambda", targets: ["MyLambda"])
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main")
+        // dependency on swift-aws-lambda-runtime is added dynamically below
+        // .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main")
     ],
     targets: [
         .executableTarget(
@@ -32,22 +33,20 @@ let package = Package(
     ]
 )
 
-if let localDepsPath = ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"], localDepsPath != ""  {  
+if let localDepsPath = ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"],
+    localDepsPath != "",
+    let v = try? URL(fileURLWithPath: localDepsPath).resourceValues(forKeys: [.isDirectoryKey]),
+    let _ = v.isDirectory
+{
+    print("[INFO] Compiling against swift-aws-lambda-runtime located at \(localDepsPath)")
+    package.dependencies += [
+        .package(name: "swift-aws-lambda-runtime", path: localDepsPath)
+    ]
 
-    print("++++++++ \(localDepsPath)")
-
-    // check if directory exists
-    let u = URL(fileURLWithPath: localDepsPath)
-    if let v = try? u.resourceValues(forKeys: [.isDirectoryKey]), v.isDirectory! {
-            print("Compiling against swift-aws-lambda-runtime located at \(localDepsPath)")
-            package.dependencies = [
-                .package(name: "swift-aws-lambda-runtime", path: localDepsPath)
-            ]
-    } else {
-        print("LAMBDA_USE_LOCAL_DEPS is not pointing to your local swift-aws-lambda-runtime code")
-        print("This project will compile against the main branch of the Lambda Runtime on GitHub")
-    }
 } else {
-    print("++++++++ NO ENV VAR ")
-
+    print("[INFO] LAMBDA_USE_LOCAL_DEPS is not pointing to your local swift-aws-lambda-runtime code")
+    print("[INFO] This project will compile against the main branch of the Lambda Runtime on GitHub")
+    package.dependencies += [
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main")
+    ]
 }
