@@ -20,7 +20,7 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 
 - Ensure you have the Swift 6.x toolchain installed.  You can [install Swift toolchains](https://www.swift.org/install/macos/) from Swift.org
 
-- When developing on macOs, be sure you are using macOS 15 (Sequoia) or more recent.
+- When developing on macOs, be sure you use macOS 15 (Sequoia) or a more recent macOS version.
 
 - To build and archive the package for AWS Lambda, you need to [install docker](https://docs.docker.com/desktop/install/mac-install/).
 
@@ -101,7 +101,7 @@ The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPa
 
 5. Deploy to AWS
 
-There are multiple way to deploy to AWS (SAM, Terraform, CDK, Console) that are covered later in this doc.
+There are multiple ways to deploy to AWS (SAM, Terraform, CDK, Console) that are covered later in this doc.
 Here is how to deploy using the `aws` command line.
 
 ```bash
