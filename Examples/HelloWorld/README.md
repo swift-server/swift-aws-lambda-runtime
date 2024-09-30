@@ -1,16 +1,16 @@
 # Hello World 
 
-This is a simple example of an AWS Lambda function that takes a String as input parameter and returns a String as response.
+This is a simple example of an AWS Lambda function that takes a `String` as input parameter and returns a `String` as response.
 
 ## Code 
 
-The code creates a `LambdaRuntime` struct. In it's simplest form, it takes a function as argument. The function is the Lambda handler that will be invoked when an event triggers the Lambda function.
+The code creates a `LambdaRuntime` struct. In it's simplest form, the initializer takes a function as argument. The function is the handler that will be invoked when an event triggers the Lambda function.
 
-The handler is `(event: String, context: LambdaContext) -> String`. The function takes two arguments:
+The handler is `(event: String, context: LambdaContext)`. The function takes two arguments:
 - the event argument is a `String`. It is the parameter passed when invoking the function.
 - the context argument is a `Lambda Context`. It is a description of the runtime context.
 
-The function must return a String.
+The function return value will be encoded as your Lambda function response.
 
 ## Build & Package 
 
@@ -53,9 +53,9 @@ aws lambda invoke \
 out.txt && cat out.txt && rm out.txt
 ```
 
-Note that the payload is expected to be a valid JSON strings, hence the surroundings quotes (`"`).
+Note that the payload is expected to be a valid JSON string, hence the surroundings quotes (`"`).
 
-This should print 
+This should output the following result. 
 
 ```
 {
@@ -63,4 +63,12 @@ This should print
     "ExecutedVersion": "$LATEST"
 }
 "Hello Seb"
+```
+
+## Undeploy
+
+When done testing, you can delete the Lambda function with this command.
+
+```bash
+aws lambda delete-function --function-name MyLambda
 ```
