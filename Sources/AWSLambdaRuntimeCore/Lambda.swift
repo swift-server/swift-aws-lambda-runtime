@@ -30,13 +30,11 @@ import ucrt
 #endif
 
 public enum Lambda {
-    package
-        static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
-            runtimeClient: RuntimeClient,
-            handler: Handler,
-            logger: Logger
-        ) async throws where Handler: StreamingLambdaHandler
-    {
+    package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
+        runtimeClient: RuntimeClient,
+        handler: Handler,
+        logger: Logger
+    ) async throws where Handler: StreamingLambdaHandler {
         var handler = handler
 
         while !Task.isCancelled {

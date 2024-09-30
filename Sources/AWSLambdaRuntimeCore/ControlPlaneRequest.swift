@@ -28,9 +28,7 @@ enum ControlPlaneResponse: Hashable {
     case error(ErrorResponse)
 }
 
-package
-    struct InvocationMetadata: Hashable
-{
+package struct InvocationMetadata: Hashable {
     package let requestID: String
     package let deadlineInMillisSinceEpoch: Int64
     package let invokedFunctionARN: String

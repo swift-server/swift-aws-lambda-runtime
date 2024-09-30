@@ -484,8 +484,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
     }
 
     func reportError(
-        isolation: isolated (any Actor)? =
-            #isolation,
+        isolation: isolated (any Actor)? = #isolation,
         _ error: any Error,
         requestID: String
     ) async throws {

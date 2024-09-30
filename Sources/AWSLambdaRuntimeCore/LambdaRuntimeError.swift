@@ -12,9 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-package
-    struct LambdaRuntimeError: Error
-{
+package struct LambdaRuntimeError: Error {
     package enum Code {
         case closingRuntimeClient
 

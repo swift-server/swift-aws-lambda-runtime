@@ -121,15 +121,13 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     }
 
     /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
-    package
-        static func __forTestsOnly(
-            requestID: String,
-            traceID: String,
-            invokedFunctionARN: String,
-            timeout: DispatchTimeInterval,
-            logger: Logger
-        ) -> LambdaContext
-    {
+    package static func __forTestsOnly(
+        requestID: String,
+        traceID: String,
+        invokedFunctionARN: String,
+        timeout: DispatchTimeInterval,
+        logger: Logger
+    ) -> LambdaContext {
         LambdaContext(
             requestID: requestID,
             traceID: traceID,
