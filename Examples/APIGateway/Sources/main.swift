@@ -19,6 +19,7 @@ import FoundationEssentials
 #else
 import Foundation
 #endif
+
 let encoder = JSONEncoder()
 let runtime = LambdaRuntime {
     (event: APIGatewayV2Request, context: LambdaContext) -> APIGatewayV2Response in
