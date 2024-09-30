@@ -16,6 +16,7 @@ import AWSLambdaEvents
 import AWSLambdaRuntime
 import class Foundation.JSONEncoder
 
+let encoder = JSONEncoder()
 let runtime = LambdaRuntime {
     (event: APIGatewayV2Request, context: LambdaContext) -> APIGatewayV2Response in
 
@@ -25,8 +26,8 @@ let runtime = LambdaRuntime {
     header["content-type"] = "application/json"
 
     // echo the request in the response
-    let data = try JSONEncoder().encode(event)
-    let response = String(data: data, encoding: .utf8)
+    let data = try encoder.encode(event)
+    let response = String(decoding: data, as: Unicode.UTF8.self)
 
     return APIGatewayV2Response(statusCode: .ok, headers: header, body: response)
 }
