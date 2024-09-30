@@ -27,9 +27,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
     let eventLoop: EventLoop
 
     public init(
-        handler: sending
-Handler
-,
+        handler: sending Handler,
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
     ) {
