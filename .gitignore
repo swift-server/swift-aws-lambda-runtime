@@ -9,3 +9,4 @@ xcuserdata
 Package.resolved
 .serverless
 .vscode
+Makefile

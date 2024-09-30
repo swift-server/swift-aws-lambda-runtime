@@ -5,24 +5,33 @@ import PackageDescription
 import class Foundation.ProcessInfo  // needed for CI to test the local version of the library
 
 let package = Package(
-    name: "swift-aws-lambda-runtime-example",
+    name: "swift-aws-lambda-runtime-samples",
     platforms: [
         .macOS(.v12)
     ],
     products: [
-        .executable(name: "MyLambda", targets: ["MyLambda"])
+        // introductory example
+        .executable(name: "HelloWorld", targets: ["HelloWorld"]),
+        // good for benchmarking
+        .executable(name: "Benchmark", targets: ["Benchmark"]),
+        // demonstrate different types of error handling
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "1.0.0-alpha")
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "1.0.0-alpha.3")
     ],
     targets: [
         .executableTarget(
-            name: "MyLambda",
+            name: "Benchmark",
             dependencies: [
                 .product(name: "AWSLambdaRuntimeCore", package: "swift-aws-lambda-runtime")
-            ],
-            path: "."
-        )
+            ]
+        ),
+        .executableTarget(
+            name: "HelloWorld",
+            dependencies: [
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime")
+            ]
+        ),
     ]
 )
 
