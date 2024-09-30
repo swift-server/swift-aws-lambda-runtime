@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import PackagePlugin
 import Foundation
+import PackagePlugin
 
 @main
 @available(macOS 15.0, *)
@@ -112,7 +112,9 @@ struct AWSLambdaPackager: CommandPlugin {
         guard let buildPathOutput = dockerBuildOutputPath.split(separator: "\n").last else {
             throw Errors.failedParsingDockerOutput(dockerBuildOutputPath)
         }
-        let buildOutputPath = URL(string: buildPathOutput.replacingOccurrences(of: "/workspace/", with: packageDirectory.description))!            
+        let buildOutputPath = URL(
+            string: buildPathOutput.replacingOccurrences(of: "/workspace/", with: packageDirectory.description)
+        )!
 
         // build the products
         var builtProducts = [LambdaProduct: URL]()
@@ -126,7 +128,7 @@ struct AWSLambdaPackager: CommandPlugin {
                 // just like Package.swift's examples assume ../.., we assume we are two levels below the root project
                 let slice = packageDirectory.pathComponents.suffix(2)
                 let beforeLastComponent = packageDirectory.pathComponents[slice.startIndex]
-                let lastComponent = packageDirectory.pathComponents[slice.endIndex-1]
+                let lastComponent = packageDirectory.pathComponents[slice.endIndex - 1]
                 try Utils.execute(
                     executable: dockerToolPath,
                     arguments: [
@@ -302,7 +304,7 @@ private struct Configuration: CustomStringConvertible {
             var isDirectory: Bool = false
             #else
             var isDirectory: ObjCBool = false
-            #endif 
+            #endif
             guard FileManager.default.fileExists(atPath: outputPath, isDirectory: &isDirectory)
             else {
                 throw Errors.invalidArgument("invalid output directory '\(outputPath)'")
@@ -447,7 +449,9 @@ private struct LambdaProduct: Hashable {
 extension PackageManager.BuildResult {
     // find the executable produced by the build
     func executableArtifact(for product: Product) -> PackageManager.BuildResult.BuiltArtifact? {
-        let executables = self.builtArtifacts.filter { $0.kind == .executable && $0.url.lastPathComponent == product.name }
+        let executables = self.builtArtifacts.filter {
+            $0.kind == .executable && $0.url.lastPathComponent == product.name
+        }
         guard !executables.isEmpty else {
             return nil
         }

@@ -14,15 +14,15 @@
 
 import Foundation
 import Logging
-import NIOCore
 import NIOConcurrencyHelpers
+import NIOCore
 
 // We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
 // We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
 // sadly crashes the compiler today.
 public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
     // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
-    let handlerMutex: NIOLockedValueBox<Optional<Handler>>
+    let handlerMutex: NIOLockedValueBox<Handler?>
     let logger: Logger
     let eventLoop: EventLoop
 

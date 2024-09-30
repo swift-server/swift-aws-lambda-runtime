@@ -57,7 +57,11 @@ let package = Package(
                         "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS or non Amazonlinux 2 distributions."
                 ),
                 permissions: [
-                    .allowNetworkConnections(scope: .docker, reason: "The archiver plugin needs docker to build the executable that can be run in AWS Lambda.")
+                    .allowNetworkConnections(
+                        scope: .docker,
+                        reason:
+                            "The archiver plugin needs docker to build the executable that can be run in AWS Lambda."
+                    )
                 ]
             )
         ),
