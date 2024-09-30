@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import Foundation
 import PackagePlugin
 import Synchronization
-import Foundation
 
 @available(macOS 15.0, *)
 struct Utils {
@@ -47,7 +47,7 @@ struct Utils {
         let outputSync = DispatchGroup()
         let outputQueue = DispatchQueue(label: "AWSLambdaPackager.output")
         let unsafeTransfer = UnsafeTransfer(value: stdout)
-        let outputHandler = { @Sendable (data: Data?) in
+        let outputHandler = { @Sendable(data:Data?) in
             dispatchPrecondition(condition: .onQueue(outputQueue))
 
             outputSync.enter()

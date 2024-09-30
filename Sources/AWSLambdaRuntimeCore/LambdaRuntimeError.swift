@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-package struct LambdaRuntimeError: Error {
-    package enum Code {
+package
+struct LambdaRuntimeError: Error {
+    package    enum Code {
         case closingRuntimeClient
 
         case connectionToControlPlaneLost
@@ -34,12 +35,12 @@ package struct LambdaRuntimeError: Error {
         case invalidPort
     }
 
-    package init(code: Code, underlying: (any Error)? = nil) {
+    package    init(code: Code, underlying: (any Error)? = nil) {
         self.code = code
         self.underlying = underlying
     }
 
-    package var code: Code
-    package var underlying: (any Error)?
+    package    var code: Code
+    package    var underlying: (any Error)?
 
 }

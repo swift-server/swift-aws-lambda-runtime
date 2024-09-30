@@ -30,37 +30,38 @@ import ucrt
 #endif
 
 public enum Lambda {
-    package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
-        runtimeClient: RuntimeClient,
-        handler: Handler,
-        logger: Logger
-    ) async throws where Handler: StreamingLambdaHandler {
-        var handler = handler
+package
+static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
+    runtimeClient: RuntimeClient,
+    handler: Handler,
+    logger: Logger
+) async throws where Handler: StreamingLambdaHandler {
+    var handler = handler
 
-        while !Task.isCancelled {
-            let (invocation, writer) = try await runtimeClient.nextInvocation()
+    while !Task.isCancelled {
+        let (invocation, writer) = try await runtimeClient.nextInvocation()
 
-            do {
-                try await handler.handle(
-                    invocation.event,
-                    responseWriter: writer,
-                    context: LambdaContext(
-                        requestID: invocation.metadata.requestID,
-                        traceID: invocation.metadata.traceID,
-                        invokedFunctionARN: invocation.metadata.invokedFunctionARN,
-                        deadline: DispatchWallTime(millisSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch),
-                        logger: logger
-                    )
+        do {
+            try await handler.handle(
+                invocation.event,
+                responseWriter: writer,
+                context: LambdaContext(
+                    requestID: invocation.metadata.requestID,
+                    traceID: invocation.metadata.traceID,
+                    invokedFunctionARN: invocation.metadata.invokedFunctionARN,
+                    deadline: DispatchWallTime(millisSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch),
+                    logger: logger
                 )
-            } catch {
-                try await writer.reportError(error)
-                continue
-            }
+            )
+        } catch {
+            try await writer.reportError(error)
+            continue
         }
     }
+}
 
-    /// The default EventLoop the Lambda is scheduled on.
-    public static var defaultEventLoop: any EventLoop = NIOSingletons.posixEventLoopGroup.next()
+/// The default EventLoop the Lambda is scheduled on.
+public static var defaultEventLoop: any EventLoop = NIOSingletons.posixEventLoopGroup.next()
 }
 
 // MARK: - Public API

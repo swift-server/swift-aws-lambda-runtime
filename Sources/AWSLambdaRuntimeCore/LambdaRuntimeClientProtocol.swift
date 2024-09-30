@@ -14,24 +14,27 @@
 
 import NIOCore
 
-package protocol LambdaRuntimeClientResponseStreamWriter: LambdaResponseStreamWriter {
+package
+protocol LambdaRuntimeClientResponseStreamWriter: LambdaResponseStreamWriter {
     func write(_ buffer: ByteBuffer) async throws
     func finish() async throws
     func writeAndFinish(_ buffer: ByteBuffer) async throws
     func reportError(_ error: any Error) async throws
 }
 
-package protocol LambdaRuntimeClientProtocol {
+package
+protocol LambdaRuntimeClientProtocol {
     associatedtype Writer: LambdaRuntimeClientResponseStreamWriter
 
     func nextInvocation() async throws -> (Invocation, Writer)
 }
 
-package struct Invocation {
-    package var metadata: InvocationMetadata
-    package var event: ByteBuffer
+package
+struct Invocation {
+    package    var metadata: InvocationMetadata
+    package    var event: ByteBuffer
 
-    package init(metadata: InvocationMetadata, event: ByteBuffer) {
+    package    init(metadata: InvocationMetadata, event: ByteBuffer) {
         self.metadata = metadata
         self.event = event
     }
