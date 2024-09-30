@@ -462,7 +462,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
         ]
     }
 
-    func nextInvocation(isolation: isolated (any Actor)? =        #isolation) async throws -> Invocation {
+    func nextInvocation(isolation: isolated (any Actor)? = #isolation) async throws -> Invocation {
         switch self.state {
         case .connected(let context, .idle):
             return try await withCheckedThrowingContinuation {
@@ -485,7 +485,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
 
     func reportError(
         isolation: isolated (any Actor)? =
-#isolation,
+            #isolation,
         _ error: any Error,
         requestID: String
     ) async throws {

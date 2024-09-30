@@ -120,20 +120,22 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         "\(Self.self)(requestID: \(self.requestID), traceID: \(self.traceID), invokedFunctionARN: \(self.invokedFunctionARN), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(self.clientContext ?? "nil"), deadline: \(self.deadline))"
     }
 
-/// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
-package
-static func __forTestsOnly(
-    requestID: String,
-    traceID: String,
-    invokedFunctionARN: String,
-    timeout: DispatchTimeInterval,
-    logger: Logger
-) -> LambdaContext {
-    LambdaContext(
-        requestID: requestID,
-        traceID: traceID,
-        invokedFunctionARN: invokedFunctionARN,
-        deadline: .now() + timeout,
-        logger: logger
-    )
-}}
+    /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
+    package
+        static func __forTestsOnly(
+            requestID: String,
+            traceID: String,
+            invokedFunctionARN: String,
+            timeout: DispatchTimeInterval,
+            logger: Logger
+        ) -> LambdaContext
+    {
+        LambdaContext(
+            requestID: requestID,
+            traceID: traceID,
+            invokedFunctionARN: invokedFunctionARN,
+            deadline: .now() + timeout,
+            logger: logger
+        )
+    }
+}
