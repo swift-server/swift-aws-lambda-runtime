@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import Foundation
 import PackagePlugin
 import Synchronization
-import Foundation
 
 @available(macOS 15.0, *)
 struct Utils {
