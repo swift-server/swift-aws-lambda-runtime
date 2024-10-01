@@ -220,13 +220,8 @@ struct AWSLambdaPackager: CommandPlugin {
             try FileManager.default.createDirectory(atPath: workingDirectory.path(), withIntermediateDirectories: true)
 
             // rename artifact to "bootstrap"
-            let relocatedArtifactPath = workingDirectory.appending(path: artifactPath.lastPathComponent)
-            let symbolicLinkPath = workingDirectory.appending(path: "bootstrap")
+            let relocatedArtifactPath = workingDirectory.appending(path: "bootstrap")
             try FileManager.default.copyItem(atPath: artifactPath.path(), toPath: relocatedArtifactPath.path())
-            try FileManager.default.createSymbolicLink(
-                atPath: symbolicLinkPath.path(),
-                withDestinationPath: relocatedArtifactPath.lastPathComponent
-            )
 
             var arguments: [String] = []
             #if os(macOS) || os(Linux)
@@ -235,7 +230,6 @@ struct AWSLambdaPackager: CommandPlugin {
                 "--symlinks",
                 zipfilePath.lastPathComponent,
                 relocatedArtifactPath.lastPathComponent,
-                symbolicLinkPath.lastPathComponent,
             ]
             #else
             throw Errors.unsupportedPlatform("can't or don't know how to create a zip file on this platform")
