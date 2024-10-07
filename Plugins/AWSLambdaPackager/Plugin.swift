@@ -235,16 +235,16 @@ struct AWSLambdaPackager: CommandPlugin {
 
             // add resources
             var artifactPathComponents = artifactPath.pathComponents
-            _ = artifactPathComponents.removeFirst() // Get rid of beginning "/"
-            _ = artifactPathComponents.removeLast() // Get rid of the name of the package
+            _ = artifactPathComponents.removeFirst()  // Get rid of beginning "/"
+            _ = artifactPathComponents.removeLast()  // Get rid of the name of the package
             let artifactDirectory = "/\(artifactPathComponents.joined(separator: "/"))"
             for fileInArtifactDirectory in try FileManager.default.contentsOfDirectory(atPath: artifactDirectory) {
                 guard let artifactURL = URL(string: "\(artifactDirectory)/\(fileInArtifactDirectory)") else {
                     continue
                 }
-                
+
                 guard artifactURL.pathExtension == "resources" else {
-                    continue // Not resources, so don't copy
+                    continue  // Not resources, so don't copy
                 }
                 let resourcesDirectoryName = artifactURL.lastPathComponent
                 let relocatedResourcesDirectory = workingDirectory.appending(path: resourcesDirectoryName)
@@ -256,7 +256,6 @@ struct AWSLambdaPackager: CommandPlugin {
                     arguments.append(resourcesDirectoryName)
                 }
             }
-            
 
             // run the zip tool
             try Utils.execute(
