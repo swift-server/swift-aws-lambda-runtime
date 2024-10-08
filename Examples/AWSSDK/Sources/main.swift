@@ -17,7 +17,6 @@ import AWSLambdaEvents
 
 import AWSS3
 
-
 func handler(event: APIGatewayV2Request, context: LambdaContext) async throws -> APIGatewayV2Response {
 
     var response: APIGatewayV2Response
