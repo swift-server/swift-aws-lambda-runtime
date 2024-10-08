@@ -30,7 +30,11 @@ struct Utils {
             print("\(executable.absoluteString) \(arguments.joined(separator: " "))")
         }
 
+        #if compiler(>=6.0) && compiler(<6.1) && os(Linux)
+        let fd = dup(1)!
+        #else
         let fd = dup(1)
+        #endif
         let stdout = fdopen(fd, "rw")
         defer { fclose(stdout) }
 
