@@ -43,8 +43,8 @@ public struct LambdaJSONOutputEncoder<Output: Encodable>: LambdaOutputEncoder {
 extension LambdaCodableAdapter {
     /// Initializes an instance given an encoder, decoder, and a handler with a non-`Void` output.
     ///   - Parameters:
-    ///   - encoder: The encoder object that will be used to encode the generic ``Output`` obtained from the `handler`'s `outputWriter` into a ``ByteBuffer``.
-    ///   - decoder: The decoder object that will be used to decode the received ``ByteBuffer`` event into the generic ``Event`` type served to the `handler`.
+    ///   - encoder: The encoder object that will be used to encode the generic `Output` obtained from the `handler`'s `outputWriter` into a `ByteBuffer`.
+    ///   - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`.
     ///   - handler: The handler object.
     public init(
         encoder: JSONEncoder,
@@ -68,8 +68,8 @@ extension LambdaCodableAdapter {
 extension LambdaRuntime {
     /// Initialize an instance with a ``LambdaHandler`` defined in the form of a closure **with a non-`Void` return type**.
     /// - Parameter body: The handler in the form of a closure.
-    /// - Parameter encoder: The encoder object that will be used to encode the generic ``Output`` into a ``ByteBuffer``. ``JSONEncoder()`` used as default.
-    /// - Parameter decoder: The decoder object that will be used to decode the incoming ``ByteBuffer`` event into the generic ``Event`` type. ``JSONDecoder()`` used as default.
+    /// - Parameter encoder: The encoder object that will be used to encode the generic `Output` into a `ByteBuffer`. `JSONEncoder()` used as default.
+    /// - Parameter decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type. `JSONDecoder()` used as default.
     public convenience init<Event: Decodable, Output>(
         body: @escaping (Event, LambdaContext) async throws -> Output,
         encoder: JSONEncoder = JSONEncoder(),
@@ -93,9 +93,9 @@ extension LambdaRuntime {
         self.init(handler: handler)
     }
 
-    /// Initialize an instance with a ``LambdaHandler`` defined in the form of a closure **with a `Void` return type**.
+    /// Initialize an instance with a `LambdaHandler` defined in the form of a closure **with a `Void` return type**.
     /// - Parameter body: The handler in the form of a closure.
-    /// - Parameter decoder: The decoder object that will be used to decode the incoming ``ByteBuffer`` event into the generic ``Event`` type. ``JSONDecoder()`` used as default.
+    /// - Parameter decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type. `JSONDecoder()` used as default.
     public convenience init<Event: Decodable>(
         body: @escaping (Event, LambdaContext) async throws -> Void,
         decoder: JSONDecoder = JSONDecoder()
