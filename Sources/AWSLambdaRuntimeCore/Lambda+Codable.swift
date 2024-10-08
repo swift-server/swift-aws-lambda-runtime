@@ -15,9 +15,9 @@
 import NIOCore
 
 /// The protocol a decoder must conform to so that it can be used with ``LambdaCodableAdapter`` to decode incoming
-/// ``ByteBuffer`` events.
+/// `ByteBuffer` events.
 public protocol LambdaEventDecoder {
-    /// Decode the ``ByteBuffer`` representing the received event into the generic ``Event`` type
+    /// Decode the `ByteBuffer` representing the received event into the generic `Event` type
     /// the handler will receive.
     /// - Parameters:
     ///   - type: The type of the object to decode the buffer into.
@@ -27,14 +27,14 @@ public protocol LambdaEventDecoder {
 }
 
 /// The protocol an encoder must conform to so that it can be used with ``LambdaCodableAdapter`` to encode the generic
-/// ``Output`` object into a ``ByteBuffer``.
+/// ``LambdaOutputEncoder/Output`` object into a `ByteBuffer`.
 public protocol LambdaOutputEncoder {
     associatedtype Output
 
-    /// Encode the generic type `Output` the handler has returned into a ``ByteBuffer``.
+    /// Encode the generic type `Output` the handler has returned into a `ByteBuffer`.
     /// - Parameters:
-    ///   - value: The object to encode into a ``ByteBuffer``.
-    ///   - buffer: The ``ByteBuffer`` where the encoded value will be written to.
+    ///   - value: The object to encode into a `ByteBuffer`.
+    ///   - buffer: The `ByteBuffer` where the encoded value will be written to.
     func encode(_ value: Output, into buffer: inout ByteBuffer) throws
 }
 
@@ -62,7 +62,7 @@ public struct LambdaHandlerAdapter<
         self.handler = handler
     }
 
-    /// Passes the generic ``Event`` object to the ``LambdaHandler/handle(_:context:)`` function, and
+    /// Passes the generic `Event` object to the ``LambdaHandler/handle(_:context:)`` function, and
     /// the resulting output is then written to ``LambdaWithBackgroundProcessingHandler``'s `outputWriter`.
     /// - Parameters:
     ///   - event: The received event.
@@ -93,9 +93,9 @@ public struct LambdaCodableAdapter<
     @usableFromInline var byteBuffer: ByteBuffer = .init()
 
     /// Initializes an instance given an encoder, decoder, and a handler with a non-`Void` output.
-    ///   - Parameters:
-    ///   - encoder: The encoder object that will be used to encode the generic ``Output`` obtained from the `handler`'s `outputWriter` into a ``ByteBuffer``.
-    ///   - decoder: The decoder object that will be used to decode the received ``ByteBuffer`` event into the generic ``Event`` type served to the `handler`.
+    /// - Parameters:
+    ///   - encoder: The encoder object that will be used to encode the generic `Output` obtained from the `handler`'s `outputWriter` into a `ByteBuffer`.
+    ///   - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`.
     ///   - handler: The handler object.
     @inlinable
     public init(encoder: Encoder, decoder: Decoder, handler: Handler) where Output: Encodable {
@@ -106,8 +106,8 @@ public struct LambdaCodableAdapter<
 
     /// Initializes an instance given a decoder, and a handler with a `Void` output.
     ///   - Parameters:
-    ///   - decoder: The decoder object that will be used to decode the received ``ByteBuffer`` event into the generic ``Event`` type served to the `handler`.
-    ///   - handler: The handler object.
+    ///     - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`.
+    ///     - handler: The handler object.
     @inlinable
     public init(decoder: Decoder, handler: Handler) where Output == Void, Encoder == VoidEncoder {
         self.encoder = VoidEncoder()
@@ -145,7 +145,7 @@ where Output == Encoder.Output {
 
     /// Initializes an instance given an encoder and an underlying ``LambdaResponseStreamWriter``.
     /// - Parameters:
-    ///   - encoder: The encoder object that will be used to encode the generic ``Output`` into a ``ByteBuffer``, which will then be passed to `streamWriter`.
+    ///   - encoder: The encoder object that will be used to encode the generic `Output` into a `ByteBuffer`, which will then be passed to `streamWriter`.
     ///   - streamWriter: The underlying ``LambdaResponseStreamWriter`` that will be wrapped.
     @inlinable
     public init(encoder: Encoder, streamWriter: Base) {
