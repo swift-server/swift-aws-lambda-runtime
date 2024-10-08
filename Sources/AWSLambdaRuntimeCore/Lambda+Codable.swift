@@ -93,7 +93,7 @@ public struct LambdaCodableAdapter<
     @usableFromInline var byteBuffer: ByteBuffer = .init()
 
     /// Initializes an instance given an encoder, decoder, and a handler with a non-`Void` output.
-    ///   - Parameters:
+    /// - Parameters:
     ///   - encoder: The encoder object that will be used to encode the generic `Output` obtained from the `handler`'s `outputWriter` into a `ByteBuffer`.
     ///   - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`.
     ///   - handler: The handler object.
@@ -106,8 +106,8 @@ public struct LambdaCodableAdapter<
 
     /// Initializes an instance given a decoder, and a handler with a `Void` output.
     ///   - Parameters:
-    ///   - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`.
-    ///   - handler: The handler object.
+    ///     - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`.
+    ///     - handler: The handler object.
     @inlinable
     public init(decoder: Decoder, handler: Handler) where Output == Void, Encoder == VoidEncoder {
         self.encoder = VoidEncoder()
