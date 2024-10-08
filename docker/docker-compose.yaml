@@ -24,7 +24,11 @@ services:
 
   soundness:
     <<: *common
-    command: /bin/bash -cl "./scripts/soundness.sh"
+    command: >-
+      /bin/bash -clx "
+      curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-swift-format.sh | bash && 
+      curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-license-header.sh | bash 
+      "
 
   test:
     <<: *common
@@ -34,14 +38,10 @@ services:
     <<: *common
     command: >-
       /bin/bash -clx "
-      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Benchmark &&
-      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Deployment &&
-      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Echo &&
-      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/ErrorHandling &&
-      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Foundation &&
-      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/JSON &&
-      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/LocalDebugging/MyLambda &&
-      LAMBDA_USE_LOCAL_DEPS=true swift test --package-path Examples/Testing
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/APIGateway &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/AWSSDK &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/HelloWorld &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Soto &&
       "
 
   # util
