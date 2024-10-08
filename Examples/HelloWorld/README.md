@@ -18,7 +18,7 @@ To build & archive the package, type the following commands.
 
 ```bash
 swift build
-swift package archive --disable-sandbox
+swift package archive --allow-network-access docker
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
