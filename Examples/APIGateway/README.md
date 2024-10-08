@@ -26,7 +26,7 @@ swift package archive --allow-network-access docker
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
-The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip`
+The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip`
 
 ## Deploy
 
@@ -40,9 +40,9 @@ To actually deploy your Lambda function and create the infrastructure, type the 
 
 ```bash
 sam deploy \
-----resolve-s3 \
+--resolve-s3 \
 --template-file template.yaml \
---stack-name MyLambda \
+--stack-name APIGAtewayLambda \
 --capabilities CAPABILITY_IAM 
 ```
 
@@ -54,7 +54,7 @@ The output is similar to this one.
 Outputs                                                                                                                     
 -----------------------------------------------------------------------------------------------------------------------------
 Key                 APIGAtewayEndpoint                                                                                      
-Description         API Gateway endpoint UR"                                                                                
+Description         API Gateway endpoint URL"                                                                                
 Value               https://a5q74es3k2.execute-api.us-east-1.amazonaws.com                                                  
 -----------------------------------------------------------------------------------------------------------------------------
 ```

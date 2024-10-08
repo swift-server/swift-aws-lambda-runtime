@@ -7,7 +7,7 @@ Resources:
   APIGAtewayLambda:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGAtewayLambda/APIGAtewayLambda.zip
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip
       Timeout: 60
       Handler: swift.bootstrap
       Runtime: provided.al2

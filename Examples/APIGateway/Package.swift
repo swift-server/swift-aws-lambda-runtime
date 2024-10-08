@@ -16,7 +16,7 @@ let package = Package(
     name: "swift-aws-lambda-runtime-example",
     platforms: platforms,
     products: [
-        .executable(name: "APIGAtewayLambda", targets: ["APIGAtewayLambda"])
+        .executable(name: "APIGatewayLambda", targets: ["APIGatewayLambda"])
     ],
     dependencies: [
         // dependency on swift-aws-lambda-runtime is added dynamically below
@@ -26,7 +26,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "APIGAtewayLambda",
+            name: "APIGatewayLambda",
             dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
                 .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
