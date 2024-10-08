@@ -14,15 +14,16 @@
 
 import AWSLambdaEvents
 import AWSLambdaRuntime
-import AWSS3
 
-func handler(event: APIGatewayV2Request, context: LambdaContext) async throws -> APIGatewayV2Response {
+@preconcurrency import AWSS3
+let client = try await S3Client()
+
+let runtime = LambdaRuntime.init { (event: APIGatewayV2Request, context: LambdaContext) async throws -> APIGatewayV2Response in
 
     var response: APIGatewayV2Response
     do {
         // read the list of buckets
         context.logger.debug("Reading list of buckets")
-        let client = try await S3Client()
         let output = try await client.listBuckets(input: ListBucketsInput())
         let bucketList = output.buckets?.compactMap { $0.name }
         response = APIGatewayV2Response(statusCode: .ok, body: bucketList?.joined(separator: "\n"))
@@ -33,5 +34,4 @@ func handler(event: APIGatewayV2Request, context: LambdaContext) async throws ->
     return response
 }
 
-let runtime = LambdaRuntime.init(body: handler)
 try await runtime.run()
