@@ -27,42 +27,42 @@ swift package init --type executable
 
 2. Prepare your `Package.swift` file
 
-2.1 Add the Swift AWS Lambda Runtime as a dependency
+    2.1 Add the Swift AWS Lambda Runtime as a dependency
 
-```bash
- swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --branch main
- swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime
- ```
+    ```bash
+    swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --branch main
+    swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime
+    ```
 
-2.2 (Optional - only on macOS) Add `platforms` after `name`
+    2.2 (Optional - only on macOS) Add `platforms` after `name`
 
-```
-    platforms: [.macOS(.v15)],
-```
+    ```
+        platforms: [.macOS(.v15)],
+    ```
 
-2.3 Your `Package.swift` file must look like this
+    2.3 Your `Package.swift` file must look like this
 
-```swift
-// swift-tools-version: 6.0
+    ```swift
+    // swift-tools-version: 6.0
 
-import PackageDescription
+    import PackageDescription
 
-let package = Package(
-    name: "MyLambda",
-    platforms: [.macOS(.v15)],
-    dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
-    ],
-    targets: [
-        .executableTarget(
-            name: "MyLambda",
-            dependencies: [
-                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-            ]
-            ),
-    ]
-)
-```
+    let package = Package(
+        name: "MyLambda",
+        platforms: [.macOS(.v15)],
+        dependencies: [
+            .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
+        ],
+        targets: [
+            .executableTarget(
+                name: "MyLambda",
+                dependencies: [
+                    .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+                ]
+                ),
+        ]
+    )
+    ```
 
 3. Edit `Sources/main.swift` file and replace the content with this code 
 
