@@ -14,11 +14,12 @@
 
 import AWSLambdaEvents
 import AWSLambdaRuntime
-
 @preconcurrency import AWSS3
+
 let client = try await S3Client()
 
-let runtime = LambdaRuntime.init { (event: APIGatewayV2Request, context: LambdaContext) async throws -> APIGatewayV2Response in
+let runtime = LambdaRuntime.init {
+    (event: APIGatewayV2Request, context: LambdaContext) async throws -> APIGatewayV2Response in
 
     var response: APIGatewayV2Response
     do {
