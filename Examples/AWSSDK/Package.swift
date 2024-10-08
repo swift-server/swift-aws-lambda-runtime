@@ -6,15 +6,9 @@ import PackageDescription
 import class Foundation.ProcessInfo
 import struct Foundation.URL
 
-#if os(macOS)
-let platforms: [PackageDescription.SupportedPlatform]? = [.macOS(.v15)]
-#else
-let platforms: [PackageDescription.SupportedPlatform]? = nil
-#endif
-
 let package = Package(
     name: "AWSSDKExample",
-    platforms: platforms,
+    platforms: [.macOS(.v15)],
     products: [
         .executable(name: "AWSSDKExample", targets: ["AWSSDKExample"])
     ],
