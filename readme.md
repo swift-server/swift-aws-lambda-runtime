@@ -8,11 +8,13 @@
 
 - Ensure you have the Swift 6.x toolchain installed.  You can [install Swift toolchains](https://www.swift.org/install/macos/) from Swift.org
 
-- When developing on macOs, be sure you use macOS 15 (Sequoia) or a more recent macOS version.
+- When developing on macOS, be sure you use macOS 15 (Sequoia) or a more recent macOS version.
 
-- To build and archive the package for AWS Lambda, you need to [install docker](https://docs.docker.com/desktop/install/mac-install/).
+- To build and archive your Lambda function, you need to [install docker](https://docs.docker.com/desktop/install/mac-install/).
 
 - To deploy the Lambda function and invoke it, you must have [an AWS account](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html) and [install and configure the `aws` command line](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+
+- Some examples are using [AWS SAM](https://aws.amazon.com/serverless/sam/). Install the [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) before deploying these examples.
 
 ## TL;DR
 
@@ -89,7 +91,8 @@ The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPa
 
 5. Deploy to AWS
 
-There are multiple ways to deploy to AWS (SAM, Terraform, CDK, Console) that are covered later in this doc.
+There are multiple ways to deploy to AWS ([SAM](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html), [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started), [AWS Cloud Development Kit (CDK)](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html), [AWS Console](https://docs.aws.amazon.com/lambda/latest/dg/getting-started.html)) that are covered later in this doc.
+
 Here is how to deploy using the `aws` command line.
 
 ```bash
