@@ -88,15 +88,16 @@ struct LambdaRequestID {
     }
 
     /// thread safe secure random number generator.
-    private static var generator = SystemRandomNumberGenerator()
     private static func generateRandom() -> Self {
+        var generator = SystemRandomNumberGenerator()
+
         var _uuid: uuid_t = LambdaRequestID.null
         // https://tools.ietf.org/html/rfc4122#page-14
         // o  Set all the other bits to randomly (or pseudo-randomly) chosen
         //    values.
         withUnsafeMutableBytes(of: &_uuid) { ptr in
-            ptr.storeBytes(of: Self.generator.next(), toByteOffset: 0, as: UInt64.self)
-            ptr.storeBytes(of: Self.generator.next(), toByteOffset: 8, as: UInt64.self)
+            ptr.storeBytes(of: generator.next(), toByteOffset: 0, as: UInt64.self)
+            ptr.storeBytes(of: generator.next(), toByteOffset: 8, as: UInt64.self)
         }
 
         // o  Set the four most significant bits (bits 12 through 15) of the
