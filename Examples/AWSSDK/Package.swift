@@ -18,14 +18,25 @@
 
 import PackageDescription
 
+// needed for CI to test the local version of the library
+import class Foundation.ProcessInfo
+import struct Foundation.URL
+
+#if os(macOS)
+let platforms: [PackageDescription.SupportedPlatform]? = [.macOS(.v15)]
+#else
+let platforms: [PackageDescription.SupportedPlatform]? = nil
+#endif
+
 let package = Package(
-    name: "aws-swift-app",
-    platforms: [.macOS(.v15)],
+    name: "AWSSDKExample",
+    platforms: platforms,
     products: [
         .executable(name: "AWSSDKExample", targets: ["AWSSDKExample"])
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime", branch: "main"),
+        // dependency on swift-aws-lambda-runtime is added dynamically below
+        // .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main")
         .package(url: "https://github.com/swift-server/swift-aws-lambda-events", branch: "main"),
         .package(url: "https://github.com/awslabs/aws-sdk-swift", from: "1.0.0")
     ],
@@ -40,3 +51,21 @@ let package = Package(
         )
     ]
 )
+
+if let localDepsPath = ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"],
+    localDepsPath != "",
+    let v = try? URL(fileURLWithPath: localDepsPath).resourceValues(forKeys: [.isDirectoryKey]),
+    let _ = v.isDirectory
+{
+    print("[INFO] Compiling against swift-aws-lambda-runtime located at \(localDepsPath)")
+    package.dependencies += [
+        .package(name: "swift-aws-lambda-runtime", path: localDepsPath)
+    ]
+
+} else {
+    print("[INFO] LAMBDA_USE_LOCAL_DEPS is not pointing to your local swift-aws-lambda-runtime code")
+    print("[INFO] This project will compile against the main branch of the Lambda Runtime on GitHub")
+    package.dependencies += [
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main")
+    ]
+}
