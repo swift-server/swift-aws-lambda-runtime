@@ -12,16 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntime
 import AWSLambdaEvents
-
+import AWSLambdaRuntime
 import AWSS3
 
 func handler(event: APIGatewayV2Request, context: LambdaContext) async throws -> APIGatewayV2Response {
 
     var response: APIGatewayV2Response
     do {
-        // read the list of buckets 
+        // read the list of buckets
         context.logger.debug("Reading list of buckets")
         let client = try await S3Client()
         let output = try await client.listBuckets(input: ListBucketsInput())

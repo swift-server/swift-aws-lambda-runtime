@@ -12,9 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntime
 import AWSLambdaEvents
-
+import AWSLambdaRuntime
 import SotoS3
 
 let client = AWSClient()
@@ -25,8 +24,8 @@ func handler(event: APIGatewayV2Request, context: LambdaContext) async throws ->
     var response: APIGatewayV2Response
     do {
         context.logger.debug("Reading list of buckets")
-        
-        // read the list of buckets 
+
+        // read the list of buckets
         let bucketResponse = try await s3.listBuckets()
         let bucketList = bucketResponse.buckets?.compactMap { $0.name }
         response = APIGatewayV2Response(statusCode: .ok, body: bucketList?.joined(separator: "\n"))
