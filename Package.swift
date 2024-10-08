@@ -23,9 +23,8 @@ let package = Package(
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", .upToNextMajor(from: "2.72.0")),
-        .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.5.4")),
-        .package(url: "https://github.com/apple/swift-testing.git", branch: "swift-DEVELOPMENT-SNAPSHOT-2024-08-29-a"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.72.0"),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.5.4"),
     ],
     targets: [
         .target(
@@ -34,8 +33,7 @@ let package = Package(
                 .byName(name: "AWSLambdaRuntimeCore"),
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
-            ],
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            ]
         ),
         .target(
             name: "AWSLambdaRuntimeCore",
@@ -70,7 +68,6 @@ let package = Package(
                 .byName(name: "AWSLambdaRuntimeCore"),
                 .product(name: "NIOTestUtils", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
-                .product(name: "Testing", package: "swift-testing"),
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
@@ -79,7 +76,6 @@ let package = Package(
             dependencies: [
                 .byName(name: "AWSLambdaRuntimeCore"),
                 .byName(name: "AWSLambdaRuntime"),
-                .product(name: "Testing", package: "swift-testing"),
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
@@ -95,8 +91,7 @@ let package = Package(
         .testTarget(
             name: "AWSLambdaTestingTests",
             dependencies: [
-                .byName(name: "AWSLambdaTesting"),
-                .product(name: "Testing", package: "swift-testing"),
+                .byName(name: "AWSLambdaTesting")
             ]
         ),
         // for perf testing
