@@ -14,8 +14,8 @@
 
 import Foundation
 import Logging
-import Synchronization
 import NIOCore
+import Synchronization
 
 public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLambdaHandler {
     let handlerMutex: Mutex<Handler?>
