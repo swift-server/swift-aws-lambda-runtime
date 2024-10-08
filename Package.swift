@@ -32,8 +32,7 @@ let package = Package(
             dependencies: [
                 .byName(name: "AWSLambdaRuntimeCore"),
                 .product(name: "NIOCore", package: "swift-nio"),
-                .product(name: "NIOFoundationCompat", package: "swift-nio"),
-            ]
+            ],
         ),
         .target(
             name: "AWSLambdaRuntimeCore",

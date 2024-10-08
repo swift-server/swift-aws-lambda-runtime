@@ -14,7 +14,6 @@
 
 @_exported import AWSLambdaRuntimeCore
 import NIOCore
-import NIOFoundationCompat
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -24,7 +23,24 @@ import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
 #endif
 
-extension JSONDecoder: AWSLambdaRuntimeCore.LambdaEventDecoder {}
+public struct LambdaJSONEventDecoder: LambdaEventDecoder {
+    @usableFromInline let jsonDecoder: JSONDecoder
+
+    @inlinable
+    public init(_ jsonDecoder: JSONDecoder) {
+        self.jsonDecoder = jsonDecoder
+    }
+
+    @inlinable
+    public func decode<Event>(_ type: Event.Type, from buffer: NIOCore.ByteBuffer) throws -> Event where Event : Decodable {
+        try buffer.getJSONDecodable(
+            Event.self,
+            decoder: self.jsonDecoder,
+            at: buffer.readerIndex,
+            length: buffer.readableBytes
+        )!  // must work, enough readable bytes
+    }
+}
 
 public struct LambdaJSONOutputEncoder<Output: Encodable>: LambdaOutputEncoder {
     @usableFromInline let jsonEncoder: JSONEncoder
@@ -36,7 +52,7 @@ public struct LambdaJSONOutputEncoder<Output: Encodable>: LambdaOutputEncoder {
 
     @inlinable
     public func encode(_ value: Output, into buffer: inout ByteBuffer) throws {
-        try self.jsonEncoder.encode(value, into: &buffer)
+        try buffer.writeJSONEncodable(value, encoder: self.jsonEncoder)
     }
 }
 
@@ -55,11 +71,11 @@ extension LambdaCodableAdapter {
         Output: Encodable,
         Output == Handler.Output,
         Encoder == LambdaJSONOutputEncoder<Output>,
-        Decoder == JSONDecoder
+        Decoder == LambdaJSONEventDecoder
     {
         self.init(
             encoder: LambdaJSONOutputEncoder(encoder),
-            decoder: decoder,
+            decoder: LambdaJSONEventDecoder(decoder),
             handler: handler
         )
     }
@@ -81,7 +97,7 @@ extension LambdaRuntime {
             LambdaHandlerAdapter<Event, Output, ClosureHandler<Event, Output>>,
             Event,
             Output,
-            JSONDecoder,
+            LambdaJSONEventDecoder,
             LambdaJSONOutputEncoder<Output>
         >
     {
@@ -106,12 +122,12 @@ extension LambdaRuntime {
             LambdaHandlerAdapter<Event, Void, ClosureHandler<Event, Void>>,
             Event,
             Void,
-            JSONDecoder,
+            LambdaJSONEventDecoder,
             VoidEncoder
         >
     {
         let handler = LambdaCodableAdapter(
-            decoder: decoder,
+            decoder: LambdaJSONEventDecoder(decoder),
             handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
         )
 
