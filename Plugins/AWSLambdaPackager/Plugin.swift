@@ -132,12 +132,12 @@ struct AWSLambdaPackager: CommandPlugin {
                 // when developing locally, we must have the full swift-aws-lambda-runtime project in the container
                 // because Examples' Package.swift have a dependency on ../..
                 // just like Package.swift's examples assume ../.., we assume we are two levels below the root project
-                let slice = packageDirectory.pathComponents.suffix(3)
+                let slice = packageDirectory.pathComponents.suffix(2)
                 try Utils.execute(
                     executable: dockerToolPath,
                     arguments: [
                         "run", "--rm", "--env", "LAMBDA_USE_LOCAL_DEPS=true", "-v",
-                        "\(packageDirectory.path())../../..:/workspace", "-w",
+                        "\(packageDirectory.path())../..:/workspace", "-w",
                         "/workspace/\(slice.joined(separator: "/"))", baseImage, "bash", "-cl", buildCommand,
                     ],
                     logLevel: verboseLogging ? .debug : .output
