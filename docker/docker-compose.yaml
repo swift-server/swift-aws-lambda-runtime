@@ -1,7 +1,6 @@
 # this file is not designed to be run directly
 # instead, use the docker-compose.<os>.<swift> files
-# eg docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.al2.57.yaml run test
-version: "3"
+# eg docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.al2.6.0.yaml run test
 
 services:
 
@@ -41,7 +40,7 @@ services:
       LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/APIGateway &&
       LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/AWSSDK &&
       LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/HelloWorld &&
-      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Soto &&
+      LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Soto
       "
 
   # util
