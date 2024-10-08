@@ -92,7 +92,7 @@ let package = Package(
         .testTarget(
             name: "AWSLambdaTestingTests",
             dependencies: [
-                .byName(name: "AWSLambdaTesting"),
+                .byName(name: "AWSLambdaTesting")
             ]
         ),
         // for perf testing
