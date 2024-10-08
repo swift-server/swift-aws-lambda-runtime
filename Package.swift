@@ -56,12 +56,12 @@ let package = Package(
                     description:
                         "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS or non Amazonlinux 2 distributions."
                 ),
-permissions: [
+                permissions: [
                     .allowNetworkConnections(
                         scope: .docker,
                         reason: "This plugin uses Docker to create the AWS Lambda ZIP package."
                     )
-                ]                
+                ]
             )
         ),
         .testTarget(
