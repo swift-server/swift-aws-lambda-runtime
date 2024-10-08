@@ -37,4 +37,6 @@ func handler(event: APIGatewayV2Request, context: LambdaContext) async throws ->
 }
 
 let runtime = LambdaRuntime.init(body: handler)
+
 try await runtime.run()
+try await client.shutdown()
