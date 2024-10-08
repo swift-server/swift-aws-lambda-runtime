@@ -6,7 +6,7 @@ sam deploy \
 
 # API Gateway 
 
-This is a simple example of an AWS Lambda function that uses the [AWS SDK for Swift](https://github.com/awslabs/aws-sdk-swift) to read data from Amazon S3.
+This is a simple example of an AWS Lambda function that uses the [Soto SDK for AWS](https://github.com/soto-project/soto) to read data from Amazon S3.
 
 ## Code 
 
@@ -22,7 +22,7 @@ The function must return a `APIGatewayV2Response`.
 
 `APIGatewayV2Request` and `APIGatewayV2Response` are defined in the [Swift AWS Lambda Events](https://github.com/swift-server/swift-aws-lambda-events) library.
 
-The handler creates an S3 client and `ListBucketsInput` object. It passes the input object to the client and receives an output response.
+The handler creates AWS and S3 clients. It then calls `listBuckets()` on the S3 client and receives an output response.
 It then extract the list of bucket names from the output to create a `\n` separated list of names, as a `String`
 
 ## Build & Package 
@@ -35,7 +35,7 @@ swift package archive --allow-network-access docker
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
-The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/AWSSDKExample/AWSSDKExample.zip`
+The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/SotoExample/SotoExample.zip`
 
 ## Deploy
 
@@ -51,7 +51,7 @@ To actually deploy your Lambda function and create the infrastructure, type the 
 sam deploy \
 --resolve-s3 \
 --template-file template.yaml \
---stack-name AWSSDKExample \
+--stack-name SotoExample \
 --capabilities CAPABILITY_IAM 
 ```
 
