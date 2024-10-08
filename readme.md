@@ -1,5 +1,5 @@
 > [!IMPORTANT] 
-> The documentation included here refers to the Swift AWS Lambda Runtime v2 (code from the main branch). If you're developing for the runtime v1.x, check this [readme](readme-v1.md) instead.
+> The documentation included here refers to the Swift AWS Lambda Runtime v2 (code from the main branch). If you're developing for the runtime v1.x, check this [readme](https://github.com/swift-server/swift-aws-lambda-runtime/blob/v1/readme.md) instead.
 
 > [!WARNING]
 > The Swift AWS Runtime v2 is work in progress. We will add more documentation and code examples over time.
