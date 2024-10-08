@@ -17,7 +17,7 @@ import NIOCore
 import NIOHTTP1
 import NIOPosix
 
-internal struct MockServer {
+struct MockServer {
     private let group: EventLoopGroup
     private let host: String
     private let port: Int
@@ -48,7 +48,7 @@ internal struct MockServer {
     }
 }
 
-internal final class HTTPHandler: ChannelInboundHandler {
+final class HTTPHandler: ChannelInboundHandler {
     public typealias InboundIn = HTTPServerRequestPart
     public typealias OutboundOut = HTTPServerResponsePart
 
@@ -109,7 +109,12 @@ internal final class HTTPHandler: ChannelInboundHandler {
         self.writeResponse(context: context, status: responseStatus, headers: responseHeaders, body: responseBody)
     }
 
-    func writeResponse(context: ChannelHandlerContext, status: HTTPResponseStatus, headers: [(String, String)]? = nil, body: String? = nil) {
+    func writeResponse(
+        context: ChannelHandlerContext,
+        status: HTTPResponseStatus,
+        headers: [(String, String)]? = nil,
+        body: String? = nil
+    ) {
         var headers = HTTPHeaders(headers ?? [])
         headers.add(name: "content-length", value: "\(body?.utf8.count ?? 0)")
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: status, headers: headers)
@@ -134,12 +139,12 @@ internal final class HTTPHandler: ChannelInboundHandler {
     }
 }
 
-internal enum ServerError: Error {
+enum ServerError: Error {
     case notReady
     case cantBind
 }
 
-internal enum AmazonHeaders {
+enum AmazonHeaders {
     static let requestID = "Lambda-Runtime-Aws-Request-Id"
     static let traceID = "Lambda-Runtime-Trace-Id"
     static let clientContext = "X-Amz-Client-Context"
@@ -148,7 +153,7 @@ internal enum AmazonHeaders {
     static let invokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
 }
 
-internal enum Mode: String {
+enum Mode: String {
     case string
     case json
 }

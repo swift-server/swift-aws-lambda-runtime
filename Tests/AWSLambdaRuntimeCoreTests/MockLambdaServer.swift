@@ -12,16 +12,38 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntimeCore
-import Foundation // for JSON
+import Foundation  // for JSON
 import Logging
 import NIOCore
 import NIOHTTP1
 import NIOPosix
 
-internal final class MockLambdaServer {
+@testable import AWSLambdaRuntimeCore
+
+func withMockServer<Result>(
+    behaviour: some LambdaServerBehavior,
+    port: Int = 0,
+    keepAlive: Bool = true,
+    _ body: (_ port: Int) async throws -> Result
+) async throws -> Result {
+    let eventLoopGroup = NIOSingletons.posixEventLoopGroup
+    let server = MockLambdaServer(behavior: behaviour, port: port, keepAlive: keepAlive, eventLoopGroup: eventLoopGroup)
+    let port = try await server.start()
+
+    let result: Swift.Result<Result, any Error>
+    do {
+        result = .success(try await body(port))
+    } catch {
+        result = .failure(error)
+    }
+
+    try? await server.stop()
+    return try result.get()
+}
+
+final class MockLambdaServer<Behavior: LambdaServerBehavior> {
     private let logger = Logger(label: "MockLambdaServer")
-    private let behavior: LambdaServerBehavior
+    private let behavior: Behavior
     private let host: String
     private let port: Int
     private let keepAlive: Bool
@@ -30,8 +52,14 @@ internal final class MockLambdaServer {
     private var channel: Channel?
     private var shutdown = false
 
-    init(behavior: LambdaServerBehavior, host: String = "127.0.0.1", port: Int = 7000, keepAlive: Bool = true) {
-        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    init(
+        behavior: Behavior,
+        host: String = "127.0.0.1",
+        port: Int = 7000,
+        keepAlive: Bool = true,
+        eventLoopGroup: MultiThreadedEventLoopGroup
+    ) {
+        self.group = NIOSingletons.posixEventLoopGroup
         self.behavior = behavior
         self.host = host
         self.port = port
@@ -42,37 +70,45 @@ internal final class MockLambdaServer {
         assert(shutdown)
     }
 
-    func start() -> EventLoopFuture<MockLambdaServer> {
-        let bootstrap = ServerBootstrap(group: group)
+    fileprivate func start() async throws -> Int {
+        let logger = self.logger
+        let keepAlive = self.keepAlive
+        let behavior = self.behavior
+
+        let channel = try await ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap { _ in
-                    channel.pipeline.addHandler(HTTPHandler(logger: self.logger, keepAlive: self.keepAlive, behavior: self.behavior))
+                do {
+                    try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: true)
+                    try channel.pipeline.syncOperations.addHandler(
+                        HTTPHandler(logger: logger, keepAlive: keepAlive, behavior: behavior)
+                    )
+                    return channel.eventLoop.makeSucceededVoidFuture()
+                } catch {
+                    return channel.eventLoop.makeFailedFuture(error)
                 }
             }
-        return bootstrap.bind(host: self.host, port: self.port).flatMap { channel in
-            self.channel = channel
-            guard let localAddress = channel.localAddress else {
-                return channel.eventLoop.makeFailedFuture(ServerError.cantBind)
-            }
-            self.logger.info("\(self) started and listening on \(localAddress)")
-            return channel.eventLoop.makeSucceededFuture(self)
+            .bind(host: self.host, port: self.port)
+            .get()
+
+        self.channel = channel
+        guard let localAddress = channel.localAddress else {
+            throw ServerError.cantBind
         }
+        self.logger.info("\(self) started and listening on \(localAddress)")
+        return localAddress.port!
     }
 
-    func stop() -> EventLoopFuture<Void> {
+    fileprivate func stop() async throws {
         self.logger.info("stopping \(self)")
-        guard let channel = self.channel else {
-            return self.group.next().makeFailedFuture(ServerError.notReady)
-        }
-        return channel.close().always { _ in
-            self.shutdown = true
-            self.logger.info("\(self) stopped")
-        }
+        let channel = self.channel!
+        try? await channel.close().get()
+        self.shutdown = true
+        self.logger.info("\(self) stopped")
     }
 }
 
-internal final class HTTPHandler: ChannelInboundHandler {
+final class HTTPHandler: ChannelInboundHandler {
     typealias InboundIn = HTTPServerRequestPart
     typealias OutboundOut = HTTPServerResponsePart
 
@@ -163,8 +199,8 @@ internal final class HTTPHandler: ChannelInboundHandler {
             }
         } else if request.head.uri.hasSuffix(Consts.postErrorURLSuffix) {
             guard let requestId = request.head.uri.split(separator: "/").dropFirst(3).first,
-                  let json = requestBody,
-                  let error = ErrorResponse.fromJson(json)
+                let json = requestBody,
+                let error = ErrorResponse.fromJson(json)
             else {
                 return self.writeResponse(context: context, status: .badRequest)
             }
@@ -180,7 +216,12 @@ internal final class HTTPHandler: ChannelInboundHandler {
         self.writeResponse(context: context, status: responseStatus, headers: responseHeaders, body: responseBody)
     }
 
-    func writeResponse(context: ChannelHandlerContext, status: HTTPResponseStatus, headers: [(String, String)]? = nil, body: String? = nil) {
+    func writeResponse(
+        context: ChannelHandlerContext,
+        status: HTTPResponseStatus,
+        headers: [(String, String)]? = nil,
+        body: String? = nil
+    ) {
         var headers = HTTPHeaders(headers ?? [])
         headers.add(name: "Content-Length", value: "\(body?.utf8.count ?? 0)")
         if !self.keepAlive {
@@ -188,60 +229,65 @@ internal final class HTTPHandler: ChannelInboundHandler {
         }
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: status, headers: headers)
 
+        let logger = self.logger
         context.write(wrapOutboundOut(.head(head))).whenFailure { error in
-            self.logger.error("\(self) write error \(error)")
+            logger.error("write error \(error)")
         }
 
         if let b = body {
             var buffer = context.channel.allocator.buffer(capacity: b.utf8.count)
             buffer.writeString(b)
             context.write(wrapOutboundOut(.body(.byteBuffer(buffer)))).whenFailure { error in
-                self.logger.error("\(self) write error \(error)")
+                logger.error("write error \(error)")
             }
         }
 
+        let loopBoundContext = NIOLoopBound(context, eventLoop: context.eventLoop)
+
+        let keepAlive = self.keepAlive
         context.writeAndFlush(wrapOutboundOut(.end(nil))).whenComplete { result in
             if case .failure(let error) = result {
-                self.logger.error("\(self) write error \(error)")
+                logger.error("write error \(error)")
             }
-            if !self.keepAlive {
+            if !keepAlive {
+                let context = loopBoundContext.value
                 context.close().whenFailure { error in
-                    self.logger.error("\(self) close error \(error)")
+                    logger.error("close error \(error)")
                 }
             }
         }
     }
 }
 
-internal protocol LambdaServerBehavior {
+protocol LambdaServerBehavior: Sendable {
     func getInvocation() -> GetInvocationResult
     func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError>
     func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError>
     func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError>
 }
 
-internal typealias GetInvocationResult = Result<(String, String), GetWorkError>
+typealias GetInvocationResult = Result<(String, String), GetWorkError>
 
-internal enum GetWorkError: Int, Error {
+enum GetWorkError: Int, Error {
     case badRequest = 400
     case tooManyRequests = 429
     case internalServerError = 500
 }
 
-internal enum ProcessResponseError: Int, Error {
+enum ProcessResponseError: Int, Error {
     case badRequest = 400
     case payloadTooLarge = 413
     case tooManyRequests = 429
     case internalServerError = 500
 }
 
-internal enum ProcessErrorError: Int, Error {
+enum ProcessErrorError: Int, Error {
     case invalidErrorShape = 299
     case badRequest = 400
     case internalServerError = 500
 }
 
-internal enum ServerError: Error {
+enum ServerError: Error {
     case notReady
     case cantBind
 }

@@ -36,7 +36,8 @@ extension Lambda {
     ///     - body: Code to run within the context of the mock server. Typically this would be a Lambda.run function call.
     ///
     /// - note: This API is designed strictly for local testing and is behind a DEBUG flag
-    internal static func withLocalServer<Value>(invocationEndpoint: String? = nil, _ body: @escaping () -> Value) throws -> Value {
+    static func withLocalServer<Value>(invocationEndpoint: String? = nil, _ body: @escaping () -> Value) throws -> Value
+    {
         let server = LocalLambda.Server(invocationEndpoint: invocationEndpoint)
         try server.start().wait()
         defer { try! server.stop() }
@@ -54,14 +55,13 @@ private enum LocalLambda {
         private let port: Int
         private let invocationEndpoint: String
 
-        public init(invocationEndpoint: String?) {
-            let configuration = LambdaConfiguration()
+        init(invocationEndpoint: String?) {
             var logger = Logger(label: "LocalLambdaServer")
-            logger.logLevel = configuration.general.logLevel
+            logger.logLevel = .info
             self.logger = logger
             self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-            self.host = configuration.runtimeEngine.ip
-            self.port = configuration.runtimeEngine.port
+            self.host = "127.0.0.1"
+            self.port = 0
             self.invocationEndpoint = invocationEndpoint ?? "/invoke"
         }
 
@@ -70,14 +70,18 @@ private enum LocalLambda {
                 .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
                 .childChannelInitializer { channel in
                     channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap { _ in
-                        channel.pipeline.addHandler(HTTPHandler(logger: self.logger, invocationEndpoint: self.invocationEndpoint))
+                        channel.pipeline.addHandler(
+                            HTTPHandler(logger: self.logger, invocationEndpoint: self.invocationEndpoint)
+                        )
                     }
                 }
             return bootstrap.bind(host: self.host, port: self.port).flatMap { channel -> EventLoopFuture<Void> in
                 guard channel.localAddress != nil else {
                     return channel.eventLoop.makeFailedFuture(ServerError.cantBind)
                 }
-                self.logger.info("LocalLambdaServer started and listening on \(self.host):\(self.port), receiving events on \(self.invocationEndpoint)")
+                self.logger.info(
+                    "LocalLambdaServer started and listening on \(self.host):\(self.port), receiving events on \(self.invocationEndpoint)"
+                )
                 return channel.eventLoop.makeSucceededFuture(())
             }
         }
@@ -131,7 +135,7 @@ private enum LocalLambda {
                 guard let work = request.body else {
                     return self.writeResponse(context: context, response: .init(status: .badRequest))
                 }
-                let requestID = "\(DispatchTime.now().uptimeNanoseconds)" // FIXME:
+                let requestID = "\(DispatchTime.now().uptimeNanoseconds)"  // FIXME:
                 let promise = context.eventLoop.makePromise(of: Response.self)
                 promise.futureResult.whenComplete { result in
                     switch result {
@@ -200,7 +204,9 @@ private enum LocalLambda {
                 }
                 guard requestID == invocation.requestID else {
                     // the request's requestId is not matching the one we are expecting
-                    self.logger.error("invalid invocation state request ID \(requestID) does not match expected \(invocation.requestID)")
+                    self.logger.error(
+                        "invalid invocation state request ID \(requestID) does not match expected \(invocation.requestID)"
+                    )
                     return self.writeResponse(context: context, status: .badRequest)
                 }
 
@@ -222,7 +228,9 @@ private enum LocalLambda {
                 }
                 guard requestID == invocation.requestID else {
                     // the request's requestId is not matching the one we are expecting
-                    self.logger.error("invalid invocation state request ID \(requestID) does not match expected \(invocation.requestID)")
+                    self.logger.error(
+                        "invalid invocation state request ID \(requestID) does not match expected \(invocation.requestID)"
+                    )
                     return self.writeResponse(context: context, status: .badRequest)
                 }
 
@@ -243,7 +251,11 @@ private enum LocalLambda {
         func writeResponse(context: ChannelHandlerContext, response: Response) {
             var headers = HTTPHeaders(response.headers ?? [])
             headers.add(name: "content-length", value: "\(response.body?.readableBytes ?? 0)")
-            let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: response.status, headers: headers)
+            let head = HTTPResponseHead(
+                version: HTTPVersion(major: 1, minor: 1),
+                status: response.status,
+                headers: headers
+            )
 
             context.write(wrapOutboundOut(.head(head))).whenFailure { error in
                 self.logger.error("\(self) write error \(error)")
@@ -279,7 +291,10 @@ private enum LocalLambda {
                 // required headers
                 response.headers = [
                     (AmazonHeaders.requestID, self.requestID),
-                    (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:\(Int16.random(in: Int16.min ... Int16.max)):function:custom-runtime"),
+                    (
+                        AmazonHeaders.invokedFunctionARN,
+                        "arn:aws:lambda:us-east-1:\(Int16.random(in: Int16.min ... Int16.max)):function:custom-runtime"
+                    ),
                     (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
                     (AmazonHeaders.deadline, "\(DispatchWallTime.distantFuture.millisSinceEpoch)"),
                 ]

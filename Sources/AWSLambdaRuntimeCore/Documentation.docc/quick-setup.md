@@ -106,7 +106,7 @@ AWS Lambda runtime runs on Amazon Linux. You must compile your code for Amazon L
 > Be sure to have [Docker](https://docs.docker.com/desktop/install/mac-install/) installed for this step.
 
 ```sh
-swift package --disable-sandbox plugin archive
+swift package --allow-network-access docker archive
 
 -------------------------------------------------------------------------
 building "squarenumberlambda" in docker

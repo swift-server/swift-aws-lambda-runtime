@@ -12,36 +12,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Dispatch
 import Foundation
 import PackagePlugin
 
-#if os(macOS)
-import Darwin
-#elseif canImport(Glibc)
-import Glibc
-#elseif canImport(Musl)
-import Musl
-#elseif os(Windows)
-import ucrt
-#else
-#error("Unsupported platform")
-#endif
-
 @main
+@available(macOS 15.0, *)
 struct AWSLambdaPackager: CommandPlugin {
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
         let configuration = try Configuration(context: context, arguments: arguments)
+
+        if configuration.help {
+            self.displayHelpMessage()
+            return
+        }
+
         guard !configuration.products.isEmpty else {
             throw Errors.unknownProduct("no appropriate products found to package")
         }
 
         if configuration.products.count > 1 && !configuration.explicitProducts {
             let productNames = configuration.products.map(\.name)
-            print("No explicit products named, building all executable products: '\(productNames.joined(separator: "', '"))'")
+            print(
+                "No explicit products named, building all executable products: '\(productNames.joined(separator: "', '"))'"
+            )
         }
 
-        let builtProducts: [LambdaProduct: Path]
+        let builtProducts: [LambdaProduct: URL]
         if self.isAmazonLinux2() {
             // build directly on the machine
             builtProducts = try self.build(
@@ -54,9 +50,9 @@ struct AWSLambdaPackager: CommandPlugin {
             // build with docker
             builtProducts = try self.buildInDocker(
                 packageIdentity: context.package.id,
-                packageDirectory: context.package.directory,
+                packageDirectory: context.package.directoryURL,
                 products: configuration.products,
-                toolsProvider: { name in try context.tool(named: name).path },
+                toolsProvider: { name in try context.tool(named: name).url },
                 outputDirectory: configuration.outputDirectory,
                 baseImage: configuration.baseDockerImage,
                 disableDockerImageUpdate: configuration.disableDockerImageUpdate,
@@ -69,28 +65,30 @@ struct AWSLambdaPackager: CommandPlugin {
         let archives = try self.package(
             packageName: context.package.displayName,
             products: builtProducts,
-            toolsProvider: { name in try context.tool(named: name).path },
+            toolsProvider: { name in try context.tool(named: name).url },
             outputDirectory: configuration.outputDirectory,
             verboseLogging: configuration.verboseLogging
         )
 
-        print("\(archives.count > 0 ? archives.count.description : "no") archive\(archives.count != 1 ? "s" : "") created")
+        print(
+            "\(archives.count > 0 ? archives.count.description : "no") archive\(archives.count != 1 ? "s" : "") created"
+        )
         for (product, archivePath) in archives {
-            print("  * \(product.name) at \(archivePath.string)")
+            print("  * \(product.name) at \(archivePath)")
         }
     }
 
     private func buildInDocker(
         packageIdentity: Package.ID,
-        packageDirectory: Path,
+        packageDirectory: URL,
         products: [Product],
-        toolsProvider: (String) throws -> Path,
-        outputDirectory: Path,
+        toolsProvider: (String) throws -> URL,
+        outputDirectory: URL,
         baseImage: String,
         disableDockerImageUpdate: Bool,
         buildConfiguration: PackageManager.BuildConfiguration,
         verboseLogging: Bool
-    ) throws -> [LambdaProduct: Path] {
+    ) throws -> [LambdaProduct: URL] {
         let dockerToolPath = try toolsProvider("docker")
 
         print("-------------------------------------------------------------------------")
@@ -100,7 +98,7 @@ struct AWSLambdaPackager: CommandPlugin {
         if !disableDockerImageUpdate {
             // update the underlying docker image, if necessary
             print("updating \"\(baseImage)\" docker image")
-            try self.execute(
+            try Utils.execute(
                 executable: dockerToolPath,
                 arguments: ["pull", baseImage],
                 logLevel: .output
@@ -109,42 +107,55 @@ struct AWSLambdaPackager: CommandPlugin {
 
         // get the build output path
         let buildOutputPathCommand = "swift build -c \(buildConfiguration.rawValue) --show-bin-path"
-        let dockerBuildOutputPath = try self.execute(
+        let dockerBuildOutputPath = try Utils.execute(
             executable: dockerToolPath,
-            arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildOutputPathCommand],
+            arguments: [
+                "run", "--rm", "-v", "\(packageDirectory.path()):/workspace", "-w", "/workspace", baseImage, "bash",
+                "-cl", buildOutputPathCommand,
+            ],
             logLevel: verboseLogging ? .debug : .silent
         )
         guard let buildPathOutput = dockerBuildOutputPath.split(separator: "\n").last else {
             throw Errors.failedParsingDockerOutput(dockerBuildOutputPath)
         }
-        let buildOutputPath = Path(buildPathOutput.replacingOccurrences(of: "/workspace", with: packageDirectory.string))
+        let buildOutputPath = URL(
+            string: buildPathOutput.replacingOccurrences(of: "/workspace/", with: packageDirectory.description)
+        )!
 
         // build the products
-        var builtProducts = [LambdaProduct: Path]()
+        var builtProducts = [LambdaProduct: URL]()
         for product in products {
             print("building \"\(product.name)\"")
-            let buildCommand = "swift build -c \(buildConfiguration.rawValue) --product \(product.name) --static-swift-stdlib"
-            if ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"] != nil {
+            let buildCommand =
+                "swift build -c \(buildConfiguration.rawValue) --product \(product.name) --static-swift-stdlib"
+            if let localPath = ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"] {
                 // when developing locally, we must have the full swift-aws-lambda-runtime project in the container
                 // because Examples' Package.swift have a dependency on ../..
                 // just like Package.swift's examples assume ../.., we assume we are two levels below the root project
-                let lastComponent = packageDirectory.lastComponent
-                let beforeLastComponent = packageDirectory.removingLastComponent().lastComponent
-                try self.execute(
+                let slice = packageDirectory.pathComponents.suffix(2)
+                try Utils.execute(
                     executable: dockerToolPath,
-                    arguments: ["run", "--rm", "--env", "LAMBDA_USE_LOCAL_DEPS=true", "-v", "\(packageDirectory.string)/../..:/workspace", "-w", "/workspace/\(beforeLastComponent)/\(lastComponent)", baseImage, "bash", "-cl", buildCommand],
+                    arguments: [
+                        "run", "--rm", "--env", "LAMBDA_USE_LOCAL_DEPS=\(localPath)", "-v",
+                        "\(packageDirectory.path())../..:/workspace", "-w",
+                        "/workspace/\(slice.joined(separator: "/"))", baseImage, "bash", "-cl", buildCommand,
+                    ],
                     logLevel: verboseLogging ? .debug : .output
                 )
             } else {
-                try self.execute(
+                try Utils.execute(
                     executable: dockerToolPath,
-                    arguments: ["run", "--rm", "-v", "\(packageDirectory.string):/workspace", "-w", "/workspace", baseImage, "bash", "-cl", buildCommand],
+                    arguments: [
+                        "run", "--rm", "-v", "\(packageDirectory.path()):/workspace", "-w", "/workspace", baseImage,
+                        "bash", "-cl", buildCommand,
+                    ],
                     logLevel: verboseLogging ? .debug : .output
                 )
             }
-            let productPath = buildOutputPath.appending(product.name)
-            guard FileManager.default.fileExists(atPath: productPath.string) else {
-                Diagnostics.error("expected '\(product.name)' binary at \"\(productPath.string)\"")
+            let productPath = buildOutputPath.appending(path: product.name)
+
+            guard FileManager.default.fileExists(atPath: productPath.path()) else {
+                Diagnostics.error("expected '\(product.name)' binary at \"\(productPath.path())\"")
                 throw Errors.productExecutableNotFound(product.name)
             }
             builtProducts[.init(product)] = productPath
@@ -157,12 +168,12 @@ struct AWSLambdaPackager: CommandPlugin {
         products: [Product],
         buildConfiguration: PackageManager.BuildConfiguration,
         verboseLogging: Bool
-    ) throws -> [LambdaProduct: Path] {
+    ) throws -> [LambdaProduct: URL] {
         print("-------------------------------------------------------------------------")
         print("building \"\(packageIdentity)\"")
         print("-------------------------------------------------------------------------")
 
-        var results = [LambdaProduct: Path]()
+        var results = [LambdaProduct: URL]()
         for product in products {
             print("building \"\(product.name)\"")
             var parameters = PackageManager.BuildParameters()
@@ -177,7 +188,7 @@ struct AWSLambdaPackager: CommandPlugin {
             guard let artifact = result.executableArtifact(for: product) else {
                 throw Errors.productExecutableNotFound(product.name)
             }
-            results[.init(product)] = artifact.path
+            results[.init(product)] = artifact.url
         }
         return results
     }
@@ -185,58 +196,69 @@ struct AWSLambdaPackager: CommandPlugin {
     // TODO: explore using ziplib or similar instead of shelling out
     private func package(
         packageName: String,
-        products: [LambdaProduct: Path],
-        toolsProvider: (String) throws -> Path,
-        outputDirectory: Path,
+        products: [LambdaProduct: URL],
+        toolsProvider: (String) throws -> URL,
+        outputDirectory: URL,
         verboseLogging: Bool
-    ) throws -> [LambdaProduct: Path] {
+    ) throws -> [LambdaProduct: URL] {
         let zipToolPath = try toolsProvider("zip")
 
-        var archives = [LambdaProduct: Path]()
+        var archives = [LambdaProduct: URL]()
         for (product, artifactPath) in products {
             print("-------------------------------------------------------------------------")
             print("archiving \"\(product.name)\"")
             print("-------------------------------------------------------------------------")
 
             // prep zipfile location
-            let workingDirectory = outputDirectory.appending(product.name)
-            let zipfilePath = workingDirectory.appending("\(product.name).zip")
-            if FileManager.default.fileExists(atPath: workingDirectory.string) {
-                try FileManager.default.removeItem(atPath: workingDirectory.string)
+            let workingDirectory = outputDirectory.appending(path: product.name)
+            let zipfilePath = workingDirectory.appending(path: "\(product.name).zip")
+            if FileManager.default.fileExists(atPath: workingDirectory.path()) {
+                try FileManager.default.removeItem(atPath: workingDirectory.path())
             }
-            try FileManager.default.createDirectory(atPath: workingDirectory.string, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(atPath: workingDirectory.path(), withIntermediateDirectories: true)
 
             // rename artifact to "bootstrap"
-            let relocatedArtifactPath = workingDirectory.appending(artifactPath.lastComponent)
-            let symbolicLinkPath = workingDirectory.appending("bootstrap")
-            try FileManager.default.copyItem(atPath: artifactPath.string, toPath: relocatedArtifactPath.string)
-            try FileManager.default.createSymbolicLink(atPath: symbolicLinkPath.string, withDestinationPath: relocatedArtifactPath.lastComponent)
+            let relocatedArtifactPath = workingDirectory.appending(path: "bootstrap")
+            try FileManager.default.copyItem(atPath: artifactPath.path(), toPath: relocatedArtifactPath.path())
 
             var arguments: [String] = []
             #if os(macOS) || os(Linux)
             arguments = [
                 "--recurse-paths",
                 "--symlinks",
-                zipfilePath.lastComponent,
-                relocatedArtifactPath.lastComponent,
-                symbolicLinkPath.lastComponent,
+                zipfilePath.lastPathComponent,
+                relocatedArtifactPath.lastPathComponent,
             ]
             #else
             throw Errors.unsupportedPlatform("can't or don't know how to create a zip file on this platform")
             #endif
 
             // add resources
-            let artifactDirectory = artifactPath.removingLastComponent()
-            let resourcesDirectoryName = "\(packageName)_\(product.name).resources"
-            let resourcesDirectory = artifactDirectory.appending(resourcesDirectoryName)
-            let relocatedResourcesDirectory = workingDirectory.appending(resourcesDirectoryName)
-            if FileManager.default.fileExists(atPath: resourcesDirectory.string) {
-                try FileManager.default.copyItem(atPath: resourcesDirectory.string, toPath: relocatedResourcesDirectory.string)
-                arguments.append(resourcesDirectoryName)
+            var artifactPathComponents = artifactPath.pathComponents
+            _ = artifactPathComponents.removeFirst()  // Get rid of beginning "/"
+            _ = artifactPathComponents.removeLast()  // Get rid of the name of the package
+            let artifactDirectory = "/\(artifactPathComponents.joined(separator: "/"))"
+            for fileInArtifactDirectory in try FileManager.default.contentsOfDirectory(atPath: artifactDirectory) {
+                guard let artifactURL = URL(string: "\(artifactDirectory)/\(fileInArtifactDirectory)") else {
+                    continue
+                }
+
+                guard artifactURL.pathExtension == "resources" else {
+                    continue  // Not resources, so don't copy
+                }
+                let resourcesDirectoryName = artifactURL.lastPathComponent
+                let relocatedResourcesDirectory = workingDirectory.appending(path: resourcesDirectoryName)
+                if FileManager.default.fileExists(atPath: artifactURL.path()) {
+                    try FileManager.default.copyItem(
+                        atPath: artifactURL.path(),
+                        toPath: relocatedResourcesDirectory.path()
+                    )
+                    arguments.append(resourcesDirectoryName)
+                }
             }
 
             // run the zip tool
-            try self.execute(
+            try Utils.execute(
                 executable: zipToolPath,
                 arguments: arguments,
                 customWorkingDirectory: workingDirectory,
@@ -248,88 +270,57 @@ struct AWSLambdaPackager: CommandPlugin {
         return archives
     }
 
-    @discardableResult
-    private func execute(
-        executable: Path,
-        arguments: [String],
-        customWorkingDirectory: Path? = .none,
-        logLevel: ProcessLogLevel
-    ) throws -> String {
-        if logLevel >= .debug {
-            print("\(executable.string) \(arguments.joined(separator: " "))")
-        }
-
-        var output = ""
-        let outputSync = DispatchGroup()
-        let outputQueue = DispatchQueue(label: "AWSLambdaPackager.output")
-        let outputHandler = { (data: Data?) in
-            dispatchPrecondition(condition: .onQueue(outputQueue))
-
-            outputSync.enter()
-            defer { outputSync.leave() }
-
-            guard let _output = data.flatMap({ String(data: $0, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(["\n"])) }), !_output.isEmpty else {
-                return
-            }
-
-            output += _output + "\n"
-
-            switch logLevel {
-            case .silent:
-                break
-            case .debug(let outputIndent), .output(let outputIndent):
-                print(String(repeating: " ", count: outputIndent), terminator: "")
-                print(_output)
-                fflush(stdout)
-            }
-        }
-
-        let pipe = Pipe()
-        pipe.fileHandleForReading.readabilityHandler = { fileHandle in outputQueue.async { outputHandler(fileHandle.availableData) } }
-
-        let process = Process()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        process.executableURL = URL(fileURLWithPath: executable.string)
-        process.arguments = arguments
-        if let workingDirectory = customWorkingDirectory {
-            process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory.string)
-        }
-        process.terminationHandler = { _ in
-            outputQueue.async {
-                outputHandler(try? pipe.fileHandleForReading.readToEnd())
-            }
-        }
-
-        try process.run()
-        process.waitUntilExit()
-
-        // wait for output to be full processed
-        outputSync.wait()
-
-        if process.terminationStatus != 0 {
-            // print output on failure and if not already printed
-            if logLevel < .output {
-                print(output)
-                fflush(stdout)
-            }
-            throw Errors.processFailed([executable.string] + arguments, process.terminationStatus)
-        }
-
-        return output
-    }
-
     private func isAmazonLinux2() -> Bool {
-        if let data = FileManager.default.contents(atPath: "/etc/system-release"), let release = String(data: data, encoding: .utf8) {
+        if let data = FileManager.default.contents(atPath: "/etc/system-release"),
+            let release = String(data: data, encoding: .utf8)
+        {
             return release.hasPrefix("Amazon Linux release 2")
         } else {
             return false
         }
     }
+
+    private func displayHelpMessage() {
+        print(
+            """
+            OVERVIEW: A SwiftPM plugin to build and package your lambda function.
+
+            REQUIREMENTS: To use this plugin, you must have docker installed and started.
+
+            USAGE: swift package --allow-network-access docker archive [--help] [--verbose]
+                                                       [--output-directory <path>]
+                                                       [--products <list of products>]
+                                                       [--configuration debug | release]
+                                                       [--swift-version <version>]
+                                                       [--base-docker-image <docker_image_name>]
+                                                       [--disable-docker-image-update]
+                                                      
+
+            OPTIONS:
+            --verbose                     Produce verbose output for debugging.
+            --output-directory <path>     The path of the binary package.
+                                          (default is `.build/plugins/AWSLambdaPackager/outputs/...`)
+            --products <list>             The list of executable targets to build.
+                                          (default is taken from Package.swift)
+            --configuration <name>        The build configuration (debug or release)
+                                          (default is release)
+            --swift-version               The swift version to use for building. 
+                                          (default is latest)
+                                          This parameter cannot be used when --base-docker-image  is specified.
+            --base-docker-image <name>    The name of the base docker image to use for the build.
+                                          (default : swift-<version>:amazonlinux2)
+                                          This parameter cannot be used when --swift-version is specified.
+            --disable-docker-image-update Do not attempt to update the docker image
+            --help                        Show help information.
+            """
+        )
+    }
 }
 
+@available(macOS 15.0, *)
 private struct Configuration: CustomStringConvertible {
-    public let outputDirectory: Path
+    public let help: Bool
+    public let outputDirectory: URL
     public let products: [Product]
     public let explicitProducts: Bool
     public let buildConfiguration: PackageManager.BuildConfiguration
@@ -349,17 +340,27 @@ private struct Configuration: CustomStringConvertible {
         let swiftVersionArgument = argumentExtractor.extractOption(named: "swift-version")
         let baseDockerImageArgument = argumentExtractor.extractOption(named: "base-docker-image")
         let disableDockerImageUpdateArgument = argumentExtractor.extractFlag(named: "disable-docker-image-update") > 0
+        let helpArgument = argumentExtractor.extractFlag(named: "help") > 0
 
+        // help required ?
+        self.help = helpArgument
+
+        // verbose logging required ?
         self.verboseLogging = verboseArgument
 
         if let outputPath = outputPathArgument.first {
+            #if os(Linux)
+            var isDirectory: Bool = false
+            #else
             var isDirectory: ObjCBool = false
-            guard FileManager.default.fileExists(atPath: outputPath, isDirectory: &isDirectory), isDirectory.boolValue else {
+            #endif
+            guard FileManager.default.fileExists(atPath: outputPath, isDirectory: &isDirectory)
+            else {
                 throw Errors.invalidArgument("invalid output directory '\(outputPath)'")
             }
-            self.outputDirectory = Path(outputPath)
+            self.outputDirectory = URL(string: outputPath)!
         } else {
-            self.outputDirectory = context.pluginWorkDirectory.appending(subpath: "\(AWSLambdaPackager.self)")
+            self.outputDirectory = context.pluginWorkDirectoryURL.appending(path: "\(AWSLambdaPackager.self)")
         }
 
         self.explicitProducts = !productsArgument.isEmpty
@@ -389,8 +390,9 @@ private struct Configuration: CustomStringConvertible {
             throw Errors.invalidArgument("--swift-version and --base-docker-image are mutually exclusive")
         }
 
-        let swiftVersion = swiftVersionArgument.first ?? .none // undefined version will yield the latest docker image
-        self.baseDockerImage = baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2"
+        let swiftVersion = swiftVersionArgument.first ?? .none  // undefined version will yield the latest docker image
+        self.baseDockerImage =
+            baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2"
 
         self.disableDockerImageUpdate = disableDockerImageUpdateArgument
 
@@ -496,7 +498,9 @@ private struct LambdaProduct: Hashable {
 extension PackageManager.BuildResult {
     // find the executable produced by the build
     func executableArtifact(for product: Product) -> PackageManager.BuildResult.BuiltArtifact? {
-        let executables = self.builtArtifacts.filter { $0.kind == .executable && $0.path.lastComponent == product.name }
+        let executables = self.builtArtifacts.filter {
+            $0.kind == .executable && $0.url.lastPathComponent == product.name
+        }
         guard !executables.isEmpty else {
             return nil
         }

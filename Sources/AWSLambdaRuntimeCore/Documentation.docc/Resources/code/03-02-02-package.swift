@@ -6,6 +6,6 @@ import PackageDescription
 let package = Package(
     name: "SquareNumberLambda",
     platforms: [
-        .macOS(.v12),
-    ],
+        .macOS(.v12)
+    ]
 )

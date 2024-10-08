@@ -12,11 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntimeCore
 import NIOCore
 import NIOEmbedded
 import NIOHTTP1
 import XCTest
+
+@testable import AWSLambdaRuntimeCore
 
 final class ControlPlaneRequestEncoderTests: XCTestCase {
     let host = "192.168.0.1"
@@ -104,8 +105,10 @@ final class ControlPlaneRequestEncoderTests: XCTestCase {
         let expectedBody = #"{"errorType":"SomeError","errorMessage":"An error happened"}"#
 
         XCTAssertEqual(request?.head.headers["content-length"], ["\(expectedBody.utf8.count)"])
-        XCTAssertEqual(try request?.body?.getString(at: 0, length: XCTUnwrap(request?.body?.readableBytes)),
-                       expectedBody)
+        XCTAssertEqual(
+            try request?.body?.getString(at: 0, length: XCTUnwrap(request?.body?.readableBytes)),
+            expectedBody
+        )
 
         XCTAssertNil(try self.server.readInbound(as: NIOHTTPServerRequestFull.self))
     }
@@ -124,14 +127,16 @@ final class ControlPlaneRequestEncoderTests: XCTestCase {
         XCTAssertEqual(request?.head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
         let expectedBody = #"{"errorType":"StartupError","errorMessage":"Urgh! Startup failed. 😨"}"#
         XCTAssertEqual(request?.head.headers["content-length"], ["\(expectedBody.utf8.count)"])
-        XCTAssertEqual(try request?.body?.getString(at: 0, length: XCTUnwrap(request?.body?.readableBytes)),
-                       expectedBody)
+        XCTAssertEqual(
+            try request?.body?.getString(at: 0, length: XCTUnwrap(request?.body?.readableBytes)),
+            expectedBody
+        )
 
         XCTAssertNil(try self.server.readInbound(as: NIOHTTPServerRequestFull.self))
     }
 
     func testMultipleNextAndResponseSuccessRequests() {
-        for _ in 0 ..< 1000 {
+        for _ in 0..<1000 {
             var nextRequest: NIOHTTPServerRequestFull?
             XCTAssertNoThrow(nextRequest = try self.sendRequest(.next))
             XCTAssertEqual(nextRequest?.head.method, .GET)

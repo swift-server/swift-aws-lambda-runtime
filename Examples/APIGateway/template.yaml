@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for QuoteService
+
+Resources:
+  # Lambda function
+  APIGAtewayLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGAtewayLambda/APIGAtewayLambda.zip
+      Timeout: 60
+      Handler: swift.bootstrap
+      Runtime: provided.al2
+      MemorySize: 512
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          # by default, AWS Lambda runtime produces no log
+          # use `LOG_LEVEL: debug` for for lifecycle and event handling information
+          # use `LOG_LEVEL: trace` for detailed input event information
+          LOG_LEVEL: trace
+      Events:
+        HttpApiEvent:
+            Type: HttpApi
+
+Outputs:
+  # print API Gateway endpoint
+  APIGAtewayEndpoint:
+    Description: API Gateway endpoint UR"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"

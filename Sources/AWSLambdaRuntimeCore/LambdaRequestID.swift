@@ -18,7 +18,9 @@ import NIOCore
 // https://github.com/swift-extras/swift-extras-uuid
 
 struct LambdaRequestID {
-    typealias uuid_t = (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
+    typealias uuid_t = (
+        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8
+    )
 
     var uuid: uuid_t {
         self._uuid
@@ -86,15 +88,16 @@ struct LambdaRequestID {
     }
 
     /// thread safe secure random number generator.
-    private static var generator = SystemRandomNumberGenerator()
     private static func generateRandom() -> Self {
+        var generator = SystemRandomNumberGenerator()
+
         var _uuid: uuid_t = LambdaRequestID.null
         // https://tools.ietf.org/html/rfc4122#page-14
         // o  Set all the other bits to randomly (or pseudo-randomly) chosen
         //    values.
         withUnsafeMutableBytes(of: &_uuid) { ptr in
-            ptr.storeBytes(of: Self.generator.next(), toByteOffset: 0, as: UInt64.self)
-            ptr.storeBytes(of: Self.generator.next(), toByteOffset: 8, as: UInt64.self)
+            ptr.storeBytes(of: generator.next(), toByteOffset: 0, as: UInt64.self)
+            ptr.storeBytes(of: generator.next(), toByteOffset: 8, as: UInt64.self)
         }
 
         // o  Set the four most significant bits (bits 12 through 15) of the
@@ -114,22 +117,12 @@ struct LambdaRequestID {
 extension LambdaRequestID: Equatable {
     // sadly no auto conformance from the compiler
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs._uuid.0 == rhs._uuid.0 &&
-            lhs._uuid.1 == rhs._uuid.1 &&
-            lhs._uuid.2 == rhs._uuid.2 &&
-            lhs._uuid.3 == rhs._uuid.3 &&
-            lhs._uuid.4 == rhs._uuid.4 &&
-            lhs._uuid.5 == rhs._uuid.5 &&
-            lhs._uuid.6 == rhs._uuid.6 &&
-            lhs._uuid.7 == rhs._uuid.7 &&
-            lhs._uuid.8 == rhs._uuid.8 &&
-            lhs._uuid.9 == rhs._uuid.9 &&
-            lhs._uuid.10 == rhs._uuid.10 &&
-            lhs._uuid.11 == rhs._uuid.11 &&
-            lhs._uuid.12 == rhs._uuid.12 &&
-            lhs._uuid.13 == rhs._uuid.13 &&
-            lhs._uuid.14 == rhs._uuid.14 &&
-            lhs._uuid.15 == rhs._uuid.15
+        lhs._uuid.0 == rhs._uuid.0 && lhs._uuid.1 == rhs._uuid.1 && lhs._uuid.2 == rhs._uuid.2
+            && lhs._uuid.3 == rhs._uuid.3 && lhs._uuid.4 == rhs._uuid.4 && lhs._uuid.5 == rhs._uuid.5
+            && lhs._uuid.6 == rhs._uuid.6 && lhs._uuid.7 == rhs._uuid.7 && lhs._uuid.8 == rhs._uuid.8
+            && lhs._uuid.9 == rhs._uuid.9 && lhs._uuid.10 == rhs._uuid.10 && lhs._uuid.11 == rhs._uuid.11
+            && lhs._uuid.12 == rhs._uuid.12 && lhs._uuid.13 == rhs._uuid.13 && lhs._uuid.14 == rhs._uuid.14
+            && lhs._uuid.15 == rhs._uuid.15
     }
 }
 
@@ -160,7 +153,10 @@ extension LambdaRequestID: Decodable {
         let uuidString = try container.decode(String.self)
 
         guard let uuid = LambdaRequestID.fromString(uuidString) else {
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Attempted to decode UUID from invalid UUID string.")
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Attempted to decode UUID from invalid UUID string."
+            )
         }
 
         self = uuid
@@ -217,38 +213,38 @@ extension LambdaRequestID {
         // are safe and we don't need Swifts safety guards.
 
         characters.withUnsafeBufferPointer { lookup in
-            string.0 = lookup[Int(uuid.0 >> 4)]
-            string.1 = lookup[Int(uuid.0 & 0x0F)]
-            string.2 = lookup[Int(uuid.1 >> 4)]
-            string.3 = lookup[Int(uuid.1 & 0x0F)]
-            string.4 = lookup[Int(uuid.2 >> 4)]
-            string.5 = lookup[Int(uuid.2 & 0x0F)]
-            string.6 = lookup[Int(uuid.3 >> 4)]
-            string.7 = lookup[Int(uuid.3 & 0x0F)]
-            string.9 = lookup[Int(uuid.4 >> 4)]
-            string.10 = lookup[Int(uuid.4 & 0x0F)]
-            string.11 = lookup[Int(uuid.5 >> 4)]
-            string.12 = lookup[Int(uuid.5 & 0x0F)]
-            string.14 = lookup[Int(uuid.6 >> 4)]
-            string.15 = lookup[Int(uuid.6 & 0x0F)]
-            string.16 = lookup[Int(uuid.7 >> 4)]
-            string.17 = lookup[Int(uuid.7 & 0x0F)]
-            string.19 = lookup[Int(uuid.8 >> 4)]
-            string.20 = lookup[Int(uuid.8 & 0x0F)]
-            string.21 = lookup[Int(uuid.9 >> 4)]
-            string.22 = lookup[Int(uuid.9 & 0x0F)]
-            string.24 = lookup[Int(uuid.10 >> 4)]
-            string.25 = lookup[Int(uuid.10 & 0x0F)]
-            string.26 = lookup[Int(uuid.11 >> 4)]
-            string.27 = lookup[Int(uuid.11 & 0x0F)]
-            string.28 = lookup[Int(uuid.12 >> 4)]
-            string.29 = lookup[Int(uuid.12 & 0x0F)]
-            string.30 = lookup[Int(uuid.13 >> 4)]
-            string.31 = lookup[Int(uuid.13 & 0x0F)]
-            string.32 = lookup[Int(uuid.14 >> 4)]
-            string.33 = lookup[Int(uuid.14 & 0x0F)]
-            string.34 = lookup[Int(uuid.15 >> 4)]
-            string.35 = lookup[Int(uuid.15 & 0x0F)]
+            string.0 = lookup[Int(self.uuid.0 >> 4)]
+            string.1 = lookup[Int(self.uuid.0 & 0x0F)]
+            string.2 = lookup[Int(self.uuid.1 >> 4)]
+            string.3 = lookup[Int(self.uuid.1 & 0x0F)]
+            string.4 = lookup[Int(self.uuid.2 >> 4)]
+            string.5 = lookup[Int(self.uuid.2 & 0x0F)]
+            string.6 = lookup[Int(self.uuid.3 >> 4)]
+            string.7 = lookup[Int(self.uuid.3 & 0x0F)]
+            string.9 = lookup[Int(self.uuid.4 >> 4)]
+            string.10 = lookup[Int(self.uuid.4 & 0x0F)]
+            string.11 = lookup[Int(self.uuid.5 >> 4)]
+            string.12 = lookup[Int(self.uuid.5 & 0x0F)]
+            string.14 = lookup[Int(self.uuid.6 >> 4)]
+            string.15 = lookup[Int(self.uuid.6 & 0x0F)]
+            string.16 = lookup[Int(self.uuid.7 >> 4)]
+            string.17 = lookup[Int(self.uuid.7 & 0x0F)]
+            string.19 = lookup[Int(self.uuid.8 >> 4)]
+            string.20 = lookup[Int(self.uuid.8 & 0x0F)]
+            string.21 = lookup[Int(self.uuid.9 >> 4)]
+            string.22 = lookup[Int(self.uuid.9 & 0x0F)]
+            string.24 = lookup[Int(self.uuid.10 >> 4)]
+            string.25 = lookup[Int(self.uuid.10 & 0x0F)]
+            string.26 = lookup[Int(self.uuid.11 >> 4)]
+            string.27 = lookup[Int(self.uuid.11 & 0x0F)]
+            string.28 = lookup[Int(self.uuid.12 >> 4)]
+            string.29 = lookup[Int(self.uuid.12 & 0x0F)]
+            string.30 = lookup[Int(self.uuid.13 >> 4)]
+            string.31 = lookup[Int(self.uuid.13 & 0x0F)]
+            string.32 = lookup[Int(self.uuid.14 >> 4)]
+            string.33 = lookup[Int(self.uuid.14 & 0x0F)]
+            string.34 = lookup[Int(self.uuid.15 >> 4)]
+            string.35 = lookup[Int(self.uuid.15 & 0x0F)]
         }
 
         return string
@@ -270,11 +266,11 @@ extension LambdaRequestID {
     static func fromPointer(_ ptr: UnsafeRawBufferPointer) -> LambdaRequestID? {
         func uint4Value(from value: UInt8, valid: inout Bool) -> UInt8 {
             switch value {
-            case UInt8(ascii: "0") ... UInt8(ascii: "9"):
+            case UInt8(ascii: "0")...UInt8(ascii: "9"):
                 return value &- UInt8(ascii: "0")
-            case UInt8(ascii: "a") ... UInt8(ascii: "f"):
+            case UInt8(ascii: "a")...UInt8(ascii: "f"):
                 return value &- UInt8(ascii: "a") &+ 10
-            case UInt8(ascii: "A") ... UInt8(ascii: "F"):
+            case UInt8(ascii: "A")...UInt8(ascii: "F"):
                 return value &- UInt8(ascii: "A") &+ 10
             default:
                 valid = false
@@ -365,7 +361,7 @@ extension ByteBuffer {
             return nil
         }
 
-        let upperBound = indexFromReaderIndex &+ length // safe, can't overflow, we checked it above.
+        let upperBound = indexFromReaderIndex &+ length  // safe, can't overflow, we checked it above.
 
         // uncheckedBounds is safe because `length` is >= 0, so the lower bound will always be lower/equal to upper
         return Range<Int>(uncheckedBounds: (lower: indexFromReaderIndex, upper: upperBound))

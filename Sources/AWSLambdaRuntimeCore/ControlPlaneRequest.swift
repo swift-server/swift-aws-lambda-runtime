@@ -23,38 +23,39 @@ enum ControlPlaneRequest: Hashable {
 }
 
 enum ControlPlaneResponse: Hashable {
-    case next(Invocation, ByteBuffer)
+    case next(InvocationMetadata, ByteBuffer)
     case accepted
     case error(ErrorResponse)
 }
 
-struct Invocation: Hashable {
-    let requestID: String
-    let deadlineInMillisSinceEpoch: Int64
-    let invokedFunctionARN: String
-    let traceID: String
-    let clientContext: String?
-    let cognitoIdentity: String?
+package struct InvocationMetadata: Hashable {
+    package let requestID: String
+    package let deadlineInMillisSinceEpoch: Int64
+    package let invokedFunctionARN: String
+    package let traceID: String
+    package let clientContext: String?
+    package let cognitoIdentity: String?
 
-    init(headers: HTTPHeaders) throws {
+    package init(headers: HTTPHeaders) throws(LambdaRuntimeError) {
         guard let requestID = headers.first(name: AmazonHeaders.requestID), !requestID.isEmpty else {
-            throw LambdaRuntimeError.invocationMissingHeader(AmazonHeaders.requestID)
+            throw LambdaRuntimeError(code: .nextInvocationMissingHeaderRequestID)
         }
 
         guard let deadline = headers.first(name: AmazonHeaders.deadline),
-              let unixTimeInMilliseconds = Int64(deadline)
+            let unixTimeInMilliseconds = Int64(deadline)
         else {
-            throw LambdaRuntimeError.invocationMissingHeader(AmazonHeaders.deadline)
+            throw LambdaRuntimeError(code: .nextInvocationMissingHeaderDeadline)
         }
 
         guard let invokedFunctionARN = headers.first(name: AmazonHeaders.invokedFunctionARN) else {
-            throw LambdaRuntimeError.invocationMissingHeader(AmazonHeaders.invokedFunctionARN)
+            throw LambdaRuntimeError(code: .nextInvocationMissingHeaderInvokeFuctionARN)
         }
 
         self.requestID = requestID
         self.deadlineInMillisSinceEpoch = unixTimeInMilliseconds
         self.invokedFunctionARN = invokedFunctionARN
-        self.traceID = headers.first(name: AmazonHeaders.traceID) ?? "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=0"
+        self.traceID =
+            headers.first(name: AmazonHeaders.traceID) ?? "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=0"
         self.clientContext = headers["Lambda-Runtime-Client-Context"].first
         self.cognitoIdentity = headers["Lambda-Runtime-Cognito-Identity"].first
     }
@@ -66,7 +67,7 @@ struct ErrorResponse: Hashable, Codable {
 }
 
 extension ErrorResponse {
-    internal func toJSONBytes() -> [UInt8] {
+    func toJSONBytes() -> [UInt8] {
         var bytes = [UInt8]()
         bytes.append(UInt8(ascii: "{"))
         bytes.append(contentsOf: #""errorType":"#.utf8)

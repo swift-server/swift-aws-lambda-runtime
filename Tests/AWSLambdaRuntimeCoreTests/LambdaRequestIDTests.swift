@@ -12,62 +12,70 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import AWSLambdaRuntimeCore
+import Foundation
 import NIOCore
-import XCTest
+import Testing
 
-final class LambdaRequestIDTest: XCTestCase {
+@testable import AWSLambdaRuntimeCore
+
+@Suite("LambdaRequestID tests")
+struct LambdaRequestIDTest {
+    @Test
     func testInitFromStringSuccess() {
         let string = "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
         var buffer = ByteBuffer(string: string)
 
         let requestID = buffer.readRequestID()
-        XCTAssertEqual(buffer.readerIndex, 36)
-        XCTAssertEqual(buffer.readableBytes, 0)
-        XCTAssertEqual(requestID?.uuidString, UUID(uuidString: string)?.uuidString)
-        XCTAssertEqual(requestID?.uppercased, string)
+        #expect(buffer.readerIndex == 36)
+        #expect(buffer.readableBytes == 0)
+        #expect(requestID?.uuidString == UUID(uuidString: string)?.uuidString)
+        #expect(requestID?.uppercased == string)
     }
 
+    @Test
     func testInitFromLowercaseStringSuccess() {
         let string = "E621E1F8-C36C-495A-93FC-0C247A3E6E5F".lowercased()
         var originalBuffer = ByteBuffer(string: string)
 
         let requestID = originalBuffer.readRequestID()
-        XCTAssertEqual(originalBuffer.readerIndex, 36)
-        XCTAssertEqual(originalBuffer.readableBytes, 0)
-        XCTAssertEqual(requestID?.uuidString, UUID(uuidString: string)?.uuidString)
-        XCTAssertEqual(requestID?.lowercased, string)
+        #expect(originalBuffer.readerIndex == 36)
+        #expect(originalBuffer.readableBytes == 0)
+        #expect(requestID?.uuidString == UUID(uuidString: string)?.uuidString)
+        #expect(requestID?.lowercased == string)
 
         var newBuffer = ByteBuffer()
         originalBuffer.moveReaderIndex(to: 0)
-        XCTAssertNoThrow(try newBuffer.writeRequestID(XCTUnwrap(requestID)))
-        XCTAssertEqual(newBuffer, originalBuffer)
+        #expect(throws: Never.self) { try newBuffer.writeRequestID(#require(requestID)) }
+        #expect(newBuffer == originalBuffer)
     }
 
+    @Test
     func testInitFromStringMissingCharacterAtEnd() {
         let string = "E621E1F8-C36C-495A-93FC-0C247A3E6E5"
         var buffer = ByteBuffer(string: string)
 
         let readableBeforeRead = buffer.readableBytes
         let requestID = buffer.readRequestID()
-        XCTAssertNil(requestID)
-        XCTAssertEqual(buffer.readerIndex, 0)
-        XCTAssertEqual(buffer.readableBytes, readableBeforeRead)
+        #expect(requestID == nil)
+        #expect(buffer.readerIndex == 0)
+        #expect(buffer.readableBytes == readableBeforeRead)
     }
 
+    @Test
     func testInitFromStringInvalidCharacterAtEnd() {
         let string = "E621E1F8-C36C-495A-93FC-0C247A3E6E5H"
         var buffer = ByteBuffer(string: string)
 
         let readableBeforeRead = buffer.readableBytes
         let requestID = buffer.readRequestID()
-        XCTAssertNil(requestID)
-        XCTAssertEqual(buffer.readerIndex, 0)
-        XCTAssertEqual(buffer.readableBytes, readableBeforeRead)
+        #expect(requestID == nil)
+        #expect(buffer.readerIndex == 0)
+        #expect(buffer.readableBytes == readableBeforeRead)
     }
 
-    func testInitFromStringInvalidSeparatorCharacter() {
-        let invalid = [
+    @Test(
+        "Init from String with invalid separator character",
+        arguments: [
             // with _ instead of -
             "E621E1F8-C36C-495A-93FC_0C247A3E6E5F",
             "E621E1F8-C36C-495A_93FC-0C247A3E6E5F",
@@ -80,18 +88,19 @@ final class LambdaRequestIDTest: XCTestCase {
             "E621E1F8-C36C0495A-93FC-0C247A3E6E5F",
             "E621E1F80C36C-495A-93FC-0C247A3E6E5F",
         ]
+    )
+    func testInitFromStringInvalidSeparatorCharacter(_ input: String) {
 
-        for string in invalid {
-            var buffer = ByteBuffer(string: string)
+        var buffer = ByteBuffer(string: input)
 
-            let readableBeforeRead = buffer.readableBytes
-            let requestID = buffer.readRequestID()
-            XCTAssertNil(requestID)
-            XCTAssertEqual(buffer.readerIndex, 0)
-            XCTAssertEqual(buffer.readableBytes, readableBeforeRead)
-        }
+        let readableBeforeRead = buffer.readableBytes
+        let requestID = buffer.readRequestID()
+        #expect(requestID == nil)
+        #expect(buffer.readerIndex == 0)
+        #expect(buffer.readableBytes == readableBeforeRead)
     }
 
+    @Test
     func testInitFromNSStringSuccess() {
         let nsString = NSMutableString(capacity: 16)
         nsString.append("E621E1F8")
@@ -109,79 +118,85 @@ final class LambdaRequestIDTest: XCTestCase {
         //       achieve this though at the moment
         // XCTAssertFalse((nsString as String).isContiguousUTF8)
         let requestID = LambdaRequestID(uuidString: nsString as String)
-        XCTAssertEqual(requestID?.uuidString, LambdaRequestID(uuidString: nsString as String)?.uuidString)
-        XCTAssertEqual(requestID?.uppercased, nsString as String)
+        #expect(requestID?.uuidString == LambdaRequestID(uuidString: nsString as String)?.uuidString)
+        #expect(requestID?.uppercased == nsString as String)
     }
 
+    @Test
     func testUnparse() {
         let string = "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
         let requestID = LambdaRequestID(uuidString: string)
-        XCTAssertEqual(string.lowercased(), requestID?.lowercased)
+        #expect(string.lowercased() == requestID?.lowercased)
     }
 
+    @Test
     func testDescription() {
         let requestID = LambdaRequestID()
         let fduuid = UUID(uuid: requestID.uuid)
 
-        XCTAssertEqual(fduuid.description, requestID.description)
-        XCTAssertEqual(fduuid.debugDescription, requestID.debugDescription)
+        #expect(fduuid.description == requestID.description)
+        #expect(fduuid.debugDescription == requestID.debugDescription)
     }
 
+    @Test
     func testFoundationInteropFromFoundation() {
         let fduuid = UUID()
         let requestID = LambdaRequestID(uuid: fduuid.uuid)
 
-        XCTAssertEqual(fduuid.uuid.0, requestID.uuid.0)
-        XCTAssertEqual(fduuid.uuid.1, requestID.uuid.1)
-        XCTAssertEqual(fduuid.uuid.2, requestID.uuid.2)
-        XCTAssertEqual(fduuid.uuid.3, requestID.uuid.3)
-        XCTAssertEqual(fduuid.uuid.4, requestID.uuid.4)
-        XCTAssertEqual(fduuid.uuid.5, requestID.uuid.5)
-        XCTAssertEqual(fduuid.uuid.6, requestID.uuid.6)
-        XCTAssertEqual(fduuid.uuid.7, requestID.uuid.7)
-        XCTAssertEqual(fduuid.uuid.8, requestID.uuid.8)
-        XCTAssertEqual(fduuid.uuid.9, requestID.uuid.9)
-        XCTAssertEqual(fduuid.uuid.10, requestID.uuid.10)
-        XCTAssertEqual(fduuid.uuid.11, requestID.uuid.11)
-        XCTAssertEqual(fduuid.uuid.12, requestID.uuid.12)
-        XCTAssertEqual(fduuid.uuid.13, requestID.uuid.13)
-        XCTAssertEqual(fduuid.uuid.14, requestID.uuid.14)
-        XCTAssertEqual(fduuid.uuid.15, requestID.uuid.15)
+        #expect(fduuid.uuid.0 == requestID.uuid.0)
+        #expect(fduuid.uuid.1 == requestID.uuid.1)
+        #expect(fduuid.uuid.2 == requestID.uuid.2)
+        #expect(fduuid.uuid.3 == requestID.uuid.3)
+        #expect(fduuid.uuid.4 == requestID.uuid.4)
+        #expect(fduuid.uuid.5 == requestID.uuid.5)
+        #expect(fduuid.uuid.6 == requestID.uuid.6)
+        #expect(fduuid.uuid.7 == requestID.uuid.7)
+        #expect(fduuid.uuid.8 == requestID.uuid.8)
+        #expect(fduuid.uuid.9 == requestID.uuid.9)
+        #expect(fduuid.uuid.10 == requestID.uuid.10)
+        #expect(fduuid.uuid.11 == requestID.uuid.11)
+        #expect(fduuid.uuid.12 == requestID.uuid.12)
+        #expect(fduuid.uuid.13 == requestID.uuid.13)
+        #expect(fduuid.uuid.14 == requestID.uuid.14)
+        #expect(fduuid.uuid.15 == requestID.uuid.15)
     }
 
+    @Test
     func testFoundationInteropToFoundation() {
         let requestID = LambdaRequestID()
         let fduuid = UUID(uuid: requestID.uuid)
 
-        XCTAssertEqual(fduuid.uuid.0, requestID.uuid.0)
-        XCTAssertEqual(fduuid.uuid.1, requestID.uuid.1)
-        XCTAssertEqual(fduuid.uuid.2, requestID.uuid.2)
-        XCTAssertEqual(fduuid.uuid.3, requestID.uuid.3)
-        XCTAssertEqual(fduuid.uuid.4, requestID.uuid.4)
-        XCTAssertEqual(fduuid.uuid.5, requestID.uuid.5)
-        XCTAssertEqual(fduuid.uuid.6, requestID.uuid.6)
-        XCTAssertEqual(fduuid.uuid.7, requestID.uuid.7)
-        XCTAssertEqual(fduuid.uuid.8, requestID.uuid.8)
-        XCTAssertEqual(fduuid.uuid.9, requestID.uuid.9)
-        XCTAssertEqual(fduuid.uuid.10, requestID.uuid.10)
-        XCTAssertEqual(fduuid.uuid.11, requestID.uuid.11)
-        XCTAssertEqual(fduuid.uuid.12, requestID.uuid.12)
-        XCTAssertEqual(fduuid.uuid.13, requestID.uuid.13)
-        XCTAssertEqual(fduuid.uuid.14, requestID.uuid.14)
-        XCTAssertEqual(fduuid.uuid.15, requestID.uuid.15)
+        #expect(fduuid.uuid.0 == requestID.uuid.0)
+        #expect(fduuid.uuid.1 == requestID.uuid.1)
+        #expect(fduuid.uuid.2 == requestID.uuid.2)
+        #expect(fduuid.uuid.3 == requestID.uuid.3)
+        #expect(fduuid.uuid.4 == requestID.uuid.4)
+        #expect(fduuid.uuid.5 == requestID.uuid.5)
+        #expect(fduuid.uuid.6 == requestID.uuid.6)
+        #expect(fduuid.uuid.7 == requestID.uuid.7)
+        #expect(fduuid.uuid.8 == requestID.uuid.8)
+        #expect(fduuid.uuid.9 == requestID.uuid.9)
+        #expect(fduuid.uuid.10 == requestID.uuid.10)
+        #expect(fduuid.uuid.11 == requestID.uuid.11)
+        #expect(fduuid.uuid.12 == requestID.uuid.12)
+        #expect(fduuid.uuid.13 == requestID.uuid.13)
+        #expect(fduuid.uuid.14 == requestID.uuid.14)
+        #expect(fduuid.uuid.15 == requestID.uuid.15)
     }
 
+    @Test
     func testHashing() {
         let requestID = LambdaRequestID()
         let fduuid = UUID(uuid: requestID.uuid)
-        XCTAssertEqual(fduuid.hashValue, requestID.hashValue)
+        #expect(fduuid.hashValue == requestID.hashValue)
 
         var _uuid = requestID.uuid
         _uuid.0 = _uuid.0 > 0 ? _uuid.0 - 1 : 1
-        XCTAssertNotEqual(UUID(uuid: _uuid).hashValue, requestID.hashValue)
+        #expect(UUID(uuid: _uuid).hashValue != requestID.hashValue)
     }
 
-    func testEncoding() {
+    @Test
+    func testEncoding() throws {
         struct Test: Codable {
             let requestID: LambdaRequestID
         }
@@ -189,10 +204,13 @@ final class LambdaRequestIDTest: XCTestCase {
         let test = Test(requestID: requestID)
 
         var data: Data?
-        XCTAssertNoThrow(data = try JSONEncoder().encode(test))
-        XCTAssertEqual(try String(decoding: XCTUnwrap(data), as: Unicode.UTF8.self), #"{"requestID":"\#(requestID.uuidString)"}"#)
+        #expect(throws: Never.self) { data = try JSONEncoder().encode(test) }
+        #expect(
+            try String(decoding: #require(data), as: Unicode.UTF8.self) == #"{"requestID":"\#(requestID.uuidString)"}"#
+        )
     }
 
+    @Test
     func testDecodingSuccess() {
         struct Test: Codable {
             let requestID: LambdaRequestID
@@ -201,10 +219,11 @@ final class LambdaRequestIDTest: XCTestCase {
         let data = #"{"requestID":"\#(requestID.uuidString)"}"#.data(using: .utf8)
 
         var result: Test?
-        XCTAssertNoThrow(result = try JSONDecoder().decode(Test.self, from: XCTUnwrap(data)))
-        XCTAssertEqual(result?.requestID, requestID)
+        #expect(throws: Never.self) { result = try JSONDecoder().decode(Test.self, from: #require(data)) }
+        #expect(result?.requestID == requestID)
     }
 
+    @Test
     func testDecodingFailure() {
         struct Test: Codable {
             let requestID: LambdaRequestID
@@ -214,12 +233,13 @@ final class LambdaRequestIDTest: XCTestCase {
         _ = requestIDString.removeLast()
         let data = #"{"requestID":"\#(requestIDString)"}"#.data(using: .utf8)
 
-        XCTAssertThrowsError(_ = try JSONDecoder().decode(Test.self, from: XCTUnwrap(data))) { error in
-            XCTAssertNotNil(error as? DecodingError)
+        #expect(throws: DecodingError.self) {
+            try JSONDecoder().decode(Test.self, from: #require(data))
         }
     }
 
+    @Test
     func testStructSize() {
-        XCTAssertEqual(MemoryLayout<LambdaRequestID>.size, 16)
+        #expect(MemoryLayout<LambdaRequestID>.size == 16)
     }
 }
