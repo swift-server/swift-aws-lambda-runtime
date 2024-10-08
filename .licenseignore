@@ -30,3 +30,5 @@ Package.resolved
 **/ResourcePackaging/hello.txt
 .mailmap
 .swiftformat
+*.yaml
+*.yml

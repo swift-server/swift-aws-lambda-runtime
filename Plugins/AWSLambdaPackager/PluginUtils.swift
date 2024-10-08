@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import Foundation
 import PackagePlugin
 import Synchronization
-import Foundation
 
 @available(macOS 15.0, *)
 struct Utils {
@@ -32,7 +32,7 @@ struct Utils {
 
         let fd = dup(1)
         let stdout = fdopen(fd, "rw")
-        defer { fclose(stdout) }
+        defer { fclose(stdout!) }
 
         // We need to use an unsafe transfer here to get the fd into our Sendable closure.
         // This transfer is fine, because we write to the variable from a single SerialDispatchQueue here.

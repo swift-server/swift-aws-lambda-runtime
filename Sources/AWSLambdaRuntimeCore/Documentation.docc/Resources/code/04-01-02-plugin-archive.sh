@@ -1,2 +1,2 @@
-swift package --disable-sandbox plugin archive
+swift package --allow-network-access docker plugin archive
 
