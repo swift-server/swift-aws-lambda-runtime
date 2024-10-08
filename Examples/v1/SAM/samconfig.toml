@@ -1,8 +1,0 @@
-version = 0.1
-[debug]
-[debug.deploy]
-[debug.deploy.parameters]
-stack_name = "swift-aws-lambda-runtime-example"
-region = "us-east-1"
-capabilities = "CAPABILITY_IAM"
-image_repositories = []
