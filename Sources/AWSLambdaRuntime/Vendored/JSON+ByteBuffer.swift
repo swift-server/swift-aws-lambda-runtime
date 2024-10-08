@@ -1,9 +1,16 @@
+//===----------------------------------------------------------------------===//
 //
-//  JSON+ByteBuffer.swift
-//  swift-aws-lambda-runtime
+// This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-//  Created by Fabian Fett on 06.09.24.
+// Copyright (c) 2017-2022 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Licensed under Apache License v2.0
 //
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
 //
@@ -19,12 +26,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOCore
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
 import Foundation
 #endif
-import NIOCore
 
 extension ByteBuffer {
     /// Attempts to decode the `length` bytes from `index` using the `JSONDecoder` `decoder` as `T`.
