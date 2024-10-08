@@ -128,7 +128,7 @@ struct AWSLambdaPackager: CommandPlugin {
             print("building \"\(product.name)\"")
             let buildCommand =
                 "swift build -c \(buildConfiguration.rawValue) --product \(product.name) --static-swift-stdlib"
-            if ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"] != nil {
+            if let localPath = ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"] {
                 // when developing locally, we must have the full swift-aws-lambda-runtime project in the container
                 // because Examples' Package.swift have a dependency on ../..
                 // just like Package.swift's examples assume ../.., we assume we are two levels below the root project
@@ -136,7 +136,7 @@ struct AWSLambdaPackager: CommandPlugin {
                 try Utils.execute(
                     executable: dockerToolPath,
                     arguments: [
-                        "run", "--rm", "--env", "LAMBDA_USE_LOCAL_DEPS=true", "-v",
+                        "run", "--rm", "--env", "LAMBDA_USE_LOCAL_DEPS=\(localPath)", "-v",
                         "\(packageDirectory.path())../..:/workspace", "-w",
                         "/workspace/\(slice.joined(separator: "/"))", baseImage, "bash", "-cl", buildCommand,
                     ],
