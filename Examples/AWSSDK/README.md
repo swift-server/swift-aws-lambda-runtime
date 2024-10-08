@@ -1,9 +1,3 @@
-sam deploy \                                                  
---resolve-s3 \
---template-file template.yaml \
---stack-name AWSSDKExample \
---capabilities CAPABILITY_IAM
-
 # API Gateway 
 
 This is a simple example of an AWS Lambda function that uses the [AWS SDK for Swift](https://github.com/awslabs/aws-sdk-swift) to read data from Amazon S3.
@@ -62,7 +56,7 @@ The output is similar to this one.
 -----------------------------------------------------------------------------------------------------------------------------
 Outputs                                                                                                                     
 -----------------------------------------------------------------------------------------------------------------------------
-Key                 APIGAtewayEndpoint                                                                                      
+Key                 APIGatewayEndpoint                                                                                      
 Description         API Gateway endpoint URL"                                                                                
 Value               https://a5q74es3k2.execute-api.us-east-1.amazonaws.com                                                  
 -----------------------------------------------------------------------------------------------------------------------------

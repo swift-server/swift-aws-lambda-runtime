@@ -42,7 +42,7 @@ To actually deploy your Lambda function and create the infrastructure, type the 
 sam deploy \
 --resolve-s3 \
 --template-file template.yaml \
---stack-name APIGAtewayLambda \
+--stack-name APIGatewayLambda \
 --capabilities CAPABILITY_IAM 
 ```
 
@@ -53,7 +53,7 @@ The output is similar to this one.
 -----------------------------------------------------------------------------------------------------------------------------
 Outputs                                                                                                                     
 -----------------------------------------------------------------------------------------------------------------------------
-Key                 APIGAtewayEndpoint                                                                                      
+Key                 APIGatewayEndpoint                                                                                      
 Description         API Gateway endpoint URL"                                                                                
 Value               https://a5q74es3k2.execute-api.us-east-1.amazonaws.com                                                  
 -----------------------------------------------------------------------------------------------------------------------------

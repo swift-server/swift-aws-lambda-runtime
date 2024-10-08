@@ -4,7 +4,7 @@ Description: SAM Template for QuoteService
 
 Resources:
   # Lambda function
-  APIGAtewayLambda:
+  APIGatewayLambda:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip
@@ -26,6 +26,6 @@ Resources:
 
 Outputs:
   # print API Gateway endpoint
-  APIGAtewayEndpoint:
+  APIGatewayEndpoint:
     Description: API Gateway endpoint UR"
     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
