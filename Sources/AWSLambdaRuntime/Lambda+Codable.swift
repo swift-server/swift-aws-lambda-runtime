@@ -33,7 +33,7 @@ public struct LambdaJSONEventDecoder: LambdaEventDecoder {
 
     @inlinable
     public func decode<Event>(_ type: Event.Type, from buffer: NIOCore.ByteBuffer) throws -> Event
-    where Event : Decodable {
+    where Event: Decodable {
         try buffer.getJSONDecodable(
             Event.self,
             decoder: self.jsonDecoder,
