@@ -30,13 +30,9 @@ struct Utils {
             print("\(executable.absoluteString) \(arguments.joined(separator: " "))")
         }
 
-//        #if compiler(>=6.0) && compiler(<6.0.1) && os(Linux)
-//        let fd = dup(1)!
-//        #else
         let fd = dup(1)
-//        #endif
         let stdout = fdopen(fd, "rw")
-        defer { fclose(stdout) }
+        defer { fclose(stdout!) }
 
         // We need to use an unsafe transfer here to get the fd into our Sendable closure.
         // This transfer is fine, because we write to the variable from a single SerialDispatchQueue here.
