@@ -33,7 +33,6 @@ let package = Package(
                 .byName(name: "AWSLambdaRuntimeCore"),
                 .product(name: "NIOCore", package: "swift-nio"),
             ],
-            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .target(
             name: "AWSLambdaRuntimeCore",
