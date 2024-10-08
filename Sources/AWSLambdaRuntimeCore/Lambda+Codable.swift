@@ -106,7 +106,7 @@ public struct LambdaCodableAdapter<
 
     /// Initializes an instance given a decoder, and a handler with a `Void` output.
     ///   - Parameters:
-    ///   - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic ``Event`` type served to the `handler`.
+    ///   - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`.
     ///   - handler: The handler object.
     @inlinable
     public init(decoder: Decoder, handler: Handler) where Output == Void, Encoder == VoidEncoder {
