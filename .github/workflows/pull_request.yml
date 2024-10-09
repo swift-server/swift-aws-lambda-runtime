@@ -26,14 +26,13 @@ jobs:
 
     integration-tests:
         name: Integration Tests
-        # Workaround https://github.com/nektos/act/issues/1875
         uses: apple/swift-nio/.github/workflows/swift_matrix.yml@main
         with:
             name: "Integration tests"
             matrix_linux_command: "./scripts/integration_tests.sh"
-            linux_5_8_enabled: false
-            linux_5_9_enabled: false
-            linux_5_10_enabled: false
+            matrix_linux_5_8_enabled: false
+            matrix_linux_5_9_enabled: false
+            matrix_linux_5_10_enabled: false
     
     swift-6-language-mode:
         name: Swift 6 Language Mode
