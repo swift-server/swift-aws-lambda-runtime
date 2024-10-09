@@ -18,7 +18,7 @@ on:
       matrix_linux_swift_container_image:
         type: string
         description: "Container image for the 6.0 Swift version matrix job. Defaults to matching latest Swift Ubuntu image."
-        default: "swiftlang/swift:6.0.1-noble"
+        default: "swift:6.0.1-noble"
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
