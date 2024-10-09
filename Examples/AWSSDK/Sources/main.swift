@@ -18,7 +18,7 @@ import AWSLambdaRuntime
 
 let client = try await S3Client()
 
-let runtime = LambdaRuntime.init {
+let runtime = LambdaRuntime {
     (event: APIGatewayV2Request, context: LambdaContext) async throws -> APIGatewayV2Response in
 
     var response: APIGatewayV2Response
