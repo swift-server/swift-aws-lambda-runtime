@@ -48,7 +48,7 @@ concurrency:
  
 jobs:
   linux:
-    name:  example-${{ matrix.examples }}-linux-${{ matrix.swift.swift_version }}
+    name:  Example/${{ matrix.examples }} on Linux ${{ matrix.swift.swift_version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
