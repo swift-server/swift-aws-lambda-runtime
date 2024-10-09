@@ -1,16 +1,10 @@
-sam deploy \                                                  
---resolve-s3 \
---template-file template.yaml \
---stack-name AWSSDKExample \
---capabilities CAPABILITY_IAM
-
-# API Gateway 
+# List Amazon S3 Buckets with Soto 
 
 This is a simple example of an AWS Lambda function that uses the [Soto SDK for AWS](https://github.com/soto-project/soto) to read data from Amazon S3.
 
 ## Code 
 
-The Lambda function reads all bucket names from your AWS account and return them as a String.
+The Lambda function reads all bucket names from your AWS account and returns them as a String.
 
 The code creates a `LambdaRuntime` struct. In it's simplest form, the initializer takes a function as argument. The function is the handler that will be invoked when the API Gateway receives an HTTP request.
 
@@ -22,12 +16,12 @@ The function must return a `APIGatewayV2Response`.
 
 `APIGatewayV2Request` and `APIGatewayV2Response` are defined in the [Swift AWS Lambda Events](https://github.com/swift-server/swift-aws-lambda-events) library.
 
-The handler creates AWS and S3 clients. It then calls `listBuckets()` on the S3 client and receives an output response.
-It then extract the list of bucket names from the output to create a `\n` separated list of names, as a `String`
+The handler creates two clients : an AWS client that manages the communication with AWS API and and the S3 client that expose the S3 API. Then, the handler calls `listBuckets()` on the S3 client and receives an output response.
+Finally, the handler extracts the list of bucket names from the output to create a `\n`-separated list of names, as a `String`.
 
 ## Build & Package 
 
-To build the package, type the following commands.
+To build the package, type the following command.
 
 ```bash
 swift build
@@ -83,9 +77,10 @@ This should print text similar to
 ```bash 
 my_bucket_1
 my_bucket_2
+...
 ```
 
-## Undeploy
+## Delete the infrastructure
 
 When done testing, you can delete the infrastructure with this command.
 

@@ -1,10 +1,10 @@
-# API Gateway 
+# List Amazon S3 Buckets with the AWS SDK for Swift 
 
 This is a simple example of an AWS Lambda function that uses the [AWS SDK for Swift](https://github.com/awslabs/aws-sdk-swift) to read data from Amazon S3.
 
 ## Code 
 
-The Lambda function reads all bucket names from your AWS account and return them as a String.
+The Lambda function reads all bucket names from your AWS account and returns them as a String.
 
 The code creates a `LambdaRuntime` struct. In it's simplest form, the initializer takes a function as argument. The function is the handler that will be invoked when the API Gateway receives an HTTP request.
 
@@ -17,7 +17,7 @@ The function must return a `APIGatewayV2Response`.
 `APIGatewayV2Request` and `APIGatewayV2Response` are defined in the [Swift AWS Lambda Events](https://github.com/swift-server/swift-aws-lambda-events) library.
 
 The handler creates an S3 client and `ListBucketsInput` object. It passes the input object to the client and receives an output response.
-It then extract the list of bucket names from the output to create a `\n` separated list of names, as a `String`
+It then extracts the list of bucket names from the output and creates a `\n`-separated list of names, as a `String`
 
 ## Build & Package 
 
@@ -77,9 +77,10 @@ This should print text similar to
 ```bash 
 my_bucket_1
 my_bucket_2
+...
 ```
 
-## Undeploy
+## Delete the infrastructure
 
 When done testing, you can delete the infrastructure with this command.
 
