@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       name:
-        type: string
+        type: sequence
         description: "The name of the workflow used for the concurrency group."
         required: true
       examples:
