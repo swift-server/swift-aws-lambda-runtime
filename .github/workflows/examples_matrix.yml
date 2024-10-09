@@ -11,35 +11,14 @@ on:
       #   type: sequence
       #   description: "The examples to run."
       #   required: true
-      matrix_linux_command_override:
-        type: string
-        description: "The command of the current Swift version linux matrix job to execute."  
       matrix_linux_command:
         type: string
         description: "The command of the current Swift version linux matrix job to execute."
         required: true
-      matrix_linux_nightly_6_0_enabled:
-        type: boolean
-        description: "Boolean to enable the nightly 6.0 Swift version matrix job. Defaults to true."
-        default: true
-      matrix_linux_nightly_6_0_container_image:
+      matrix_linux_swift_container_image:
         type: string
-        description: "Container image for the nightly 6.0 Swift version matrix job. Defaults to matching Swift Ubuntu image."
-        default: "swiftlang/swift:nightly-6.0-jammy"
-      matrix_linux_nightly_6_0_command_override:
-        type: string
-        description: "The command of the nightly 6.0 Swift version linux matrix job to execute."
-      matrix_linux_nightly_main_enabled:
-        type: boolean
-        description: "Boolean to enable the nightly main Swift version matrix job. Defaults to true."
-        default: true
-      matrix_linux_nightly_main_container_image:
-        type: string
-        description: "Container image for the nightly main Swift version matrix job. Defaults to matching Swift Ubuntu image."
-        default: "swiftlang/swift:nightly-main-jammy"
-      matrix_linux_nightly_main_command_override:
-        type: string
-        description: "The command of the nightly main Swift version linux matrix job to execute."
+        description: "Container image for the 6.0 Swift version matrix job. Defaults to matching latest Swift Ubuntu image."
+        default: "swiftlang/swift:6.0.1-noble"
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -57,33 +36,24 @@ jobs:
         examples : [ "HelloWorld", "APIGateway" ]
         # examples: ${{ inputs.examples }}
 
-        # We are specifying only the major and minor of the docker images to automatically pick up the latest patch release
+        # We are using only one Swift version
         swift:
-        - image: ${{ inputs.matrix_linux_nightly_6_0_container_image }}
-          swift_version: "nightly-6.0"
-          enabled: ${{ inputs.matrix_linux_nightly_6_0_enabled }}
-        - image: ${{ inputs.matrix_linux_nightly_main_container_image }}
-          swift_version: "nightly-main"
-          enabled: ${{ inputs.matrix_linux_nightly_main_enabled }}
+        - image: ${{ inputs.matrix_linux_swift_container_image }}
+          swift_version: "6.0.1-noble"
     container:
       image: ${{ matrix.swift.image }}
     steps:
     - name: Checkout repository
-      if: ${{ matrix.swift.enabled }}
       uses: actions/checkout@v4
       with:
           persist-credentials: false
     - name: Mark the workspace as safe
-      if: ${{ matrix.swift.enabled }}
     # https://github.com/actions/checkout/issues/766
       run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
     - name: Run matrix job
-      if: ${{ matrix.swift.enabled }}
       env:
         SWIFT_VERSION: ${{ matrix.swift.swift_version }}
         COMMAND: ${{ inputs.matrix_linux_command }}
-        COMMAND_OVERRIDE_NIGHTLY_6_0: ${{ inputs.matrix_linux_nightly_6_0_command_override }}
-        COMMAND_OVERRIDE_NIGHTLY_MAIN: ${{ inputs.matrix_linux_nightly_main_command_override }}
         EXAMPLE: ${{ matrix.examples }}
       run: |
         apt-get -qq update && apt-get -qq -y install curl

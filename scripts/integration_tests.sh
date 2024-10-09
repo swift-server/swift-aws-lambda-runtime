@@ -24,21 +24,11 @@ test -n "${COMMAND:-}" || fatal "COMMAND unset"
 test -n "${EXAMPLE:-}" || fatal "EXAMPLE unset"
 swift_version="$SWIFT_VERSION"
 command="$COMMAND"
-command_nightly_6_0="$COMMAND_OVERRIDE_NIGHTLY_6_0"
-command_nightly_main="$COMMAND_OVERRIDE_NIGHTLY_MAIN"
 example="$EXAMPLE"
 
 pushd Examples/"$example" > /dev/null
 
-if [[ "$swift_version" == "nightly-6.0" ]] && [[ -n "$command_nightly_6_0" ]]; then
-  log "Running nightly 6.0 command override"
-  eval "$command_nightly_6_0"
-elif [[ "$swift_version" == "nightly-main" ]] && [[ -n "$command_nightly_main" ]]; then
-  log "Running nightly main command override"
-  eval "$command_nightly_main"
-else
-  log "Running default command"
-  eval "$command"
-fi
+log "Running command with Swift $SWIFT_VERSION"
+eval "$command"
 
 popd
