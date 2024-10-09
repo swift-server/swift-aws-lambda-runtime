@@ -67,16 +67,14 @@ let package = Package(
                 .byName(name: "AWSLambdaRuntimeCore"),
                 .product(name: "NIOTestUtils", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
-            ],
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            ]
         ),
         .testTarget(
             name: "AWSLambdaRuntimeTests",
             dependencies: [
                 .byName(name: "AWSLambdaRuntimeCore"),
                 .byName(name: "AWSLambdaRuntime"),
-            ],
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            ]
         ),
         // testing helper
         .target(
