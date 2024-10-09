@@ -6,9 +6,15 @@ import PackageDescription
 import class Foundation.ProcessInfo
 import struct Foundation.URL
 
+#if os(macOS)
+let platforms: [PackageDescription.SupportedPlatform]? = [.macOS(.v15)]
+#else
+let platforms: [PackageDescription.SupportedPlatform]? = nil
+#endif
+
 let package = Package(
     name: "swift-aws-lambda-runtime-example",
-    platforms: [.macOS(.v15)],
+    platforms: platforms,
     products: [
         .executable(name: "APIGatewayLambda", targets: ["APIGatewayLambda"])
     ],

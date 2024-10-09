@@ -6,9 +6,15 @@ import PackageDescription
 import class Foundation.ProcessInfo
 import struct Foundation.URL
 
+#if os(macOS)
+let platforms: [PackageDescription.SupportedPlatform]? = [.macOS(.v15)]
+#else
+let platforms: [PackageDescription.SupportedPlatform]? = nil
+#endif
+
 let package = Package(
     name: "SotoLambdaExample",
-    platforms: [.macOS(.v15)],
+    platforms: platforms,
     products: [
         .executable(name: "SotoLambdaExample", targets: ["SotoExample"])
     ],
