@@ -163,11 +163,3 @@ tbd + link to docc
 ### Background Tasks 
 
 tbd + link to docc
-
-### Development 
-
-Your contributions are welcome.  If you open a pull request, be sure to ensure it passes the soundness checks 
-
-```
-docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.al2.6.0.yaml run soundness 
-```
