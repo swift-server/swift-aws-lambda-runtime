@@ -29,7 +29,7 @@ jobs:
         uses: examples_matrix.yml
         with:
             name: "Integration tests"
-            matrix_linux_command: "pushd Examples/$EXAMPLE && LAMBDA_USE_LOCAL_DEPS=../.. swift build && popd"
+            matrix_linux_command: "LAMBDA_USE_LOCAL_DEPS=../.. swift build"
     
     swift-6-language-mode:
         name: Swift 6 Language Mode

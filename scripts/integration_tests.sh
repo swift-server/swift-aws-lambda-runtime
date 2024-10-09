@@ -13,16 +13,6 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-# set +x -e
-
-# for EXAMPLE in $(find Examples -type d -d 1);
-# do
-# 	echo "Building $EXAMPLE"
-# 	pushd $EXAMPLE
-# 	LAMBDA_USE_LOCAL_DEPS=../.. swift build
-# 	popd
-# done 
-
 set -euo pipefail
 
 log() { printf -- "** %s\n" "$*" >&2; }
@@ -38,6 +28,8 @@ command_nightly_6_0="$COMMAND_OVERRIDE_NIGHTLY_6_0"
 command_nightly_main="$COMMAND_OVERRIDE_NIGHTLY_MAIN"
 example="$EXAMPLE"
 
+pushd Examples/"$example" > /dev/null
+
 if [[ "$swift_version" == "nightly-6.0" ]] && [[ -n "$command_nightly_6_0" ]]; then
   log "Running nightly 6.0 command override"
   eval "$command_nightly_6_0"
@@ -48,3 +40,5 @@ else
   log "Running default command"
   eval "$command"
 fi
+
+popd
