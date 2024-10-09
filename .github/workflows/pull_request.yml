@@ -26,7 +26,7 @@ jobs:
 
     integration-tests:
         name: Integration Tests
-        uses: swift-server/swift-aws-lambda-runtime/.github/workflows/examples_matrix.yml
+        uses: ./.github/workflows/examples_matrix.yml
         with:
             name: "Integration tests"
             matrix_linux_command: "LAMBDA_USE_LOCAL_DEPS=../.. swift build"
