@@ -13,9 +13,12 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-set +ex
+set +x -e
 
-LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/APIGateway 
-LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/AWSSDK 
-LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/HelloWorld 
-LAMBDA_USE_LOCAL_DEPS=true swift build --package-path Examples/Soto
+for EXAMPLE in $(find Examples -type d -d 1);
+do
+	echo "Building $EXAMPLE"
+	pushd $EXAMPLE
+	LAMBDA_USE_LOCAL_DEPS=../.. swift build
+	popd
+done 
