@@ -28,6 +28,8 @@ jobs:
         name: Integration Tests
         uses: ./.github/workflows/examples_matrix.yml
         with:
+            # We should pass the list of examples here, but we can't pass an array as argument
+            examples: [ "HelloWorld", "APIGateway" ]
             name: "Integration tests"
             matrix_linux_command: "LAMBDA_USE_LOCAL_DEPS=../.. swift build"
     
