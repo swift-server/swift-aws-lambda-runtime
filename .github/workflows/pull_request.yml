@@ -26,13 +26,10 @@ jobs:
 
     integration-tests:
         name: Integration Tests
-        uses: apple/swift-nio/.github/workflows/swift_matrix.yml@main
+        uses: examples_matrix.yml
         with:
             name: "Integration tests"
-            matrix_linux_command: "./scripts/integration_tests.sh"
-            matrix_linux_5_8_enabled: false
-            matrix_linux_5_9_enabled: false
-            matrix_linux_5_10_enabled: false
+            matrix_linux_command: "pushd Examples/$EXAMPLE && LAMBDA_USE_LOCAL_DEPS=../.. swift build && popd"
     
     swift-6-language-mode:
         name: Swift 6 Language Mode
