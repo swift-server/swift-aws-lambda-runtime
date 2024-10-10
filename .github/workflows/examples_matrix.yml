@@ -43,18 +43,27 @@ jobs:
     container:
       image: ${{ matrix.swift.image }}
     steps:
-    - name: Checkout repository
-      # GitHub checkout action has a dep on NodeJS 20 which is not running on Amazonlinux2
-      # workaround is to manually checkout the repository
-      # https://github.com/actions/checkout/issues/1487
 
-      # uses: actions/checkout@v4
-      # with:
-      #     persist-credentials: false
+    # GitHub checkout action has a dep on NodeJS 20 which is not running on Amazonlinux2
+    # workaround is to manually checkout the repository
+    # https://github.com/actions/checkout/issues/1487
+    - name: Manually Clone repository and checkout PR
+      env:
+        PR_NUMBER: ${{ github.event.pull_request.number }}
       run: |
-        git clone https://github.com/${{ github.repository }}
-        cd ${{ github.event.repository.name }}
-        git checkout ${{ github.ref }}
+        # Clone the repository
+        git clone https://github.com/${{ github.repository }}.git .
+        
+        # Fetch the pull request
+        git fetch origin +refs/pull/$PR_NUMBER/merge:
+        
+        # Checkout the pull request
+        git checkout -qf FETCH_HEAD
+
+    # - name: Checkout repository
+    #   uses: actions/checkout@v4
+    #   with:
+    #       persist-credentials: false
 
     - name: Mark the workspace as safe
       working-directory: ${{ github.event.repository.name }} # until we can use action/checkout@v4
