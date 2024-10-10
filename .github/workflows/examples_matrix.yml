@@ -18,7 +18,7 @@ on:
       matrix_linux_swift_container_image:
         type: string
         description: "Container image for the matrix job. Defaults to matching latest Swift Ubuntu image."
-        default: "swift:latest"
+        default: "swift:amazonlinux2"
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -39,7 +39,7 @@ jobs:
         # We are using only one Swift version
         swift:
         - image: ${{ inputs.matrix_linux_swift_container_image }}
-          swift_version: "6.0.1-noble"
+          swift_version: "6.0.1-amazonlinux2"
     container:
       image: ${{ matrix.swift.image }}
     steps:
@@ -56,5 +56,4 @@ jobs:
         COMMAND: ${{ inputs.matrix_linux_command }}
         EXAMPLE: ${{ matrix.examples }}
       run: |
-        apt-get -qq update && apt-get -qq -y install curl openssl libssl-dev
         ./scripts/integration_tests.sh
