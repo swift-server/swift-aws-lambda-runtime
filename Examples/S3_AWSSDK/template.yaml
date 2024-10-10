@@ -9,7 +9,7 @@ Resources:
     Properties:
       CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/AWSSDKExample/AWSSDKExample.zip
       Timeout: 60
-      Handler: swift.bootstrap
+      Handler: swift.bootstrap # ignored by the Swift runtime
       Runtime: provided.al2
       MemorySize: 512
       Architectures:
@@ -19,7 +19,7 @@ Resources:
           # by default, AWS Lambda runtime produces no log
           # use `LOG_LEVEL: debug` for for lifecycle and event handling information
           # use `LOG_LEVEL: trace` for detailed input event information
-          LOG_LEVEL: trace
+          LOG_LEVEL: debug
 
       # Handles all methods of the REST API
       Events:
