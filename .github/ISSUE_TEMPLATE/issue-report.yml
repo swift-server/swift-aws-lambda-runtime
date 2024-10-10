@@ -17,7 +17,7 @@ body:
     attributes:
       label: Actual behavior
       description: What actually happened
-      placeholder: Describe 
+      placeholder: Describe
     validations:
       required: true
   - type: textarea
@@ -55,7 +55,7 @@ body:
     attributes:
       label: Swift version
       description: Swift environment version.
-      placeholder: |  
+      placeholder: |
         Open a Terminal and execute the following command
 
         swift --version && uname -a
