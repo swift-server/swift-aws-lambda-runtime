@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         # This should be passed as an argument in input. Can we pass arrays as argument ?
-        examples : [ "HelloWorld", "APIGateway" ]
+        examples : [ "HelloWorld", "APIGateway", "S3_AWSSDK", "S3_Soto" ]
         # examples: ${{ inputs.examples }}
 
         # We are using only one Swift version
