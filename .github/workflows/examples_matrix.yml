@@ -52,8 +52,9 @@ jobs:
         PR_NUMBER: ${{ github.event.pull_request.number }}
       run: |
         # Clone the repository
-        git clone https://github.com/${{ github.repository }}.git .
-        
+        git clone https://github.com/${{ github.repository }}
+        cd ${{ github.event.repository.name }}
+
         # Fetch the pull request
         git fetch origin +refs/pull/$PR_NUMBER/merge:
         
