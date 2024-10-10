@@ -42,7 +42,11 @@ if let localDepsPath = Context.environment["LAMBDA_USE_LOCAL_DEPS"],
 {
     // when we use the local runtime as deps, let's remove the dependency added above
     let indexToRemove = package.dependencies.firstIndex { dependency in
-        if case .sourceControl(name: _, location: "https://github.com/swift-server/swift-aws-lambda-runtime.git", requirement: _) = dependency.kind {
+        if case .sourceControl(
+            name: _,
+            location: "https://github.com/swift-server/swift-aws-lambda-runtime.git",
+            requirement: _
+        ) = dependency.kind {
             return true
         }
         return false
@@ -50,7 +54,7 @@ if let localDepsPath = Context.environment["LAMBDA_USE_LOCAL_DEPS"],
     if let indexToRemove {
         package.dependencies.remove(at: indexToRemove)
     }
-    
+
     // then we add the dependency on LAMBDA_USE_LOCAL_DEPS' path (typically ../..)
     print("[INFO] Compiling against swift-aws-lambda-runtime located at \(localDepsPath)")
     package.dependencies += [
