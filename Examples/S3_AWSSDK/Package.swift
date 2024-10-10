@@ -3,7 +3,6 @@
 import PackageDescription
 
 // needed for CI to test the local version of the library
-import class Foundation.ProcessInfo
 import struct Foundation.URL
 
 #if os(macOS)
