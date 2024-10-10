@@ -44,7 +44,8 @@ jobs:
       image: ${{ matrix.swift.image }}
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      # use v3 until this is fixed https://github.com/actions/checkout/issues/1487
+      uses: actions/checkout@v3
       with:
           persist-credentials: false
     - name: Mark the workspace as safe
