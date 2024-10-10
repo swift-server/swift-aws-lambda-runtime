@@ -1,4 +1,3 @@
-
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: SAM Template for AWS SDK Example
@@ -10,7 +9,7 @@ Resources:
     Properties:
       CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/SotoExample/SotoExample.zip
       Timeout: 60
-      Handler: swift.bootstrap # ignored by the Swift runtime
+      Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2
       MemorySize: 512
       Architectures:
@@ -31,11 +30,11 @@ Resources:
       # It grants the function permissions to read the list of buckets in your account.
       Policies:
         - Statement:
-          - Sid: ListAllS3BucketsInYourAccount
-            Effect: Allow
-            Action:
-            - s3:ListAllMyBuckets
-            Resource: '*'  
+            - Sid: ListAllS3BucketsInYourAccount
+              Effect: Allow
+              Action:
+                - s3:ListAllMyBuckets
+              Resource: '*'
 
 # print API endpoint
 Outputs:
