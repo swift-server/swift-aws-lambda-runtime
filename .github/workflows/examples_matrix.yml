@@ -54,6 +54,7 @@ jobs:
       run: |
         git clone https://github.com/${{ github.repository }}
         cd ${{ github.event.repository.name }}
+        git checkout ${{ github.ref }}
 
     - name: Mark the workspace as safe
       working-directory: ${{ github.event.repository.name }} # until we can use action/checkout@v4
