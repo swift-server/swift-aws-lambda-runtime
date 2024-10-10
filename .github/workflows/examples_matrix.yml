@@ -44,14 +44,25 @@ jobs:
       image: ${{ matrix.swift.image }}
     steps:
     - name: Checkout repository
-      # use v3 until this is fixed https://github.com/actions/checkout/issues/1487
-      uses: actions/checkout@v3
-      with:
-          persist-credentials: false
+      # GitHub checkout action has a dep on NodeJS 20 which is not running on Amazonlinux2
+      # workaround is to manually checkout the repository
+      # https://github.com/actions/checkout/issues/1487
+
+      # uses: actions/checkout@v4
+      # with:
+      #     persist-credentials: false
+      run: |
+        git clone https://github.com/${{ github.repository }}
+        cd ${{ github.event.repository.name }}
+        git checkout ${{ github.sha }}
+
     - name: Mark the workspace as safe
-    # https://github.com/actions/checkout/issues/766
+      working-directory: ${{ github.event.repository.name }} # until we can use action/checkout@v4
+      # https://github.com/actions/checkout/issues/766
       run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+
     - name: Run matrix job
+      working-directory: ${{ github.event.repository.name }} # until we can use action/checkout@v4
       env:
         SWIFT_VERSION: ${{ matrix.swift.swift_version }}
         COMMAND: ${{ inputs.matrix_linux_command }}
