@@ -13,9 +13,18 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
-import Foundation
 import PackagePlugin
 import Synchronization
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import struct Foundation.URL
+import struct Foundation.CharacterSet
+import struct Foundation.Data
+import class Foundation.Pipe
+import class Foundation.Process
+#endif
 
 @available(macOS 15.0, *)
 struct Utils {

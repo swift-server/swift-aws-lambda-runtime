@@ -12,8 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import PackagePlugin
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import struct Foundation.URL
+import class Foundation.FileManager
+import class Foundation.ProcessInfo
+import struct Foundation.ObjCBool
+#endif
 
 @main
 @available(macOS 15.0, *)
