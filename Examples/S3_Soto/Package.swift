@@ -1,4 +1,4 @@
-// swift-tools-version:6.0
+// swift-tools-version: 6.0
 
 import PackageDescription
 
@@ -12,22 +12,26 @@ let platforms: [PackageDescription.SupportedPlatform]? = nil
 #endif
 
 let package = Package(
-    name: "swift-aws-lambda-runtime-example",
+    name: "SotoExample",
     platforms: platforms,
     products: [
-        .executable(name: "MyLambda", targets: ["MyLambda"])
+        .executable(name: "SotoExample", targets: ["SotoExample"])
     ],
     dependencies: [
+        .package(url: "https://github.com/soto-project/soto.git", from: "7.0.0"),
+
         // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main")
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-events", branch: "main"),
     ],
     targets: [
         .executableTarget(
-            name: "MyLambda",
+            name: "SotoExample",
             dependencies: [
-                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime")
-            ],
-            path: "."
+                .product(name: "SotoS3", package: "soto"),
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+                .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
+            ]
         )
     ]
 )

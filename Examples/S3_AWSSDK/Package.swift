@@ -1,4 +1,4 @@
-// swift-tools-version:6.0
+// swift-tools-version: 6.0
 
 import PackageDescription
 
@@ -12,22 +12,25 @@ let platforms: [PackageDescription.SupportedPlatform]? = nil
 #endif
 
 let package = Package(
-    name: "swift-aws-lambda-runtime-example",
+    name: "AWSSDKExample",
     platforms: platforms,
     products: [
-        .executable(name: "MyLambda", targets: ["MyLambda"])
+        .executable(name: "AWSSDKExample", targets: ["AWSSDKExample"])
     ],
     dependencies: [
         // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main")
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-events", branch: "main"),
+        .package(url: "https://github.com/awslabs/aws-sdk-swift", from: "1.0.0"),
     ],
     targets: [
         .executableTarget(
-            name: "MyLambda",
+            name: "AWSSDKExample",
             dependencies: [
-                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime")
-            ],
-            path: "."
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+                .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
+                .product(name: "AWSS3", package: "aws-sdk-swift"),
+            ]
         )
     ]
 )
