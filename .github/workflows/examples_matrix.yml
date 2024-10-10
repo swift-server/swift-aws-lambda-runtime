@@ -56,5 +56,5 @@ jobs:
         COMMAND: ${{ inputs.matrix_linux_command }}
         EXAMPLE: ${{ matrix.examples }}
       run: |
-        apt-get -qq update && apt-get -qq -y install curl
+        apt-get -qq update && apt-get -qq -y install curl openssl libssl-dev
         ./scripts/integration_tests.sh
