@@ -1,0 +1,60 @@
+name: ExamplesMatrix
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        type: string
+        description: "The name of the workflow used for the concurrency group."
+        required: true
+      # examples:
+      #   type: sequence
+      #   description: "The examples to run."
+      #   required: true
+      matrix_linux_command:
+        type: string
+        description: "The command of the current Swift version linux matrix job to execute."
+        required: true
+      matrix_linux_swift_container_image:
+        type: string
+        description: "Container image for the matrix job. Defaults to matching latest Swift Ubuntu image."
+        default: "swift:latest"
+
+## We are cancelling previously triggered workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.name }}
+  cancel-in-progress: true
+ 
+jobs:
+  linux:
+    name:  Example/${{ matrix.examples }} on Linux ${{ matrix.swift.swift_version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # This should be passed as an argument in input. Can we pass arrays as argument ?
+        examples : [ "HelloWorld", "APIGateway" ]
+        # examples: ${{ inputs.examples }}
+
+        # We are using only one Swift version
+        swift:
+        - image: ${{ inputs.matrix_linux_swift_container_image }}
+          swift_version: "6.0.1-noble"
+    container:
+      image: ${{ matrix.swift.image }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+          persist-credentials: false
+    - name: Mark the workspace as safe
+    # https://github.com/actions/checkout/issues/766
+      run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+    - name: Run matrix job
+      env:
+        SWIFT_VERSION: ${{ matrix.swift.swift_version }}
+        COMMAND: ${{ inputs.matrix_linux_command }}
+        EXAMPLE: ${{ matrix.examples }}
+      run: |
+        apt-get -qq update && apt-get -qq -y install curl
+        ./scripts/integration_tests.sh
