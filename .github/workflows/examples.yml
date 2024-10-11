@@ -113,6 +113,9 @@ jobs:
 
           # package the example (docker and swift toolchain are installed on the GH runner)
           which docker
+          docker info 
+          docker pull swift:amazonlinux2
+          /usr/bin/docker pull swift:amazonlinux2
           echo yes | swift package archive --allow-network-connections docker --verbose
 
           # did the plugin generated a Linux binary?
