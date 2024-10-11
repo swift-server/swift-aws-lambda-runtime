@@ -101,7 +101,7 @@ struct AWSLambdaPackager: CommandPlugin {
             try Utils.execute(
                 executable: dockerToolPath,
                 arguments: ["pull", baseImage],
-                logLevel: .output
+                logLevel: verboseLogging ? .debug : .output
             )
         }
 
