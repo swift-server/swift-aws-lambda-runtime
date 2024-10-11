@@ -112,10 +112,7 @@ jobs:
           pushd Examples/${EXAMPLE}
 
           # package the example (docker and swift toolchain are installed on the GH runner)
-          which docker
-          docker info 
-          docker pull swift:amazonlinux2
-          echo yes | swift package archive --allow-network-connections docker --disable-docker-image-update --verbose
+          echo yes | swift package archive --allow-network-connections docker
 
           # did the plugin generated a Linux binary?
           [ -f ${OUTPUT_FILE} ]
