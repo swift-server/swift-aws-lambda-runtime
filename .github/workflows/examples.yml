@@ -105,9 +105,9 @@ jobs:
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
       - name: Test the archive plugin
         env:
-          EXAMPLE=HelloWorld
-          OUTPUT_FILE=.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/bootstrap
-          ZIP_FILE=.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip
+          EXAMPLE: HelloWorld
+          OUTPUT_FILE: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/bootstrap
+          ZIP_FILE: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip
         run: |
           pushd Examples/${EXAMPLE}
 
