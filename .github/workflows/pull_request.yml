@@ -27,12 +27,14 @@ jobs:
 
   integration-tests:
     name: Integration Tests
-    uses: ./.github/workflows/examples_matrix.yml
+    uses: ./.github/workflows/examples.yml
     with:
+      name: "Integration tests"
+      examples_enabled: true
       # We should pass the list of examples here, but we can't pass an array as argument
       # examples: [ "HelloWorld", "APIGateway" ]
-      name: "Integration tests"
       matrix_linux_command: "LAMBDA_USE_LOCAL_DEPS=../.. swift build"
+      archive_plugin_enabled: true
 
   swift-6-language-mode:
     name: Swift 6 Language Mode
