@@ -115,8 +115,7 @@ jobs:
           which docker
           docker info 
           docker pull swift:amazonlinux2
-          /usr/bin/docker pull swift:amazonlinux2
-          echo yes | swift package archive --allow-network-connections docker --verbose
+          echo yes | swift package archive --allow-network-connections docker --disable-docker-image-update --verbose
 
           # did the plugin generated a Linux binary?
           [ -f ${OUTPUT_FILE} ]
