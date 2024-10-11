@@ -27,7 +27,7 @@ struct Utils {
         logLevel: ProcessLogLevel
     ) throws -> String {
         if logLevel >= .debug {
-            print("\(executable.description) \(arguments.joined(separator: " "))")
+            print("\(executable.path()) \(arguments.joined(separator: " "))")
         }
 
         let fd = dup(1)
@@ -83,7 +83,7 @@ struct Utils {
         let process = Process()
         process.standardOutput = pipe
         process.standardError = pipe
-        process.executableURL = URL(fileURLWithPath: executable.description)
+        process.executableURL = executable
         process.arguments = arguments
         if let workingDirectory = customWorkingDirectory {
             process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory.path())
