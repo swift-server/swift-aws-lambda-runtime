@@ -1,0 +1,80 @@
+name: ExamplesMatrix
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        type: string
+        description: "The name of the workflow used for the concurrency group."
+        required: true
+      # examples:
+      #   type: sequence
+      #   description: "The examples to run."
+      #   required: true
+      matrix_linux_command:
+        type: string
+        description: "The command of the current Swift version linux matrix job to execute."
+        required: true
+      matrix_linux_swift_container_image:
+        type: string
+        description: "Container image for the matrix job. Defaults to matching latest Swift Ubuntu image."
+        default: "swift:amazonlinux2"
+
+## We are cancelling previously triggered workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.name }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Example/${{ matrix.examples }} on Linux ${{ matrix.swift.swift_version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # This should be passed as an argument in input. Can we pass arrays as argument ?
+        examples: ["HelloWorld", "APIGateway", "S3_AWSSDK", "S3_Soto"]
+        # examples: ${{ inputs.examples }}
+
+        # We are using only one Swift version
+        swift:
+          - image: ${{ inputs.matrix_linux_swift_container_image }}
+            swift_version: "6.0.1-amazonlinux2"
+    container:
+      image: ${{ matrix.swift.image }}
+    steps:
+      # GitHub checkout action has a dep on NodeJS 20 which is not running on Amazonlinux2
+      # workaround is to manually checkout the repository
+      # https://github.com/actions/checkout/issues/1487
+      - name: Manually Clone repository and checkout PR
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Clone the repository
+          git clone https://github.com/${{ github.repository }}
+          cd ${{ github.event.repository.name }}
+
+          # Fetch the pull request
+          git fetch origin +refs/pull/$PR_NUMBER/merge:
+
+          # Checkout the pull request
+          git checkout -qf FETCH_HEAD
+
+      # - name: Checkout repository
+      #   uses: actions/checkout@v4
+      #   with:
+      #       persist-credentials: false
+
+      - name: Mark the workspace as safe
+        working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
+        # https://github.com/actions/checkout/issues/766
+        run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+
+      - name: Run matrix job
+        working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
+        env:
+          SWIFT_VERSION: ${{ matrix.swift.swift_version }}
+          COMMAND: ${{ inputs.matrix_linux_command }}
+          EXAMPLE: ${{ matrix.examples }}
+        run: |
+          ./scripts/integration_tests.sh

@@ -1,13 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: SAM Template for QuoteService
+Description: SAM Template for AWS SDK Example
 
 Resources:
   # Lambda function
-  APIGatewayLambda:
+  AWSSDKExample:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/AWSSDKExample/AWSSDKExample.zip
       Timeout: 60
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2
@@ -20,12 +20,24 @@ Resources:
           # use `LOG_LEVEL: debug` for for lifecycle and event handling information
           # use `LOG_LEVEL: trace` for detailed input event information
           LOG_LEVEL: debug
+
+      # Handles all methods of the REST API
       Events:
-        HttpApiEvent:
+        Api:
           Type: HttpApi
 
+      # Add an IAM policy to this function.
+      # It grants the function permissions to read the list of buckets in your account.
+      Policies:
+        - Statement:
+            - Sid: ListAllS3BucketsInYourAccount
+              Effect: Allow
+              Action:
+                - s3:ListAllMyBuckets
+              Resource: '*'
+
+# print API endpoint
 Outputs:
-  # print API Gateway endpoint
-  APIGatewayEndpoint:
-    Description: API Gateway endpoint UR"
+  SwiftAPIEndpoint:
+    Description: "API Gateway endpoint URL for your application"
     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
