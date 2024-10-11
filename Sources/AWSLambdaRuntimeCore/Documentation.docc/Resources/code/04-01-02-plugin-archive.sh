@@ -1,2 +1,2 @@
-swift package --allow-network-access docker plugin archive
+swift package archive --allow-network-connections docker
 

@@ -83,7 +83,7 @@ try await runtime.run()
 
 ```bash
 swift build
-swift package archive --allow-network-access docker
+swift package archive --allow-network-connections docker
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
