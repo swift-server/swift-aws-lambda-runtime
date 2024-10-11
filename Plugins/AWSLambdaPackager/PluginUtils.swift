@@ -27,7 +27,7 @@ struct Utils {
         logLevel: ProcessLogLevel
     ) throws -> String {
         if logLevel >= .debug {
-            print("\(executable.absoluteString) \(arguments.joined(separator: " "))")
+            print("\(executable.description) \(arguments.joined(separator: " "))")
         }
 
         let fd = dup(1)
