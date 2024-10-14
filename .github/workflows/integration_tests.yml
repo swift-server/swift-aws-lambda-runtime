@@ -12,7 +12,7 @@ on:
       # The workaround is mentioned here https://github.com/orgs/community/discussions/11692
       examples:
         type: string
-        description: "The list of examples to run. Pass a String with a valid JSON array such as \"[ 'HelloWorld', 'APIGAteway' ]\""
+        description: "The list of examples to run. Pass a String with a valid JSON array such as \"[ 'HelloWorld', 'APIGateway' ]\""
         required: true
         default: ""
       examples_enabled:
@@ -39,7 +39,7 @@ concurrency:
 
 jobs:
   test-examples:
-    name: Test Examples/${{ matrix.examples }} on Linux ${{ matrix.swift.swift_version }}
+    name: Test Examples/${{ matrix.examples }} on ${{ matrix.swift.swift_version }}
     if: ${{ inputs.examples_enabled }}
     runs-on: ubuntu-latest
     strategy:
