@@ -37,7 +37,7 @@ jobs:
       # Instead, we pass a String with a valid JSON array.
       # The workaround is mentioned here https://github.com/orgs/community/discussions/11692
       examples: "[ 'HelloWorld', 'APIGateway','S3_AWSSDK', 'S3_Soto' ]"
-      
+
       archive_plugin_enabled: true
 
   swift-6-language-mode:
