@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        examples: ${{ fromJson(inputs.examples }}
+        examples: ${{ fromJson(inputs.examples) }}
 
         # We are using only one Swift version
         swift:
