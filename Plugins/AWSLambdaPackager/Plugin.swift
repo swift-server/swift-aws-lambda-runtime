@@ -287,7 +287,8 @@ struct AWSLambdaPackager: CommandPlugin {
 
             REQUIREMENTS: To use this plugin, you must have docker installed and started.
 
-            USAGE: swift package --allow-network-access docker archive [--help] [--verbose]
+            USAGE: swift package --allow-network-connections docker archive
+                                                       [--help] [--verbose]
                                                        [--output-directory <path>]
                                                        [--products <list of products>]
                                                        [--configuration debug | release]
