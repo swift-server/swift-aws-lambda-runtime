@@ -1,4 +1,4 @@
-swift package --allow-network-access docker archive
+swift package archive --allow-network-connections docker 
 
 -------------------------------------------------------------------------
 building "squarenumberlambda" in docker
