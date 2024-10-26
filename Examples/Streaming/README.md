@@ -47,7 +47,7 @@ aws lambda create-function \
 --runtime provided.al2 \
 --handler provided  \
 --architectures arm64 \
---role arn:aws:iam::$AWS_ACCOUNT_ID:role/lambda_basic_execution \
+--role arn:aws:iam::${AWS_ACCOUNT_ID}:role/lambda_basic_execution \
 --timeout 15
 ```
 
