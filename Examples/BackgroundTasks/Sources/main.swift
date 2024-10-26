@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntime
-import NIOCore
 import Foundation
 
 struct BackgroundProcessingHandler: LambdaWithBackgroundProcessingHandler {
