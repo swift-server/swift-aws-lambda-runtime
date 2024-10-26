@@ -35,7 +35,8 @@ The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPa
 
 Here is how to deploy using the `aws` command line.
 
-### Create the function 
+### Create the function
+
 ```bash
 AWS_ACCOUNT_ID=012345678901
 aws lambda create-function \
@@ -85,6 +86,8 @@ cat response.json
 {"echoedMessage":"Hello Background Tasks"}
 ```
 
+### View the function's logs 
+
 You can observe additional messages being logged after the response is received.
 
 To tail the log, use the AWS CLI:
@@ -107,7 +110,7 @@ REPORT RequestId: 4c8edd74-d776-4df9-9714-19086ab59bfd    Duration: 10160.89 ms 
 
 Type CTRL-C to stop tailing the logs.
 
-### Undeploy
+## Cleanup
 
 When done testing, you can delete the Lambda function with this command.
 
