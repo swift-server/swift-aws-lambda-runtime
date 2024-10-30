@@ -38,7 +38,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         // developers have to wait for AWS Lambda to dispose and recreate a runtime environment to pickup a change
         // this approach is less flexible but more performant than reading the value of the environment variable at each invocation
         var log = logger
-        log.logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info        
+        log.logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
         self.logger = logger
     }
 
