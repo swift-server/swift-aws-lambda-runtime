@@ -23,7 +23,7 @@ import NIOCore
 public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
     // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
     let handlerMutex: NIOLockedValueBox<Handler?>
-    var logger: Logger
+    let logger: Logger
     let eventLoop: EventLoop
 
     public init(
@@ -33,6 +33,12 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
     ) {
         self.handlerMutex = NIOLockedValueBox(handler)
         self.eventLoop = eventLoop
+
+        // by setting the log level here, we understand it can not be changed dynamically at runtime
+        // developers have to wait for AWS Lambda to dispose and recreate a runtime environment to pickup a change
+        // this approach is less flexible but more performant than reading the value of the environment variable at each invocation
+        var log = logger
+        log.logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info        
         self.logger = logger
     }
 
@@ -54,11 +60,6 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         guard let handler else {
             throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
         }
-
-        // by setting the log level here, we understand it can not be changed dynamically at runtime
-        // developers have to wait for AWS Lambda to dispose and recreate a runtime environment to pickup a change
-        // this approach is less flexible but more performant than reading the value of the environment variable at each invocation
-        self.logger.logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
 
         try await LambdaRuntimeClient.withRuntimeClient(
             configuration: .init(ip: ip, port: port),
