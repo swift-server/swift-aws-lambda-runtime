@@ -18,6 +18,17 @@
 
 ## TL;DR
 
+The `Examples/_MyFirstFunction` contains a script that goes through the steps described in this section. 
+
+If you are really impatient, just type:
+
+```bash
+cd Examples/_MyFirstFunction
+./create_and_deploy_function.sh
+```
+
+Otherwise, continue reading.
+
 1. Create a new Swift executable project
 
 ```bash
@@ -64,7 +75,15 @@ swift package init --type executable
     )
     ```
 
-3. Edit `Sources/main.swift` file and replace the content with this code 
+3. Scaffold a minimal Lambda function
+
+The runtime comes with a plugin to generate the code of a simple AWS Lambda function:
+ 
+```bash
+swift package lambda-init --allow-writing-to-package-directory 
+```
+
+Your `Sources/main.swift` file must look like this. 
 
 ```swift
 import AWSLambdaRuntime
@@ -81,12 +100,13 @@ try await runtime.run()
 
 4. Build & archive the package 
 
+The runtime comes with a plugin to compile on Amazon Linux and create a ZIP archive:
+
 ```bash
-swift build
 swift package archive --allow-network-connections docker
 ```
 
-If there is no error, there is a ZIP file ready to deploy. 
+If there is no error, the ZIP archive is ready to deploy. 
 The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip`
 
 5. Deploy to AWS
