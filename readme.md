@@ -178,7 +178,40 @@ tbd + link to docc
 
 ### Lambda Streaming Response
 
-tbd + link to docc
+You can configure your Lambda function to stream response payloads back to clients. Response streaming can benefit latency sensitive applications by improving time to first byte (TTFB) performance. This is because you can send partial responses back to the client as they become available. Additionally, you can use response streaming to build functions that return larger payloads. Response stream payloads have a soft limit of 20 MB as compared to the 6 MB limit for buffered responses. Streaming a response also means that your function doesn’t need to fit the entire response in memory. For very large responses, this can reduce the amount of memory you need to configure for your function.
+
+Streaming responses incurs a cost. For more information, see [AWS Lambda Pricing](https://aws.amazon.com/lambda/pricing/).
+
+You can stream responses through [Lambda function URLs](https://docs.aws.amazon.com/lambda/latest/dg/urls-configuration.html), the AWS SDK, or using the Lambda [InvokeWithResponseStream](https://docs.aws.amazon.com/lambda/latest/dg/API_InvokeWithResponseStream.html) API. In this example, we create an authenticated Lambda function URL.
+
+Here is an example of a minimal function that streams 10 numbers with an interval of one second for each number.
+
+```swift
+import AWSLambdaRuntime
+import NIOCore
+
+struct SendNumbersWithPause: StreamingLambdaHandler {
+    func handle(
+        _ event: ByteBuffer,
+        responseWriter: some LambdaResponseStreamWriter,
+        context: LambdaContext
+    ) async throws {
+        for i in 1...10 {
+            // Send partial data
+            try await responseWriter.write(ByteBuffer(string: "\(i)\n"))
+            // Perform some long asynchronous work
+            try await Task.sleep(for: .milliseconds(1000))
+        }
+        // All data has been sent. Close off the response stream.
+        try await responseWriter.finish()
+    }
+}
+
+let runtime = LambdaRuntime.init(handler: SendNumbersWithPause())
+try await runtime.run()
+```
+
+You can learn how to deploy and invoke this function in [the example README file](Examples/Streaming/README.md).
 
 ### Integration with Swift Service LifeCycle 
 
