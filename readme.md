@@ -184,6 +184,51 @@ tbd + link to docc
 
 tbd + link to docc
 
-### Background Tasks 
+### Use Lambda Background Tasks 
 
-tbd + link to docc
+Background tasks allow code to execute asynchronously after the main response has been returned, enabling additional processing without affecting response latency. This approach is ideal for scenarios like logging, data updates, or notifications that can be deferred. The code leverages Lambda's "Response Streaming" feature, which is effective for balancing real-time user responsiveness with the ability to perform extended tasks post-response. For more information about Lambda background tasks, see [this AWS blog post](https://aws.amazon.com/blogs/compute/running-code-after-returning-a-response-from-an-aws-lambda-function/).
+
+
+Here is an example of a minimal function that waits 10 seconds after it returned a response but before the handler returns.
+```swift
+import AWSLambdaRuntime
+import Foundation
+
+struct BackgroundProcessingHandler: LambdaWithBackgroundProcessingHandler {
+    struct Input: Decodable {
+        let message: String
+    }
+
+    struct Greeting: Encodable {
+        let echoedMessage: String
+    }
+
+    typealias Event = Input
+    typealias Output = Greeting
+
+    func handle(
+        _ event: Event,
+        outputWriter: some LambdaResponseWriter<Output>,
+        context: LambdaContext
+    ) async throws {
+        // Return result to the Lambda control plane
+        context.logger.debug("BackgroundProcessingHandler - message received")
+        try await outputWriter.write(Greeting(echoedMessage: event.message))
+
+        // Perform some background work, e.g:
+        context.logger.debug("BackgroundProcessingHandler - response sent. Performing background tasks.")
+        try await Task.sleep(for: .seconds(10))
+
+        // Exit the function. All asynchronous work has been executed before exiting the scope of this function.
+        // Follows structured concurrency principles.
+        context.logger.debug("BackgroundProcessingHandler - Background tasks completed. Returning")
+        return
+    }
+}
+
+let adapter = LambdaCodableAdapter(handler: BackgroundProcessingHandler())
+let runtime = LambdaRuntime.init(handler: adapter)
+try await runtime.run()
+```
+
+You can learn how to deploy and invoke this function in [the example README file](Examples/BackgroundTasks/README.md).
