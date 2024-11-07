@@ -130,7 +130,7 @@ This should print
 
 ## Tutorial 
 
-[The Swift AWS Lambda Runtime docc tutorial](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/1.0.0-alpha.3/tutorials/table-of-content) provides developers with detailed step-by-steps instructions to develop, build, and deploy a Lambda function.
+[The Swift AWS Lambda Runtime docc tutorial](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/1.0.0-alpha.3/tutorials/table-of-content) provides developers with detailed step-by-step instructions to develop, build, and deploy a Lambda function.
 
 ## Swift AWS Lambda Runtime
 
