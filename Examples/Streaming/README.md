@@ -39,7 +39,9 @@ The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPa
 Here is how to deploy using the `aws` command line.
 
 ### Step 1: Create the function 
+
 ```bash
+# Replace with your AWS Account ID
 AWS_ACCOUNT_ID=012345678901
 aws lambda create-function \
 --function-name StreamingNumbers \
