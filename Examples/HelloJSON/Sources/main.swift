@@ -31,8 +31,10 @@ struct HelloResponse: Encodable {
 // the Lambda runtime
 let runtime = LambdaRuntime {
     (event: HelloRequest, context: LambdaContext) in
-    
-    return HelloResponse(greetings: "Hello \(event.name). You look \(event.age > 30 ? "younger" : "older") than your age.")
+
+    HelloResponse(
+        greetings: "Hello \(event.name). You look \(event.age > 30 ? "younger" : "older") than your age."
+    )
 }
 
 // start the loop
