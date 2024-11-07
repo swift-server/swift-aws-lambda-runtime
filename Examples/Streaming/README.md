@@ -77,7 +77,7 @@ Be sure to replace <YOUR_ACCOUNT_ID> with your actual AWS account ID (for exampl
 
 ### Step3: Create the URL 
 
-This creates [an URL with IAM authentication](https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html). Only calls with a valid signature will be authorized.
+This creates [a URL with IAM authentication](https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html). Only calls with a valid signature will be authorized.
 
 ```bash
 aws lambda create-function-url-config \
