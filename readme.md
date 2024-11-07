@@ -128,6 +128,10 @@ This should print
 "dlroW olleH"
 ```
 
+## Tutorial 
+
+[The Swift AWS Lambda Runtime docc tutorial](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/1.0.0-alpha.3/tutorials/table-of-content) provides developers with detailed step-by-step instructions to develop, build, and deploy a Lambda function.
+
 ## Swift AWS Lambda Runtime
 
 Many modern systems have client components like iOS, macOS or watchOS applications as well as server components that those clients interact with. Serverless functions are often the easiest and most efficient way for client application developers to extend their applications into the cloud.
@@ -142,15 +146,35 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 
 ## Design Principles
 
-tbd + reference to the `v2-api.md` design doc.
+The [design document](Sources/AWSLambdaRuntimeCore/Documentation.docc/Proposals/0001-v2-api.md) details the v2 API proposal for the swift-aws-lambda-runtime library, which aims to enhance the developer experience for building serverless functions in Swift.
 
-## Tutorial 
+The proposal has been reviewed and [incorporated feedback from the community](https://forums.swift.org/t/aws-lambda-v2-api-proposal/73819). The full v2 API design document is available [in this repository](Sources/AWSLambdaRuntimeCore/Documentation.docc/Proposals/0001-v2-api.md).
 
-link to [updated docc tutorial](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/1.0.0-alpha.3/tutorials/table-of-content)
+**Key Design Principles**
+
+The v2 API prioritizes the following principles:
+
+**Readability and Maintainability**: Extensive use of `async`/`await` improves code clarity and simplifies maintenance.
+
+**Developer Control**: Developers own the `main()` function and have the flexibility to inject dependencies into the `LambdaRuntime`. This allows you to manage service lifecycles efficiently using [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle) for structured concurrency.
+
+**Simplified Codable Support**: The `LambdaCodableAdapter` struct eliminates the need for verbose boilerplate code when encoding and decoding events and responses.
+
+**New Capabilities**
+
+The v2 API introduces two new features:
+
+[Response Streaming](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/]): This functionality is ideal for handling large responses that need to be sent incrementally.   
+
+[Background Work](https://aws.amazon.com/blogs/compute/running-code-after-returning-a-response-from-an-aws-lambda-function/): Schedule tasks to run after returning a response to the AWS Lambda control plane.
+
+These new capabilities provide greater flexibility and control when building serverless functions in Swift with the swift-aws-lambda-runtime library.
 
 ## AWSLambdaRuntime API 
 
-tbd 
+### Receive and respond with JSON objects
+
+tbd + link to docc
 
 ### Lambda Streaming Response
 
