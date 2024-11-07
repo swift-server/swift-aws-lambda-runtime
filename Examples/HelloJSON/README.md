@@ -2,6 +2,8 @@
 
 This is a simple example of an AWS Lambda function that takes a JSON structure as input parameter and returns a JSON structure as response.
 
+The runtime takes care of decoding the input and encoding the output.
+
 ## Code 
 
 The code defines a `HelloRequest` and `HelloResponse` data structure to represent the input and outpout payload. These structures are typically shared with a client project, such as an iOS application.

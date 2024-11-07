@@ -28,10 +28,6 @@ struct HelloResponse: Encodable {
     let greetings: String
 }
 
-// the JSON encoder. It is created outside of the handler.
-// this instance is reused at each invocation.
-let encoder = JSONEncoder()
-
 // the Lambda runtime
 let runtime = LambdaRuntime {
     (event: HelloRequest, context: LambdaContext) in
