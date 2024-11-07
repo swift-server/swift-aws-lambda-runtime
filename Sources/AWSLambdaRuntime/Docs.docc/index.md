@@ -16,7 +16,7 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 
 ## Getting started
 
-If you have never used AWS Lambda or Docker before, check out this [getting started guide](https://fabianfett.de/getting-started-with-swift-aws-lambda-runtime) which helps you with every step from zero to a running Lambda.
+If you have never used AWS Lambda or Docker before, check out this [getting started guide](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/1.0.0-alpha.3/tutorials/table-of-content) which helps you with every step from zero to a running Lambda.
 
 First, create a SwiftPM project and pull Swift AWS Lambda Runtime as dependency into your project
 
@@ -120,32 +120,6 @@ First, add a dependency on the event packages:
 
  Modeling Lambda functions as Closures is both simple and safe. Swift AWS Lambda Runtime will ensure that the user-provided code is offloaded from the network processing thread such that even if the code becomes slow to respond or gets stuck, the underlying process can continue to function. This safety comes at a small performance penalty from context switching between threads. In many cases, the simplicity and safety of using the Closure based API is often preferred over the complexity of the performance-oriented API.
 
-### Using EventLoopLambdaHandler
-
- Performance sensitive Lambda functions may choose to use a more complex API which allows user code to run on the same thread as the networking handlers. Swift AWS Lambda Runtime uses [SwiftNIO](https://github.com/apple/swift-nio) as its underlying networking engine which means the APIs are based on [SwiftNIO](https://github.com/apple/swift-nio) concurrency primitives like the `EventLoop` and `EventLoopFuture`. For example:
-
- ```swift
- // Import the modules
- import AWSLambdaRuntime
- import AWSLambdaEvents
- import NIO
-
- // Our Lambda handler, conforms to EventLoopLambdaHandler
- struct Handler: EventLoopLambdaHandler {
-     typealias In = SNS.Message // Request type
-     typealias Out = Void // Response type
-
-     // In this example we are receiving an SNS Message, with no response (Void).
-     func handle(context: Lambda.Context, event: In) -> EventLoopFuture<Out> {
-         ...
-         context.eventLoop.makeSucceededFuture(Void())
-     }
- }
-
- Lambda.run(Handler())
- ```
-
- Beyond the small cognitive complexity of using the `EventLoopFuture` based APIs, note these APIs should be used with extra care. An [`EventLoopLambdaHandler`][ellh] will execute the user code on the same `EventLoop` (thread) as the library, making processing faster but requiring the user code to never call blocking APIs as it might prevent the underlying process from functioning.
 
 ## Deploying to AWS Lambda
 
