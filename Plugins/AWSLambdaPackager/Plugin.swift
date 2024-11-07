@@ -74,7 +74,7 @@ struct AWSLambdaPackager: CommandPlugin {
             "\(archives.count > 0 ? archives.count.description : "no") archive\(archives.count != 1 ? "s" : "") created"
         )
         for (product, archivePath) in archives {
-            print("  * \(product.name) at \(archivePath)")
+            print("  * \(product.name) at \(archivePath.path())")
         }
     }
 
