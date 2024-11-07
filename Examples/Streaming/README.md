@@ -68,12 +68,10 @@ Anyone with a valid signature from your AWS account will have permission to invo
 aws lambda add-permission \
   --function-name StreamingNumbers \
   --action lambda:InvokeFunctionUrl \
-  --principal $AWS_ACCOUNT_ID \
+  --principal ${AWS_ACCOUNT_ID} \
   --function-url-auth-type AWS_IAM \
   --statement-id allowURL
 ```  
-
-Be sure to replace <YOUR_ACCOUNT_ID> with your actual AWS account ID (for example: 012345678901).
 
 ### Step3: Create the URL 
 
@@ -100,6 +98,11 @@ This calls return various information, including the URL to invoke your function
 ### Invoke your Lambda function
 
 To invoke the Lambda function, use `curl` with the AWS Sigv4 option to generate the signature.
+
+Read the [AWS Credentials and Signature](../README.md/#AWS-Credentials-and-Signature) section for more details about the AWS Sigv4 protocol and how to obtain AWS credentials.
+
+When you have the `aws` command line installed and configured, you will find the credentials in the `~/.aws/credentials` file.
+
 ```bash
 URL=https://ul3nf4dogmgyr7ffl5r5rs22640fwocc.lambda-url.us-east-1.on.aws/
 REGION=us-east-1
@@ -108,9 +111,9 @@ SECRET_KEY=...
 AWS_SESSION_TOKEN=...
 
 curl "$URL"                              \
-     --user "$ACCESS_KEY":"$SECRET_KEY"   \
-     --aws-sigv4 "aws:amz:$REGION:lambda" \
-     -H "x-amz-security-token: $AWS_SESSION_TOKEN" \
+     --user "${ACCESS_KEY}":"${SECRET_KEY}"   \
+     --aws-sigv4 "aws:amz:${REGION}:lambda" \
+     -H "x-amz-security-token: ${AWS_SESSION_TOKEN}" \
      --no-buffer
 ```
 
@@ -205,7 +208,7 @@ Once the function is deployed, you can invoke it with `curl`, similarly to what 
 ```bash
 curl "$URL"                              \
      --user "$ACCESS_KEY":"$SECRET_KEY"   \
-     --aws-sigv4 "aws:amz:$REGION:lambda" \
+     --aws-sigv4 "aws:amz:${REGION}:lambda" \
      -H "x-amz-security-token: $AWS_SESSION_TOKEN" \
      --no-buffer
 ```
