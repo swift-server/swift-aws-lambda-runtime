@@ -60,12 +60,12 @@ public struct LambdaJSONOutputEncoder<Output: Encodable>: LambdaOutputEncoder {
 extension LambdaCodableAdapter {
     /// Initializes an instance given an encoder, decoder, and a handler with a non-`Void` output.
     ///   - Parameters:
-    ///   - encoder: The encoder object that will be used to encode the generic `Output` obtained from the `handler`'s `outputWriter` into a `ByteBuffer`.
-    ///   - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`.
+    ///   - encoder: The encoder object that will be used to encode the generic `Output` obtained from the `handler`'s `outputWriter` into a `ByteBuffer`. By default, a JSONEncoder is used.
+    ///   - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`. By default, a JSONDecoder is used.
     ///   - handler: The handler object.
     public init(
-        encoder: JSONEncoder,
-        decoder: JSONDecoder,
+        encoder: JSONEncoder = JSONEncoder(),
+        decoder: JSONDecoder = JSONDecoder(),
         handler: Handler
     )
     where
