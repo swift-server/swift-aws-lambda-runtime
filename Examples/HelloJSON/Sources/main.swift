@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntime
-import Foundation
 
 // in this example we are receiving and responding with a JSON structure
 
