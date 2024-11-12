@@ -4,6 +4,18 @@
 > [!WARNING]
 > The Swift AWS Runtime v2 is work in progress. We will add more documentation and code examples over time.
 
+## The Swift AWS Lambda Runtime
+
+Many modern systems have client components like iOS, macOS or watchOS applications as well as server components that those clients interact with. Serverless functions are often the easiest and most efficient way for client application developers to extend their applications into the cloud.
+
+Serverless functions are increasingly becoming a popular choice for running event-driven or otherwise ad-hoc compute tasks in the cloud. They power mission critical microservices and data intensive workloads. In many cases, serverless functions allow developers to more easily scale and control compute costs given their on-demand nature.
+
+When using serverless functions, attention must be given to resource utilization as it directly impacts the costs of the system. This is where Swift shines! With its low memory footprint, deterministic performance, and quick start time, Swift is a fantastic match for the serverless functions architecture.
+
+Combine this with Swift's developer friendliness, expressiveness, and emphasis on safety, and we have a solution that is great for developers at all skill levels, scalable, and cost effective.
+
+Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift simple and safe. The library is an implementation of the [AWS Lambda Runtime API](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-custom.html) and uses an embedded asynchronous HTTP Client based on [SwiftNIO](http://github.com/apple/swift-nio) that is fine-tuned for performance in the AWS Runtime context. The library provides a multi-tier API that allows building a range of Lambda functions: From quick and simple closures to complex, performance-sensitive event handlers.
+
 ## Pre-requisites
 
 - Ensure you have the Swift 6.x toolchain installed.  You can [install Swift toolchains](https://www.swift.org/install/macos/) from Swift.org
@@ -16,7 +28,11 @@
 
 - Some examples are using [AWS SAM](https://aws.amazon.com/serverless/sam/). Install the [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) before deploying these examples.
 
-## TL;DR
+## Getting started
+
+To get started, read [the Swift AWS Lambda runtime v1 tutorial](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/1.0.0-alpha.3/tutorials/table-of-content). It provides developers with detailed step-by-step instructions to develop, build, and deploy a Lambda function.
+
+Or, if you're impatient to start with runtime v2, try these six steps:
 
 1. Create a new Swift executable project
 
@@ -128,53 +144,42 @@ This should print
 "dlroW olleH"
 ```
 
-## Tutorial 
-
-[The Swift AWS Lambda Runtime docc tutorial](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/1.0.0-alpha.3/tutorials/table-of-content) provides developers with detailed step-by-step instructions to develop, build, and deploy a Lambda function.
-
-## Swift AWS Lambda Runtime
-
-Many modern systems have client components like iOS, macOS or watchOS applications as well as server components that those clients interact with. Serverless functions are often the easiest and most efficient way for client application developers to extend their applications into the cloud.
-
-Serverless functions are increasingly becoming a popular choice for running event-driven or otherwise ad-hoc compute tasks in the cloud. They power mission critical microservices and data intensive workloads. In many cases, serverless functions allow developers to more easily scale and control compute costs given their on-demand nature.
-
-When using serverless functions, attention must be given to resource utilization as it directly impacts the costs of the system. This is where Swift shines! With its low memory footprint, deterministic performance, and quick start time, Swift is a fantastic match for the serverless functions architecture.
-
-Combine this with Swift's developer friendliness, expressiveness, and emphasis on safety, and we have a solution that is great for developers at all skill levels, scalable, and cost effective.
-
-Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift simple and safe. The library is an implementation of the [AWS Lambda Runtime API](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-custom.html) and uses an embedded asynchronous HTTP Client based on [SwiftNIO](http://github.com/apple/swift-nio) that is fine-tuned for performance in the AWS Runtime context. The library provides a multi-tier API that allows building a range of Lambda functions: From quick and simple closures to complex, performance-sensitive event handlers.
-
-## Design Principles
-
-The [design document](Sources/AWSLambdaRuntimeCore/Documentation.docc/Proposals/0001-v2-api.md) details the v2 API proposal for the swift-aws-lambda-runtime library, which aims to enhance the developer experience for building serverless functions in Swift.
-
-The proposal has been reviewed and [incorporated feedback from the community](https://forums.swift.org/t/aws-lambda-v2-api-proposal/73819). The full v2 API design document is available [in this repository](Sources/AWSLambdaRuntimeCore/Documentation.docc/Proposals/0001-v2-api.md).
-
-### Key Design Principles
-
-The v2 API prioritizes the following principles:
-
-- Readability and Maintainability: Extensive use of `async`/`await` improves code clarity and simplifies maintenance.
-
-- Developer Control: Developers own the `main()` function and have the flexibility to inject dependencies into the `LambdaRuntime`. This allows you to manage service lifecycles efficiently using [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle) for structured concurrency.
-
-- Simplified Codable Support: The `LambdaCodableAdapter` struct eliminates the need for verbose boilerplate code when encoding and decoding events and responses.
-
-### New Capabilities
-
-The v2 API introduces two new features:
-
-[Response Streaming](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/]): This functionality is ideal for handling large responses that need to be sent incrementally.   
-
-[Background Work](https://aws.amazon.com/blogs/compute/running-code-after-returning-a-response-from-an-aws-lambda-function/): Schedule tasks to run after returning a response to the AWS Lambda control plane.
-
-These new capabilities provide greater flexibility and control when building serverless functions in Swift with the swift-aws-lambda-runtime library.
-
-## AWSLambdaRuntime API 
+## Developing your Swift Lambda functions 
 
 ### Receive and respond with JSON objects
 
-tbd + link to docc
+Typically, your Lambda functions will receive an input parameter expressed as JSON and will respond with another JSON. The Swift AWS Lambda runtime automatically takes care of encoding and decoding JSON objects when your Lambda function handler accepts `Decodable` and returns `Encodable` conforming `struct`.
+
+Here is an example of a minimal function that accepts a JSON object as input and responds with another JSON object.
+
+```swift
+import AWSLambdaRuntime
+
+// the data structure to represent the input parameter
+struct HelloRequest: Decodable {
+    let name: String
+    let age: Int
+}
+
+// the data structure to represent the output response
+struct HelloResponse: Encodable {
+    let greetings: String
+}
+
+// the Lambda runtime
+let runtime = LambdaRuntime {
+    (event: HelloRequest, context: LambdaContext) in
+
+    HelloResponse(
+        greetings: "Hello \(event.name). You look \(event.age > 30 ? "younger" : "older") than your age."
+    )
+}
+
+// start the loop
+try await runtime.run()
+```
+
+You can learn how to deploy and invoke this function in [the example README file](Examples/HelloJSON/README.md).
 
 ### Lambda Streaming Response
 
@@ -265,3 +270,35 @@ try await runtime.run()
 ```
 
 You can learn how to deploy and invoke this function in [the example README file](Examples/BackgroundTasks/README.md).
+
+## Deploying your Swift Lambda functions
+
+
+TODO
+
+
+## Swift AWS Lambda Runtime - Design Principles
+
+The [design document](Sources/AWSLambdaRuntimeCore/Documentation.docc/Proposals/0001-v2-api.md) details the v2 API proposal for the swift-aws-lambda-runtime library, which aims to enhance the developer experience for building serverless functions in Swift.
+
+The proposal has been reviewed and [incorporated feedback from the community](https://forums.swift.org/t/aws-lambda-v2-api-proposal/73819). The full v2 API design document is available [in this repository](Sources/AWSLambdaRuntimeCore/Documentation.docc/Proposals/0001-v2-api.md).
+
+### Key Design Principles
+
+The v2 API prioritizes the following principles:
+
+- Readability and Maintainability: Extensive use of `async`/`await` improves code clarity and simplifies maintenance.
+
+- Developer Control: Developers own the `main()` function and have the flexibility to inject dependencies into the `LambdaRuntime`. This allows you to manage service lifecycles efficiently using [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle) for structured concurrency.
+
+- Simplified Codable Support: The `LambdaCodableAdapter` struct eliminates the need for verbose boilerplate code when encoding and decoding events and responses.
+
+### New Capabilities
+
+The v2 API introduces two new features:
+
+[Response Streaming](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/]): This functionality is ideal for handling large responses that need to be sent incrementally.   
+
+[Background Work](https://aws.amazon.com/blogs/compute/running-code-after-returning-a-response-from-an-aws-lambda-function/): Schedule tasks to run after returning a response to the AWS Lambda control plane.
+
+These new capabilities provide greater flexibility and control when building serverless functions in Swift with the swift-aws-lambda-runtime library.
