@@ -1,4 +1,9 @@
-import AWSLambdaRuntime
+// the data structure to represent the input parameter
+struct Request: Decodable {
+    let number: Double
+}
 
-@main
-struct SquareNumberHandler: SimpleLambdaHandler {}
+// the data structure to represent the output response
+struct Response: Encodable {
+    let result: Double
+}

@@ -1,19 +1,21 @@
 import AWSLambdaRuntime
 
-struct Input: Codable {
+// the data structure to represent the input parameter
+struct Request: Decodable {
     let number: Double
 }
 
-struct Number: Codable {
+// the data structure to represent the output response
+struct Response: Encodable {
     let result: Double
 }
 
-@main
-struct SquareNumberHandler: SimpleLambdaHandler {
-    typealias Event = Input
-    typealias Output = Number
+// the Lambda runtime
+let runtime = LambdaRuntime {
+    (event: Request, context: LambdaContext) in
 
-    func handle(_ event: Event, context: LambdaContext) async throws -> Output {
-        Number(result: event.number * event.number)
-    }
+    Response(result: event.number * event.number)
 }
+
+// start the loop
+try await runtime.run()
