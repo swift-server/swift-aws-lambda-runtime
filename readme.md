@@ -179,7 +179,7 @@ let runtime = LambdaRuntime {
 try await runtime.run()
 ```
 
-You can learn how to deploy and invoke this function in [the example README file](Examples/HelloJSON/README.md).
+You can learn how to deploy and invoke this function in [the Hello JSON example README file](Examples/HelloJSON/README.md).
 
 ### Lambda Streaming Response
 
@@ -216,7 +216,30 @@ let runtime = LambdaRuntime.init(handler: SendNumbersWithPause())
 try await runtime.run()
 ```
 
-You can learn how to deploy and invoke this function in [the example README file](Examples/Streaming/README.md).
+You can learn how to deploy and invoke this function in [the streaming example README file](Examples/Streaming/README.md).
+
+### Integration with AWS Services
+
+ Most Lambda functions are triggered by events originating in other AWS services such as `Amazon SNS`, `Amazon SQS` or `AWS APIGateway`.
+ 
+ The [Swift AWS Lambda Events](http://github.com/swift-server/swift-aws-lambda-events) package includes an `AWSLambdaEvents` module that provides implementations for most common AWS event types further simplifying writing Lambda functions.
+
+ Here is an example Lambda function invoked when the AWS APIGateway receives an HTTP request.
+
+ ```swift
+import AWSLambdaEvents
+import AWSLambdaRuntime
+
+let runtime = LambdaRuntime {
+    (event: APIGatewayV2Request, context: LambdaContext) -> APIGatewayV2Response in
+
+    APIGatewayV2Response(statusCode: .ok, body: "Hello World!")
+}
+
+try await runtime.run()
+```
+
+ You can learn how to deploy and invoke this function in [the API Gateway example README file](Examples/APIGateway/README.md).
 
 ### Integration with Swift Service LifeCycle 
 
@@ -269,7 +292,7 @@ let runtime = LambdaRuntime.init(handler: adapter)
 try await runtime.run()
 ```
 
-You can learn how to deploy and invoke this function in [the example README file](Examples/BackgroundTasks/README.md).
+You can learn how to deploy and invoke this function in [the background tasks example README file](Examples/BackgroundTasks/README.md).
 
 ## Deploying your Swift Lambda functions
 
