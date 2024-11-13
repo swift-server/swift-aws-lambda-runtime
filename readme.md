@@ -148,7 +148,7 @@ This should print
 
 ### Receive and respond with JSON objects
 
-Typically, your Lambda functions will receive an input parameter expressed as JSON and will respond with another JSON. The Swift AWS Lambda runtime automatically takes care of encoding and decoding JSON objects when your Lambda function handler accepts `Decodable` and returns `Encodable` conforming `struct`.
+Typically, your Lambda functions will receive an input parameter expressed as JSON and will respond with some other JSON. The Swift AWS Lambda runtime automatically takes care of encoding and decoding JSON objects when your Lambda function handler accepts `Decodable` and returns `Encodable` conforming types.
 
 Here is an example of a minimal function that accepts a JSON object as input and responds with another JSON object.
 
@@ -220,7 +220,7 @@ You can learn how to deploy and invoke this function in [the streaming example R
 
 ### Integration with AWS Services
 
- Most Lambda functions are triggered by events originating in other AWS services such as `Amazon SNS`, `Amazon SQS` or `AWS APIGateway`.
+ Most Lambda functions are triggered by events originating in other AWS services such as Amazon SNS, Amazon SQS or AWS APIGateway.
  
  The [Swift AWS Lambda Events](http://github.com/swift-server/swift-aws-lambda-events) package includes an `AWSLambdaEvents` module that provides implementations for most common AWS event types further simplifying writing Lambda functions.
 

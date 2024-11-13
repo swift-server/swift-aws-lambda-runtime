@@ -1,20 +1,20 @@
 # Hello JSON 
 
-This is a simple example of an AWS Lambda function that takes a JSON structure as input parameter and returns a JSON structure as response.
+This is a simple example of an AWS Lambda function that takes a JSON structure as an input parameter and returns a JSON structure as a response.
 
 The runtime takes care of decoding the input and encoding the output.
 
 ## Code 
 
-The code defines a `HelloRequest` and `HelloResponse` data structure to represent the input and outpout payload. These structures are typically shared with a client project, such as an iOS application.
+The code defines `HelloRequest` and `HelloResponse` data structures to represent the input and output payloads. These structures are typically shared with a client project, such as an iOS application.
 
-The code creates a `LambdaRuntime` struct. In it's simplest form, the initializer takes a function as argument. The function is the handler that will be invoked when an event triggers the Lambda function.
+The code creates a `LambdaRuntime` struct. In it's simplest form, the initializer takes a function as an argument. The function is the handler that will be invoked when an event triggers the Lambda function.
 
 The handler is `(event: HelloRequest, context: LambdaContext)`. The function takes two arguments:
 - the event argument is a `HelloRequest`. It is the parameter passed when invoking the function.
 - the context argument is a `Lambda Context`. It is a description of the runtime context.
 
-The function return value will be encoded to an `HelloResponse` as your Lambda function response.
+The function return value will be encoded to a `HelloResponse` as your Lambda function response.
 
 ## Build & Package 
 

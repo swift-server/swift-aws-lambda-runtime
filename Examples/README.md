@@ -18,7 +18,7 @@ This directory contains example code for Lambda functions.
 
 - **[BackgroundTasks](BackgroundTasks/README.md)**: a Lambda function that continues to run background tasks after having sent the response (requires [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
 
-- **[HelloJSON](HelloJSON/README.md)**: a Lambda function that accepts a JSON as input parameter and responds with a JSON output (requires [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
+- **[HelloJSON](HelloJSON/README.md)**: a Lambda function that accepts JSON as an input parameter and responds with a JSON output (requires [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
 
 - **[HelloWorld](HelloWorld/README.md)**: a simple Lambda function (requires [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
 
