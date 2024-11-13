@@ -148,7 +148,7 @@ This should print
 
 ### Receive and respond with JSON objects
 
-Typically, your Lambda functions will receive an input parameter expressed as JSON and will respond with another JSON. The Swift AWS Lambda runtime automatically takes care of encoding and decoding JSON objects when your Lambda function handler accepts `Decodable` and returns `Encodable` conforming `struct`.
+Typically, your Lambda functions will receive an input parameter expressed as JSON and will respond with some other JSON. The Swift AWS Lambda runtime automatically takes care of encoding and decoding JSON objects when your Lambda function handler accepts `Decodable` and returns `Encodable` conforming types.
 
 Here is an example of a minimal function that accepts a JSON object as input and responds with another JSON object.
 
