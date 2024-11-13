@@ -6,7 +6,7 @@ The runtime takes care of decoding the input and encoding the output.
 
 ## Code 
 
-The code defines a `HelloRequest` and `HelloResponse` data structure to represent the input and outpout payload. These structures are typically shared with a client project, such as an iOS application.
+The code defines `HelloRequest` and `HelloResponse` data structures to represent the input and output payloads. These structures are typically shared with a client project, such as an iOS application.
 
 The code creates a `LambdaRuntime` struct. In it's simplest form, the initializer takes a function as an argument. The function is the handler that will be invoked when an event triggers the Lambda function.
 
