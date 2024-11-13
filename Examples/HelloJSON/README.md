@@ -1,6 +1,6 @@
 # Hello JSON 
 
-This is a simple example of an AWS Lambda function that takes a JSON structure as input parameter and returns a JSON structure as response.
+This is a simple example of an AWS Lambda function that takes a JSON structure as an input parameter and returns a JSON structure as a response.
 
 The runtime takes care of decoding the input and encoding the output.
 
