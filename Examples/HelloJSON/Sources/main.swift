@@ -14,7 +14,7 @@
 
 import AWSLambdaRuntime
 
-// in this example we are receiving and responding with a JSON structure
+// in this example we are receiving and responding with JSON structures
 
 // the data structure to represent the input parameter
 struct HelloRequest: Decodable {
