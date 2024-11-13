@@ -14,7 +14,7 @@ The handler is `(event: HelloRequest, context: LambdaContext)`. The function tak
 - the event argument is a `HelloRequest`. It is the parameter passed when invoking the function.
 - the context argument is a `Lambda Context`. It is a description of the runtime context.
 
-The function return value will be encoded to an `HelloResponse` as your Lambda function response.
+The function return value will be encoded to a `HelloResponse` as your Lambda function response.
 
 ## Build & Package 
 
