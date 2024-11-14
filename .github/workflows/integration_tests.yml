@@ -1,4 +1,4 @@
-name: ExamplesMatrix
+name: IntegrationTests
 
 on:
   workflow_call:
