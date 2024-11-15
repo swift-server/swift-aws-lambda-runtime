@@ -114,7 +114,7 @@ jobs:
           pushd Examples/${EXAMPLE}
 
           # package the example (docker and swift toolchain are installed on the GH runner)
-          echo yes | swift package archive --allow-network-connections docker
+          LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker
 
           # did the plugin generated a Linux binary?
           [ -f ${OUTPUT_FILE} ]
