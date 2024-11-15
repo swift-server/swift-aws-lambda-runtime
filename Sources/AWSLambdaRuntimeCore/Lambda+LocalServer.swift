@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// commented out as long as we have a fix for Swift 6 language mode CI
-
 #if DEBUG
 import Dispatch
 import Logging

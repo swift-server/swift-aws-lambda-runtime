@@ -76,7 +76,9 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
 
         } else {
 
-            // we're not running on Lambda, let's start a local server for testing
+#if DEBUG
+            // we're not running on Lambda and we're compiled in DEBUG mode, 
+            // let's start a local server for testing
             try await Lambda.withLocalServer(invocationEndpoint: Lambda.env("LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT"))
             {
 
@@ -92,6 +94,10 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
                     )
                 }
             }
+#else 
+            // in release mode, we can't start a local server because the local server code is not compiled.
+            throw LambdaRuntimeError(code: .missingLambdaRuntimeAPIEnvironmentVariable)
+#endif            
         }
     }
 }
