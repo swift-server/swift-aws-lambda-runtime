@@ -30,25 +30,25 @@
 /// All the bytes that are required to be padded are padded with zero.
 /// Zero padding may not be reversible if the original file ends with one or more zero bytes.
 struct ZeroPadding: PaddingProtocol {
-  init() {
-  }
-
-  @inlinable
-  func add(to bytes: Array<UInt8>, blockSize: Int) -> Array<UInt8> {
-    let paddingCount = blockSize - (bytes.count % blockSize)
-    if paddingCount > 0 {
-      return bytes + Array<UInt8>(repeating: 0, count: paddingCount)
+    init() {
     }
-    return bytes
-  }
 
-  @inlinable
-  func remove(from bytes: Array<UInt8>, blockSize _: Int?) -> Array<UInt8> {
-    for (idx, value) in bytes.reversed().enumerated() {
-      if value != 0 {
-        return Array(bytes[0..<bytes.count - idx])
-      }
+    @inlinable
+    func add(to bytes: [UInt8], blockSize: Int) -> [UInt8] {
+        let paddingCount = blockSize - (bytes.count % blockSize)
+        if paddingCount > 0 {
+            return bytes + [UInt8](repeating: 0, count: paddingCount)
+        }
+        return bytes
     }
-    return bytes
-  }
+
+    @inlinable
+    func remove(from bytes: [UInt8], blockSize _: Int?) -> [UInt8] {
+        for (idx, value) in bytes.reversed().enumerated() {
+            if value != 0 {
+                return Array(bytes[0..<bytes.count - idx])
+            }
+        }
+        return bytes
+    }
 }

@@ -22,9 +22,9 @@ import class Foundation.ProcessInfo
 
 /// Protocol for providing credential details for accessing AWS services
 public protocol Credential {
-    var accessKeyId: String {get}
-    var secretAccessKey: String {get}
-    var sessionToken: String? {get}
+    var accessKeyId: String { get }
+    var secretAccessKey: String { get }
+    var sessionToken: String? { get }
 }
 
 /// basic version of Credential where you supply the credentials
@@ -32,7 +32,7 @@ public struct StaticCredential: Credential {
     public let accessKeyId: String
     public let secretAccessKey: String
     public let sessionToken: String?
-    
+
     public init(accessKeyId: String, secretAccessKey: String, sessionToken: String? = nil) {
         self.accessKeyId = accessKeyId
         self.secretAccessKey = secretAccessKey
@@ -45,7 +45,7 @@ public struct EnvironmentCredential: Credential {
     public let accessKeyId: String
     public let secretAccessKey: String
     public let sessionToken: String?
-    
+
     public init?() {
         guard let accessKeyId = ProcessInfo.processInfo.environment["AWS_ACCESS_KEY_ID"] else {
             return nil

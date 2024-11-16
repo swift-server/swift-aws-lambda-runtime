@@ -37,11 +37,11 @@ import ucrt
 #endif
 
 extension FixedWidthInteger {
-  @inlinable
-  func bytes(totalBytes: Int = MemoryLayout<Self>.size) -> Array<UInt8> {
-    arrayOfBytes(value: self.littleEndian, length: totalBytes)
-    // TODO: adjust bytes order
-    // var value = self.littleEndian
-    // return withUnsafeBytes(of: &value, Array.init).reversed()
-  }
+    @inlinable
+    func bytes(totalBytes: Int = MemoryLayout<Self>.size) -> [UInt8] {
+        arrayOfBytes(value: self.littleEndian, length: totalBytes)
+        // TODO: adjust bytes order
+        // var value = self.littleEndian
+        // return withUnsafeBytes(of: &value, Array.init).reversed()
+    }
 }

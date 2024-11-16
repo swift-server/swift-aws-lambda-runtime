@@ -19,7 +19,6 @@ import PackagePlugin
 @available(macOS 15.0, *)
 struct AWSLambdaDeployer: CommandPlugin {
 
-
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
         let configuration = try Configuration(context: context, arguments: arguments)
 
@@ -27,7 +26,7 @@ struct AWSLambdaDeployer: CommandPlugin {
             self.displayHelpMessage()
             return
         }
-        
+
         let tool = try context.tool(named: "AWSLambdaDeployerHelper")
         try Utils.execute(executable: tool.url, arguments: [], logLevel: .debug)
     }

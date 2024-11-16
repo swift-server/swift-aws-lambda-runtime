@@ -26,7 +26,7 @@ import Foundation
 
 extension Data {
     var bytes: [UInt8] {
-        return [UInt8](self)
+        [UInt8](self)
     }
 }
 
@@ -37,11 +37,19 @@ extension String {
 }
 
 extension HMAC {
-    public static func authenticate(for data: [UInt8], using key: [UInt8], variant: HMAC.Variant = .sha2(.sha256)) throws -> [UInt8] {
+    public static func authenticate(
+        for data: [UInt8],
+        using key: [UInt8],
+        variant: HMAC.Variant = .sha2(.sha256)
+    ) throws -> [UInt8] {
         let authenticator = HMAC(key: key, variant: variant)
         return try authenticator.authenticate(data)
     }
-    public static func authenticate(for data: Data, using key: [UInt8], variant: HMAC.Variant = .sha2(.sha256)) throws -> [UInt8] {
+    public static func authenticate(
+        for data: Data,
+        using key: [UInt8],
+        variant: HMAC.Variant = .sha2(.sha256)
+    ) throws -> [UInt8] {
         let authenticator = HMAC(key: key, variant: variant)
         return try authenticator.authenticate(data.bytes)
     }

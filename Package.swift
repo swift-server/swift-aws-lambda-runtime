@@ -17,20 +17,20 @@ let package = Package(
 
         // this has all the main functionality for lambda and it does not link Foundation
         .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
-        
+
         // plugin to create a new Lambda function, based on a template
         .plugin(name: "AWSLambdaInitializer", targets: ["AWSLambdaInitializer"]),
-        
+
         // plugin to package the lambda, creating an archive that can be uploaded to AWS
         // requires Linux or at least macOS v15
         .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
-        
+
         // plugin to deploy a Lambda function
         .plugin(name: "AWSLambdaDeployer", targets: ["AWSLambdaDeployer"]),
-        
+
         // an executable that implements the business logic for the plugins
         .executable(name: "AWSLambdaPluginHelper", targets: ["AWSLambdaPluginHelper"]),
-        
+
         // for testing only
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],

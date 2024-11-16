@@ -28,5 +28,5 @@
 //
 
 internal protocol DigestType {
-  func calculate(for bytes: Array<UInt8>) -> Array<UInt8>
+    func calculate(for bytes: [UInt8]) -> [UInt8]
 }
