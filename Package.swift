@@ -23,7 +23,7 @@ let package = Package(
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.72.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.76.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.4"),
     ],
     targets: [

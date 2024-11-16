@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// commented out as long as we have a fix for Swift 6 language mode CI
-
 #if DEBUG
 import Dispatch
 import Logging
@@ -133,6 +131,10 @@ private enum LocalLambda {
         }
 
         func processRequest(context: ChannelHandlerContext, request: (head: HTTPRequestHead, body: ByteBuffer?)) {
+
+            let eventLoop = context.eventLoop
+            let loopBoundContext = NIOLoopBound(context, eventLoop: eventLoop)
+
             switch (request.head.method, request.head.uri) {
             // this endpoint is called by the client invoking the lambda
             case (.POST, let url) where url.hasSuffix(self.invocationEndpoint):
@@ -142,6 +144,7 @@ private enum LocalLambda {
                 let requestID = "\(DispatchTime.now().uptimeNanoseconds)"  // FIXME:
                 let promise = context.eventLoop.makePromise(of: Response.self)
                 promise.futureResult.whenComplete { result in
+                    let context = loopBoundContext.value
                     switch result {
                     case .failure(let error):
                         self.logger.error("invocation error: \(error)")
@@ -178,6 +181,7 @@ private enum LocalLambda {
                     // create a promise that we can fullfill when we get a new task
                     let promise = context.eventLoop.makePromise(of: Invocation.self)
                     promise.futureResult.whenComplete { result in
+                        let context = loopBoundContext.value
                         switch result {
                         case .failure(let error):
                             self.logger.error("invocation error: \(error)")
