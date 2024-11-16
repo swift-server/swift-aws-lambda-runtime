@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2024 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -171,12 +171,31 @@ public struct AWSSigner {
 
     // Stage 3 Calculating signature as in https://docs.aws.amazon.com/general/latest/gr/sigv4-calculate-signature.html
     func signature(signingData: SigningData) -> String {
+
+        var signature = ""
+        do {
+            let kDate = try HMAC.authenticate(for: Data(signingData.date.utf8), using: "AWS4\(credentials.secretAccessKey)".array)
+            let kRegion = try HMAC.authenticate(for: Data(region.utf8), using: kDate)
+            let kService = try HMAC.authenticate(for: Data(name.utf8), using: kRegion)
+            let kSigning = try HMAC.authenticate(for: Data("aws4_request".utf8), using: kService)
+            let kSignature = try HMAC.authenticate(for: stringToSign(signingData: signingData), using: kSigning)    
+
+            signature = kSignature.toHexString()
+        } catch {
+            fatalError("HMAC computation is not supposed to throw")
+        }
+
+        return signature
+
+        // original code from Adam Fowler, using swift-crypto package:
+        /*
         let kDate = HMAC<SHA256>.authenticationCode(for: Data(signingData.date.utf8), using: SymmetricKey(data: Array("AWS4\(credentials.secretAccessKey)".utf8)))
         let kRegion = HMAC<SHA256>.authenticationCode(for: Data(region.utf8), using: SymmetricKey(data: kDate))
         let kService = HMAC<SHA256>.authenticationCode(for: Data(name.utf8), using: SymmetricKey(data: kRegion))
         let kSigning = HMAC<SHA256>.authenticationCode(for: Data("aws4_request".utf8), using: SymmetricKey(data: kService))
         let kSignature = HMAC<SHA256>.authenticationCode(for: stringToSign(signingData: signingData), using: SymmetricKey(data: kSigning))
         return kSignature.hexDigest()
+        */        
     }
 
     /// Stage 2 Create the string to sign as in https://docs.aws.amazon.com/general/latest/gr/sigv4-create-string-to-sign.html
