@@ -12,13 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import PackagePlugin
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
 import Foundation
-#endif
+import PackagePlugin
 
 @main
 struct AWSLambdaPackager: CommandPlugin {
