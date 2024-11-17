@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
 let functionWithUrlTemplate = #"""
     import AWSLambdaRuntime
     import AWSLambdaEvents

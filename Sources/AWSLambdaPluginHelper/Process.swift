@@ -14,7 +14,6 @@
 
 import Dispatch
 import Foundation
-import PackagePlugin
 import Synchronization
 
 @available(macOS 15.0, *)
@@ -28,6 +27,9 @@ struct Utils {
     ) throws -> String {
         if logLevel >= .debug {
             print("\(executable.path()) \(arguments.joined(separator: " "))")
+            if let customWorkingDirectory {
+                print("Working directory: \(customWorkingDirectory.path())")
+            }
         }
 
         let fd = dup(1)
@@ -85,8 +87,8 @@ struct Utils {
         process.standardError = pipe
         process.executableURL = executable
         process.arguments = arguments
-        if let workingDirectory = customWorkingDirectory {
-            process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory.path())
+        if let customWorkingDirectory {
+            process.currentDirectoryURL = URL(fileURLWithPath: customWorkingDirectory.path())
         }
         process.terminationHandler = { _ in
             outputQueue.async {

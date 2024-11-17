@@ -22,7 +22,6 @@
 // https://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html
 //
 
-import Crypto
 import NIO
 import NIOHTTP1
 
@@ -33,6 +32,29 @@ import class Foundation.DateFormatter
 import struct Foundation.Locale
 import struct Foundation.TimeZone
 import struct Foundation.URL
+
+// adapter for the vendored SHA256 hashing function
+private struct SHA256 {
+    static func hash(data: [UInt8]) -> [UInt8] {
+        Digest.sha256(data)
+    }
+
+    static func hash(data: Data) -> [UInt8] {
+        SHA256.hash(data: data.bytes)
+    }
+
+    static func hash(data: UnsafeBufferPointer<UInt8>) -> [UInt8] {
+        SHA256.hash(data: [UInt8](data))
+    }
+}
+
+// adapter for the vendored hexDigest function
+extension Array where Element == UInt8 {
+    fileprivate func hexDigest() -> String {
+        // call the hexEncoded function from the Array+Extensions.swift file
+        self.toHexString()
+    }
+}
 
 /// Amazon Web Services V4 Signer
 public struct AWSSigner {
