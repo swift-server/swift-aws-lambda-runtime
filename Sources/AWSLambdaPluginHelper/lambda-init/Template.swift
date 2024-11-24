@@ -31,3 +31,32 @@ let functionWithUrlTemplate = #"""
 
     try await runtime.run()
     """#
+
+let functionWithJSONTemplate = #"""
+    import AWSLambdaRuntime
+
+    // the data structure to represent the input parameter
+    struct HelloRequest: Decodable {
+        let name: String
+        let age: Int
+    }
+
+    // the data structure to represent the output response
+    struct HelloResponse: Encodable {
+        let greetings: String
+    }
+    
+    // in this example we receive a HelloRequest JSON and we return a HelloResponse JSON    
+
+    // the Lambda runtime
+    let runtime = LambdaRuntime {
+        (event: HelloRequest, context: LambdaContext) in
+
+        HelloResponse(
+            greetings: "Hello \(event.name). You look \(event.age > 30 ? "younger" : "older") than your age."
+        )
+    }
+
+    // start the loop
+    try await runtime.run()    
+    """#
