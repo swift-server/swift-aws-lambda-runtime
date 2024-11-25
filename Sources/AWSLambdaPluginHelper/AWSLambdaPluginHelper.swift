@@ -14,13 +14,13 @@
 
 @main
 struct AWSLambdaPluginHelper {
-    
+
     private enum Command: String {
         case `init`
         case build
         case deploy
     }
-    
+
     public static func main() async throws {
         let args = CommandLine.arguments
         let helper = AWSLambdaPluginHelper()
@@ -34,10 +34,10 @@ struct AWSLambdaPluginHelper {
             try await Deployer().deploy(arguments: args)
         }
     }
-    
+
     private func command(from arguments: [String]) throws -> Command {
         let args = CommandLine.arguments
-        
+
         guard args.count > 2 else {
             throw AWSLambdaPluginHelperError.noCommand
         }
@@ -45,7 +45,7 @@ struct AWSLambdaPluginHelper {
         guard let command = Command(rawValue: commandName) else {
             throw AWSLambdaPluginHelperError.invalidCommand(commandName)
         }
-        
+
         return command
     }
 }
@@ -54,4 +54,3 @@ private enum AWSLambdaPluginHelperError: Error {
     case noCommand
     case invalidCommand(String)
 }
-

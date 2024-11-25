@@ -45,7 +45,7 @@ let functionWithJSONTemplate = #"""
     struct HelloResponse: Encodable {
         let greetings: String
     }
-    
+
     // in this example we receive a HelloRequest JSON and we return a HelloResponse JSON    
 
     // the Lambda runtime

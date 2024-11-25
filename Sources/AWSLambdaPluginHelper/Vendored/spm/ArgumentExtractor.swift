@@ -50,13 +50,11 @@ public struct ArgumentExtractor {
                     values.append(val)
                     args.remove(at: idx)
                 }
-            }
-            else if arg.starts(with: "--\(name)=") {
+            } else if arg.starts(with: "--\(name)=") {
                 arg.removeFirst(2 + name.count + 1)
                 values.append(arg)
                 args.remove(at: idx)
-            }
-            else {
+            } else {
                 idx += 1
             }
         }
@@ -72,8 +70,7 @@ public struct ArgumentExtractor {
             if arg == "--\(name)" {
                 args.remove(at: idx)
                 count += 1
-            }
-            else {
+            } else {
                 idx += 1
             }
         }
@@ -82,11 +79,11 @@ public struct ArgumentExtractor {
 
     /// Returns any unextracted flags or options (based strictly on whether remaining arguments have a "--" prefix).
     public var unextractedOptionsOrFlags: [String] {
-        return args.filter{ $0.hasPrefix("--") }
+        args.filter { $0.hasPrefix("--") }
     }
 
     /// Returns all remaining arguments, including any literals after the first `--` if there is one.
     public var remainingArguments: [String] {
-        return args + literals
+        args + literals
     }
 }

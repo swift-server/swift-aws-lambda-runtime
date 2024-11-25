@@ -47,7 +47,7 @@ struct Deployer {
             --help         Show help information.
             """
         )
-    }    
+    }
 }
 
 private struct DeployerConfiguration: CustomStringConvertible {

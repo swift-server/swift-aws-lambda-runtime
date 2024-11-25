@@ -12,26 +12,26 @@ let package = Package(
     name: "swift-aws-lambda-runtime",
     platforms: platforms,
     products: [
-        
-        /*
-            The runtime library targets
-         */
-        
+
+        //
+        // The runtime library targets
+        //
+
         // this library exports `AWSLambdaRuntimeCore` and adds Foundation convenience methods
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
 
         // this has all the main functionality for lambda and it does not link Foundation
         .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
 
-        /*
-            The plugins
-            'lambda-init' creates a new Lambda function
-            'lambda-build' packages the Lambda function
-            'lambda-deploy' deploys the Lambda function
-         
-             Plugins requires Linux or at least macOS v15
+        //
+        // The plugins
+        // 'lambda-init' creates a new Lambda function
+        // 'lambda-build' packages the Lambda function
+        // 'lambda-deploy' deploys the Lambda function
+        //
+        //  Plugins requires Linux or at least macOS v15
+        //
 
-         */
         // plugin to create a new Lambda function, based on a template
         .plugin(name: "AWSLambdaInitializer", targets: ["AWSLambdaInitializer"]),
 
@@ -41,9 +41,10 @@ let package = Package(
         // plugin to deploy a Lambda function
         .plugin(name: "AWSLambdaDeployer", targets: ["AWSLambdaDeployer"]),
 
-        /*
-            Testing targets
-         */
+        //
+        // Testing targets
+        //
+
         // for testing only
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
@@ -88,23 +89,23 @@ let package = Package(
         ),
         // keep this one (with "archive") to not break workflows
         // This will be deprecated at some point in the future
-//        .plugin(
-//            name: "AWSLambdaPackager",
-//            capability: .command(
-//                intent: .custom(
-//                    verb: "archive",
-//                    description:
-//                        "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS or non Amazonlinux 2 distributions."
-//                ),
-//                permissions: [
-//                    .allowNetworkConnections(
-//                        scope: .docker,
-//                        reason: "This plugin uses Docker to create the AWS Lambda ZIP package."
-//                    )
-//                ]
-//            ),
-//            path: "Plugins/AWSLambdaBuilder" // same sources as the new "lambda-build" plugin
-//        ),
+        //        .plugin(
+        //            name: "AWSLambdaPackager",
+        //            capability: .command(
+        //                intent: .custom(
+        //                    verb: "archive",
+        //                    description:
+        //                        "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS or non Amazonlinux 2 distributions."
+        //                ),
+        //                permissions: [
+        //                    .allowNetworkConnections(
+        //                        scope: .docker,
+        //                        reason: "This plugin uses Docker to create the AWS Lambda ZIP package."
+        //                    )
+        //                ]
+        //            ),
+        //            path: "Plugins/AWSLambdaBuilder" // same sources as the new "lambda-build" plugin
+        //        ),
         .plugin(
             name: "AWSLambdaBuilder",
             capability: .command(

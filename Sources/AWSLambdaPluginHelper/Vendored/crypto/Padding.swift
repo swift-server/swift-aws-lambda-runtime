@@ -33,7 +33,7 @@ public protocol PaddingProtocol {
 }
 
 public enum Padding: PaddingProtocol {
-    case noPadding, zeroPadding  
+    case noPadding, zeroPadding
     public func add(to: [UInt8], blockSize: Int) -> [UInt8] {
         switch self {
         case .noPadding:

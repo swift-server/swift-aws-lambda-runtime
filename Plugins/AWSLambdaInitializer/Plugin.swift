@@ -20,7 +20,7 @@ struct AWSLambdaPackager: CommandPlugin {
 
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
         let tool = try context.tool(named: "AWSLambdaPluginHelper")
-        
+
         let args = ["init", "--dest-dir", context.package.directoryURL.path()] + arguments
 
         // Invoke the plugin helper on the target directory, passing a configuration
@@ -35,4 +35,3 @@ struct AWSLambdaPackager: CommandPlugin {
         }
     }
 }
-
