@@ -1,3 +1,5 @@
+# shellcheck disable=all
+
 curl --header "Content-Type: application/json" \
      --request POST                            \
      --data '{"number": 3}'                    \

@@ -1,2 +1,3 @@
-export LOCAL_LAMBDA_SERVER_ENABLED=true
+# shellcheck disable=all
 
+export LOCAL_LAMBDA_SERVER_ENABLED=true
