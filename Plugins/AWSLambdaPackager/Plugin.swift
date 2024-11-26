@@ -74,7 +74,7 @@ struct AWSLambdaPackager: CommandPlugin {
             "\(archives.count > 0 ? archives.count.description : "no") archive\(archives.count != 1 ? "s" : "") created"
         )
         for (product, archivePath) in archives {
-            print("  * \(product.name) at \(archivePath)")
+            print("  * \(product.name) at \(archivePath.path())")
         }
     }
 
@@ -101,7 +101,7 @@ struct AWSLambdaPackager: CommandPlugin {
             try Utils.execute(
                 executable: dockerToolPath,
                 arguments: ["pull", baseImage],
-                logLevel: .output
+                logLevel: verboseLogging ? .debug : .output
             )
         }
 
@@ -287,7 +287,8 @@ struct AWSLambdaPackager: CommandPlugin {
 
             REQUIREMENTS: To use this plugin, you must have docker installed and started.
 
-            USAGE: swift package --allow-network-access docker archive [--help] [--verbose]
+            USAGE: swift package --allow-network-connections docker archive
+                                                       [--help] [--verbose]
                                                        [--output-directory <path>]
                                                        [--products <list of products>]
                                                        [--configuration debug | release]

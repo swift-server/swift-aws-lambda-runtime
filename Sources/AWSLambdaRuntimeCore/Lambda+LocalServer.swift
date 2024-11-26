@@ -20,7 +20,7 @@ import NIOCore
 import NIOHTTP1
 import NIOPosix
 
-// This functionality is designed for local testing hence beind a #if DEBUG flag.
+// This functionality is designed for local testing hence being a #if DEBUG flag.
 // For example:
 //
 // try Lambda.withLocalServer {
@@ -32,16 +32,18 @@ extension Lambda {
     /// Execute code in the context of a mock Lambda server.
     ///
     /// - parameters:
-    ///     - invocationEndpoint: The endpoint  to post events to.
+    ///     - invocationEndpoint: The endpoint to post events to.
     ///     - body: Code to run within the context of the mock server. Typically this would be a Lambda.run function call.
     ///
     /// - note: This API is designed strictly for local testing and is behind a DEBUG flag
-    static func withLocalServer<Value>(invocationEndpoint: String? = nil, _ body: @escaping () -> Value) throws -> Value
-    {
+    static func withLocalServer<Value>(
+        invocationEndpoint: String? = nil,
+        _ body: @escaping () async throws -> Value
+    ) async throws -> Value {
         let server = LocalLambda.Server(invocationEndpoint: invocationEndpoint)
-        try server.start().wait()
+        try await server.start().get()
         defer { try! server.stop() }
-        return body()
+        return try await body()
     }
 }
 
@@ -61,7 +63,7 @@ private enum LocalLambda {
             self.logger = logger
             self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
             self.host = "127.0.0.1"
-            self.port = 0
+            self.port = 7000
             self.invocationEndpoint = invocationEndpoint ?? "/invoke"
         }
 
@@ -129,6 +131,10 @@ private enum LocalLambda {
         }
 
         func processRequest(context: ChannelHandlerContext, request: (head: HTTPRequestHead, body: ByteBuffer?)) {
+
+            let eventLoop = context.eventLoop
+            let loopBoundContext = NIOLoopBound(context, eventLoop: eventLoop)
+
             switch (request.head.method, request.head.uri) {
             // this endpoint is called by the client invoking the lambda
             case (.POST, let url) where url.hasSuffix(self.invocationEndpoint):
@@ -138,6 +144,7 @@ private enum LocalLambda {
                 let requestID = "\(DispatchTime.now().uptimeNanoseconds)"  // FIXME:
                 let promise = context.eventLoop.makePromise(of: Response.self)
                 promise.futureResult.whenComplete { result in
+                    let context = loopBoundContext.value
                     switch result {
                     case .failure(let error):
                         self.logger.error("invocation error: \(error)")
@@ -174,6 +181,7 @@ private enum LocalLambda {
                     // create a promise that we can fullfill when we get a new task
                     let promise = context.eventLoop.makePromise(of: Invocation.self)
                     promise.futureResult.whenComplete { result in
+                        let context = loopBoundContext.value
                         switch result {
                         case .failure(let error):
                             self.logger.error("invocation error: \(error)")
@@ -185,7 +193,7 @@ private enum LocalLambda {
                     }
                     Self.invocationState = .waitingForInvocation(promise)
                 case .some(let invocation):
-                    // if there is a task pending, we can immediatly respond with it.
+                    // if there is a task pending, we can immediately respond with it.
                     Self.invocationState = .waitingForLambdaResponse(invocation)
                     self.writeResponse(context: context, response: invocation.makeResponse())
                 }
