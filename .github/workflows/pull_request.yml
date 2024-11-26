@@ -44,6 +44,18 @@ jobs:
     name: Swift 6 Language Mode
     uses: apple/swift-nio/.github/workflows/swift_6_language_mode.yml@main
 
+  semver-label-check:
+    name: Semantic Version label check
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check for Semantic Version label
+        uses: apple/swift-nio/.github/actions/pull_request_semver_label_checker@main    
+
   # until there is a support for musl in swiftlang/github-workflows
   # https://github.com/swiftlang/github-workflows/issues/34
   musl:
