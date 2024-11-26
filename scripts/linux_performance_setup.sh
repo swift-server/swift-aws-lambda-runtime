@@ -20,14 +20,14 @@ apt-get install -y vim htop strace linux-tools-common linux-tools-generic libc6-
 
 echo 0 > /proc/sys/kernel/kptr_restrict
 
-pushd /usr/bin || exit -1
+pushd /usr/bin || exit 1
 rm -rf perf
 ln -s /usr/lib/linux-tools/*/perf perf
-popd || exit -1
+popd || exit 1
 
-pushd /opt || exit -1
+pushd /opt || exit 1
 git clone https://github.com/brendangregg/FlameGraph.git
-popd || exit -1
+popd || exit 1
 
 # build the code in relase mode with debug symbols
 # swift build -c release -Xswiftc -g
