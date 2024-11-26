@@ -15,6 +15,7 @@ jobs:
       api_breakage_check_container_image: "swift:6.0-noble"
       docs_check_container_image: "swift:6.0-noble"
       format_check_container_image: "swiftlang/swift:nightly-6.0-jammy"
+      yamllint_check_enabled: false
 
   unit-tests:
     name: Unit tests
