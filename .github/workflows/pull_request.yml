@@ -54,7 +54,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Check for Semantic Version label
-        uses: apple/swift-nio/.github/actions/pull_request_semver_label_checker@main    
+        uses: apple/swift-nio/.github/actions/pull_request_semver_label_checker@main
 
   # until there is a support for musl in swiftlang/github-workflows
   # https://github.com/swiftlang/github-workflows/issues/34
