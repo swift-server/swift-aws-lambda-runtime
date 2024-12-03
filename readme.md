@@ -589,6 +589,14 @@ aws lambda create-function \
 
 The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
 
+To update the function, use the `update-function-code` command.
+
+```sh
+aws lambda update-function-code \
+--function-name MyLambda \
+--zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip
+```
+
 #### Invoke the function 
 
 Use the `invoke-function` command to invoke the function. You can pass a well-formed JSON payload as input to the function. The payload must be encoded in base64. The CLI returns the status code and stores the response in a file.
@@ -624,13 +632,129 @@ aws iam delete-role --role-name lambda_basic_execution
 
 ### Deploy your Lambda function with AWS Serverless Application Model (SAM)
 
-TODO
+AWS Serverless Application Model (SAM) is an open-source framework for building serverless applications. It provides a simplified way to define the Amazon API Gateway APIs, AWS Lambda functions, and Amazon DynamoDB tables needed by your serverless application. You can define your serverless application in a single file, and SAM will use it to deploy your function and all its dependencies.
 
-#### Create the function 
+To use SAM, you need to [install the SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html) on your machine. The SAM CLI provides a set of commands to package, deploy, and manage your serverless applications.
 
-#### Invoke the function 
+Use SAM when you want to deploy more than a Lambda function. SAM helps you to create additional resources like an API Gateway, an S3 bucket, or a DynamoDB table, and manage the permissions between them.
+
+#### Create the function
+
+When using SAM, you describe the infrastructure you want to deploy in a YAML file. The file contains the definition of the Lambda function, the IAM role, and the permissions needed by the function. The SAM CLI uses this file to package and deploy your function.
+
+You can create a SAM template to define a REST API implemented by AWS API Gateway and a Lambda function with the following command
+
+```sh
+cat <<EOF > template.yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for APIGateway Lambda Example
+
+Resources:
+  # Lambda function
+  APIGatewayLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      # the directory name and ZIP file names depends on the Swift executable target name
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip
+      Timeout: 60
+      Handler: swift.bootstrap  # ignored by the Swift runtime
+      Runtime: provided.al2
+      MemorySize: 512
+      Architectures:
+        - arm64
+      # The events that will trigger this function  
+      Events:
+        HttpApiEvent:
+          Type: HttpApi # AWS API Gateway v2
+
+Outputs:
+  # display API Gateway endpoint
+  APIGatewayEndpoint:
+    Description: API Gateway endpoint UR"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+EOF
+```
+
+The Lambda function must accept an APIGateway v2 JSON payload as input parameter and return a valid APIGAteway v2 JSON response.  See the example code in the [APIGateway example README file](Examples/APIGateway/README.md).
+
+To deploy the function with SAM, use the `sam deploy` command. The very first time you deploy a function, you must use the `--guided` flag to configure the deployment. The command will ask you a series of questions to configure the deployment.
+
+
+Here is the command to deploy the function with SAM:
+
+```sh
+# start the first deployment 
+sam deploy --guided 
+
+Configuring SAM deploy
+======================
+
+        Looking for config file [samconfig.toml] :  Not found
+
+        Setting default arguments for 'sam deploy'
+        =========================================
+        Stack Name [sam-app]: APIGAtewayLambda
+        AWS Region [us-east-1]: 
+        #Shows you resources changes to be deployed and require a 'Y' to initiate deploy
+        Confirm changes before deploy [y/N]: n
+        #SAM needs permission to be able to create roles to connect to the resources in your template
+        Allow SAM CLI IAM role creation [Y/n]: y
+        #Preserves the state of previously provisioned resources when an operation fails
+        Disable rollback [y/N]: n
+        APIGatewayLambda has no authentication. Is this okay? [y/N]: y
+        Save arguments to configuration file [Y/n]: y
+        SAM configuration file [samconfig.toml]: 
+        SAM configuration environment [default]: 
+
+        Looking for resources needed for deployment:
+
+(redacted for brevity)
+
+CloudFormation outputs from deployed stack
+--------------------------------------------------------------------------------
+Outputs                                                                                                                                         
+--------------------------------------------------------------------------------
+Key                 APIGatewayEndpoint                                                                                                          
+Description         API Gateway endpoint UR"                                                                                                    
+Value               https://59i4uwbuj2.execute-api.us-east-1.amazonaws.com                                                                      
+--------------------------------------------------------------------------------
+
+
+Successfully created/updated stack - APIGAtewayLambda in us-east-1        
+```
+
+To update your function or any other AWS service defined in your YAML file, you can use the `sam deploy` command without the `--guided` flag.
+
+#### Invoke the function
+
+SAM allows to invoke the function locally and remotely. 
+
+Local invocations allows to test your code before uploading it. It requires docker to run.
+
+```sh
+sam local
+```
+
+Remote invocations are done with the `sam invoke` command.
+
+```sh
+sam invoke
+```
+
+SAM allows you to access the function logs from Amazon Cloudwatch.
+
+```sh
+sam logs
+```
 
 #### Delete the function
+
+SAM allows you to delete your function and all infrastructure that is defined in the YAML template with just one command.
+
+```sh
+sam delete
+```
 
 ### Deploy your Lambda function with AWS Cloud Development Kit (CDK)
 
