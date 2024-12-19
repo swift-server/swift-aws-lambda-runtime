@@ -432,4 +432,4 @@ TODO
 
 ## Third-party tools
 
-TODO
+We welcome contributions to this section. If you have experience deploying Swift Lambda functions with third-party tools like Serverless Framework, Terraform, or Pulumi, please share your knowledge with the community.
