@@ -4,32 +4,15 @@
 > [!WARNING]
 > The Swift AWS Runtime v2 is work in progress. We will add more documentation and code examples over time.
 
-## Table of Content 
+This guide contains the follwoing sections:
 
-- [Table of Content](#table-of-content)
 - [The Swift AWS Lambda Runtime](#the-swift-aws-lambda-runtime)
 - [Pre-requisites](#pre-requisites)
 - [Getting started](#getting-started)
 - [Developing your Swift Lambda functions](#developing-your-swift-lambda-functions)
-  * [Receive and respond with JSON objects](#receive-and-respond-with-json-objects)
-  * [Lambda Streaming Response](#lambda-streaming-response)
-  * [Integration with AWS Services](#integration-with-aws-services)
-  * [Integration with Swift Service LifeCycle](#integration-with-swift-service-lifecycle)
-  * [Use Lambda Background Tasks](#use-lambda-background-tasks)
 - [Testing Locally](#testing-locally)
-  * [Modifying the local endpoint](#modifying-the-local-endpoint)
 - [Deploying your Swift Lambda functions](#deploying-your-swift-lambda-functions)
-  * [Prerequisites](#prerequisites)
-  * [Choosing the AWS Region where to deploy](#choosing-the-aws-region-where-to-deploy)
-  * [The Lambda execution IAM role](#the-lambda-execution-iam-role)
-  * [Deploy your Lambda function using the AWS Console](#deploy-your-lambda-function-using-the-aws-console)
-  * [The AWS Command Line Interface (CLI)](#the-aws-command-line-interface-cli)
-  * [AWS Serverless Application Model (SAM)](#aws-serverless-application-model-sam)
-  * [AWS Cloud Development Kit (CDK)](#aws-cloud-development-kit-cdk)
-  * [Third-party tools](#third-party-tools)
-- [Swift AWS Lambda Runtime - Design Principles](#swift-aws-lambda-runtime---design-principles)
-  * [Key Design Principles](#key-design-principles)
-  * [New Capabilities](#new-capabilities)
+- [Swift AWS Lambda Runtime - Design Principles](#swift-aws-lambda-runtime---design-principles)% 
 
 ## The Swift AWS Lambda Runtime
 
