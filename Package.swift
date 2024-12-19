@@ -2,15 +2,9 @@
 
 import PackageDescription
 
-#if os(macOS)
-let platforms: [PackageDescription.SupportedPlatform]? = [.macOS(.v15)]
-#else
-let platforms: [PackageDescription.SupportedPlatform]? = nil
-#endif
-
 let package = Package(
     name: "swift-aws-lambda-runtime",
-    platforms: platforms,
+    platforms: [.macOS(.v15)],
     products: [
         // this library exports `AWSLambdaRuntimeCore` and adds Foundation convenience methods
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
