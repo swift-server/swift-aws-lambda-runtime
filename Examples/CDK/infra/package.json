@@ -1,0 +1,23 @@
+{
+  "name": "deploy",
+  "version": "0.1.0",
+  "bin": {
+    "deploy": "bin/deploy.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "22.7.9",
+    "aws-cdk": "2.173.1",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.6.3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.173.1",
+    "constructs": "^10.4.2"
+  }
+}
