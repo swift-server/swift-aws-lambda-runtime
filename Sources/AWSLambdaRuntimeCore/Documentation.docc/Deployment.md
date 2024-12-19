@@ -297,7 +297,7 @@ Resources:
 Outputs:
   # display API Gateway endpoint
   APIGatewayEndpoint:
-    Description: API Gateway endpoint URI"
+    Description: "API Gateway endpoint URI"
     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
 EOF
 ```
