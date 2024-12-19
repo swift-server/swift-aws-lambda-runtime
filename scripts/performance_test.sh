@@ -27,8 +27,8 @@ if [[ $(uname -s) == "Linux" ]]; then
 fi
 
 swift build -c release -Xswiftc -g
-swift build --package-path Examples/Echo -c release -Xswiftc -g
-swift build --package-path Examples/JSON -c release -Xswiftc -g
+LAMBDA_USE_LOCAL_DEPS=../.. swift build --package-path Examples/HelloWorld -c release -Xswiftc -g
+LAMBDA_USE_LOCAL_DEPS=../.. swift build --package-path Examples/HelloJSON -c release -Xswiftc -g
 
 cleanup() {
   kill -9 $server_pid # ignore-unacceptable-language
@@ -58,24 +58,24 @@ kill -0 $server_pid # check server is alive # ignore-unacceptable-language
 echo "running $MODE mode cold test"
 cold=()
 export MAX_REQUESTS=1
-for (( i=0; i<$cold_iterations; i++ )); do
+for (( i=0; i<cold_iterations; i++ )); do
   start=$(gdate +%s%N)
-  ./Examples/Echo/.build/release/MyLambda
+  ./Examples/HelloWorld/.build/release/MyLambda
   end=$(gdate +%s%N)
-  cold+=( $(($end-$start)) )
+  cold+=( $((end-start)) )
 done
 sum_cold=$(IFS=+; echo "$((${cold[*]}))")
-avg_cold=$(($sum_cold/$cold_iterations))
+avg_cold=$((sum_cold/cold_iterations))
 results+=( "$MODE, cold: $avg_cold (ns)" )
 
 # normal calls
 echo "running $MODE mode warm test"
 export MAX_REQUESTS=$warm_iterations
 start=$(gdate +%s%N)
-./Examples/Echo/.build/release/MyLambda
+./Examples/HelloWorld/.build/release/MyLambda
 end=$(gdate +%s%N)
-sum_warm=$(($end-$start-$avg_cold)) # substract by avg cold since the first call is cold
-avg_warm=$(($sum_warm/($warm_iterations-1))) # substract since the first call is cold
+sum_warm=$((end-start-avg_cold)) # substract by avg cold since the first call is cold
+avg_warm=$((sum_warm/(warm_iterations-1))) # substract since the first call is cold
 results+=( "$MODE, warm: $avg_warm (ns)" )
 
 #------------------
@@ -96,24 +96,24 @@ kill -0 $server_pid # check server is alive # ignore-unacceptable-language
 echo "running $MODE mode cold test"
 cold=()
 export MAX_REQUESTS=1
-for (( i=0; i<$cold_iterations; i++ )); do
+for (( i=0; i<cold_iterations; i++ )); do
   start=$(gdate +%s%N)
-  ./Examples/JSON/.build/release/MyLambda
+  ./Examples/HelloJSON/.build/release/MyLambda
   end=$(gdate +%s%N)
-  cold+=( $(($end-$start)) )
+  cold+=( $((end-start)) )
 done
 sum_cold=$(IFS=+; echo "$((${cold[*]}))")
-avg_cold=$(($sum_cold/$cold_iterations))
+avg_cold=$((sum_cold/cold_iterations))
 results+=( "$MODE, cold: $avg_cold (ns)" )
 
 # normal calls
 echo "running $MODE mode warm test"
 export MAX_REQUESTS=$warm_iterations
 start=$(gdate +%s%N)
-./Examples/JSON/.build/release/MyLambda
+./Examples/HelloJSON/.build/release/MyLambda
 end=$(gdate +%s%N)
-sum_warm=$(($end-$start-$avg_cold)) # substract by avg cold since the first call is cold
-avg_warm=$(($sum_warm/($warm_iterations-1))) # substract since the first call is cold
+sum_warm=$((end-start-avg_cold)) # substract by avg cold since the first call is cold
+avg_warm=$((sum_warm/(warm_iterations-1))) # substract since the first call is cold
 results+=( "$MODE, warm: $avg_warm (ns)" )
 
 # print results
@@ -121,7 +121,7 @@ echo "-----------------------------"
 echo "results"
 echo "-----------------------------"
 for i in "${results[@]}"; do
-   echo $i
+   echo "$i"
 done
 echo "-----------------------------"
 

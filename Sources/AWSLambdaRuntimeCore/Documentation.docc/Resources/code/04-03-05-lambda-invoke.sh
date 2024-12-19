@@ -1,3 +1,5 @@
+# shellcheck disable=all
+
 #
 # --region            the AWS Region to send the command
 # --function-name     the name of your function
