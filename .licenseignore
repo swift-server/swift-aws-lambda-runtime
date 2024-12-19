@@ -32,3 +32,6 @@ Package.resolved
 .swiftformat
 *.yaml
 *.yml
+.npmignore
+**/*.json
+
