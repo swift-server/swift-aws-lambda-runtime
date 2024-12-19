@@ -12,7 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation  // for JSON
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 import Logging
 import NIOCore
 import NIOHTTP1

@@ -12,7 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 import NIOCore
 import Testing
 
@@ -100,6 +104,7 @@ struct LambdaRequestIDTest {
         #expect(buffer.readableBytes == readableBeforeRead)
     }
 
+    #if os(macOS)
     @Test
     func testInitFromNSStringSuccess() {
         let nsString = NSMutableString(capacity: 16)
@@ -121,6 +126,7 @@ struct LambdaRequestIDTest {
         #expect(requestID?.uuidString == LambdaRequestID(uuidString: nsString as String)?.uuidString)
         #expect(requestID?.uppercased == nsString as String)
     }
+    #endif
 
     @Test
     func testUnparse() {
