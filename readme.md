@@ -160,7 +160,7 @@ Be sure to replace <YOUR_ACCOUNT_ID> with your actual AWS account ID (for exampl
 >
 > You can create this role in two ways:
 > 1. Using AWS Console
-> 2. Running the commands in the setup script at `Examples/_MyFirstFunction/create_iam_role.sh`
+> 2. Running the commands in the `create_lambda_execution_role()` function in `Examples/_MyFirstFunction/create_iam_role.sh`
 
 6. Invoke your Lambda function
 
