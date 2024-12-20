@@ -12,13 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation  // for JSON
 import Logging
 import NIOCore
 import NIOHTTP1
 import NIOPosix
 
 @testable import AWSLambdaRuntimeCore
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 
 func withMockServer<Result>(
     behaviour: some LambdaServerBehavior,
