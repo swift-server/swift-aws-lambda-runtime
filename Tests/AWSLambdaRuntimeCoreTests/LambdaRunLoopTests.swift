@@ -12,16 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 import Logging
 import NIOCore
 import Testing
 
 @testable import AWSLambdaRuntimeCore
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 
 @Suite
 struct LambdaRunLoopTests {

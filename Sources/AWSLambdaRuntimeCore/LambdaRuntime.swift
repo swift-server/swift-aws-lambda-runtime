@@ -12,14 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
+import NIOConcurrencyHelpers
+import NIOCore
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
 import Foundation
 #endif
-import Logging
-import NIOConcurrencyHelpers
-import NIOCore
 
 // We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
 // We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this

@@ -13,13 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntimeCore
+import Logging
+import NIOCore
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
 import Foundation
 #endif
-import Logging
-import NIOCore
 
 struct LambdaMockWriter: LambdaRuntimeClientResponseStreamWriter {
     var underlying: LambdaMockClient
