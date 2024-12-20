@@ -1,4 +1,17 @@
-#!/bin/sh
+#!/bin/bash
+##===----------------------------------------------------------------------===##
+##
+## This source file is part of the SwiftAWSLambdaRuntime open source project
+##
+## Copyright (c) 2017-2024 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+## Licensed under Apache License v2.0
+##
+## See LICENSE.txt for license information
+## See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
+##
+## SPDX-License-Identifier: Apache-2.0
+##
+##===----------------------------------------------------------------------===##
 
 # Stop the script execution if an error occurs 
 set -e -o pipefail
@@ -19,7 +32,7 @@ You must have an AWS account and know an AWS access key, secret access key, and 
 These values are read from '~/.aws/credentials'.
 "
 
-read -p "Are you ready to create your first Lambda function in Swift? [y/n] " continue
+read -r -p "Are you ready to create your first Lambda function in Swift? [y/n] " continue
 if [[ ! $continue =~ ^[Yy]$ ]]; then
   echo "OK, try again later when you feel ready"
   exit 1
@@ -84,7 +97,8 @@ echo "🚀 Deploy to AWS Lambda"
 
 # retrieve your AWS Account ID 
 echo "🔑 Retrieve your AWS Account ID"
-export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export AWS_ACCOUNT_ID
 
 # Check if the role already exists
 echo "🔍 Check if a Lambda execution IAM role already exists"
@@ -97,8 +111,8 @@ aws lambda create-function \
 --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip \
 --runtime provided.al2 \
 --handler provided  \
---architectures $(uname -m) \
---role arn:aws:iam::${AWS_ACCOUNT_ID}:role/lambda_basic_execution > /dev/null 2>&1
+--architectures "$(uname -m)" \
+--role arn:aws:iam::"${AWS_ACCOUNT_ID}":role/lambda_basic_execution > /dev/null 2>&1
 
 echo "⏰ Waiting 10 secs for the Lambda function to be ready..."
 sleep 10

@@ -1,7 +1,20 @@
-#!/bin/sh
+#!/bin/bash
+##===----------------------------------------------------------------------===##
+##
+## This source file is part of the SwiftAWSLambdaRuntime open source project
+##
+## Copyright (c) 2017-2024 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+## Licensed under Apache License v2.0
+##
+## See LICENSE.txt for license information
+## See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
+##
+## SPDX-License-Identifier: Apache-2.0
+##
+##===----------------------------------------------------------------------===##
 
 echo "This script deletes the Lambda function and the IAM role created in the previous step and deletes the project files."
-read -p "Are you you sure you want to delete everything that was created? [y/n] " continue
+read -r -p "Are you you sure you want to delete everything that was created? [y/n] " continue
 if [[ ! $continue =~ ^[Yy]$ ]]; then
   echo "OK, try again later when you feel ready"
   exit 1
