@@ -253,7 +253,11 @@ Background tasks allow code to execute asynchronously after the main response ha
 Here is an example of a minimal function that waits 10 seconds after it returned a response but before the handler returns.
 ```swift
 import AWSLambdaRuntime
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 
 struct BackgroundProcessingHandler: LambdaWithBackgroundProcessingHandler {
     struct Input: Decodable {
