@@ -23,8 +23,7 @@ which docker > /dev/null || (echo "Docker is not installed.  Please install Dock
 which aws > /dev/null || (echo "AWS CLI is not installed.  Please install AWS CLI and try again." && exit 1)
 
 # import code present in create_iam_role.sh
-# shellcheck source=./create_iam_role.sh
-source ./create_iam_role.sh
+source create_iam_role.sh
 
 # check if user has an access key and secret access key
 echo "This script creates and deploys a Lambda function on your AWS Account.
