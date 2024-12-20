@@ -1,7 +1,5 @@
 #!/bin/sh
 
-alias aws="aws --profile seb"
-
 echo "This script deletes the Lambda function and the IAM role created in the previous step and deletes the project files."
 read -p "Are you you sure you want to delete everything that was created? [y/n] " continue
 if [[ ! $continue =~ ^[Yy]$ ]]; then
