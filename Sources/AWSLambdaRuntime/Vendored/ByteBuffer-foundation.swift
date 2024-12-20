@@ -26,8 +26,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import NIOCore
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 
 // This is NIO's `NIOFoundationCompat` module which at the moment only adds `ByteBuffer` utility methods
 // for Foundation's `Data` type.

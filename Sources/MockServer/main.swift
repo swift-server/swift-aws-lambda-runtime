@@ -12,10 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
+import Dispatch
 import NIOCore
 import NIOHTTP1
 import NIOPosix
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 
 struct MockServer {
     private let group: EventLoopGroup

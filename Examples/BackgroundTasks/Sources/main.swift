@@ -13,7 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntime
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 
 struct BackgroundProcessingHandler: LambdaWithBackgroundProcessingHandler {
     struct Input: Decodable {
