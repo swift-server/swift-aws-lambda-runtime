@@ -1,4 +1,3 @@
-
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
@@ -15,25 +14,25 @@
 
 import Testing
 
-@testable import APIGatewayLambda // to access the business code
+@testable import APIGatewayLambda  // to access the business code
 
 let valuesToTest: [(String, String)] = [
-    ("hello world", "Hello world"), // happy path
-    ("", ""), // Empty string
-    ("a", "A"), // Single character
-    ("A", "A"), // Single uppercase character
-    ("HELLO WORLD", "Hello world"), // All uppercase
-    ("hello world", "Hello world"), // All lowercase
-    ("hElLo WoRlD", "Hello world"), // Mixed case
-    ("123abc", "123abc"), // Numeric string
-    ("!@#abc", "!@#abc") // Special characters
+    ("hello world", "Hello world"),  // happy path
+    ("", ""),  // Empty string
+    ("a", "A"),  // Single character
+    ("A", "A"),  // Single uppercase character
+    ("HELLO WORLD", "Hello world"),  // All uppercase
+    ("hello world", "Hello world"),  // All lowercase
+    ("hElLo WoRlD", "Hello world"),  // Mixed case
+    ("123abc", "123abc"),  // Numeric string
+    ("!@#abc", "!@#abc"),  // Special characters
 ]
 
 @Suite("Business Tests")
 class BusinessTests {
 
     @Test("Uppercased First", arguments: valuesToTest)
-    func uppercasedFirst(_ arg: (String,String)) {
+    func uppercasedFirst(_ arg: (String, String)) {
         let input = arg.0
         let expectedOutput = arg.1
         #expect(input.uppercasedFirst() == expectedOutput)

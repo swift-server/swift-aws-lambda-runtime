@@ -12,26 +12,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Testing
-
 import AWSLambdaEvents
 import AWSLambdaRuntime
 import Logging
+import Testing
 
-@testable import APIGatewayLambda // to access the business code
+@testable import APIGatewayLambda  // to access the business code
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
 import Foundation
-#endif 
+#endif
 
 @Suite("Handler Tests")
 public struct HandlerTest {
 
     @Test("Invoke handler")
     public func invokeHandler() async throws {
-        
+
         // read event.json file
         let testBundle = Bundle.module
         guard let eventURL = testBundle.url(forResource: "event", withExtension: "json") else {
@@ -42,8 +41,8 @@ public struct HandlerTest {
 
         // decode the event
         let apiGatewayRequest = try JSONDecoder().decode(APIGatewayV2Request.self, from: eventData)
-        
-        // create a mock LambdaContext 
+
+        // create a mock LambdaContext
         let lambdaContext = LambdaContext.__forTestsOnly(
             requestID: UUID().uuidString,
             traceID: UUID().uuidString,

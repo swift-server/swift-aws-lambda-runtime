@@ -32,7 +32,7 @@ let package = Package(
             resources: [
                 .process("event.json")
             ]
-        )       
+        ),
     ]
 )
 
