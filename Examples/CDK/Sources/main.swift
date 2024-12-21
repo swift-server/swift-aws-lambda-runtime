@@ -15,6 +15,13 @@
 import AWSLambdaEvents
 import AWSLambdaRuntime
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
+let encoder = JSONEncoder()
 let runtime = LambdaRuntime {
     (event: APIGatewayV2Request, context: LambdaContext) -> APIGatewayV2Response in
 
@@ -24,7 +31,10 @@ let runtime = LambdaRuntime {
     header["content-type"] = "application/json"
 
     // echo the request in the response
-    return try APIGatewayV2Response(statusCode: .ok, headers: header, encodableBody: event)
+    let data = try encoder.encode(event)
+    let response = String(decoding: data, as: Unicode.UTF8.self)
+
+    return APIGatewayV2Response(statusCode: .ok, headers: header, body: response)
 }
 
 try await runtime.run()

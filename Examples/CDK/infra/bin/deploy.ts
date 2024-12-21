@@ -12,19 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaEvents
-import AWSLambdaRuntime
+import * as cdk from 'aws-cdk-lib';
+import { LambdaApiStack } from '../lib/lambda-api-project-stack';
 
-let runtime = LambdaRuntime {
-    (event: APIGatewayV2Request, context: LambdaContext) -> APIGatewayV2Response in
-
-    var header = HTTPHeaders()
-    context.logger.debug("HTTP API Message received")
-
-    header["content-type"] = "application/json"
-
-    // echo the request in the response
-    return try APIGatewayV2Response(statusCode: .ok, headers: header, encodableBody: event)
-}
-
-try await runtime.run()
+const app = new cdk.App();
+new LambdaApiStack(app, 'LambdaApiStack');
