@@ -31,10 +31,7 @@ let runtime = LambdaRuntime {
     header["content-type"] = "application/json"
 
     // echo the request in the response
-    let data = try encoder.encode(event)
-    let response = String(decoding: data, as: Unicode.UTF8.self)
-
-    return APIGatewayV2Response(statusCode: .ok, headers: header, body: response)
+    return try APIGatewayV2Response(statusCode: .ok, headers: header, encodableBody: event)
 }
 
 try await runtime.run()
