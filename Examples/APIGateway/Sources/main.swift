@@ -15,12 +15,6 @@
 import AWSLambdaEvents
 import AWSLambdaRuntime
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-
 let runtime = LambdaRuntime {
     (event: APIGatewayV2Request, context: LambdaContext) -> APIGatewayV2Response in
 
