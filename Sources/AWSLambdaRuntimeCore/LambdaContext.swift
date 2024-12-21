@@ -120,8 +120,10 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         "\(Self.self)(requestID: \(self.requestID), traceID: \(self.traceID), invokedFunctionARN: \(self.invokedFunctionARN), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(self.clientContext ?? "nil"), deadline: \(self.deadline))"
     }
 
-    /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
-    package static func __forTestsOnly(
+    /// This interface is not part of the public API and must not be used by adopters.
+    /// It is declared public to allow users to unit test their handler.
+    /// This API is not part of semver versioning.
+    public static func __forTestsOnly(
         requestID: String,
         traceID: String,
         invokedFunctionARN: String,
