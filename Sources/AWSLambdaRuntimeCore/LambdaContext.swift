@@ -122,7 +122,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
 
     /// This interface is not part of the public API and must not be used by adopters.
     /// It is declared public to allow users to unit test their handler.
-    ///  This API is not part of semver versioning.
+    /// This API is not part of semver versioning.
     public static func __forTestsOnly(
         requestID: String,
         traceID: String,
