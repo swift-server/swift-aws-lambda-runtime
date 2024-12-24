@@ -54,6 +54,20 @@ Here is the content of this guide:
    }
    ```
 
+3. A Swift Lambda function to deploy.
+
+   You need a Swift Lambda function to deploy. If you don't have one yet, you can use one of the examples in the [Examples](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples) directory.
+
+   Compile and package the function using the following command
+
+   ```sh
+   swift package archive --allow-network-connections docker
+   ```
+
+   This command creates a ZIP file with the compiled Swift code. The ZIP file is located in the `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip` folder.
+
+   The name of the ZIP file depends on the target name you entered in the `Package.swift` file.
+
 ## Choosing the AWS Region where to deploy
 
 [AWS Global infrastructure](https://aws.amazon.com/about-aws/global-infrastructure/) spans over 34 geographic Regions (and continuously expanding). When you create a resource on AWS, such as a Lambda function, you have to select a geographic region where the resource will be created. The two main factors to consider to select a Region are the physical proximity with your users and geographical compliance. 
@@ -69,6 +83,8 @@ A Lambda execution role is an AWS Identity and Access Management (IAM) role that
 When you create a Lambda function, you must specify an execution role. This role contains two main components: a trust policy that allows the Lambda service itself to assume the role, and permission policies that determine what AWS resources the function can access. By default, Lambda functions get basic permissions to write logs to CloudWatch Logs, but any additional permissions (like accessing S3 buckets or sending messages to SQS queues) must be explicitly added to the role's policies. Following the principle of least privilege, it's recommended to grant only the minimum permissions necessary for your function to operate, helping maintain the security of your serverless applications.
 
 ## Deploy your Lambda function with the AWS Console
+
+In this section, we deploy the HelloWorld example function using the AWS Console. The HelloWorld function is a simple function that takes a `String` as input and returns a `String`.
 
 Authenticate on the AWS console using your IAM username and password. On the top right side, select the AWS Region where you want to deploy, then navigate to the Lambda section.
 
@@ -91,7 +107,7 @@ On the right side, select **Upload from** and select **.zip file**.
 
 ![Console - select zip file](console-40-select-zip-file)
 
-Select the zip file created with the `swift package archive --allow-network-connections docker` command.  This file is located in your project folder at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip`. The name of the ZIP file depends on the target name you entered in the `Package.swift` file.
+Select the zip file created with the `swift package archive --allow-network-connections docker` command as described in the [Prerequisites](#prerequisites) section.
 
 Select **Save**
 
@@ -101,7 +117,7 @@ You're now ready to test your function.
 
 ### Invoke the function 
 
-Select the **Test** tab in the console and prepare a payload to send to your Lambda function. In this example, you've deployed the [HelloWorld](Exmaples.HelloWorld/README.md) example function. The function expects a `String` as input parameter and returns a `String`.
+Select the **Test** tab in the console and prepare a payload to send to your Lambda function. In this example, you've deployed the [HelloWorld](Exmaples.HelloWorld/README.md) example function. As explained, the function takes a `String` as input and returns a `String`. we will therefore create a test event with a JSON payload that contains a `String`.
 
 Select **Create new event**. Enter an **Event name**. Enter `"Swift on Lambda"` as **Event JSON**. Note that the payload must be a valid JSON document, hence we use surrounding double quotes (`"`).
 
@@ -109,13 +125,15 @@ Select **Test** on the upper right side of the screen.
 
 ![Console - prepare test event](console-60-prepare-test-event)
 
-The response of the invocation and additional meta data appears in the green section of the page.
+The response of the invocation and additional meta data appear in the green section of the page.
 
-I can see the response from the Swift code: `Hello Swift on Lambda`.
+You can see the response from the Swift code: `Hello Swift on Lambda`.
 
 The function consumed 109.60ms of execution time, out of this 83.72ms where spent to initialize this new runtime. This initialization time is known as Lambda cold start time.
 
-> Lambda cold start time refers to the initial delay that occurs when a Lambda function is invoked for the first time or after being idle for a while. Cold starts happen because AWS needs to provision and initialize a new container, load your code, and start your runtime environment (in this case, the Swift runtime). This delay is particularly noticeable for the first invocation, but subsequent invocations (known as "warm starts") are typically much faster because the container and runtime are already initialized and ready to process requests. Cold starts are an important consideration when architecting serverless applications, especially for latency-sensitive workloads.
+> Lambda cold start time refers to the initial delay that occurs when a Lambda function is invoked for the first time or after being idle for a while. Cold starts happen because AWS needs to provision and initialize a new container, load your code, and start your runtime environment (in this case, the Swift runtime). This delay is particularly noticeable for the first invocation, but subsequent invocations (known as "warm starts") are typically much faster because the container and runtime are already initialized and ready to process requests. Cold starts are an important consideration when architecting serverless applications, especially for latency-sensitive workloads. Usually, compiled languages, such as Swift, Go, and Rust, have shorter cold start times compared to interpreted languages, such as Python, Java, Ruby, and Node.js.
+
+```text
 
 ![Console - view invocation result](console-70-view-invocation-response)
 
@@ -147,13 +165,14 @@ Select the `HelloWorld-role-xxxx` role and select **Delete**. Confirm the deleti
 
 You can deploy your Lambda function using the AWS Command Line Interface (CLI). The CLI is a unified tool to manage your AWS services from the command line and automate your operations through scripts. The CLI is available for Windows, macOS, and Linux. Follow the [installation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html) instructions in the AWS CLI User Guide.
 
+In this example, we're building the HelloWorld example from the [Examples](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples) directory.
+
 ### Create the function 
 
 To create a function, you must first create the function execution role and define the permission. Then, you create the function with the `create-function` command.
 
-The command assumes you've already created the ZIP file with the `swift package archive --allow-network-connections docker` command. The name and the path of the ZIP file depends on the executable target name you entered in the `Package.swift` file.
+The command assumes you've already created the ZIP file with the `swift package archive --allow-network-connections docker` command, as described in the [Prerequisites](#prerequisites) section.
  
-
 ```sh
 # enter your AWS Account ID 
 export AWS_ACCOUNT_ID=123456789012
@@ -215,7 +234,7 @@ aws lambda create-function \
 
 The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
 
-To update the function, use the `update-function-code` command.
+To update the function, use the `update-function-code` command after you've recompiled and archived your code again with the `swift package archive` command.
 
 ```sh
 aws lambda update-function-code \
@@ -266,6 +285,8 @@ Use SAM when you want to deploy more than a Lambda function. SAM helps you to cr
 
 ### Create the function
 
+We assume your Swift function is compiled and packaged, as described in the [Prerequisites](#prerequisites) section.
+
 When using SAM, you describe the infrastructure you want to deploy in a YAML file. The file contains the definition of the Lambda function, the IAM role, and the permissions needed by the function. The SAM CLI uses this file to package and deploy your function.
 
 You can create a SAM template to define a REST API implemented by AWS API Gateway and a Lambda function with the following command
@@ -302,10 +323,9 @@ Outputs:
 EOF
 ```
 
-In this example, the Lambda function must accept an APIGateway v2 JSON payload as input parameter and return a valid APIGAteway v2 JSON response.  See the example code in the [APIGateway example README file](https://github.com/swift-server/swift-aws-lambda-runtime/blob/main/Examples/APIGateway/README.md).
+In this example, the Lambda function must accept an APIGateway v2 JSON payload as input parameter and return a valid APIGAteway v2 JSON response. See the example code in the [APIGateway example README file](https://github.com/swift-server/swift-aws-lambda-runtime/blob/main/Examples/APIGateway/README.md).
 
-To deploy the function with SAM, use the `sam deploy` command. The very first time you deploy a function, you must use the `--guided` flag to configure the deployment. The command will ask you a series of questions to configure the deployment.
-
+To deploy the function with SAM, use the `sam deploy` command. The very first time you deploy a function, you should use the `--guided` flag to configure the deployment. The command will ask you a series of questions to configure the deployment.
 
 Here is the command to deploy the function with SAM:
 
@@ -342,7 +362,7 @@ CloudFormation outputs from deployed stack
 Outputs                                                                                                                                         
 --------------------------------------------------------------------------------
 Key                 APIGatewayEndpoint                                                                                                          
-Description         API Gateway endpoint UR"                                                                                                    
+Description         API Gateway endpoint URI"                                                                                                    
 Value               https://59i4uwbuj2.execute-api.us-east-1.amazonaws.com                                                                      
 --------------------------------------------------------------------------------
 
@@ -428,6 +448,8 @@ To use the CDK, you need to [install the CDK CLI](https://docs.aws.amazon.com/cd
 
 Use the CDK when you want to define your infrastructure in code and manage the deployment of your Lambda function and other AWS services.
 
+This example deploys the [APIGateway]((https://github.com/swift-server/swift-aws-lambda-runtime/blob/main/Examples/APIGateway/) example code.  It comprises a Lambda function that implements a REST API and an API Gateway to expose the function over HTTPS.
+
 ### Create a CDK project
 
 To create a new CDK project, use the `cdk init` command. The command creates a new directory with the project structure and the necessary files to define your infrastructure.
@@ -471,7 +493,7 @@ export class LambdaApiStack extends cdk.Stack {
  }
 }    
 ```
-The code assumes you already built the Swift Lambda function with the `swift package archive --allow-network-connections docker` command. The ZIP file is located in the `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip` folder.
+The code assumes you already built and packaged the APIGateway Lambda function with the `swift package archive --allow-network-connections docker` command, as described in the [Prerequisites](#prerequisites) section.
 
 You can write code to add an API Gateway to invoke your Lambda function. The following code creates an HTTP API Gateway that triggers the Lambda function.
 
