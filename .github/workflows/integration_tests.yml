@@ -23,6 +23,10 @@ on:
         type: boolean
         description: "Boolean to enable the test of the archive plugin. Defaults to true."
         default: true
+      check_foundation_enabled:
+        type: boolean
+        description: "Boolean to enable the check for Foundation dependency. Defaults to true."
+        default: true
       matrix_linux_command:
         type: string
         description: "The command of the current Swift version linux matrix job to execute."
@@ -88,15 +92,12 @@ jobs:
           COMMAND: ${{ inputs.matrix_linux_command }}
           EXAMPLE: ${{ matrix.examples }}
         run: |
-          ./scripts/integration_tests.sh
-          echo "✅ The examples compile correctly"
+          .github/workflows/scripts/integration_tests.sh
 
   test-archive-plugin:
     name: Test archive plugin
     if: ${{ inputs.archive_plugin_enabled }}
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -106,25 +107,21 @@ jobs:
         # https://github.com/actions/checkout/issues/766
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
       - name: Test the archive plugin
-        env:
-          EXAMPLE: HelloWorld
-          OUTPUT_FILE: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/bootstrap
-          ZIP_FILE: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip
         run: |
-          pushd Examples/${EXAMPLE}
+          .github/workflows/scripts/check-archive-plugin.sh
 
-          # package the example (docker and swift toolchain are installed on the GH runner)
-          LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker
-
-          # did the plugin generated a Linux binary?
-          [ -f ${OUTPUT_FILE} ]
-          file ${OUTPUT_FILE} | grep --silent ELF
-
-          # did the plugin created a ZIP file?
-          [ -f ${ZIP_FILE} ]
-
-          # does the ZIP file contain the bootstrap?
-          unzip -l ${ZIP_FILE} | grep --silent bootstrap
-
-          echo "✅ The archive plugin is OK"
-          popd
+  check-foundation:
+    name: No dependencies on Foundation
+    if: ${{ inputs.check_foundation_enabled }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Mark the workspace as safe
+        # https://github.com/actions/checkout/issues/766
+        run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+      - name: Check for Foundation or ICU dependency
+        run: |
+          .github/workflows/scripts/check-link-foundation.sh
