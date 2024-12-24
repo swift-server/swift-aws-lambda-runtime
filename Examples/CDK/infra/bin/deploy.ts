@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2024 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,17 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntimeCore
+import * as cdk from 'aws-cdk-lib';
+import { LambdaApiStack } from '../lib/lambda-api-project-stack';
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import struct Foundation.Date
-#endif
-
-extension LambdaContext {
-    var deadlineDate: Date {
-        let secondsSinceEpoch = Double(Int64(bitPattern: self.deadline.rawValue)) / -1_000_000_000
-        return Date(timeIntervalSince1970: secondsSinceEpoch)
-    }
-}
+const app = new cdk.App();
+new LambdaApiStack(app, 'LambdaApiStack');

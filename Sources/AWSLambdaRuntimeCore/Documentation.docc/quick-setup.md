@@ -45,7 +45,7 @@ let package = Package(
             dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
             ],
-            path: "."
+            path: "Sources"
         ),
     ]
 )
