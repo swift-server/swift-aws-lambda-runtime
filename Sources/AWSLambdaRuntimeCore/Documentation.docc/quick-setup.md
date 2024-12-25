@@ -31,17 +31,17 @@ import PackageDescription
 let package = Package(
     name: "YourProjetName",
     platforms: [
-        .macOS(.v12),
+        .macOS(.v15),
     ],
     products: [
-        .executable(name: "YourFunctionName", targets: ["YourFunctionName"]),
+        .executable(name: "MyFirstLambdaFunction", targets: ["MyFirstLambdaFunction"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "1.0.0-alpha"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "main"),
     ],
     targets: [
         .executableTarget(
-            name: "YourFunctionName",
+            name: "MyFirstLambdaFunction",
             dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
             ],
@@ -55,48 +55,50 @@ let package = Package(
 
 > Be sure to rename the `main.swift` file to something else.
 
-Extends the `SimpleLambdaHandler` protocol and implement `handle(_:context)`.
+Create an instance of `LambdaRuntime` and pass as a closure a function with this signature: `(_ : Event, context: LambdaContext) async throws -> Output` (as defined in the `LambdaHandler` protocol). `Event` must be `Decodable`.
 
+If your Lambda function is invoked by another AWS service, use the `AWSLambdaEvent` library at [https://github.com/swift-server/swift-aws-lambda-events](https://github.com/swift-server/swift-aws-lambda-events) to represent the input event.
 
-If your Lambda function is invoked by another AWS service, use the `AWSLambdaEvent` library at [https://github.com/swift-server/swift-aws-lambda-events](https://github.com/swift-server/swift-aws-lambda-events)
+Finally, call `runtime.run()` to start the event loop.
 
 ```swift
-import AWSLambdaRuntime
-
-struct Input: Codable {
-    let number: Double
+// the data structure to represent the input parameter
+struct HelloRequest: Decodable {
+    let name: String
+    let age: Int
 }
 
-struct Number: Codable {
-    let result: Double
+// the data structure to represent the output response
+struct HelloResponse: Encodable {
+    let greetings: String
 }
 
-@main
-struct SquareNumberHandler: SimpleLambdaHandler {
-    typealias Event = Input
-    typealias Output = Number
-    
-    func handle(_ event: Input, context: LambdaContext) async throws -> Number {
-        Number(result: event.number * event.number)
-    }
+// the Lambda runtime
+let runtime = LambdaRuntime {
+    (event: HelloRequest, context: LambdaContext) in
+
+    HelloResponse(
+        greetings: "Hello \(event.name). You look \(event.age > 30 ? "younger" : "older") than your age."
+    )
 }
+
+// start the loop
+try await runtime.run()
 ```
 
 4. Test your code locally 
 
 ```sh
-export LOCAL_LAMBDA_SERVER_ENABLED=true
-
-swift run 
+swift run  # this starts a local server on port 7000
 
 # Switch to another Terminal tab
 
 curl --header "Content-Type: application/json" \
      --request POST                            \
-     --data '{"number": 3}'                    \
+     --data '{"name": "Seb", "age": 50}'       \
      http://localhost:7000/invoke
 
-{"result":9}
+{"greetings":"Hello Seb. You look younger than your age."}
 ```
 
 5. Build and package your code for AWS Lambda 
@@ -109,24 +111,24 @@ AWS Lambda runtime runs on Amazon Linux. You must compile your code for Amazon L
 swift package --allow-network-connections docker archive
 
 -------------------------------------------------------------------------
-building "squarenumberlambda" in docker
+building "MyFirstLambdaFunction" in docker
 -------------------------------------------------------------------------
 updating "swift:amazonlinux2" docker image
   amazonlinux2: Pulling from library/swift
   Digest: sha256:5b0cbe56e35210fa90365ba3a4db9cd2b284a5b74d959fc1ee56a13e9c35b378
   Status: Image is up to date for swift:amazonlinux2
   docker.io/library/swift:amazonlinux2
-building "SquareNumberLambda"
+building "MyFirstLambdaFunction"
   Building for production...
 ...
 -------------------------------------------------------------------------
-archiving "SquareNumberLambda"
+archiving "MyFirstLambdaFunction"
 -------------------------------------------------------------------------
 1 archive created
-  * SquareNumberLambda at /Users/YourUserName/SquareNumberLambda/.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/SquareNumberLambda/SquareNumberLambda.zip
+  * MyFirstLambdaFunction at /Users/YourUserName/MyFirstLambdaFunction/.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyFirstLambdaFunction/MyFirstLambdaFunction.zip
 
 
-cp .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/SquareNumberLambda/SquareNumberLambda.zip ~/Desktop
+cp .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyFirstLambdaFunction/MyFirstLambdaFunction.zip ~/Desktop
 ```
 
 6. Deploy on AWS Lambda
@@ -139,9 +141,9 @@ cp .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/SquareNumberLambda
 - Select **Provide your own bootstrap on Amazon Linux 2** as **Runtime**
 - Select an **Architecture** that matches the one of the machine where you build the code. Select **x86_64** when you build on Intel-based Macs or **arm64** for Apple Silicon-based Macs.
 - Upload the ZIP create during step 5
-- Select the **Test** tab, enter a test event such as `{"number":3}` and select **Test**
+- Select the **Test** tab, enter a test event such as `{"name": "Seb", "age": 50}` and select **Test**
 
-If the test succeeds, you will see the result: '{"result":9}'
+If the test succeeds, you will see the result: `{"greetings":"Hello Seb. You look younger than your age."}`.
 
 
 Congratulations 🎉! You just wrote, test, build, and deployed a Lambda function written in Swift.
