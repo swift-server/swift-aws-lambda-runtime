@@ -10,7 +10,7 @@ In this document, we describe four different testing strategies:
   * [Local invocation using the AWS SAM CLI](#local-invocation-using-the-aws-sam-cli)
 
 > [!IMPORTANT]
-> In this example, the API Gateway sends a payload to the Lambda function as a JSON string. Your business payload is in the `body` section of the API Gateway payload. It is base64-encoded. You can find an example of the API Gateway payload in the `event.json` file. The API Gateway event format is documented in [Create AWS Lambda proxy integrations for HTTP APIs in API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html). 
+> In this example, the API Gateway sends an event to your Lambda function as a JSON string. Your business payload is in the `body` section of the API Gateway event. It is base64-encoded. You can find an example of the API Gateway event in the `event.json` file. The API Gateway event format is documented in [Create AWS Lambda proxy integrations for HTTP APIs in API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html). 
 
 To include a sample event in your test targets, you must add the `event.json` file from the `Tests` directory to the binary bundle. To do so, add a `resources` section in your `Package.swift` file:
 
@@ -47,7 +47,8 @@ class BusinessTests {
         let expectedOutput = arg.1
         #expect(input.uppercasedFirst() == expectedOutput)
     }
-}```
+}
+```
 
 2. Add a test target to your `Package.swift` file.
 ```swift
@@ -62,7 +63,7 @@ class BusinessTests {
 
 ## Integration Testing the handler function
 
-You can test the handler function by creating an input event, a mock Lambda context, and calling the handler function from your test.
+You can test the handler function by creating an input event, a mock Lambda context, and calling your Lambda handler function from your test.
 Your Lambda handler function must be declared separatly from the `LambdaRuntime`. For example:
 
 ```swift
@@ -131,9 +132,9 @@ public struct HandlerTest {
 
 You can test your Lambda function locally by invoking it with the Swift AWS Lambda Runtime.
 
-You must pass a payload to the Lambda function. You can use the `Tests/event.json` file for this purpose. The return value is a `APIGatewayV2Response` object in this example.
+You must pass an event to the Lambda function. You can use the `Tests/event.json` file for this purpose. The return value is a `APIGatewayV2Response` object in this example.
 
-Just type `swift run` to run the Lambda function locally.
+Just type `swift run` to run the Lambda function locally, this starts a local HTTP endpoint on localhost:7000.
 
 ```sh
 LOG_LEVEL=trace swift run
@@ -151,9 +152,9 @@ This returns the following response:
 
 ## Local invocation using the AWS SAM CLI
 
-The AWS SAM CLI provides you with a local testing environment for your Lambda functions. It deploys and invoke your function locally in a Docker container designed to mimic the AWS Lambda environment.
+The AWS SAM CLI provides you with a local testing environment for your Lambda functions. It deploys and invokes your function locally in a Docker container designed to mimic the AWS Lambda environment.
 
-You must pass a payload to the Lambda function. You can use the `event.json` file for this purpose. The return value is a `APIGatewayV2Response` object in this example.
+You must pass an event to the Lambda function. You can use the `event.json` file for this purpose. The return value is a `APIGatewayV2Response` object in this example.
 
 ```sh
 sam local invoke -e Tests/event.json
