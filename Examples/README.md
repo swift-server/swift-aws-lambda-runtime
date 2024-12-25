@@ -32,6 +32,8 @@ This directory contains example code for Lambda functions.
 
 - **[Streaming]**: create a Lambda function exposed as an URL. The Lambda function streams its response over time. (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
 
+- **[Testing](Testing/README.md)**: a test suite for Lambda functions.
+
 ## AWS Credentials and Signature
 
 This section is a short tutorial on the AWS Signature protocol and the AWS credentials.
