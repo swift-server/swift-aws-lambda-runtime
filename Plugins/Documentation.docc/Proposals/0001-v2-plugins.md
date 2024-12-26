@@ -22,7 +22,7 @@ As a source of inspiration, we looked to the Rust community, which created Cargo
 
 ### Current Limitations
 
-The current version of `swift-aws-lambda-runtime` does not provide any support for project scaffolding or deployment of Lambda functions. This makes it difficult for Swift developers new to AWS and Lambda, or AWS Professionals new to Swift, to get started.
+The current version of `swift-aws-lambda-runtime` does not provide any support for project **scaffolding** or **deployment** of Lambda functions. This makes it difficult for Swift developers new to AWS and Lambda, or AWS Professionals new to Swift, to get started.
 
 The main limitations of the current version of the `archive` plugin are as follows:
 
@@ -43,15 +43,13 @@ We may consider additional plugins in a future release. For example, we could co
 
 ## Detailed Solution
 
-### Dependencies
-
-One of the design objective of the Swift AWS Lambda Runtime is to minimize its dependencies on other libraries. We will strive to keep the dependencies of the plugins to a minimum.
+The proposed solution consists of three new plugins: `lambda-init`, `lambda-build`, and `lambda-deploy`. These plugins will assist developers in creating, building, packaging, and deploying Lambda functions.
 
 ### Create a New Project (lambda-init)
 
-The `lambda-init` plugin will assist developers in creating a new Lambda project from scratch. The plugin will scaffold the project code. It will create a ready-to-deploy `main.swift` file containing a simple Lambda function. The plugin will allow users to choose from a selection of basic templates, such as a simple "Hello World" Lambda function or a function invoked by a URL.
+The `lambda-init` plugin will assist developers in creating a new Lambda project from scratch. The plugin will scaffold the project code. It will create a ready-to-build `main.swift` file containing a simple Lambda function. The plugin will allow users to choose from a selection of basic templates, such as a simple "Hello World" Lambda function or a function invoked by a URL.
 
-The plugin cannot be invoked without the required dependencies installed in `Package.swift`. The process of creating a new project will consist of three steps and four commands, all executable from the command line:
+The plugin cannot be invoked without the required dependency on `swift-aws-lambda-runtime` project being configured in `Package.swift`. The process of creating a new project will consist of three steps and four commands, all executable from the command line:
 
 ```bash
 # Step 1: Create a new Swift executable package
@@ -92,7 +90,7 @@ The `lambda-build` plugin will assist developers in building and packaging their
 
 We also propose to automatically strip the binary of debug symbols to reduce the size of the ZIP file. Our tests showed that this can reduce the size by up to 50%. An option to disable stripping will be provided.
 
-The `lambda-build` plugin is similar to the existing `archive` plugin. We propose to keep the same interface to facilitate migration of existing projects. If technically feasible, we will also consider keeping the `archive` plugin as an alias to the `lambda-build` plugin.
+The `lambda-build` plugin is similar to the existing `archive` plugin. We propose to keep the same interface to facilitate migration of existing projects and CI chains. If technically feasible, we will also consider keeping the `archive` plugin as an alias to the `lambda-build` plugin.
 
 The plugin interface is based on the existing `archive` plugin, with the addition of the `--no-strip` and `--cross-compile` options:
 
@@ -101,15 +99,17 @@ OVERVIEW: A SwiftPM plugin to build and package your Lambda function.
 
 REQUIREMENTS: To use this plugin, Docker must be installed and running.
 
-USAGE: swift package --allow-network-connections docker archive
-                                            [--help] [--verbose]
-                                            [--output-directory <path>]
-                                            [--products <list of products>]
-                                            [--configuration debug | release]
-                                            [--swift-version <version>]
-                                            [--base-docker-image <docker_image_name>]
-                                            [--disable-docker-image-update]
-                                            
+USAGE: swift package archive
+            [--help] [--verbose]
+            [--output-directory <path>]
+            [--products <list of products>]
+            [--configuration debug | release]
+            [--swift-version <version>]
+            [--base-docker-image <docker_image_name>]
+            [--disable-docker-image-update]
+            [--no-strip]
+            [--cross-compile <value>]
+            [--allow-network-connections docker]
 
 OPTIONS:
 --output-directory <path>     The path of the binary package.
@@ -125,14 +125,19 @@ OPTIONS:
                                 (default: swift-<version>:amazonlinux2)
                                 This parameter cannot be used with --swift-version.
                                 This parameter cannot be used with a value other than Docker provided to --cross-compile.
---disable-docker-image
+--disable-docker-image-update Do not update the Docker image before building.
+--no-strip                    Do not strip the binary of debug symbols.
+--cross-compile <value>       Cross-compile the binary using the specified method.
+                                (default: docker) Accepted values are: docker, swift-static-sdk, custom-sdk
 ```
 
 ### Deploy (lambda-deploy)
 
 The `lambda-deploy` plugin will assist developers in deploying their Lambda function to AWS. It will handle the deployment process, including creating the IAM role, the Lambda function itself, and optionally configuring a Lambda function URL.
 
-The plugin will not require any additional dependencies. It will interact with the AWS REST API directly, without using the AWS SDK fro Swift or Soto. Users will need to provide AWS access key and secret access key credentials. The plugin will attempt to locate these credentials in standard locations, such as environment variables or the `~/.aws/credentials` file.
+The plugin will not depends on nay third-party library. It will interact directly with the AWS REST API, without using the AWS SDK fro Swift or Soto.
+
+Users will need to provide AWS access key and secret access key credentials. The plugin will attempt to locate these credentials in standard locations, such as environment variables or the `~/.aws/credentials` file.
 
 The plugin supports deployment through either the REST and Base64 payload or by uploading the code to a temporary S3 bucket. Refer to [the `Function Code` section](https://docs.aws.amazon.com/lambda/latest/api/API_FunctionCode.html) of the [CreateFunction](https://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html) API for more details.
 
@@ -152,6 +157,9 @@ OVERVIEW: A SwiftPM plugin to deploy a Lambda function.
 
 USAGE: swift package lambda-deploy
                         [--with-url]
+                        [--region <value>]
+                        [--iam-role <value>]
+                        [--delete]
                         [--help] [--verbose]
 
 OPTIONS:
@@ -168,11 +176,13 @@ OPTIONS:
 
 ### Dependencies
 
-Minimizing dependencies is a key priority for the plugins. We aim to avoid including unnecessary dependencies, such as the AWS SDK for Swift or Soto, for the `lambda-deploy` plugin.
+One of the design objective of the Swift AWS Lambda Runtime is to minimize its dependencies on other libraries.
 
-Four essential dependencies have been identified for the plugins:
+Therefore, minimizing dependencies is a key priority for the new plugins. We aim to avoid including unnecessary dependencies, such as the AWS SDK for Swift or Soto, for the `lambda-deploy` plugin.
 
-* an argument parser
+Four essential dependencies have been identified to implement the plugins:
+
+* an command line argument parser
 * an HTTP client
 * a library to sign AWS requests
 * a library to calculate HMAC-SHA256 (used in the AWS signing process)
@@ -181,7 +191,7 @@ These functionalities can be incorporated by vending source code from other proj
 
 **Argument Parser:**
 
-* We will leverage the `ArgumentExtractor` from the `swift-package-manager` project ([https://github.com/swiftlang/swift-package-manager/blob/main/Sources/PackagePlugin/ArgumentExtractor.swift](https://github.com/swiftlang/swift-package-manager/blob/main/Sources/PackagePlugin/ArgumentExtractor.swift)). This is a simple argument parser used by the Swift Package Manager. The relevant files will be copied into the plugin.
+* We propose to leverage the `ArgumentExtractor` from the `swift-package-manager` project ([https://github.com/swiftlang/swift-package-manager/blob/main/Sources/PackagePlugin/ArgumentExtractor.swift](https://github.com/swiftlang/swift-package-manager/blob/main/Sources/PackagePlugin/ArgumentExtractor.swift)). This is a simple argument parser used by the Swift Package Manager. The relevant files will be copied into the plugin.
 
 **HTTP Client:**
 
@@ -199,7 +209,7 @@ These functionalities can be incorporated by vending source code from other proj
 
 The dependencies will be vendored within the plugin and will not be listed as dependencies in the `Package.swift` file.
 
-The following files will be copied into the plugin, without modifications from their original projects:
+If we follow that plan, the following files will be copied into the plugin, without modifications from their original projects:
 
 ```text
 Sources/AWSLambdaPluginHelper/Vendored
@@ -235,7 +245,7 @@ Sources/AWSLambdaPluginHelper/Vendored
 
 ### Implementation
 
-SwiftPM plugin can not share code within sources files or using a shared Library target. The recommended way to share code between plugins is to create an executable target to implement the plugin functionalities and to implement the plugin as a thin wrapper that invokes the executable target.
+SwiftPM plugins from a same project can not share code in between sources files or using a shared Library target. The recommended way to share code between plugins is to create an executable target to implement the plugin functionalities and to implement the plugin as a thin wrapper that invokes the executable target.
 
 We propose to add an executable target and three plugins to the `Package.swift` file of the `swift-aws-lambda-runtime` package.
 
@@ -249,11 +259,7 @@ let package = Package(
         // The runtime library targets
         //
 
-        // this library exports `AWSLambdaRuntimeCore` and adds Foundation convenience methods
-        .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
-
-        // this has all the main functionality for lambda and it does not link Foundation
-        .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
+        // ... unchanged ...
 
         //
         // The plugins
@@ -430,9 +436,9 @@ In addition to the proposed solution, we evaluated the following alternatives:
 
 We considered using a VSCode extension, such as the `vscode-aws-lambda-swift-sam` extension ([https://github.com/swift-server-community/vscode-aws-lambda-swift-sam](https://github.com/swift-server-community/vscode-aws-lambda-swift-sam)), to scaffold new Lambda projects.
 
-This extension creates a new Lambda project from scratch, including the project structure and dependencies. It provides a ready-to-deploy `main.swift` file with a simple Lambda function and allows users to choose from basic templates, such as "Hello World" or an OpenAPI-based function. However, the extension relies on the AWS CLI and SAM CLI for deployment. It is only available in the Visual Studio Code Marketplace.
+This extension creates a new Lambda project from scratch, including the project structure and dependencies. It provides a ready-to-build `main.swift` file with a simple Lambda function and allows users to choose from basic templates, such as "Hello World" or an OpenAPI-based Lambda function. However, the extension relies on the AWS CLI and SAM CLI for deployment. It is only available in the Visual Studio Code Marketplace.
 
-While the extension offers a user-friendly graphical interface, it does not align well with our goals of simplicity for first-time users and minimal dependencies. Users would need to install VSCode, the extension itself, the AWS CLI, and the SAM CLI before getting started.
+While the extension offers a user-friendly graphical interface, it does not align well with our goals of simplicity for first-time users and minimal dependencies. Users would need to install and configure VSCode, the extension itself, the AWS CLI, and the SAM CLI before getting started.
 
 2. **Deployment DSL with AWS SAM:**
 
