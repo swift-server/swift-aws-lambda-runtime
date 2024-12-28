@@ -10,11 +10,12 @@ jobs:
     uses: swiftlang/github-workflows/.github/workflows/soundness.yml@main
     with:
       license_header_check_project_name: "SwiftAWSLambdaRuntime"
-      shell_check_enabled: false
-      python_lint_check_enabled: false
+      shell_check_enabled: true
+      python_lint_check_enabled: true
       api_breakage_check_container_image: "swift:6.0-noble"
       docs_check_container_image: "swift:6.0-noble"
       format_check_container_image: "swiftlang/swift:nightly-6.0-jammy"
+      yamllint_check_enabled: true
 
   unit-tests:
     name: Unit tests
@@ -35,13 +36,25 @@ jobs:
       # We pass the list of examples here, but we can't pass an array as argument
       # Instead, we pass a String with a valid JSON array.
       # The workaround is mentioned here https://github.com/orgs/community/discussions/11692
-      examples: "[ 'APIGateway', 'BackgroundTasks', 'HelloJSON', 'HelloWorld', 'S3_AWSSDK', 'S3_Soto', 'Streaming' ]"
+      examples: "[ 'APIGateway', 'BackgroundTasks', 'HelloJSON', 'HelloWorld', 'S3_AWSSDK', 'S3_Soto', 'Streaming', 'Testing' ]"
 
       archive_plugin_enabled: true
 
   swift-6-language-mode:
     name: Swift 6 Language Mode
     uses: apple/swift-nio/.github/workflows/swift_6_language_mode.yml@main
+
+  semver-label-check:
+    name: Semantic Version label check
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check for Semantic Version label
+        uses: apple/swift-nio/.github/actions/pull_request_semver_label_checker@main
 
   # until there is a support for musl in swiftlang/github-workflows
   # https://github.com/swiftlang/github-workflows/issues/34

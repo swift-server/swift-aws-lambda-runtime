@@ -1,3 +1,5 @@
+# shellcheck disable=all
+
 2023-04-14T11:42:21+0200 info LocalLambdaServer : [AWSLambdaRuntimeCore] LocalLambdaServer started and listening on 127.0.0.1:7000, receiving events on /invoke
 2023-04-14T11:42:21+0200 info Lambda : [AWSLambdaRuntimeCore] lambda runtime starting with LambdaConfiguration
   General(logLevel: info))

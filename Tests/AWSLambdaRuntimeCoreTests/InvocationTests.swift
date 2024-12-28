@@ -12,11 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import NIOHTTP1
 import Testing
 
 @testable import AWSLambdaRuntimeCore
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 
 @Suite
 struct InvocationTest {

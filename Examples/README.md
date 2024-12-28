@@ -12,11 +12,15 @@ This directory contains example code for Lambda functions.
 
 - Some examples are using [AWS SAM](https://aws.amazon.com/serverless/sam/). Install the [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) before deploying these examples.
 
+- Some examples are using the [AWS CDK](https://aws.amazon.com/cdk/). Install the [CDK CLI](https://docs.aws.amazon.com/cdk/latest/guide/cli.html) before deploying these examples.
+
 ## Examples 
 
 - **[API Gateway](APIGateway/README.md)**: an HTTPS REST API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) and a Lambda function as backend (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
 
 - **[BackgroundTasks](BackgroundTasks/README.md)**: a Lambda function that continues to run background tasks after having sent the response (requires [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
+
+- **[CDK](CDK/README.md)**: a simple example of an AWS Lambda function invoked through an Amazon API Gateway and deployed with the Cloud Development Kit (CDK).
 
 - **[HelloJSON](HelloJSON/README.md)**: a Lambda function that accepts JSON as an input parameter and responds with a JSON output (requires [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
 
@@ -27,6 +31,8 @@ This directory contains example code for Lambda functions.
 - **[S3_Soto](S3_Soto/README.md)**: a Lambda function that uses [Soto](https://github.com/soto-project/soto) to invoke an [Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html) API (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
 
 - **[Streaming]**: create a Lambda function exposed as an URL. The Lambda function streams its response over time. (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
+
+- **[Testing](Testing/README.md)**: a test suite for Lambda functions.
 
 ## AWS Credentials and Signature
 
@@ -52,7 +58,7 @@ To obtain these keys, you need an AWS account:
 
 2. **Create IAM User**: In the console, go to IAM (Identity and Access Management) and create a new user. Ensure you set permissions that match what the user will need for your application (e.g., permissions to access specific AWS services, such as AWS Lambda).
 
-3. **Generate Access Key and Secret Access Key**: In the IAM user settings, find the option to generate an "Access Key" and "Secret Access Key." Save these securely! You’ll need them to authenticate your requests.
+3. **Generate Access Key and Secret Access Key**: In the IAM user credentials section, find the option to generate an "Access Key" and "Secret Access Key." Save these securely! You’ll need them to authenticate your requests.
 
 4. **(Optional) Generate Temporary Security Credentials**: If you’re using temporary credentials (which are more secure for short-term access), use AWS Security Token Service (STS). You can call the `GetSessionToken` or `AssumeRole` API to generate temporary credentials, including a session token.
 
