@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "SquareNumberLambda",
+    name: "Palindrome",
     platforms: [
         .macOS(.v15)
     ]

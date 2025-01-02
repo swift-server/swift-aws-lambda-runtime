@@ -1,9 +1,11 @@
 // the data structure to represent the input parameter
 struct Request: Decodable {
-    let number: Double
+    let text: String
 }
 
-// the data structure to represent the output response
+// the data structure to represent the response parameter
 struct Response: Encodable {
-    let result: Double
+    let text: String
+    let isPalindrome: Bool
+    let message: String
 }

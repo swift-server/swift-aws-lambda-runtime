@@ -4,19 +4,19 @@
 import PackageDescription
 
 let package = Package(
-    name: "SquareNumberLambda",
+    name: "Palindrome",
     platforms: [
         .macOS(.v15)
     ],
     products: [
-        .executable(name: "SquareNumberLambda", targets: ["SquareNumberLambda"])
+        .executable(name: "PalindromeLambda", targets: ["PalindromeLambda"])
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "main")
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main")
     ],
     targets: [
         .executableTarget(
-            name: "SquareNumberLambda",
+            name: "PalindromeLambda",
             dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime")
             ],

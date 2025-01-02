@@ -4,11 +4,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "SquareNumberLambda",
+    name: "Palindrome",
     platforms: [
         .macOS(.v15)
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "main")
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main")
     ]
 )
