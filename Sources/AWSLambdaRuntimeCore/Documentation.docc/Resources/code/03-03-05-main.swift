@@ -21,5 +21,5 @@ func isPalindrome(_ text: String) -> Bool {
 // the lambda handler function
 let runtime = LambdaRuntime {
     (event: Request, context: LambdaContext) -> Response in
-    
+
 }

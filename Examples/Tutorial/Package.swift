@@ -3,11 +3,13 @@
 
 import PackageDescription
 
+import struct Foundation.URL
+
 let package = Package(
     name: "Palindrome",
-    platforms: [ .macOS(.v15)],
+    platforms: [.macOS(.v15)],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -15,12 +17,11 @@ let package = Package(
         .executableTarget(
             name: "Palindrome",
             dependencies: [
-                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-            ]),
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime")
+            ]
+        )
     ]
 )
-
-import struct Foundation.URL
 
 if let localDepsPath = Context.environment["LAMBDA_USE_LOCAL_DEPS"],
     localDepsPath != "",
