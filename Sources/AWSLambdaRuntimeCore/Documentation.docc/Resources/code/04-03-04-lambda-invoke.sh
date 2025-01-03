@@ -1,6 +1,3 @@
-# shellcheck disable=all
-
-#
 # --region            the AWS Region to send the command
 # --function-name     the name of your function
 # --cli-binary-format tells the cli to use raw data as input (default is base64)
@@ -9,9 +6,9 @@
 
 aws lambda invoke                                \
            --region us-west-2                    \
-           --function-name SquaredNumberLambda   \
+           --function-name PalindromeLambda      \
            --cli-binary-format raw-in-base64-out \
-           --payload '{"number":3}'              \
+           --payload '{"text": "Was it a car or a cat I saw?"}' \
            result.json
 
 {

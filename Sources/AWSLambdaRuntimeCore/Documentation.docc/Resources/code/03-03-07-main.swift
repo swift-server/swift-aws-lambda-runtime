@@ -30,3 +30,6 @@ let runtime = LambdaRuntime {
         message: "Your text is \(result ? "a" : "not a") palindrome"
     )
 }
+
+// start the runtime
+try await runtime.run()
