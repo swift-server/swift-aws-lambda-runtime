@@ -1,6 +1,9 @@
-# API Gateway 
+# Lambda Authorizer with API Gateway 
 
-This is an example of a Lambda Authorizer function.  There are two Lambda function in this example. The first one is the authorizer function. The second one is the business function. The business function is exposed throigh a REST API using the API Gateway. The API Gateway is configured to use the authorizer function to authorize the requests. 
+This is an example of a Lambda Authorizer function.  There are two Lambda functions in this example. The first one is the authorizer function. The second one is the business function. The business function is exposed through a REST API using the API Gateway. The API Gateway is configured to use the authorizer function to implement a custom logic to authorize the requests. 
+
+>![NOTE]
+> If your application is protected by JWT tokens, it's recommended to use [the native JWT authorizer provided by the API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html). The Lambda authorizer is useful when you need to implement a custom authorization logic. See the [OAuth 2.0/JWT authorizer example for AWS SAM](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-controlling-access-to-apis-oauth2-authorizer.html) to learn how to use the native JWT authorizer with SAM.
 
 ## Code 
 
@@ -9,7 +12,6 @@ The authorizer function is a simple function that checks data received from the 
 There are two possible responses from a Lambda Authorizer function: policy and simple. The policy response returns an IAM policy document that describes the permissions of the caller. The simple response returns a boolean value that indicates if the caller is authorized or not. You can read more about the two types of responses in the [Lambda authorizer response format](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-lambda-authorizer.html) section of the API Gateway documentation.
 
 This example uses an authorizer that returns the simple response. The authorizer function is defined in the `Sources/AuthorizerLambda` directory. The business function is defined in the `Sources/APIGatewayLambda` directory.
-
 
 ## Build & Package 
 
@@ -25,7 +27,7 @@ The ZIP file are located under `.build/plugins/AWSLambdaPackager/outputs/AWSLamb
 
 ## Deploy
 
-The deployment must include the Lambda function and the API Gateway. We use the [Serverless Application Model (SAM)](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html) to deploy the infrastructure.
+The deployment must include the Lambda functions and the API Gateway. We use the [Serverless Application Model (SAM)](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html) to deploy the infrastructure.
 
 **Prerequisites** : Install the [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
 
@@ -49,7 +51,7 @@ The output is similar to this one.
 Outputs                                                                                                                     
 -----------------------------------------------------------------------------------------------------------------------------
 Key                 APIGatewayEndpoint                                                                                      
-Description         API Gateway endpoint URLI                                                                                
+Description         API Gateway endpoint URI                                                                                
 Value               https://a5q74es3k2.execute-api.us-east-1.amazonaws.com/demo                                                 
 -----------------------------------------------------------------------------------------------------------------------------
 ```
@@ -79,7 +81,7 @@ curl -v https://6sm6270j21.execute-api.us-east-1.amazonaws.com/demo
 {"message":"Unauthorized"}
 ```
 
-When invoking the Lambda function with the `Authorization` header, the response is a `200 OK` status code.
+When invoking the Lambda function with the `Authorization` header, the response is a `200 OK` status code. Note that the Lambda Authorizer function is configured to accept any value in the `Authorization` header.
 
 ```bash
 curl -v -H 'Authorization: 123' https://6sm6270j21.execute-api.us-east-1.amazonaws.com/demo
