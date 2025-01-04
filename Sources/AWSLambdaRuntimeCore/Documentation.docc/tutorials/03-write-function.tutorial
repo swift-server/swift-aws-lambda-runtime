@@ -1,6 +1,10 @@
 @Tutorial(time: 15) {
     @Intro(title: "Write your first Lambda function") {
-        Learn how to create your project, add dependencies, and create and test your first Lambda function in Swift.        
+        Learn how to create your project, add dependencies, and create and test your first Lambda function in Swift. 
+
+        In this example, we will create a Lambda function that receives a text and checks if this text is a palindrome or not.
+
+        A palindrome is a word or phrase that reads the same forward and backward.       
     }
     
     @Section(title: "Initialize a new project") {
@@ -51,7 +55,7 @@
             @Step {
                 In the Xcode editor, replace the content of `Package.swift` with the file on the right side of the screen.
 
-                It defines a package for a project named `SquareNumberLambda`. The package name only matters when you build a library that is used by other Swift packages.
+                It defines a package for a project named `Palindrome`. The package name only matters when you build a library that is used by other Swift packages.
                 
                 > Comments are important here, do not skip them. They define the minimum version of Swift to use.
                 @Code(name: "Package.swift", file: 03-02-01-package.swift)
@@ -72,7 +76,7 @@
             @Step {
                 Add the `target` section.
 
-                In the `targets` section you specify your own targets. They are pretty comparable to targets you specify within an Xcode project (that's probably why they share the name 😎). In our example we only want to create an executable that is called `SquareNumberLambda`. An executable must have an entrypoint. This can be either a `main.swift` or an object that is marked with `@main`. For Lambda we will use the `@main` approach. 
+                In the `targets` section you specify your own targets. They are pretty comparable to targets you specify within an Xcode project (that's probably why they share the name 😎). In our example we only want to create an executable that is called `PalindromeLambda`. An executable must have an entrypoint. This can be either a `main.swift` or an object that is marked with `@main`. For Lambda we will use the `@main` approach. 
 
                 @Code(name: "Package.swift", file: 03-02-04-package.swift)
             }
@@ -94,58 +98,65 @@
         }
         
         @Steps {
-            @Step {
-                Rename the file `main.swift` to something else. I typically use `Lambda.swift`.
-                
-                The `AWSLambdaRuntime` use the [`@main`](https://github.com/apple/swift-evolution/blob/main/proposals/0281-main-attribute.md) directive to designate the entry point in your code.
-                
-                >A `main.swift` file is always considered to be an entry point, even if it has no top-level code. Because of this, placing the @main-designated type in a `main.swift` file is an error. 
-                                
-                @Image(source: 03-03-01-rename-file, alt: "Rename the file in Xcode IDE")
-            }
-
             
             @Step {
-                Remove the code generated and create a `@main struct` that implements the protocol `SimpleLambdaHandler`
-                
-                @Code(name: "Lambda.swift", file: 03-03-01-main.swift)
+                Open the `main.swift` file, remove the code generated and write the code to represent the request sent to your Lambda function.
+
+                Input parameters must conform to the `Decodable` protocol. This ensures that your Lambda function accepts any JSON input.
+
+                > When your function is triggered by another AWS service, we modeled most of the input and output data format for you. You can add the dependency on [https://github.com/swift-server/swift-aws-lambda-events](https://github.com/swift-server/swift-aws-lambda-events) and import `AWSLambdaEvents` in your code.
+
+                @Code(name: "main.swift", file: 03-03-01-main.swift)
             }
                         
             @Step {
-                Add an import statement to import the `AWSLambdaRuntime` library. 
-                @Code(name: "Lambda.swift", file: 03-03-02-main.swift)
-            }
-            
-            @Step {
-                Write the `handle(_:context:) async throws -> Output` function as defined in `SimpleLambdaHandler` protocol.
-                
-                The `handle(_:context:)` function is the entry point of the Lambda function.  
-                @Code(name: "Lambda.swift", file: 03-03-03-main.swift)
+                Write the code to represent the response returned by your Lambda function.
+
+                Output parameters must conform to the `Encodable` protocol. This ensures that your Lambda function returns a valid JSON output. Your function might also return `Void` if it does not return any value.
+
+                > You can also write function that stream a response back to the caller. This is useful when you have a large amount of data to return. See the [Lambda Streaming example](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples/Streaming) for more information.
+
+                @Code(name: "main.swift", file: 03-03-02-main.swift)
             }
 
             @Step {
-                Add the definition of the input and output parameters.
+                Write your business logic.
                 
-                Input and Output parameters must conform to the `Codable` protocol. This ensures that your Lambda function accepts a JSON input and creates a JSON output.
-                Your function can use any `Codable`. When your function is triggered by another AWS service, we modeled most of the input and output data format for you. You can add the dependency on https://github.com/swift-server/swift-aws-lambda-events and import `AWSLambdaEvents` in your code.
-                
-                @Code(name: "Lambda.swift", file: 03-03-04-main.swift)
+                In real life project, this will be the most complex part of your code. It will live in spearate files or libraries. For this example, we will keep it simple and just return `true` if a `String` is a palindrome.
+
+                @Code(name: "main.swift", file: 03-03-03-main.swift)
             }
             
             @Step {
-                Modify the `struct` and the `handle(_:context:)` function to use your input and output parameter types.
-                
-                @Code(name: "Lambda.swift", file: 03-03-05-main.swift)
+                Add an `import` statement to import the `AWSLambdaRuntime` library. 
+
+                @Code(name: "main.swift", file: 03-03-04-main.swift)
             }
 
             @Step {
-                Add your function-specific business logic.
+                Create a `LambdaRuntime` struct and add a handler function that will be called by the Lambda runtime.
+
+                This function is passed as a closure to the initializer of the `LambdaRuntime` struct. It accepts two parameters: the input event and the context. The input event is the JSON payload sent to your Lambda function. The context provides information about the function, such as the function name, memory limit, and log group name. The function returns the output event, which is the JSON payload returned by your Lambda function or Void if your function does not return any value.
+
+                @Code(name: "main.swift", file: 03-03-05-main.swift)
+            }
+
+            @Step {
+                Add the business logic to the handler function and return the response.
+
+                In this example, we call the `isPalindrome(_:)` function to check if the input string is a palindrome. Then, we create a response with the result of the check.
                 
-                As mentioned earlier, this example is very simple, it just squares the number received as input. Your actual function can do whatever you want: call APIs, access a database, or any other task your business requires. 
-                
-                @Code(name: "Lambda.swift", file: 03-03-06-main.swift)
+                @Code(name: "main.swift", file: 03-03-06-main.swift)
             }
             
+            @Step {
+                Start the runtime by calling the `run()` function.
+
+                This function starts the Lambda runtime and listens for incoming requests. When a request is received, it calls the handler function with the input event and context. The handler function processes the request and returns the output event. The runtime sends the output event back to the caller. This function might `throw` an error if the runtime fails to process an event or if the handler function throws an error. This function is asynchronous and does not return until the runtime is stopped.
+                
+                @Code(name: "main.swift", file: 03-03-07-main.swift)
+            }
+
         }
     }
 
@@ -160,61 +171,51 @@
         
         @Steps {
             
-            The embedded web server starts only when an environment variable is defined. You will edit the Run step of the target scheme to include the environment variable. This will allow you to run your code from Xcode.
+            The embedded web server starts only when compiling in `DEBUG` mode and when the code is not run inside a Lambda function environment. You will start the test server directly from Xcode.
             
             @Step {
-                Select `Edit Scheme` under `SquareNumberLambda` target. 
+                Compile and run your project. Click on the `Run` button (▶️) in Xcode. 
                 
-                @Image(source: 03-04-01-edit-scheme.png, alt: "Menu entry to edit schemes")
+                @Image(source: 03-04-01-compile-run.png, alt: "Compile and run the project")
+            }
+                        
+            @Step {
+                Verify the server is correctlys started. You should see the following output in the console.
+                
+                @Code(name: "Console output", file: 03-04-02-console-output.sh)
             }
             
             @Step {
-                Add the `LOCAL_LAMBDA_SERVER_ENABLED` environment variable, with a value of `true` under `Run` settings.
+                Now that the local server started, open a Terminal and use `curl` or any other HTTP client to POST your input payload to `127.0.0.1:7000`.
                 
-                @Image(source: 03-04-02-add-variable.png, alt: "Add environment variable under Run settings")
+                @Code(name: "curl command in a terminal", file: 03-04-03-curl.sh)
             }
             
             @Step {
-                Compile and Run your project. You should see the following output in the console.
+                When you pass `'{"text": "Was it a car or a cat I saw?"}'`, you should receive the response `{"message":"Your text is a palindrome","isPalindrome":true,"text":"Was it a car or a cat I saw?"}`
                 
-                @Code(name: "Console output", file: 03-04-03-console-output.sh)
-            }
-            
-            @Step {
-                Now that the local server started, open a Terminal and use `curl` or any other HTTP client to POST your input payload to `localhost:7000`.
-                
+                > Do not forget to stop the running scheme in Xcode (⏹️) when you're done.
+
                 @Code(name: "curl command in a terminal", file: 03-04-04-curl.sh)
-            }
-            
-            @Step {
-                When you pass `{"number":3}`, you should receive the response `{"result":9}`
-                
-                > Do not forget to stop the running scheme when you're done.
-                @Code(name: "curl command in a terminal", file: 03-04-05-curl.sh)
             }
                                     
             Alternatively, you can use the command line from the Terminal.
 
             @Step {
-                From a Terminal, set the `LOCAL_LAMBDA_SERVER_ENABLED` environment variable to `true`
-                @Code(name: "curl command in a terminal", file: 03-04-06-terminal.sh)
-            }
-
-            @Step {
                 Use the command `swift run` to start the local embedded web server.
-                @Code(name: "curl command in a terminal", file: 03-04-07-terminal.sh)
+                @Code(name: "curl command in a terminal", file: 03-04-06-terminal.sh)
             }
             
             @Step {
                 You should see the following output in the console. 
-                @Code(name: "curl command in a terminal", file: 03-04-08-terminal.sh)
+                @Code(name: "curl command in a terminal", file: 03-04-07-terminal.sh)
             }
             
             @Step {
-                Now that the local server started, open a second tab in the Terminal and use `curl` or any other HTTP client to POST your input payload to `localhost:7000`.
+                Now that the local server started, open a second tab in the Terminal and use `curl` or any other HTTP client to POST your input payload to `127.0.0.1:7000`.
                 
                 > Do not forget to stop the local server with `CTRL-C` when you're done.
-                @Code(name: "curl command in a terminal", file: 03-04-04-curl.sh)
+                @Code(name: "curl command in a terminal", file: 03-04-03-curl.sh)
             }
             
         }        
