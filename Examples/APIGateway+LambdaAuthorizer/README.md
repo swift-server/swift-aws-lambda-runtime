@@ -2,7 +2,7 @@
 
 This is an example of a Lambda Authorizer function.  There are two Lambda functions in this example. The first one is the authorizer function. The second one is the business function. The business function is exposed through a REST API using the API Gateway. The API Gateway is configured to use the authorizer function to implement a custom logic to authorize the requests. 
 
->![NOTE]
+>[!NOTE]
 > If your application is protected by JWT tokens, it's recommended to use [the native JWT authorizer provided by the API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html). The Lambda authorizer is useful when you need to implement a custom authorization logic. See the [OAuth 2.0/JWT authorizer example for AWS SAM](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-controlling-access-to-apis-oauth2-authorizer.html) to learn how to use the native JWT authorizer with SAM.
 
 ## Code 
