@@ -29,7 +29,9 @@ import Foundation
 public final class LambdaRuntime<Handler>: Service, @unchecked Sendable where Handler: StreamingLambdaHandler {
     // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
     let handlerMutex: NIOLockedValueBox<Handler?>
-    let logger: Logger
+
+    // logger is accessible from the outside, but only mutable from the inside
+    public private(set) var logger: Logger
     let eventLoop: EventLoop
 
     public init(
