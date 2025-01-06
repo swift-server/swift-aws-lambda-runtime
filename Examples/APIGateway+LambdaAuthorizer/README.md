@@ -63,7 +63,7 @@ To invoke the Lambda function, use this `curl` command line. Be sure to replace 
 When invoking the Lambda function without `Authorization` header, the response is a `401 Unauthorized` error.
 
 ```bash
-curl -v https://6sm6270j21.execute-api.us-east-1.amazonaws.com/demo
+curl -v https://a5q74es3k2.execute-api.us-east-1.amazonaws.com/demo
 ...
 > GET /demo HTTP/2
 > Host: 6sm6270j21.execute-api.us-east-1.amazonaws.com
@@ -84,7 +84,7 @@ curl -v https://6sm6270j21.execute-api.us-east-1.amazonaws.com/demo
 When invoking the Lambda function with the `Authorization` header, the response is a `200 OK` status code. Note that the Lambda Authorizer function is configured to accept any value in the `Authorization` header.
 
 ```bash
-curl -v -H 'Authorization: 123' https://6sm6270j21.execute-api.us-east-1.amazonaws.com/demo
+curl -v -H 'Authorization: 123' https://a5q74es3k2.execute-api.us-east-1.amazonaws.com/demo
 ...
 > GET /demo HTTP/2
 > Host: 6sm6270j21.execute-api.us-east-1.amazonaws.com
@@ -108,5 +108,5 @@ curl -v -H 'Authorization: 123' https://6sm6270j21.execute-api.us-east-1.amazona
 When done testing, you can delete the infrastructure with this command.
 
 ```bash
-sam delete 
+sam delete --stack-name APIGatewayWithLambdaAuthorizer
 ```
