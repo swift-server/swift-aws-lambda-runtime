@@ -23,7 +23,7 @@ swift package init --type executable
 2. Add dependencies on `AWSLambdaRuntime` library 
 
 ```swift
-// swift-tools-version:5.8
+// swift-tools-version:6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -53,9 +53,7 @@ let package = Package(
 
 3. Write your function code.
 
-> Be sure to rename the `main.swift` file to something else.
-
-Create an instance of `LambdaRuntime` and pass as a closure a function with this signature: `(_ : Event, context: LambdaContext) async throws -> Output` (as defined in the `LambdaHandler` protocol). `Event` must be `Decodable`.
+Create an instance of `LambdaRuntime` and pass a function as a closure. The function has this signature: `(_: Event, context: LambdaContext) async throws -> Output` (as defined in the `LambdaHandler` protocol). `Event` must be `Decodable`. `Output` must be `Encodable`.
 
 If your Lambda function is invoked by another AWS service, use the `AWSLambdaEvent` library at [https://github.com/swift-server/swift-aws-lambda-events](https://github.com/swift-server/swift-aws-lambda-events) to represent the input event.
 

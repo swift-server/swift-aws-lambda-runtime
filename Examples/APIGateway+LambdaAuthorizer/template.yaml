@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for APIGateway Lambda Example
+
+Resources:
+  # The API Gateway
+  MyProtectedApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        DefaultAuthorizer: MyLambdaRequestAuthorizer
+        Authorizers:
+          MyLambdaRequestAuthorizer:
+            FunctionArn: !GetAtt AuthorizerLambda.Arn
+            Identity:
+              Headers:
+                - Authorization
+            AuthorizerPayloadFormatVersion: "2.0"
+            EnableSimpleResponses: true
+
+  # Give the API Gateway permissions to invoke the Lambda authorizer
+  AuthorizerPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AuthorizerLambda
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${MyProtectedApi}/*
+
+  # Lambda business function
+  APIGatewayLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip
+      Timeout: 60
+      Handler: swift.bootstrap  # ignored by the Swift runtime
+      Runtime: provided.al2
+      MemorySize: 512
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          # by default, AWS Lambda runtime produces no log
+          # use `LOG_LEVEL: debug` for for lifecycle and event handling information
+          # use `LOG_LEVEL: trace` for detailed input event information
+          LOG_LEVEL: debug
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref MyProtectedApi
+            Path: /demo
+            Method: ANY
+
+  # Lambda authorizer function
+  AuthorizerLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/AuthorizerLambda/AuthorizerLambda.zip
+      Timeout: 29  # max 29 seconds for Lambda authorizers
+      Handler: swift.bootstrap  # ignored by the Swift runtime
+      Runtime: provided.al2
+      MemorySize: 512
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          # by default, AWS Lambda runtime produces no log
+          # use `LOG_LEVEL: debug` for for lifecycle and event handling information
+          # use `LOG_LEVEL: trace` for detailed input event information
+          LOG_LEVEL: debug
+
+Outputs:
+  # print API Gateway endpoint
+  APIGatewayEndpoint:
+    Description: API Gateway endpoint URI
+    Value: !Sub "https://${MyProtectedApi}.execute-api.${AWS::Region}.amazonaws.com/demo"

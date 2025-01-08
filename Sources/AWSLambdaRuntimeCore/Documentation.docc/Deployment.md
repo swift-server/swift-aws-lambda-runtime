@@ -68,6 +68,9 @@ Here is the content of this guide:
 
    The name of the ZIP file depends on the target name you entered in the `Package.swift` file.
 
+   >[!NOTE]
+   > When building on Linux, your current user must have permission to use docker. On most Linux distributions, you can do so by adding your user to the `docker` group with the following command: `sudo usermod -aG docker $USER`. You must log out and log back in for the changes to take effect.
+
 ## Choosing the AWS Region where to deploy
 
 [AWS Global infrastructure](https://aws.amazon.com/about-aws/global-infrastructure/) spans over 34 geographic Regions (and continuously expanding). When you create a resource on AWS, such as a Lambda function, you have to select a geographic region where the resource will be created. The two main factors to consider to select a Region are the physical proximity with your users and geographical compliance. 
