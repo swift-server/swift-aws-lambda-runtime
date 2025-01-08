@@ -158,11 +158,11 @@ The `--architectures` flag is only required when you build the binary on an Appl
 Be sure to replace <YOUR_ACCOUNT_ID> with your actual AWS account ID (for example: 012345678901).
 
 > [!IMPORTANT] 
-> Before starting, you need the `lambda_basic_execution` IAM role in your AWS account.
+> Before creating a function, you need to have a `lambda_basic_execution` IAM role in your AWS account.
 >
 > You can create this role in two ways:
 > 1. Using AWS Console
-> 2. Running the commands in the `create_lambda_execution_role()` function in `Examples/_MyFirstFunction/create_iam_role.sh`
+> 2. Running the commands in the `create_lambda_execution_role()` function in [`Examples/_MyFirstFunction/create_iam_role.sh`](https://github.com/swift-server/swift-aws-lambda-runtime/blob/8dff649920ab0c66bb039d15ae48d9d5764db71a/Examples/_MyFirstFunction/create_and_deploy_function.sh#L40C1-L40C31)
 
 6. Invoke your Lambda function
 
