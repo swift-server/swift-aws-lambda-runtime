@@ -18,6 +18,8 @@ This directory contains example code for Lambda functions.
 
 - **[API Gateway](APIGateway/README.md)**: an HTTPS REST API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) and a Lambda function as backend (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
 
+- **[API Gateway with Lambda Authorizer](APIGateway+LambdaAuthorizer/README.md)**: an HTTPS REST API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) protected by a Lambda authorizer (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
+
 - **[BackgroundTasks](BackgroundTasks/README.md)**: a Lambda function that continues to run background tasks after having sent the response (requires [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
 
 - **[CDK](CDK/README.md)**: a simple example of an AWS Lambda function invoked through an Amazon API Gateway and deployed with the Cloud Development Kit (CDK).
