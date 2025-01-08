@@ -40,7 +40,9 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 
 ## Getting started
 
-To get started, read [the Swift AWS Lambda runtime v1 tutorial](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/1.0.0-alpha.3/tutorials/table-of-content). It provides developers with detailed step-by-step instructions to develop, build, and deploy a Lambda function.
+To get started, read [the Swift AWS Lambda runtime tutorial](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/tutorials/table-of-content). It provides developers with detailed step-by-step instructions to develop, build, and deploy a Lambda function.
+
+We also wrote a comprehensive [deployment guide](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/documentation/awslambdaruntimecore/deployment).
 
 Or, if you're impatient to start with runtime v2, try these six steps:
 
