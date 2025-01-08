@@ -1,8 +1,18 @@
-> [!IMPORTANT] 
+> [!IMPORTANT]
 > The documentation included here refers to the Swift AWS Lambda Runtime v2 (code from the main branch). If you're developing for the runtime v1.x, check this [readme](https://github.com/swift-server/swift-aws-lambda-runtime/blob/v1/readme.md) instead.
 
 > [!WARNING]
 > The Swift AWS Runtime v2 is work in progress. We will add more documentation and code examples over time.
+
+This guide contains the follwoing sections:
+
+- [The Swift AWS Lambda Runtime](#the-swift-aws-lambda-runtime)
+- [Pre-requisites](#pre-requisites)
+- [Getting started](#getting-started)
+- [Developing your Swift Lambda functions](#developing-your-swift-lambda-functions)
+- [Testing Locally](#testing-locally)
+- [Deploying your Swift Lambda functions](#deploying-your-swift-lambda-functions)
+- [Swift AWS Lambda Runtime - Design Principles](#swift-aws-lambda-runtime---design-principles)% 
 
 ## The Swift AWS Lambda Runtime
 
@@ -30,11 +40,13 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 
 ## Getting started
 
-To get started, read [the Swift AWS Lambda runtime v1 tutorial](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/1.0.0-alpha.3/tutorials/table-of-content). It provides developers with detailed step-by-step instructions to develop, build, and deploy a Lambda function.
+To get started, read [the Swift AWS Lambda runtime tutorial](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/tutorials/table-of-content). It provides developers with detailed step-by-step instructions to develop, build, and deploy a Lambda function.
+
+We also wrote a comprehensive [deployment guide](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/documentation/awslambdaruntimecore/deployment).
 
 Or, if you're impatient to start with runtime v2, try these six steps:
 
-The `Examples/_MyFirstFunction` contains a script that goes through the steps described in this section. 
+The `Examples/_MyFirstFunction` contains a script that goes through the steps described in this section.
 
 If you are really impatient, just type:
 
@@ -94,12 +106,12 @@ swift package init --type executable
 3. Scaffold a minimal Lambda function
 
 The runtime comes with a plugin to generate the code of a simple AWS Lambda function:
- 
+
 ```bash
-swift package lambda-init --allow-writing-to-package-directory 
+swift package lambda-init --allow-writing-to-package-directory
 ```
 
-Your `Sources/main.swift` file must look like this. 
+Your `Sources/main.swift` file must look like this.
 
 ```swift
 import AWSLambdaRuntime
@@ -114,7 +126,7 @@ let runtime = LambdaRuntime {
 try await runtime.run()
 ```
 
-4. Build & archive the package 
+4. Build & archive the package
 
 The runtime comes with a plugin to compile on Amazon Linux and create a ZIP archive:
 
@@ -122,7 +134,7 @@ The runtime comes with a plugin to compile on Amazon Linux and create a ZIP arch
 swift package archive --allow-network-connections docker
 ```
 
-If there is no error, the ZIP archive is ready to deploy. 
+If there is no error, the ZIP archive is ready to deploy.
 The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip`
 
 5. Deploy to AWS
@@ -145,6 +157,13 @@ The `--architectures` flag is only required when you build the binary on an Appl
 
 Be sure to replace <YOUR_ACCOUNT_ID> with your actual AWS account ID (for example: 012345678901).
 
+> [!IMPORTANT] 
+> Before creating a function, you need to have a `lambda_basic_execution` IAM role in your AWS account.
+>
+> You can create this role in two ways:
+> 1. Using AWS Console
+> 2. Running the commands in the `create_lambda_execution_role()` function in [`Examples/_MyFirstFunction/create_iam_role.sh`](https://github.com/swift-server/swift-aws-lambda-runtime/blob/8dff649920ab0c66bb039d15ae48d9d5764db71a/Examples/_MyFirstFunction/create_and_deploy_function.sh#L40C1-L40C31)
+
 6. Invoke your Lambda function
 
 ```bash
@@ -154,7 +173,7 @@ aws lambda invoke \
 out.txt && cat out.txt && rm out.txt
 ```
 
-This should print 
+This should print
 
 ```
 {
@@ -164,7 +183,7 @@ This should print
 "dlroW olleH"
 ```
 
-## Developing your Swift Lambda functions 
+## Developing your Swift Lambda functions
 
 ### Receive and respond with JSON objects
 
@@ -241,7 +260,7 @@ You can learn how to deploy and invoke this function in [the streaming example R
 ### Integration with AWS Services
 
  Most Lambda functions are triggered by events originating in other AWS services such as `Amazon SNS`, `Amazon SQS` or `AWS APIGateway`.
- 
+
  The [Swift AWS Lambda Events](http://github.com/swift-server/swift-aws-lambda-events) package includes an `AWSLambdaEvents` module that provides implementations for most common AWS event types further simplifying writing Lambda functions.
 
  Here is an example Lambda function invoked when the AWS APIGateway receives an HTTP request.
@@ -261,11 +280,11 @@ try await runtime.run()
 
  You can learn how to deploy and invoke this function in [the API Gateway example README file](Examples/APIGateway/README.md).
 
-### Integration with Swift Service LifeCycle 
+### Integration with Swift Service LifeCycle
 
 tbd + link to docc
 
-### Use Lambda Background Tasks 
+### Use Lambda Background Tasks
 
 Background tasks allow code to execute asynchronously after the main response has been returned, enabling additional processing without affecting response latency. This approach is ideal for scenarios like logging, data updates, or notifications that can be deferred. The code leverages Lambda's "Response Streaming" feature, which is effective for balancing real-time user responsiveness with the ability to perform extended tasks post-response. For more information about Lambda background tasks, see [this AWS blog post](https://aws.amazon.com/blogs/compute/running-code-after-returning-a-response-from-an-aws-lambda-function/).
 
@@ -273,7 +292,11 @@ Background tasks allow code to execute asynchronously after the main response ha
 Here is an example of a minimal function that waits 10 seconds after it returned a response but before the handler returns.
 ```swift
 import AWSLambdaRuntime
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 
 struct BackgroundProcessingHandler: LambdaWithBackgroundProcessingHandler {
     struct Input: Decodable {
@@ -338,10 +361,10 @@ curl -v --header "Content-Type:\ application/json" --data @events/create-session
 > Accept: */*
 > Content-Type:\ application/json
 > Content-Length: 1160
-> 
+>
 < HTTP/1.1 200 OK
 < content-length: 247
-< 
+<
 * Connection #0 to host 127.0.0.1 left intact
 {"statusCode":200,"isBase64Encoded":false,"body":"...","headers":{"Access-Control-Allow-Origin":"*","Content-Type":"application\/json; charset=utf-8","Access-Control-Allow-Headers":"*"}}
 ```
@@ -359,9 +382,45 @@ LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT=/2015-03-31/functions/function/invocatio
 
 ## Deploying your Swift Lambda functions
 
+There is a full deployment guide available in [the documentation](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/documentation/awslambdaruntimecore/deployment).
 
-TODO
+There are multiple ways to deploy your Swift code to AWS Lambda. The very first time, you'll probably use the AWS Console to create a new Lambda function and upload your code as a zip file. However, as you iterate on your code, you'll want to automate the deployment process.
 
+To take full advantage of the cloud, we recommend using Infrastructure as Code (IaC) tools like the [AWS Serverless Application Model (SAM)](https://aws.amazon.com/serverless/sam/) or [AWS Cloud Development Kit (CDK)](https://aws.amazon.com/cdk/). These tools allow you to define your infrastructure and deployment process as code, which can be version-controlled and automated.
+
+Alternatively, you might also consider using popular third-party tools like [Serverless Framework](https://www.serverless.com/), [Terraform](https://www.terraform.io/), or [Pulumi](https://www.pulumi.com/) to deploy Lambda functions and create and manage AWS infrastructure.
+
+Here is a short example that shows how to deploy using SAM.
+
+**Prerequisites** : Install the [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
+
+When using SAM, you describe your deployment in a YAML text file.
+The [API Gateway example directory](Examples/APIGateway/template.yaml) contains a file named `template.yaml` that you can use as a starting point.
+
+To deploy your Lambda function and create the infrastructure, type the following `sam` command.
+
+```bash
+sam deploy \
+--resolve-s3 \
+--template-file template.yaml \
+--stack-name APIGatewayLambda \
+--capabilities CAPABILITY_IAM 
+```
+
+At the end of the deployment, the script lists the API Gateway endpoint.
+The output is similar to this one.
+
+```
+-----------------------------------------------------------------------------------------------------------------------------
+Outputs                                                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------
+Key                 APIGatewayEndpoint                                                                                      
+Description         API Gateway endpoint URL"                                                                                
+Value               https://a5q74es3k2.execute-api.us-east-1.amazonaws.com                                                  
+-----------------------------------------------------------------------------------------------------------------------------
+```
+
+Please refer to the full deployment guide available in [the documentation](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/documentation/awslambdaruntime) for more details.
 
 ## Swift AWS Lambda Runtime - Design Principles
 
@@ -383,7 +442,7 @@ The v2 API prioritizes the following principles:
 
 The v2 API introduces two new features:
 
-[Response Streaming](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/]): This functionality is ideal for handling large responses that need to be sent incrementally.   
+[Response Streaming](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/]): This functionality is ideal for handling large responses that need to be sent incrementally.  
 
 [Background Work](https://aws.amazon.com/blogs/compute/running-code-after-returning-a-response-from-an-aws-lambda-function/): Schedule tasks to run after returning a response to the AWS Lambda control plane.
 

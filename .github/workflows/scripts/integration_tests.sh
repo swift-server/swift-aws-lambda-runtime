@@ -22,13 +22,10 @@ fatal() { error "$@"; exit 1; }
 test -n "${SWIFT_VERSION:-}" || fatal "SWIFT_VERSION unset"
 test -n "${COMMAND:-}" || fatal "COMMAND unset"
 test -n "${EXAMPLE:-}" || fatal "EXAMPLE unset"
-swift_version="$SWIFT_VERSION"
-command="$COMMAND"
-example="$EXAMPLE"
 
-pushd Examples/"$example" > /dev/null
+pushd Examples/"$EXAMPLE" > /dev/null
 
 log "Running command with Swift $SWIFT_VERSION"
-eval "$command"
+eval "$COMMAND"
 
 popd

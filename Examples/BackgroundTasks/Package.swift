@@ -5,15 +5,9 @@ import PackageDescription
 // needed for CI to test the local version of the library
 import struct Foundation.URL
 
-#if os(macOS)
-let platforms: [PackageDescription.SupportedPlatform]? = [.macOS(.v15)]
-#else
-let platforms: [PackageDescription.SupportedPlatform]? = nil
-#endif
-
 let package = Package(
     name: "swift-aws-lambda-runtime-example",
-    platforms: platforms,
+    platforms: [.macOS(.v15)],
     products: [
         .executable(name: "BackgroundTasks", targets: ["BackgroundTasks"])
     ],
@@ -27,7 +21,7 @@ let package = Package(
             dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime")
             ],
-            path: "."
+            path: "Sources"
         )
     ]
 )

@@ -12,10 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import Logging
 import NIOConcurrencyHelpers
 import NIOCore
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 
 // We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
 // We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
@@ -39,7 +44,8 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         // this approach is less flexible but more performant than reading the value of the environment variable at each invocation
         var log = logger
         log.logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
-        self.logger = logger
+        self.logger = log
+        self.logger.debug("LambdaRuntime initialized")
     }
 
     public func run() async throws {
