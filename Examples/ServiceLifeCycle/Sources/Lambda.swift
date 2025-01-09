@@ -1,4 +1,4 @@
-import AWSLambdaRuntime
+import AWSLambdaRuntimeService
 import Logging
 import PostgresNIO
 import ServiceLifecycle

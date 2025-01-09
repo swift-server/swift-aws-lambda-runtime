@@ -12,8 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_exported import AWSLambdaRuntimeCore
-import NIOCore
+@_exported import AWSLambdaRuntime
 
 import ServiceLifecycle
 #if canImport(FoundationEssentials)

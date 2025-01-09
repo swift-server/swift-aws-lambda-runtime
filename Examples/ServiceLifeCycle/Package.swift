@@ -17,11 +17,9 @@ let package = Package(
         .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.6.3"),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .executableTarget(name: "pg", dependencies: [
             .product(name: "PostgresNIO", package: "postgres-nio"),
-            .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+            .product(name: "AWSLambdaRuntimeService", package: "swift-aws-lambda-runtime"),
             .product(name: "ServiceLifecycle", package: "swift-service-lifecycle")
         ]),
     ]
