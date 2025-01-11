@@ -107,4 +107,9 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
             #endif
         }
     }
+
+    /// Cancels the runtime client loop.
+    public func cancel() {
+        Lambda.cancel()
+    }
 }

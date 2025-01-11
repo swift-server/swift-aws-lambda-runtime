@@ -16,6 +16,7 @@ import Dispatch
 import Logging
 import NIOCore
 import NIOPosix
+import Synchronization
 
 #if os(macOS)
 import Darwin.C
@@ -30,6 +31,15 @@ import ucrt
 #endif
 
 public enum Lambda {
+
+    // allow to gracefully shitdown the runtime client loop
+    // this supports gracefull shutdown of the Lambda runtime when integarted with Swift ServiceLifeCycle
+    private static let cancelled: Mutex<Bool> = Mutex(false)
+    public static func cancel() {
+        Lambda.cancelled.withLock {
+            $0 = true
+        }
+    }
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
         runtimeClient: RuntimeClient,
         handler: Handler,
@@ -37,9 +47,12 @@ public enum Lambda {
     ) async throws where Handler: StreamingLambdaHandler {
         var handler = handler
 
-        while !Task.isCancelled {
+        var cancelled: Bool = Lambda.cancelled.withLock { $0 }
+        while !Task.isCancelled && !cancelled {
+            logger.trace("Waiting for next invocation")
             let (invocation, writer) = try await runtimeClient.nextInvocation()
 
+            logger.trace("Received invocation : \(invocation.metadata.requestID)")
             do {
                 try await handler.handle(
                     invocation.event,
@@ -56,7 +69,11 @@ public enum Lambda {
                 try await writer.reportError(error)
                 continue
             }
+
+            logger.trace("Completed invocation : \(invocation.metadata.requestID)")
+            cancelled = Lambda.cancelled.withLock { $0 }
         }
+        logger.trace("Lambda runLoop() \(cancelled ? "cancelled" : "completed")")
     }
 
     /// The default EventLoop the Lambda is scheduled on.

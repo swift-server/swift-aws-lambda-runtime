@@ -7,9 +7,9 @@ import PackageDescription
 import struct Foundation.URL
 
 let package = Package(
-    name: "pg",
+    name: "LambdaWithServiceLifecycle",
     platforms: [
-        .macOS(.v15),
+        .macOS(.v15)
     ],
     dependencies: [
         .package(url: "https://github.com/vapor/postgres-nio.git", from: "1.23.0"),
@@ -17,11 +17,14 @@ let package = Package(
         .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.6.3"),
     ],
     targets: [
-        .executableTarget(name: "pg", dependencies: [
-            .product(name: "PostgresNIO", package: "postgres-nio"),
-            .product(name: "AWSLambdaRuntimeService", package: "swift-aws-lambda-runtime"),
-            .product(name: "ServiceLifecycle", package: "swift-service-lifecycle")
-        ]),
+        .executableTarget(
+            name: "LambdaWithServiceLifecycle",
+            dependencies: [
+                .product(name: "PostgresNIO", package: "postgres-nio"),
+                .product(name: "AWSLambdaRuntimeService", package: "swift-aws-lambda-runtime"),
+                .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
+            ]
+        )
     ]
 )
 

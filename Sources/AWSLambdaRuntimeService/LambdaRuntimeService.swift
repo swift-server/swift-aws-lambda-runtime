@@ -13,25 +13,30 @@
 //===----------------------------------------------------------------------===//
 
 @_exported import AWSLambdaRuntime
-
+import Logging
 import ServiceLifecycle
-
 
 ///
 /// Encapsulate a LambdaRuntime+Codable to offer the same API but this time exposed as a Swift Service
 /// This allows to avoid the Service extra payload for Lambda functions that doesn't need it
 ///
-public class LambdaRuntimeService<Handler>: Service, @unchecked Sendable where Handler: StreamingLambdaHandler  {
+public class LambdaRuntimeService<Handler>: Service, @unchecked Sendable where Handler: StreamingLambdaHandler {
 
-    let runtime: LambdaRuntime<Handler>
+    private let logger: Logger
+    private let runtime: LambdaRuntime<Handler>
 
     public func run() async throws {
-        try await cancelWhenGracefulShutdown {
-            try await self.runtime.run()
+        try await withTaskCancellationOrGracefulShutdownHandler {
+            self.logger.debug("LambdaRuntime will start")
+            try await runtime.run()
+        } onCancelOrGracefulShutdown: {
+            self.logger.debug("LambdaRuntime will be cancelled or gracefully shutdown")
+            self.runtime.cancel()
         }
     }
 
-    init(handler: sending Handler) {
-        self.runtime = LambdaRuntime(handler: handler)
+    init(handler: sending Handler, logger: Logger) {
+        self.logger = logger
+        self.runtime = LambdaRuntime(handler: handler, logger: logger)
     }
 }

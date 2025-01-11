@@ -1,3 +1,17 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the SwiftAWSLambdaRuntime open source project
+//
+// Copyright (c) 2025 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Licensed under Apache License v2.0
+//
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
+
 import AWSLambdaRuntimeService
 import Logging
 import PostgresNIO
@@ -8,8 +22,49 @@ struct LambdaFunction {
 
     static func main() async throws {
 
-        var logger = Logger(label: "Example")
+        var logger = Logger(label: "ServiceLifecycleExample")
         logger.logLevel = .trace
+
+        let pgClient = try preparePostgresClient(
+            host: Lambda.env("DB_HOST") ?? "localhost",
+            user: Lambda.env("DB_USER") ?? "postgres",
+            password: Lambda.env("DB_PASSWORD") ?? "secret",
+            dbName: Lambda.env("DB_NAME") ?? "test"
+        )
+
+        /// Instantiate LambdaRuntime with a closure handler implementing the business logic of the Lambda function
+        let runtime = LambdaRuntimeService(logger: logger) { (event: String, context: LambdaContext) in
+
+            do {
+                // Use initialized service within the handler
+                // IMPORTANT - CURRENTLY WHEN THERE IS AN ERROR, THIS CALL HANGS !!!
+                let rows = try await pgClient.query("SELECT id, username FROM users")
+                for try await (id, username) in rows.decode((Int, String).self) {
+                    logger.debug("\(id) : \(username)")
+                }
+            } catch {
+                logger.error("PG Error: \(error)")
+            }
+        }
+
+        /// Use ServiceLifecycle to manage the initialization and termination
+        /// of the PGClient together with the LambdaRuntime
+        let serviceGroup = ServiceGroup(
+            services: [pgClient, runtime],
+            gracefulShutdownSignals: [.sigterm],  // add SIGINT for CTRL+C in local testing
+            logger: logger
+        )
+        try await serviceGroup.run()
+
+        // perform any cleanup here
+    }
+
+    private static func preparePostgresClient(
+        host: String,
+        user: String,
+        password: String,
+        dbName: String
+    ) throws -> PostgresClient {
 
         var tlsConfig = TLSConfiguration.makeClientConfiguration()
         // Load the root certificate
@@ -22,32 +77,14 @@ struct LambdaFunction {
         tlsConfig.certificateVerification = .fullVerification
 
         let config = PostgresClient.Configuration(
-            host: Lambda.env("DB_HOST") ?? "localhost",
+            host: host,
             port: 5432,
-            username: Lambda.env("DB_USER") ?? "postgres",
-            password: Lambda.env("DB_PASSWORD") ?? "",
-            database: Lambda.env("DB_NAME") ?? "test",
+            username: user,
+            password: password,
+            database: dbName,
             tls: .prefer(tlsConfig)
         )
 
-        let postgresClient = PostgresClient(configuration: config)
-
-        /// Instantiate LambdaRuntime with a closure handler implementing the business logic of the Lambda function
-        let runtime = LambdaRuntimeService { (event: String, context: LambdaContext) in
-            /// Use initialized service within the handler
-            let rows = try await postgresClient.query("SELECT id, username FROM users")
-            for try await (id, username) in rows.decode((Int, String).self) {
-                logger.trace("\(id) : \(username)")
-            }
-        }
-
-        /// Use ServiceLifecycle to manage the initialization and termination
-        /// of the services as well as the LambdaRuntime
-        let serviceGroup = ServiceGroup(
-            services: [postgresClient, runtime],
-            gracefulShutdownSignals: [.sigterm],
-            logger: logger
-        )
-        try await serviceGroup.run()
+        return PostgresClient(configuration: config)
     }
 }

@@ -8,17 +8,17 @@ let package = Package(
     products: [
         // this library exports `AWSLambdaRuntimeCore` and adds Foundation convenience methods
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
-        
+
         // this library exports `AWSLambdaRuntime` and adds conformances to `Service` from Swift Service Lifecycle
         .library(name: "AWSLambdaRuntimeService", targets: ["AWSLambdaRuntimeService"]),
-        
+
         // this has all the main functionality for lambda and it does not link Foundation
         .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
-        
+
         // plugin to package the lambda, creating an archive that can be uploaded to AWS
         // requires Linux or at least macOS v15
         .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
-        
+
         // for testing only
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
