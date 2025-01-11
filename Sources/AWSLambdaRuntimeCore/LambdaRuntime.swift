@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
-import NIOConcurrencyHelpers
 import NIOCore
+import Synchronization
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -22,12 +22,9 @@ import FoundationEssentials
 import Foundation
 #endif
 
-// We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
-// We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
-// sadly crashes the compiler today.
+// We need `@unchecked` Sendable here until we can make `Handler` `Sendable`.
 public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
-    // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
-    let handlerMutex: NIOLockedValueBox<Handler?>
+    let handlerMutex: Mutex<Handler?> = Mutex(nil)
 
     let logger: Logger
     let eventLoop: EventLoop
@@ -37,7 +34,8 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
     ) {
-        self.handlerMutex = NIOLockedValueBox(handler)
+
+        handlerMutex.withLock { $0 = handler }
         self.eventLoop = eventLoop
 
         // by setting the log level here, we understand it can not be changed dynamically at runtime
@@ -50,11 +48,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
     }
 
     public func run() async throws {
-        let handler = self.handlerMutex.withLockedValue { handler in
-            let result = handler
-            handler = nil
-            return result
-        }
+        let handler = self.handlerMutex.withLock { $0 }
 
         guard let handler else {
             throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
