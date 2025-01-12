@@ -47,31 +47,31 @@ public enum Lambda {
     ) async throws where Handler: StreamingLambdaHandler {
         var handler = handler
 
-        var cancelled: Bool = Lambda.cancelled.withLock { $0 }
-        while !Task.isCancelled && !cancelled {
-            logger.trace("Waiting for next invocation")
-            let (invocation, writer) = try await runtimeClient.nextInvocation()
+        do {
+            while !Task.isCancelled {
+                let (invocation, writer) = try await runtimeClient.nextInvocation()
 
-            logger.trace("Received invocation : \(invocation.metadata.requestID)")
-            do {
-                try await handler.handle(
-                    invocation.event,
-                    responseWriter: writer,
-                    context: LambdaContext(
-                        requestID: invocation.metadata.requestID,
-                        traceID: invocation.metadata.traceID,
-                        invokedFunctionARN: invocation.metadata.invokedFunctionARN,
-                        deadline: DispatchWallTime(millisSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch),
-                        logger: logger
+                do {
+                    try await handler.handle(
+                        invocation.event,
+                        responseWriter: writer,
+                        context: LambdaContext(
+                            requestID: invocation.metadata.requestID,
+                            traceID: invocation.metadata.traceID,
+                            invokedFunctionARN: invocation.metadata.invokedFunctionARN,
+                            deadline: DispatchWallTime(
+                                millisSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
+                            ),
+                            logger: logger
+                        )
                     )
-                )
-            } catch {
-                try await writer.reportError(error)
-                continue
+                } catch {
+                    try await writer.reportError(error)
+                    continue
+                }
             }
-
-            logger.trace("Completed invocation : \(invocation.metadata.requestID)")
-            cancelled = Lambda.cancelled.withLock { $0 }
+        } catch is CancellationError {
+            // don't allow cancellation error to propagate further
         }
         logger.trace("Lambda runLoop() \(cancelled ? "cancelled" : "completed")")
     }
