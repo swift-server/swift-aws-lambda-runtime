@@ -410,6 +410,17 @@ private protocol LambdaChannelHandlerDelegate {
     func connectionErrorHappened(_ error: any Error, channel: any Channel)
 }
 
+struct UnsafeContext: @unchecked Sendable {
+    private let _context: ChannelHandlerContext
+    var context: ChannelHandlerContext {
+        self._context.eventLoop.preconditionInEventLoop()
+        return _context
+    }
+    init(_ context: ChannelHandlerContext) {
+        self._context = context
+    }
+}
+
 private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate> {
     let nextInvocationPath = Consts.invocationURLPrefix + Consts.getNextInvocationURLSuffix
 
@@ -469,10 +480,37 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
     func nextInvocation(isolation: isolated (any Actor)? = #isolation) async throws -> Invocation {
         switch self.state {
         case .connected(let context, .idle):
-            return try await withCheckedThrowingContinuation {
-                (continuation: CheckedContinuation<Invocation, any Error>) in
-                self.state = .connected(context, .waitingForNextInvocation(continuation))
-                self.sendNextRequest(context: context)
+            return try await withTaskCancellationHandler {
+                try Task.checkCancellation()
+                return try await withCheckedThrowingContinuation {
+                    (continuation: CheckedContinuation<Invocation, any Error>) in
+                    self.state = .connected(context, .waitingForNextInvocation(continuation))
+
+                    let unsafeContext = UnsafeContext(context)
+                    context.eventLoop.execute { [nextInvocationPath, defaultHeaders] in
+                        // Send next request. The function `sendNextRequest` requires `self` which is not
+                        // Sendable so just inlined the code instead
+                        let httpRequest = HTTPRequestHead(
+                            version: .http1_1,
+                            method: .GET,
+                            uri: nextInvocationPath,
+                            headers: defaultHeaders
+                        )
+                        let context = unsafeContext.context
+                        context.write(Self.wrapOutboundOut(.head(httpRequest)), promise: nil)
+                        context.write(Self.wrapOutboundOut(.end(nil)), promise: nil)
+                        context.flush()
+                    }
+                }
+            } onCancel: {
+                switch self.state {
+                case .connected(_, .waitingForNextInvocation(let continuation)):
+                    continuation.resume(throwing: CancellationError())
+                case .connected(_, .idle):
+                    break
+                default:
+                    fatalError("Invalid state: \(self.state)")
+                }
             }
 
         case .connected(_, .sendingResponse),
