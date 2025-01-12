@@ -16,6 +16,7 @@ import Dispatch
 import Logging
 import NIOCore
 import NIOPosix
+import Synchronization
 
 #if os(macOS)
 import Darwin.C
@@ -30,33 +31,55 @@ import ucrt
 #endif
 
 public enum Lambda {
+
+    // allow to gracefully shitdown the runtime client loop
+    // this supports gracefull shutdown of the Lambda runtime when integarted with Swift ServiceLifeCycle
+    private static let gracefulShutdown: Mutex<Bool> = Mutex(false)
+    public static func shutdown() {
+        Lambda.gracefulShutdown.withLock {
+            $0 = true
+        }
+    }
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
         runtimeClient: RuntimeClient,
         handler: Handler,
         logger: Logger
     ) async throws where Handler: StreamingLambdaHandler {
         var handler = handler
+        var gracefulShutdown: Bool = Lambda.gracefulShutdown.withLock { $0 }
+        do {
+            while !Task.isCancelled && !gracefulShutdown {
+                logger.trace("Waiting for next invocation")
+                let (invocation, writer) = try await runtimeClient.nextInvocation()
 
-        while !Task.isCancelled {
-            let (invocation, writer) = try await runtimeClient.nextInvocation()
-
-            do {
-                try await handler.handle(
-                    invocation.event,
-                    responseWriter: writer,
-                    context: LambdaContext(
-                        requestID: invocation.metadata.requestID,
-                        traceID: invocation.metadata.traceID,
-                        invokedFunctionARN: invocation.metadata.invokedFunctionARN,
-                        deadline: DispatchWallTime(millisSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch),
-                        logger: logger
+                logger.trace("Received invocation : \(invocation.metadata.requestID)")
+                do {
+                    try await handler.handle(
+                        invocation.event,
+                        responseWriter: writer,
+                        context: LambdaContext(
+                            requestID: invocation.metadata.requestID,
+                            traceID: invocation.metadata.traceID,
+                            invokedFunctionARN: invocation.metadata.invokedFunctionARN,
+                            deadline: DispatchWallTime(
+                                millisSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
+                            ),
+                            logger: logger
+                        )
                     )
-                )
-            } catch {
-                try await writer.reportError(error)
-                continue
+                } catch {
+                    try await writer.reportError(error)
+                    continue
+                }
+                logger.trace("Completed invocation : \(invocation.metadata.requestID)")
+                gracefulShutdown = Lambda.gracefulShutdown.withLock { $0 }
             }
+
+        } catch is CancellationError {
+            // don't allow cancellation error to propagate further
+            logger.trace("Lambda runLoop() task has been cancelled")
         }
+        logger.trace("Lambda runLoop() terminated \(gracefulShutdown ? "with gracefull shutdown" : "")")
     }
 
     /// The default EventLoop the Lambda is scheduled on.
