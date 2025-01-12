@@ -37,25 +37,31 @@ public enum Lambda {
     ) async throws where Handler: StreamingLambdaHandler {
         var handler = handler
 
-        while !Task.isCancelled {
-            let (invocation, writer) = try await runtimeClient.nextInvocation()
+        do {
+            while !Task.isCancelled {
+                let (invocation, writer) = try await runtimeClient.nextInvocation()
 
-            do {
-                try await handler.handle(
-                    invocation.event,
-                    responseWriter: writer,
-                    context: LambdaContext(
-                        requestID: invocation.metadata.requestID,
-                        traceID: invocation.metadata.traceID,
-                        invokedFunctionARN: invocation.metadata.invokedFunctionARN,
-                        deadline: DispatchWallTime(millisSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch),
-                        logger: logger
+                do {
+                    try await handler.handle(
+                        invocation.event,
+                        responseWriter: writer,
+                        context: LambdaContext(
+                            requestID: invocation.metadata.requestID,
+                            traceID: invocation.metadata.traceID,
+                            invokedFunctionARN: invocation.metadata.invokedFunctionARN,
+                            deadline: DispatchWallTime(
+                                millisSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
+                            ),
+                            logger: logger
+                        )
                     )
-                )
-            } catch {
-                try await writer.reportError(error)
-                continue
+                } catch {
+                    try await writer.reportError(error)
+                    continue
+                }
             }
+        } catch is CancellationError {
+            // don't allow cancellation error to propagate further
         }
     }
 
