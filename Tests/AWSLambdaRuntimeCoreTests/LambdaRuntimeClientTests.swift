@@ -86,4 +86,24 @@ struct LambdaRuntimeClientTests {
             }
         }
     }
+
+    @Test
+    func testCancellation() async throws {
+        try await LambdaRuntimeClient.withRuntimeClient(
+            configuration: .init(ip: "127.0.0.1", port: 7000),
+            eventLoop: NIOSingletons.posixEventLoopGroup.next(),
+            logger: self.logger
+        ) { runtimeClient in
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    while true {
+                        _ = try await runtimeClient.nextInvocation()
+                    }
+                }
+                // wait a small amount to ensure we are waiting for continuation
+                try await Task.sleep(for: .milliseconds(100))
+                group.cancelAll()
+            }
+        }
+    }
 }
