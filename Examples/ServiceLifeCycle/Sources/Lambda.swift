@@ -52,7 +52,8 @@ struct LambdaFunction {
         /// of the PGClient together with the LambdaRuntime
         let serviceGroup = ServiceGroup(
             services: [pgClient, runtime],
-            gracefulShutdownSignals: [.sigterm],  // add SIGINT for CTRL+C in local testing
+            gracefulShutdownSignals: [.sigterm, .sigint],  // add SIGINT for CTRL+C in local testing
+            // cancellationSignals: [.sigint],
             logger: logger
         )
         try await serviceGroup.run()

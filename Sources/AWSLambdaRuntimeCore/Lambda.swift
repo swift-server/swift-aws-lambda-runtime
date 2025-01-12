@@ -34,9 +34,9 @@ public enum Lambda {
 
     // allow to gracefully shitdown the runtime client loop
     // this supports gracefull shutdown of the Lambda runtime when integarted with Swift ServiceLifeCycle
-    private static let cancelled: Mutex<Bool> = Mutex(false)
-    public static func cancel() {
-        Lambda.cancelled.withLock {
+    private static let gracefulShutdown: Mutex<Bool> = Mutex(false)
+    public static func shutdown() {
+        Lambda.gracefulShutdown.withLock {
             $0 = true
         }
     }
@@ -46,11 +46,13 @@ public enum Lambda {
         logger: Logger
     ) async throws where Handler: StreamingLambdaHandler {
         var handler = handler
-
+        var gracefulShutdown: Bool = Lambda.gracefulShutdown.withLock { $0 }
         do {
-            while !Task.isCancelled {
+            while !Task.isCancelled && !gracefulShutdown {
+                logger.trace("Waiting for next invocation")
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
 
+                logger.trace("Received invocation : \(invocation.metadata.requestID)")
                 do {
                     try await handler.handle(
                         invocation.event,
@@ -69,11 +71,15 @@ public enum Lambda {
                     try await writer.reportError(error)
                     continue
                 }
+                logger.trace("Completed invocation : \(invocation.metadata.requestID)")
+                gracefulShutdown = Lambda.gracefulShutdown.withLock { $0 }
             }
+
         } catch is CancellationError {
             // don't allow cancellation error to propagate further
+            logger.trace("Lambda runLoop() task has been cancelled")
         }
-        logger.trace("Lambda runLoop() \(cancelled ? "cancelled" : "completed")")
+        logger.trace("Lambda runLoop() terminated \(gracefulShutdown ? "with gracefull shutdown" : "")")
     }
 
     /// The default EventLoop the Lambda is scheduled on.

@@ -31,7 +31,7 @@ public class LambdaRuntimeService<Handler>: Service, @unchecked Sendable where H
             try await runtime.run()
         } onCancelOrGracefulShutdown: {
             self.logger.debug("LambdaRuntime will be cancelled or gracefully shutdown")
-            self.runtime.cancel()
+            self.runtime.shutdown()
         }
     }
 
