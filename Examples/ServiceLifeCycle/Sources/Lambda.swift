@@ -37,7 +37,8 @@ struct LambdaFunction {
 
             do {
                 // Use initialized service within the handler
-                // IMPORTANT - CURRENTLY WHEN THERE IS AN ERROR, THIS CALL HANGS !!!
+                // IMPORTANT - CURRENTLY WHEN THERE IS AN ERROR, THIS CALL HANGS WHEN DB IS NOT REACHABLE
+                // https://github.com/vapor/postgres-nio/issues/489
                 let rows = try await pgClient.query("SELECT id, username FROM users")
                 for try await (id, username) in rows.decode((Int, String).self) {
                     logger.debug("\(id) : \(username)")
