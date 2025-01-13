@@ -42,9 +42,9 @@ public class MockHttpServer {
 
         let socketBootstrap = ServerBootstrap(group: MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount))
             // Specify backlog and enable SO_REUSEADDR for the server itself
-            // .serverChannelOption(.backlog, value: 256)
+            .serverChannelOption(.backlog, value: 256)
             .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
-            // .childChannelOption(.maxMessagesPerRead, value: 1)
+            .childChannelOption(.maxMessagesPerRead, value: 1)
 
             // Set the handlers that are applied to the accepted Channels
             .childChannelInitializer { channel in
@@ -173,7 +173,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         var responseHeaders: [(String, String)] = []
 
         logger.trace(
-            "Processing request for : \(requestHead) - \(String(requestBody))"
+            "Processing request for : \(requestHead) - \(String(buffer: requestBody))"
         )
 
         if requestHead.uri.hasSuffix("/next") {
