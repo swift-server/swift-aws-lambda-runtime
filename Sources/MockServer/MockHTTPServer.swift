@@ -27,7 +27,7 @@ import Foundation
 @main
 public class MockHttpServer {
 
-    public static func main() throws { 
+    public static func main() throws {
         let server = MockHttpServer()
         try server.start()
     }
@@ -172,7 +172,9 @@ private final class HTTPHandler: ChannelInboundHandler {
         var responseBody: String = ""
         var responseHeaders: [(String, String)] = []
 
-        logger.trace("Processing request for : \(requestHead) - \(requestBody.getString(at: 0, length: self.requestBodyBytes) ?? "")")
+        logger.trace(
+            "Processing request for : \(requestHead) - \(requestBody.getString(at: 0, length: self.requestBodyBytes) ?? "")"
+        )
 
         if requestHead.uri.hasSuffix("/next") {
             logger.trace("URI /next")
@@ -182,7 +184,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             let requestId = UUID().uuidString
             switch self.mode {
             case .string:
-                responseBody = "\"\(requestId)\"" // must be a valid JSON string
+                responseBody = "\"\(requestId)\""  // must be a valid JSON string
             case .json:
                 responseBody = "{ \"body\": \"\(requestId)\" }"
             }
@@ -194,7 +196,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                 (AmazonHeaders.traceID, "Root=1-5bef4de7-ad49b0e87f6ef6c87fc2e700;Parent=9a9197af755a6419;Sampled=1"),
                 (AmazonHeaders.deadline, String(deadline)),
             ]
-        } else if requestHead.uri.hasSuffix("/response")  {
+        } else if requestHead.uri.hasSuffix("/response") {
             logger.trace("URI /response")
             responseStatus = .accepted
         } else if requestHead.uri.hasSuffix("/error") {
