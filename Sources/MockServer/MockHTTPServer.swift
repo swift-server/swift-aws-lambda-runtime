@@ -173,7 +173,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         var responseHeaders: [(String, String)] = []
 
         logger.trace(
-            "Processing request for : \(requestHead) - \(requestBody.getString(at: 0, length: self.requestBodyBytes) ?? "")"
+            "Processing request for : \(requestHead) - \(String(requestBody))"
         )
 
         if requestHead.uri.hasSuffix("/next") {
