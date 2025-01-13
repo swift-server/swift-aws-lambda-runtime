@@ -65,35 +65,10 @@ private final class HTTPHandler: ChannelInboundHandler {
     public typealias InboundIn = HTTPServerRequestPart
     public typealias OutboundOut = HTTPServerResponsePart
 
-    private enum State {
-        case idle
-        case waitingForRequestBody
-        case sendingResponse
-
-        mutating func requestReceived() {
-            precondition(self == .idle, "Invalid state for request received: \(self)")
-            self = .waitingForRequestBody
-        }
-
-        mutating func requestComplete() {
-            precondition(
-                self == .waitingForRequestBody,
-                "Invalid state for request complete: \(self)"
-            )
-            self = .sendingResponse
-        }
-
-        mutating func responseComplete() {
-            precondition(self == .sendingResponse, "Invalid state for response complete: \(self)")
-            self = .idle
-        }
-    }
-
     private let logger: Logger
     private let mode: Mode
 
     private var buffer: ByteBuffer! = nil
-    private var state: HTTPHandler.State = .idle
     private var keepAlive = false
 
     private var requestHead: HTTPRequestHead?
@@ -125,14 +100,12 @@ private final class HTTPHandler: ChannelInboundHandler {
             self.requestHead = request
             self.requestBodyBytes = 0
             self.keepAlive = request.isKeepAlive
-            self.state.requestReceived()
         case .body(buffer: var buf):
             logger.trace("Received request .body")
             self.requestBodyBytes += buf.readableBytes
             self.buffer.writeBuffer(&buf)
         case .end:
             logger.trace("Received request .end")
-            self.state.requestComplete()
 
             precondition(requestHead != nil, "Received .end without .head")
             let (responseStatus, responseHeaders, responseBody) = self.processRequest(
@@ -190,7 +163,6 @@ private final class HTTPHandler: ChannelInboundHandler {
             }
             let deadline = Int64(Date(timeIntervalSinceNow: 60).timeIntervalSince1970 * 1000)
             responseHeaders = [
-                // ("Connection", "close"),
                 (AmazonHeaders.requestID, requestId),
                 (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),
                 (AmazonHeaders.traceID, "Root=1-5bef4de7-ad49b0e87f6ef6c87fc2e700;Parent=9a9197af755a6419;Sampled=1"),
@@ -215,8 +187,6 @@ private final class HTTPHandler: ChannelInboundHandler {
         trailers: HTTPHeaders?,
         promise: EventLoopPromise<Void>?
     ) {
-        self.state.responseComplete()
-
         let eventLoop = context.eventLoop
         let loopBoundContext = NIOLoopBound(context, eventLoop: eventLoop)
 
