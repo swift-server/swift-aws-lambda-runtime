@@ -97,7 +97,8 @@ private enum LocalLambda {
         public typealias InboundIn = HTTPServerRequestPart
         public typealias OutboundOut = HTTPServerResponsePart
 
-        private var pending = CircularBuffer<(head: HTTPRequestHead, body: ByteBuffer?)>()
+        private var requestHead: HTTPRequestHead?
+        private var requestBody: ByteBuffer?
 
         private static var invocations = CircularBuffer<Invocation>()
         private static var invocationState = InvocationState.waitingForLambdaRequest
@@ -110,23 +111,27 @@ private enum LocalLambda {
             self.invocationEndpoint = invocationEndpoint
         }
 
+        func handlerAdded(context: ChannelHandlerContext) {
+            self.requestBody = context.channel.allocator.buffer(capacity: 0)
+        }
+
         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             let requestPart = unwrapInboundIn(data)
 
             switch requestPart {
             case .head(let head):
-                self.pending.append((head: head, body: nil))
-            case .body(var buffer):
-                var request = self.pending.removeFirst()
-                if request.body == nil {
-                    request.body = buffer
-                } else {
-                    request.body!.writeBuffer(&buffer)
-                }
-                self.pending.prepend(request)
+                precondition(self.requestHead == nil, "received two HTTP heads")
+                precondition(self.requestBody != nil, "body buffer is not initialized")
+                self.requestHead = head
+                self.requestBody!.clear()
+            case .body(buffer: var buf):
+                precondition(self.requestHead != nil, "received HTTP body before head")
+                precondition(self.requestBody != nil, "body buffer is not initialized")
+                self.requestBody!.writeBuffer(&buf)
             case .end:
-                let request = self.pending.removeFirst()
-                self.processRequest(context: context, request: request)
+                precondition(self.requestHead != nil, "received HTTP end before head")
+                self.processRequest(context: context, request: (head: self.requestHead!, body: self.requestBody))
+                self.requestHead = nil
             }
         }
 
