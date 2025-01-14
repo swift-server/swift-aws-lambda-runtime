@@ -157,9 +157,9 @@ private final class HTTPHandler: ChannelInboundHandler {
             let requestId = UUID().uuidString
             switch self.mode {
             case .string:
-                responseBody = "\"\(requestId)\""  // must be a valid JSON string
+                responseBody = "\"Seb\""  // must be a valid JSON document
             case .json:
-                responseBody = "{ \"body\": \"\(requestId)\" }"
+                responseBody = "{ \"name\": \"Seb\", \"age\" : 52 }"
             }
             let deadline = Int64(Date(timeIntervalSinceNow: 60).timeIntervalSince1970 * 1000)
             responseHeaders = [
