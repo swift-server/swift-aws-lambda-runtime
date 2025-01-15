@@ -233,6 +233,7 @@ private struct LambdaHttpServer {
             logger.trace("/invoke received invocation", metadata: ["requestId": "\(requestId)"])
             await self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body))
 
+            // wait for the lambda function to process the request
             for try await response in self.responsePool {
                 logger.trace(
                     "Received response to return to client",
@@ -245,6 +246,7 @@ private struct LambdaHttpServer {
                         "Received response for a different request id",
                         metadata: ["response requestId": "\(response.requestId ?? "")", "requestId": "\(requestId)"]
                     )
+                    // should we return an error here ? Or crash as this is probably a programming error?
                 }
             }
             // What todo when there is no more responses to process?
@@ -263,11 +265,11 @@ private struct LambdaHttpServer {
         // this call only returns when there is a task to give to the lambda function
         case (.GET, let url) where url.hasSuffix(Consts.getNextInvocationURLSuffix):
 
-            // pop the tasks from the queue, until there is no more to process
+            // pop the tasks from the queue
             self.logger.trace("/next waiting for /invoke")
             for try await invocation in self.invocationPool {
                 self.logger.trace("/next retrieved invocation", metadata: ["requestId": "\(invocation.requestId)"])
-                // this stores the invocation request id into the response
+                // this call also stores the invocation requestId into the response
                 return invocation.makeResponse(status: .accepted)
             }
             // What todo when there is no more tasks to process?
@@ -275,7 +277,6 @@ private struct LambdaHttpServer {
             fatalError("No more invocations to process - the async for loop should not return")
 
         // :requestID/response endpoint is called by the lambda posting the response
-        // we accept all requestID and we do not handle the body
         case (.POST, let url) where url.hasSuffix(Consts.postResponseURLSuffix):
             let parts = head.uri.split(separator: "/")
             guard let requestId = parts.count > 2 ? String(parts[parts.count - 2]) : nil else {
@@ -297,7 +298,7 @@ private struct LambdaHttpServer {
             return .init(id: requestId, status: .accepted)
 
         // :requestID/error endpoint is called by the lambda posting an error response
-        // we accept all requestID and we do not handle the body
+        // we accept all requestID and we do not handle the body, we just acknowledge the request
         case (.POST, let url) where url.hasSuffix(Consts.postErrorURLSuffix):
             let parts = head.uri.split(separator: "/")
             guard let _ = parts.count > 2 ? String(parts[parts.count - 2]) : nil else {
@@ -323,7 +324,7 @@ private struct LambdaHttpServer {
         try await outbound.write(
             HTTPServerResponsePart.head(
                 HTTPResponseHead(
-                    version: .init(major: 1, minor: 1),  // use HTTP 1.1 it keeps connection alive between requests
+                    version: .init(major: 1, minor: 1),
                     status: response.status,
                     headers: headers
                 )
@@ -336,7 +337,7 @@ private struct LambdaHttpServer {
         try await outbound.write(HTTPServerResponsePart.end(nil))
     }
 
-    /// A shared data structure to store the current invocation or response request and the continuation.
+    /// A shared data structure to store the current invocation or response requests and the continuation objects.
     /// This data structure is shared between instances of the HTTPHandler
     /// (one instance to serve requests from the Lambda function and one instance to serve requests from the client invoking the lambda function).
     private final class Pool<T>: AsyncSequence, AsyncIteratorProtocol, Sendable where T: Sendable {
@@ -345,13 +346,15 @@ private struct LambdaHttpServer {
         private let _buffer = Mutex<CircularBuffer<T>>(.init())
         private let _continuation = Mutex<CheckedContinuation<T, any Error>?>(nil)
 
+        /// retrieve the first element from the buffer
         public func popFirst() async -> T? {
             self._buffer.withLock { $0.popFirst() }
         }
 
-        // if the iterator is waiting for an element, give it to it
-        // otherwise, enqueue the element
+        /// enqueue an element, or give it back immediately to the iterator if it is waiting for an element
         public func push(_ invocation: T) async {
+            // if the iterator is waiting for an element, give it to it
+            // otherwise, enqueue the element
             if let continuation = self._continuation.withLock({ $0 }) {
                 self._continuation.withLock { $0 = nil }
                 continuation.resume(returning: invocation)
