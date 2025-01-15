@@ -16,6 +16,7 @@ import Logging
 import NIOCore
 import NIOHTTP1
 import NIOPosix
+import Synchronization
 
 // for UUID and Date
 #if canImport(FoundationEssentials)
@@ -25,133 +26,169 @@ import Foundation
 #endif
 
 @main
-public class MockHttpServer {
+struct HttpServer {
+    /// The server's host. (default: 127.0.0.1)
+    private let host: String
+    /// The server's port. (default: 7000)
+    private let port: Int
+    /// The server's event loop group. (default: MultiThreadedEventLoopGroup.singleton)
+    private let eventLoopGroup: MultiThreadedEventLoopGroup
+    /// the mode. Are we mocking a server for a Lambda function that expects a String or a JSON document? (default: string)
+    private let mode: Mode
+    /// the number of connections this server must accept before shutting down (default: 1)
+    private let maxInvocations: Int
+    /// the logger (control verbosity with LOG_LEVEL environment variable)
+    private let logger: Logger
 
-    public static func main() throws {
-        let server = MockHttpServer()
-        try server.start()
-    }
-
-    private func start() throws {
-        let host = env("HOST") ?? "127.0.0.1"
-        let port = env("PORT").flatMap(Int.init) ?? 7000
-        let mode = env("MODE").flatMap(Mode.init) ?? .string
+    static func main() async throws {
         var log = Logger(label: "MockServer")
         log.logLevel = env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
-        let logger = log
 
-        let socketBootstrap = ServerBootstrap(group: MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount))
-            // Specify backlog and enable SO_REUSEADDR for the server itself
+        let server = HttpServer(
+            host: env("HOST") ?? "127.0.0.1",
+            port: env("PORT").flatMap(Int.init) ?? 7000,
+            eventLoopGroup: .singleton,
+            mode: env("MODE").flatMap(Mode.init) ?? .string,
+            maxInvocations: env("MAX_INVOCATIONS").flatMap(Int.init) ?? 1,
+            logger: log
+        )
+        try await server.run()
+    }
+
+    /// This method starts the server and handles incoming connections.
+    private func run() async throws {
+        let channel = try await ServerBootstrap(group: self.eventLoopGroup)
             .serverChannelOption(.backlog, value: 256)
             .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
             .childChannelOption(.maxMessagesPerRead, value: 1)
+            .bind(
+                host: self.host,
+                port: self.port
+            ) { channel in
+                channel.eventLoop.makeCompletedFuture {
 
-            // Set the handlers that are applied to the accepted Channels
-            .childChannelInitializer { channel in
-                channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
-                    channel.pipeline.addHandler(HTTPHandler(mode: mode, logger: logger))
+                    try channel.pipeline.syncOperations.configureHTTPServerPipeline(
+                        withErrorHandling: true
+                    )
+
+                    return try NIOAsyncChannel(
+                        wrappingChannelSynchronously: channel,
+                        configuration: NIOAsyncChannel.Configuration(
+                            inboundType: HTTPServerRequestPart.self,
+                            outboundType: HTTPServerResponsePart.self
+                        )
+                    )
                 }
             }
 
-        let channel = try socketBootstrap.bind(host: host, port: port).wait()
-        logger.debug("Server started and listening on \(host):\(port)")
+        logger.info(
+            "Server started and listening",
+            metadata: [
+                "host": "\(channel.channel.localAddress?.ipAddress?.debugDescription ?? "")",
+                "port": "\(channel.channel.localAddress?.port ?? 0)",
+            ]
+        )
 
-        // This will never return as we don't close the ServerChannel
-        try channel.closeFuture.wait()
-    }
-}
-
-private final class HTTPHandler: ChannelInboundHandler {
-    public typealias InboundIn = HTTPServerRequestPart
-    public typealias OutboundOut = HTTPServerResponsePart
-
-    private let logger: Logger
-    private let mode: Mode
-
-    private var buffer: ByteBuffer! = nil
-    private var keepAlive = false
-
-    private var requestHead: HTTPRequestHead?
-    private var requestBodyBytes: Int = 0
-
-    init(mode: Mode, logger: Logger) {
-        self.mode = mode
-        self.logger = logger
-    }
-
-    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let reqPart = Self.unwrapInboundIn(data)
-        handle(context: context, request: reqPart)
-    }
-
-    func channelReadComplete(context: ChannelHandlerContext) {
-        context.flush()
-        self.buffer.clear()
-    }
-
-    func handlerAdded(context: ChannelHandlerContext) {
-        self.buffer = context.channel.allocator.buffer(capacity: 0)
-    }
-
-    private func handle(context: ChannelHandlerContext, request: HTTPServerRequestPart) {
-        switch request {
-        case .head(let request):
-            logger.trace("Received request .head")
-            self.requestHead = request
-            self.requestBodyBytes = 0
-            self.keepAlive = request.isKeepAlive
-        case .body(buffer: var buf):
-            logger.trace("Received request .body")
-            self.requestBodyBytes += buf.readableBytes
-            self.buffer.writeBuffer(&buf)
-        case .end:
-            logger.trace("Received request .end")
-
-            precondition(requestHead != nil, "Received .end without .head")
-            let (responseStatus, responseHeaders, responseBody) = self.processRequest(
-                requestHead: self.requestHead!,
-                requestBody: self.buffer
-            )
-
-            self.buffer.clear()
-            self.buffer.writeString(responseBody)
-
-            var headers = HTTPHeaders(responseHeaders)
-            headers.add(name: "Content-Length", value: "\(responseBody.utf8.count)")
-
-            // write the response
-            context.write(
-                Self.wrapOutboundOut(
-                    .head(
-                        httpResponseHead(
-                            request: self.requestHead!,
-                            status: responseStatus,
-                            headers: headers
-                        )
+        // We are handling each incoming connection in a separate child task. It is important
+        // to use a discarding task group here which automatically discards finished child tasks.
+        // A normal task group retains all child tasks and their outputs in memory until they are
+        // consumed by iterating the group or by exiting the group. Since, we are never consuming
+        // the results of the group we need the group to automatically discard them; otherwise, this
+        // would result in a memory leak over time.
+        try await withThrowingDiscardingTaskGroup { group in
+            try await channel.executeThenClose { inbound in
+                for try await connectionChannel in inbound {
+                    logger.trace("Handling new connection")
+                    logger.info(
+                        "This mock server accepts only one connection, it will shutdown the server after handling the current connection."
                     )
-                ),
-                promise: nil
-            )
-            context.write(Self.wrapOutboundOut(.body(.byteBuffer(self.buffer))), promise: nil)
-            self.completeResponse(context, trailers: nil, promise: nil)
+                    group.addTask {
+                        await self.handleConnection(channel: connectionChannel)
+                        logger.trace("Done handling connection")
+                    }
+                    break
+                }
+            }
+        }
+        logger.info("Server shutting down")
+    }
+
+    /// This method handles a single connection by echoing back all inbound data.
+    private func handleConnection(
+        channel: NIOAsyncChannel<HTTPServerRequestPart, HTTPServerResponsePart>
+    ) async {
+
+        var requestHead: HTTPRequestHead!
+        var requestBody: ByteBuffer?
+
+        // each Lambda invocation results in TWO HTTP requests (next and response)
+        let requestCount = RequestCounter(maxRequest: self.maxInvocations * 2)
+
+        // Note that this method is non-throwing and we are catching any error.
+        // We do this since we don't want to tear down the whole server when a single connection
+        // encounters an error.
+        do {
+            try await channel.executeThenClose { inbound, outbound in
+                for try await inboundData in inbound {
+                    let requestNumber = requestCount.current()
+                    logger.trace("Handling request", metadata: ["requestNumber": "\(requestNumber)"])
+
+                    if case .head(let head) = inboundData {
+                        logger.trace("Received request head", metadata: ["head": "\(head)"])
+                        requestHead = head
+                    }
+                    if case .body(let body) = inboundData {
+                        logger.trace("Received request body", metadata: ["body": "\(body)"])
+                        requestBody = body
+                    }
+                    if case .end(let end) = inboundData {
+                        logger.trace("Received request end", metadata: ["end": "\(String(describing: end))"])
+
+                        precondition(requestHead != nil, "Received .end without .head")
+                        let (responseStatus, responseHeaders, responseBody) = self.processRequest(
+                            requestHead: requestHead,
+                            requestBody: requestBody
+                        )
+
+                        try await self.sendResponse(
+                            responseStatus: responseStatus,
+                            responseHeaders: responseHeaders,
+                            responseBody: responseBody,
+                            outbound: outbound
+                        )
+
+                        requestHead = nil
+
+                        if requestCount.increment() {
+                            logger.info(
+                                "Maximum number of invocations reached, closing this connection",
+                                metadata: ["maxInvocations": "\(self.maxInvocations)"]
+                            )
+                            break
+                        }
+                    }
+                }
+            }
+        } catch {
+            logger.error("Hit error: \(error)")
         }
     }
-
+    /// This function process the requests and return an hard-coded response (string or JSON depending on the mode).
+    /// We ignore the requestBody.
     private func processRequest(
         requestHead: HTTPRequestHead,
-        requestBody: ByteBuffer
+        requestBody: ByteBuffer?
     ) -> (HTTPResponseStatus, [(String, String)], String) {
         var responseStatus: HTTPResponseStatus = .ok
         var responseBody: String = ""
         var responseHeaders: [(String, String)] = []
 
         logger.trace(
-            "Processing request for : \(requestHead) - \(String(buffer: requestBody))"
+            "Processing request",
+            metadata: ["VERB": "\(requestHead.method)", "URI": "\(requestHead.uri)"]
         )
 
         if requestHead.uri.hasSuffix("/next") {
-            logger.trace("URI /next")
-
             responseStatus = .accepted
 
             let requestId = UUID().uuidString
@@ -169,64 +206,51 @@ private final class HTTPHandler: ChannelInboundHandler {
                 (AmazonHeaders.deadline, String(deadline)),
             ]
         } else if requestHead.uri.hasSuffix("/response") {
-            logger.trace("URI /response")
             responseStatus = .accepted
         } else if requestHead.uri.hasSuffix("/error") {
-            logger.trace("URI /error")
             responseStatus = .ok
         } else {
-            logger.trace("Unknown URI : \(requestHead)")
             responseStatus = .notFound
         }
         logger.trace("Returning response: \(responseStatus), \(responseHeaders), \(responseBody)")
         return (responseStatus, responseHeaders, responseBody)
     }
 
-    private func completeResponse(
-        _ context: ChannelHandlerContext,
-        trailers: HTTPHeaders?,
-        promise: EventLoopPromise<Void>?
-    ) {
-        let eventLoop = context.eventLoop
-        let loopBoundContext = NIOLoopBound(context, eventLoop: eventLoop)
+    private func sendResponse(
+        responseStatus: HTTPResponseStatus,
+        responseHeaders: [(String, String)],
+        responseBody: String,
+        outbound: NIOAsyncChannelOutboundWriter<HTTPServerResponsePart>
+    ) async throws {
+        var headers = HTTPHeaders(responseHeaders)
+        headers.add(name: "Content-Length", value: "\(responseBody.utf8.count)")
 
-        let promise = self.keepAlive ? promise : (promise ?? context.eventLoop.makePromise())
-        if !self.keepAlive {
-            promise!.futureResult.whenComplete { (_: Result<Void, Error>) in
-                let context = loopBoundContext.value
-                context.close(promise: nil)
-            }
-        }
-
-        context.writeAndFlush(Self.wrapOutboundOut(.end(trailers)), promise: promise)
+        logger.trace("Writing response head")
+        try await outbound.write(
+            HTTPServerResponsePart.head(
+                HTTPResponseHead(
+                    version: .init(major: 1, minor: 1),
+                    status: responseStatus,
+                    headers: headers
+                )
+            )
+        )
+        logger.trace("Writing response body")
+        try await outbound.write(HTTPServerResponsePart.body(.byteBuffer(ByteBuffer(string: responseBody))))
+        logger.trace("Writing response end")
+        try await outbound.write(HTTPServerResponsePart.end(nil))
     }
 
-    private func httpResponseHead(
-        request: HTTPRequestHead,
-        status: HTTPResponseStatus,
-        headers: HTTPHeaders = HTTPHeaders()
-    ) -> HTTPResponseHead {
-        var head = HTTPResponseHead(version: request.version, status: status, headers: headers)
-        let connectionHeaders: [String] = head.headers[canonicalForm: "connection"].map {
-            $0.lowercased()
-        }
+    private enum Mode: String {
+        case string
+        case json
+    }
 
-        if !connectionHeaders.contains("keep-alive") && !connectionHeaders.contains("close") {
-            // the user hasn't pre-set either 'keep-alive' or 'close', so we might need to add headers
-
-            switch (request.isKeepAlive, request.version.major, request.version.minor) {
-            case (true, 1, 0):
-                // HTTP/1.0 and the request has 'Connection: keep-alive', we should mirror that
-                head.headers.add(name: "Connection", value: "keep-alive")
-            case (false, 1, let n) where n >= 1:
-                // HTTP/1.1 (or treated as such) and the request has 'Connection: close', we should mirror that
-                head.headers.add(name: "Connection", value: "close")
-            default:
-                // we should match the default or are dealing with some HTTP that we don't support, let's leave as is
-                ()
-            }
+    private static func env(_ name: String) -> String? {
+        guard let value = getenv(name) else {
+            return nil
         }
-        return head
+        return String(cString: value)
     }
 
     private enum ServerError: Error {
@@ -242,16 +266,22 @@ private final class HTTPHandler: ChannelInboundHandler {
         static let deadline = "Lambda-Runtime-Deadline-Ms"
         static let invokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
     }
-}
 
-private enum Mode: String {
-    case string
-    case json
-}
+    private final class RequestCounter: Sendable {
+        private let counterMutex = Mutex<Int>(0)
+        private let maxRequest: Int
 
-private func env(_ name: String) -> String? {
-    guard let value = getenv(name) else {
-        return nil
+        init(maxRequest: Int) {
+            self.maxRequest = maxRequest
+        }
+        func current() -> Int {
+            counterMutex.withLock { $0 }
+        }
+        func increment() -> Bool {
+            counterMutex.withLock {
+                $0 += 1
+                return $0 >= maxRequest
+            }
+        }
     }
-    return String(cString: value)
 }
