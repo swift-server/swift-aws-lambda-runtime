@@ -55,7 +55,8 @@ struct HttpServer {
         try await server.run()
     }
 
-    /// This method starts the server and handles incoming connections.
+    /// This method starts the server and handles one unique incoming connections
+    /// The Lambda function will send two HTTP requests over this connection: one for the next invocation and one for the response.
     private func run() async throws {
         let channel = try await ServerBootstrap(group: self.eventLoopGroup)
             .serverChannelOption(.backlog, value: 256)
@@ -86,8 +87,13 @@ struct HttpServer {
             metadata: [
                 "host": "\(channel.channel.localAddress?.ipAddress?.debugDescription ?? "")",
                 "port": "\(channel.channel.localAddress?.port ?? 0)",
+                "maxInvocations": "\(self.maxInvocations)",
             ]
         )
+
+        // This counter is used to track the number of incoming connections.
+        // This mock servers accepts n TCP connection then shutdowns
+        let connectionCounter = SharedCounter(maxValue: self.maxInvocations)
 
         // We are handling each incoming connection in a separate child task. It is important
         // to use a discarding task group here which automatically discards finished child tasks.
@@ -98,22 +104,31 @@ struct HttpServer {
         try await withThrowingDiscardingTaskGroup { group in
             try await channel.executeThenClose { inbound in
                 for try await connectionChannel in inbound {
-                    logger.trace("Handling new connection")
-                    logger.info(
-                        "This mock server accepts only one connection, it will shutdown the server after handling the current connection."
-                    )
+
+                    let counter = connectionCounter.current()
+                    logger.trace("Handling new connection", metadata: ["connectionNumber": "\(counter)"])
+
                     group.addTask {
                         await self.handleConnection(channel: connectionChannel)
-                        logger.trace("Done handling connection")
+                        logger.trace("Done handling connection", metadata: ["connectionNumber": "\(counter)"])
                     }
-                    break
+
+                    if connectionCounter.increment() {
+                        logger.info(
+                            "Maximum number of connections reached, shutting down after current connection",
+                            metadata: ["maxConnections": "\(self.maxInvocations)"]
+                        )
+                        break  // this causes the server to shutdown after handling the connection
+                    }
                 }
             }
         }
         logger.info("Server shutting down")
     }
 
-    /// This method handles a single connection by echoing back all inbound data.
+    /// This method handles a single connection by responsing hard coded value to a Lambda function request.
+    /// It handles two requests: one for the next invocation and one for the response.
+    /// when the maximum number of requests is reached, it closes the connection.
     private func handleConnection(
         channel: NIOAsyncChannel<HTTPServerRequestPart, HTTPServerResponsePart>
     ) async {
@@ -122,7 +137,7 @@ struct HttpServer {
         var requestBody: ByteBuffer?
 
         // each Lambda invocation results in TWO HTTP requests (next and response)
-        let requestCount = RequestCounter(maxRequest: self.maxInvocations * 2)
+        let requestCount = SharedCounter(maxValue: 2)
 
         // Note that this method is non-throwing and we are catching any error.
         // We do this since we don't want to tear down the whole server when a single connection
@@ -161,10 +176,10 @@ struct HttpServer {
 
                         if requestCount.increment() {
                             logger.info(
-                                "Maximum number of invocations reached, closing this connection",
-                                metadata: ["maxInvocations": "\(self.maxInvocations)"]
+                                "Maximum number of requests reached, closing this connection",
+                                metadata: ["maxRequest": "2"]
                             )
-                            break
+                            break  // this finishes handiling request on this connection
                         }
                     }
                 }
@@ -224,12 +239,13 @@ struct HttpServer {
     ) async throws {
         var headers = HTTPHeaders(responseHeaders)
         headers.add(name: "Content-Length", value: "\(responseBody.utf8.count)")
+        headers.add(name: "KeepAlive", value: "timeout=1, max=2")
 
         logger.trace("Writing response head")
         try await outbound.write(
             HTTPServerResponsePart.head(
                 HTTPResponseHead(
-                    version: .init(major: 1, minor: 1),
+                    version: .init(major: 1, minor: 1),  // use HTTP 1.1 it keeps connection alive between requests
                     status: responseStatus,
                     headers: headers
                 )
@@ -267,12 +283,12 @@ struct HttpServer {
         static let invokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
     }
 
-    private final class RequestCounter: Sendable {
+    private final class SharedCounter: Sendable {
         private let counterMutex = Mutex<Int>(0)
-        private let maxRequest: Int
+        private let maxValue: Int
 
-        init(maxRequest: Int) {
-            self.maxRequest = maxRequest
+        init(maxValue: Int) {
+            self.maxValue = maxValue
         }
         func current() -> Int {
             counterMutex.withLock { $0 }
@@ -280,7 +296,7 @@ struct HttpServer {
         func increment() -> Bool {
             counterMutex.withLock {
                 $0 += 1
-                return $0 >= maxRequest
+                return $0 >= maxValue
             }
         }
     }
