@@ -22,34 +22,35 @@ import AWSLambdaRuntime
 // This code is shown for the example only and is not used in this demo.
 // This code doesn't perform any type of token validation. It should be used as a reference only.
 let policyAuthorizerHandler:
-    @Sendable (APIGatewayLambdaAuthorizerRequest, LambdaContext) async throws -> APIGatewayLambdaAuthorizerPolicyResponse = {
-        (request: APIGatewayLambdaAuthorizerRequest, context: LambdaContext) in
+    @Sendable (APIGatewayLambdaAuthorizerRequest, LambdaContext) async throws ->
+        APIGatewayLambdaAuthorizerPolicyResponse = {
+            (request: APIGatewayLambdaAuthorizerRequest, context: LambdaContext) in
 
-        context.logger.debug("+++ Policy Authorizer called +++")
+            context.logger.debug("+++ Policy Authorizer called +++")
 
-        // typically, this function will check the validity of the incoming token received in the request
+            // typically, this function will check the validity of the incoming token received in the request
 
-        // then it creates and returns a response
-        return APIGatewayLambdaAuthorizerPolicyResponse(
-            principalId: "John Appleseed",
+            // then it creates and returns a response
+            return APIGatewayLambdaAuthorizerPolicyResponse(
+                principalId: "John Appleseed",
 
-            // this policy allows the caller to invoke any API Gateway endpoint
-            policyDocument: .init(statement: [
-                .init(
-                    action: "execute-api:Invoke",
-                    effect: .allow,
-                    resource: "*"
-                )
+                // this policy allows the caller to invoke any API Gateway endpoint
+                policyDocument: .init(statement: [
+                    .init(
+                        action: "execute-api:Invoke",
+                        effect: .allow,
+                        resource: "*"
+                    )
 
-            ]),
+                ]),
 
-            // this is additional context we want to return to the caller
-            context: [
-                "abc1": "xyz1",
-                "abc2": "xyz2",
-            ]
-        )
-    }
+                // this is additional context we want to return to the caller
+                context: [
+                    "abc1": "xyz1",
+                    "abc2": "xyz2",
+                ]
+            )
+        }
 
 //
 // This is an example of a simple authorizer that always authorizes the request.
@@ -57,21 +58,22 @@ let policyAuthorizerHandler:
 //
 // This code doesn't perform any type of token validation. It should be used as a reference only.
 let simpleAuthorizerHandler:
-    @Sendable (APIGatewayLambdaAuthorizerRequest, LambdaContext) async throws -> APIGatewayLambdaAuthorizerSimpleResponse = {
-        (_: APIGatewayLambdaAuthorizerRequest, context: LambdaContext) in
+    @Sendable (APIGatewayLambdaAuthorizerRequest, LambdaContext) async throws ->
+        APIGatewayLambdaAuthorizerSimpleResponse = {
+            (_: APIGatewayLambdaAuthorizerRequest, context: LambdaContext) in
 
-        context.logger.debug("+++ Simple Authorizer called +++")
+            context.logger.debug("+++ Simple Authorizer called +++")
 
-        // typically, this function will check the validity of the incoming token received in the request
+            // typically, this function will check the validity of the incoming token received in the request
 
-        return APIGatewayLambdaAuthorizerSimpleResponse(
-            // this is the authorization decision: yes or no
-            isAuthorized: true,
+            return APIGatewayLambdaAuthorizerSimpleResponse(
+                // this is the authorization decision: yes or no
+                isAuthorized: true,
 
-            // this is additional context we want to return to the caller
-            context: ["abc1": "xyz1"]
-        )
-    }
+                // this is additional context we want to return to the caller
+                context: ["abc1": "xyz1"]
+            )
+        }
 
 // create the runtime and start polling for new events.
 // in this demo we use the simple authorizer handler
