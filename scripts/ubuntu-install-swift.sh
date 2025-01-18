@@ -64,15 +64,4 @@ sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plug
 sudo usermod -aG docker "$USER"
 
 # LOGOUT and LOGIN to apply the changes
-exit
-
-# reconnect with ssh 
-
-export PATH=/home/ubuntu/swift-6.0.3-RELEASE-ubuntu24.04-aarch64/usr/bin:"${PATH}"
-
-# clone a project 
-git clone https://github.com/swift-server/swift-aws-lambda-runtime.git
-
-# build the project
-cd swift-aws-lambda-runtime/Examples/ResourcesPackaging/
-LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker                                      
+exit 0
