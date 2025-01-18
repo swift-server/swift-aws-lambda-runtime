@@ -20,7 +20,7 @@ import NIOCore
 /// Background work can also be executed after returning the response. After closing the response stream by calling
 /// ``LambdaResponseStreamWriter/finish()`` or ``LambdaResponseStreamWriter/writeAndFinish(_:)``,
 /// the ``handle(_:responseWriter:context:)`` function is free to execute any background work.
-public protocol StreamingLambdaHandler {
+public protocol StreamingLambdaHandler: Sendable {
     /// The handler function -- implement the business logic of the Lambda function here.
     /// - Parameters:
     ///   - event: The invocation's input data.
@@ -45,7 +45,7 @@ public protocol StreamingLambdaHandler {
 
 /// A writer object to write the Lambda response stream into. The HTTP response is started lazily.
 /// before the first call to ``write(_:)`` or ``writeAndFinish(_:)``.
-public protocol LambdaResponseStreamWriter {
+public protocol LambdaResponseStreamWriter: Sendable {
     /// Write a response part into the stream. Bytes written are streamed continually.
     /// - Parameter buffer: The buffer to write.
     func write(_ buffer: ByteBuffer) async throws
@@ -64,7 +64,7 @@ public protocol LambdaResponseStreamWriter {
 ///
 /// - note: This handler protocol does not support response streaming because the output has to be encoded prior to it being sent, e.g. it is not possible to encode a partial/incomplete JSON string.
 /// This protocol also does not support the execution of background work after the response has been returned -- the ``LambdaWithBackgroundProcessingHandler`` protocol caters for such use-cases.
-public protocol LambdaHandler {
+public protocol LambdaHandler: Sendable {
     /// Generic input type.
     /// The body of the request sent to Lambda will be decoded into this type for the handler to consume.
     associatedtype Event: Decodable
@@ -86,7 +86,7 @@ public protocol LambdaHandler {
 /// ``LambdaResponseWriter``that is passed in as an argument, meaning that the
 /// ``LambdaWithBackgroundProcessingHandler/handle(_:outputWriter:context:)`` function is then
 /// free to implement any background work after the result has been sent to the AWS Lambda control plane.
-public protocol LambdaWithBackgroundProcessingHandler {
+public protocol LambdaWithBackgroundProcessingHandler: Sendable {
     /// Generic input type.
     /// The body of the request sent to Lambda will be decoded into this type for the handler to consume.
     associatedtype Event: Decodable
@@ -110,7 +110,7 @@ public protocol LambdaWithBackgroundProcessingHandler {
 /// Used with ``LambdaWithBackgroundProcessingHandler``.
 /// A mechanism to "return" an output from ``LambdaWithBackgroundProcessingHandler/handle(_:outputWriter:context:)`` without the function needing to
 /// have a return type and exit at that point. This allows for background work to be executed _after_ a response has been sent to the AWS Lambda response endpoint.
-public protocol LambdaResponseWriter<Output> {
+public protocol LambdaResponseWriter<Output>: Sendable {
     associatedtype Output
     /// Sends the generic ``LambdaResponseWriter/Output`` object (representing the computed result of the handler)
     /// to the AWS Lambda response endpoint.
@@ -150,17 +150,17 @@ public struct StreamingClosureHandler: StreamingLambdaHandler {
 /// A ``LambdaHandler`` conforming handler object that can be constructed with a closure.
 /// Allows for a handler to be defined in a clean manner, leveraging Swift's trailing closure syntax.
 public struct ClosureHandler<Event: Decodable, Output>: LambdaHandler {
-    let body: (Event, LambdaContext) async throws -> Output
+    let body: @Sendable (Event, LambdaContext) async throws -> Output
 
     /// Initialize with a closure handler over generic `Input` and `Output` types.
     /// - Parameter body: The handler function written as a closure.
-    public init(body: @escaping (Event, LambdaContext) async throws -> Output) where Output: Encodable {
+    public init(body: @Sendable @escaping (Event, LambdaContext) async throws -> Output) where Output: Encodable {
         self.body = body
     }
 
     /// Initialize with a closure handler over a generic `Input` type, and a `Void` `Output`.
     /// - Parameter body: The handler function written as a closure.
-    public init(body: @escaping (Event, LambdaContext) async throws -> Void) where Output == Void {
+    public init(body: @Sendable  @escaping (Event, LambdaContext) async throws -> Void) where Output == Void {
         self.body = body
     }
 
@@ -194,7 +194,7 @@ extension LambdaRuntime {
     >(
         encoder: Encoder,
         decoder: Decoder,
-        body: sending @escaping (Event, LambdaContext) async throws -> Output
+        body: @Sendable @escaping (Event, LambdaContext) async throws -> Output
     )
     where
         Handler == LambdaCodableAdapter<
@@ -220,7 +220,7 @@ extension LambdaRuntime {
     ///   - body: The handler in the form of a closure.
     public convenience init<Event: Decodable, Decoder: LambdaEventDecoder>(
         decoder: Decoder,
-        body: sending @escaping (Event, LambdaContext) async throws -> Void
+        body: @Sendable @escaping (Event, LambdaContext) async throws -> Void
     )
     where
         Handler == LambdaCodableAdapter<

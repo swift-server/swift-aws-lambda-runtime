@@ -36,8 +36,8 @@ let package = Package(
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
-            ],
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            ]
+            // swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .plugin(
             name: "AWSLambdaPackager",
