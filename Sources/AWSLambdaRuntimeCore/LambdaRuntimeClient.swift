@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 // TODO: rewrite for Swift 6 concurrency
 
 import Logging
@@ -143,7 +142,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         }
     }
 
-    // FIXME: add support for graceful shutdown 
+    // FIXME: add support for graceful shutdown
     func nextInvocation() async throws -> (Invocation, Writer) {
         switch self.lambdaState {
         case .idle:
@@ -345,7 +344,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                 self.connectionState = .connected(channel, handler)
                 defer {
                     // for continuation in array {
-                    //     // This causes an error in Swift 6 
+                    //     // This causes an error in Swift 6
                     //     //  'self'-isolated 'handler' is passed as a 'sending' parameter; Uses in callee may race with later 'self'-isolated uses
                     //     continuation.resume(returning: handler)
                     // }

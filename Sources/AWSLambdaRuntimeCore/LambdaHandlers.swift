@@ -160,7 +160,7 @@ public struct ClosureHandler<Event: Decodable, Output>: LambdaHandler {
 
     /// Initialize with a closure handler over a generic `Input` type, and a `Void` `Output`.
     /// - Parameter body: The handler function written as a closure.
-    public init(body: @Sendable  @escaping (Event, LambdaContext) async throws -> Void) where Output == Void {
+    public init(body: @Sendable @escaping (Event, LambdaContext) async throws -> Void) where Output == Void {
         self.body = body
     }
 

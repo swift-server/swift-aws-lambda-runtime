@@ -86,7 +86,8 @@ public struct LambdaCodableAdapter<
     Output,
     Decoder: LambdaEventDecoder,
     Encoder: LambdaOutputEncoder
->: Sendable, StreamingLambdaHandler where Handler.Event == Event, Handler.Output == Output, Encoder.Output == Output, Encoder: Sendable, Decoder: Sendable {
+>: Sendable, StreamingLambdaHandler
+where Handler.Event == Event, Handler.Output == Output, Encoder.Output == Output, Encoder: Sendable, Decoder: Sendable {
     @usableFromInline let handler: Handler
     @usableFromInline let encoder: Encoder
     @usableFromInline let decoder: Decoder
