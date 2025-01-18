@@ -61,7 +61,7 @@ sudo apt-get update
 sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # Add the current user to the docker group
-sudo usermod -aG docker $USER
+sudo usermod -aG docker "$USER"
 
 # LOGOUT and LOGIN to apply the changes
 exit
