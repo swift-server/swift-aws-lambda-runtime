@@ -13,40 +13,35 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-check_archive_plugin() {
-    local EXAMPLE=$1
-    OUTPUT_DIR=.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager
-    OUTPUT_FILE=${OUTPUT_DIR}/MyLambda/bootstrap
-    ZIP_FILE=${OUTPUT_DIR}/MyLambda/MyLambda.zip
+log() { printf -- "** %s\n" "$*" >&2; }
+error() { printf -- "** ERROR: %s\n" "$*" >&2; }
+fatal() { error "$@"; exit 1; }
 
-    pushd "Examples/${EXAMPLE}" || exit 1
+test -n "${EXAMPLE:-}" || fatal "EXAMPLE unset"
 
-    # package the example (docker and swift toolchain are installed on the GH runner)
-    LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker || exit 1
+OUTPUT_DIR=.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager
+OUTPUT_FILE=${OUTPUT_DIR}/MyLambda/bootstrap
+ZIP_FILE=${OUTPUT_DIR}/MyLambda/MyLambda.zip
 
-    # did the plugin generated a Linux binary?
-    [ -f "${OUTPUT_FILE}" ]
-    file "${OUTPUT_FILE}" | grep --silent ELF
+pushd "Examples/${EXAMPLE}" || exit 1
 
-    # did the plugin created a ZIP file?
-    [ -f "${ZIP_FILE}" ]
+# package the example (docker and swift toolchain are installed on the GH runner)
+LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker || exit 1
 
-    # does the ZIP file contain the bootstrap?
-    unzip -l "${ZIP_FILE}" | grep --silent bootstrap
+# did the plugin generated a Linux binary?
+[ -f "${OUTPUT_FILE}" ]
+file "${OUTPUT_FILE}" | grep --silent ELF
 
-    # if EXAMPLE is ResourcesPackaging, check if the ZIP file contains hello.txt
-    if [ "$EXAMPLE" == "ResourcesPackaging" ]; then
-        unzip -l "${ZIP_FILE}" | grep --silent hello.txt
-    fi    
+# did the plugin created a ZIP file?
+[ -f "${ZIP_FILE}" ]
 
-    echo "✅ The archive plugin is OK with example ${EXAMPLE}"
-    popd || exit 1
-}
+# does the ZIP file contain the bootstrap?
+unzip -l "${ZIP_FILE}" | grep --silent bootstrap
 
-# List of examples
-EXAMPLES=("HelloWorld" "ResourcesPackaging")
+# if EXAMPLE is ResourcesPackaging, check if the ZIP file contains hello.txt
+if [ "$EXAMPLE" == "ResourcesPackaging" ]; then
+    unzip -l "${ZIP_FILE}" | grep --silent hello.txt
+fi    
 
-# Iterate over each example and call check_archive_plugin
-for EXAMPLE in "${EXAMPLES[@]}"; do
-  check_archive_plugin "$EXAMPLE"
-done
+echo "✅ The archive plugin is OK with example ${EXAMPLE}"
+popd || exit 1
