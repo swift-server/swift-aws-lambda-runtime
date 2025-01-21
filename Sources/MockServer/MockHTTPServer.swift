@@ -269,11 +269,6 @@ struct HttpServer {
         return String(cString: value)
     }
 
-    private enum ServerError: Error {
-        case notReady
-        case cantBind
-    }
-
     private enum AmazonHeaders {
         static let requestID = "Lambda-Runtime-Aws-Request-Id"
         static let traceID = "Lambda-Runtime-Trace-Id"
