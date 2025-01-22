@@ -55,7 +55,11 @@ extension Lambda {
             // this call will return when the server calls continuation.resume()
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
                 group.addTask {
-                    try await LambdaHttpServer(invocationEndpoint: invocationEndpoint).start(continuation: continuation)
+                    do {
+                        try await LambdaHttpServer(invocationEndpoint: invocationEndpoint).start(continuation: continuation)
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }   
                 }
             }
             // now that server is started, run the Lambda function itself
