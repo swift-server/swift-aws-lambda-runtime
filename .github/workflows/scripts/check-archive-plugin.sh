@@ -13,12 +13,17 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-EXAMPLE=HelloWorld
+log() { printf -- "** %s\n" "$*" >&2; }
+error() { printf -- "** ERROR: %s\n" "$*" >&2; }
+fatal() { error "$@"; exit 1; }
+
+test -n "${EXAMPLE:-}" || fatal "EXAMPLE unset"
+
 OUTPUT_DIR=.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager
 OUTPUT_FILE=${OUTPUT_DIR}/MyLambda/bootstrap
 ZIP_FILE=${OUTPUT_DIR}/MyLambda/MyLambda.zip
 
-pushd Examples/${EXAMPLE} || exit 1
+pushd "Examples/${EXAMPLE}" || exit 1
 
 # package the example (docker and swift toolchain are installed on the GH runner)
 LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker || exit 1
@@ -33,5 +38,10 @@ file "${OUTPUT_FILE}" | grep --silent ELF
 # does the ZIP file contain the bootstrap?
 unzip -l "${ZIP_FILE}" | grep --silent bootstrap
 
-echo "✅ The archive plugin is OK"
+# if EXAMPLE is ResourcesPackaging, check if the ZIP file contains hello.txt
+if [ "$EXAMPLE" == "ResourcesPackaging" ]; then
+    unzip -l "${ZIP_FILE}" | grep --silent hello.txt
+fi    
+
+echo "✅ The archive plugin is OK with example ${EXAMPLE}"
 popd || exit 1
