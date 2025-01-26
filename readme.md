@@ -1,9 +1,6 @@
 > [!IMPORTANT]
 > The documentation included here refers to the Swift AWS Lambda Runtime v2 (code from the main branch). If you're developing for the runtime v1.x, check this [readme](https://github.com/swift-server/swift-aws-lambda-runtime/blob/v1/readme.md) instead.
 
-> [!WARNING]
-> The Swift AWS Runtime v2 is work in progress. We will add more documentation and code examples over time.
-
 This guide contains the follwoing sections:
 
 - [The Swift AWS Lambda Runtime](#the-swift-aws-lambda-runtime)
@@ -282,7 +279,7 @@ try await runtime.run()
 
 ### Integration with Swift Service LifeCycle
 
-tbd + link to docc
+Support for [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle) is currently being implemented. You can follow https://github.com/swift-server/swift-aws-lambda-runtime/issues/374 for more details and teh current status. Your contributions are welcome.
 
 ### Use Lambda Background Tasks
 
