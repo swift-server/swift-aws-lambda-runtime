@@ -249,11 +249,29 @@ struct AWSLambdaPackager: CommandPlugin {
                 let resourcesDirectoryName = artifactURL.lastPathComponent
                 let relocatedResourcesDirectory = workingDirectory.appending(path: resourcesDirectoryName)
                 if FileManager.default.fileExists(atPath: artifactURL.path()) {
-                    try FileManager.default.copyItem(
-                        atPath: artifactURL.path(),
-                        toPath: relocatedResourcesDirectory.path()
-                    )
-                    arguments.append(resourcesDirectoryName)
+                    do {
+                        try FileManager.default.copyItem(
+                            atPath: artifactURL.path(),
+                            toPath: relocatedResourcesDirectory.path()
+                        )
+                        arguments.append(resourcesDirectoryName)
+                    } catch let error as CocoaError {
+
+                        // On Linux, when the build has been done with Docker,
+                        // the source file are owned by root
+                        // this causes a permission error **after** the files have been copied
+                        // see https://github.com/swift-server/swift-aws-lambda-runtime/issues/449
+                        // see https://forums.swift.org/t/filemanager-copyitem-on-linux-fails-after-copying-the-files/77282
+
+                        // because this error happens after the files have been copied, we can ignore it
+                        // this code checks if the destination file exists
+                        // if they do, just ignore error, otherwise throw it up to the caller.
+                        if !(error.code == CocoaError.Code.fileWriteNoPermission
+                            && FileManager.default.fileExists(atPath: relocatedResourcesDirectory.path()))
+                        {
+                            throw error
+                        }  // else just ignore it
+                    }
                 }
             }
 
