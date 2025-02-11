@@ -30,8 +30,8 @@ If there are no errors, a ZIP file should be ready to deploy, located at `.build
 
 ## Deploy
 
-[!IMPORTANT]
-The Lambda function and the S3 bucket must be located in the same AWS Region. In the code below, we use `eu-west-1` (Ireland). 
+> [!IMPORTANT]
+> The Lambda function and the S3 bucket must be located in the same AWS Region. In the code below, we use `eu-west-1` (Ireland). 
 
 To deploy the Lambda function, you can use the `aws` command line:
 
@@ -90,5 +90,5 @@ This will:
 
 Replace `my-test-bucket` with your bucket name (bucket names are unique globaly and this one is already taken). Also replace `REGION` environment variable with the AWS Region where you deployed the Lambda function and `<YOUR_ACCOUNT_ID>` with your actual AWS account ID.
 
-[!IMPORTANT]
-The Lambda function and the S3 bucket must be located in the same AWS Region. Adjust the code above according to your closest AWS Region.
+> [!IMPORTANT]
+> The Lambda function and the S3 bucket must be located in the same AWS Region. Adjust the code above according to your closest AWS Region.
