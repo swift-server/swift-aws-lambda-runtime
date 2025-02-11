@@ -30,10 +30,14 @@ If there are no errors, a ZIP file should be ready to deploy, located at `.build
 
 ## Deploy
 
+[!IMPORTANT]
+The Lambda function and the S3 bucket must be located in the same AWS Region. In the code below, we use `eu-west-1` (Ireland). 
+
 To deploy the Lambda function, you can use the `aws` command line:
 
 ```bash
 aws lambda create-function \
+    --region eu-west-1 \
     --function-name S3EventNotifier \
     --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/S3EventNotifier/S3EventNotifier.zip \
     --runtime provided.al2 \
@@ -51,7 +55,8 @@ Besides deploying the Lambda function you also need to create the S3 bucket and 
 ```bash
 aws s3api create-bucket --bucket my-test-bucket --region eu-west-1 --create-bucket-configuration LocationConstraint=eu-west-1
 
-aws lambda add-permission \
+aws lambda add-permission 
+    --region eu-west-1 \
     --function-name S3EventNotifier \
     --statement-id S3InvokeFunction \
     --action lambda:InvokeFunction \
@@ -59,6 +64,7 @@ aws lambda add-permission \
     --source-arn arn:aws:s3:::my-test-bucket
 
 aws s3api put-bucket-notification-configuration \
+    --region eu-west-1 \
     --bucket my-test-bucket \
     --notification-configuration '{
         "LambdaFunctionConfigurations": [{
@@ -67,7 +73,7 @@ aws s3api put-bucket-notification-configuration \
         }]
     }'
 
-aws s3 cp testfile.txt s3://my-test-bucket/
+touch testfile.txt && aws s3 cp testfile.txt s3://my-test-bucket/
 ```
 
 This will:
@@ -76,4 +82,7 @@ This will:
  - configure the bucket to send `s3:ObjectCreated:*` events to the Lambda function named `S3EventNotifier`;
  - upload a file named `testfile.txt` to the bucket.
 
-Replace `<REGION>` with the region where you deployed the Lambda function and `<YOUR_ACCOUNT_ID>` with your actual AWS account ID.
+Replace `my-test-bucket` with your bucket name (bucket names are unique globaly and this one is already taken). Also replace `<REGION>` with the region where you deployed the Lambda function and `<YOUR_ACCOUNT_ID>` with your actual AWS account ID.
+
+[!IMPORTANT]
+The Lambda function and the S3 bucket must be located in the same AWS Region. Adjust the code above according to your closest AWS Region.
