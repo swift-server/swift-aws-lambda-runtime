@@ -36,8 +36,9 @@ The Lambda function and the S3 bucket must be located in the same AWS Region. In
 To deploy the Lambda function, you can use the `aws` command line:
 
 ```bash
+REGION=eu-west-1
 aws lambda create-function \
-    --region eu-west-1 \
+    --region "${REGION}" \
     --function-name S3EventNotifier \
     --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/S3EventNotifier/S3EventNotifier.zip \
     --runtime provided.al2 \
@@ -48,27 +49,32 @@ aws lambda create-function \
 
 The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
 
-Be sure to replace `<YOUR_ACCOUNT_ID>` with your actual AWS account ID (for example: 012345678901).
+Be sure to define `REGION` with the region where you want to deploy your Lambda function and replace `<YOUR_ACCOUNT_ID>` with your actual AWS account ID (for example: 012345678901).
 
 Besides deploying the Lambda function you also need to create the S3 bucket and configure it to send events to the Lambda function. You can do this using the following commands:
 
 ```bash
-aws s3api create-bucket --bucket my-test-bucket --region eu-west-1 --create-bucket-configuration LocationConstraint=eu-west-1
+REGION=eu-west-1
 
-aws lambda add-permission 
-    --region eu-west-1 \
+aws s3api create-bucket     \
+    --region "${REGION}"    \
+    --bucket my-test-bucket \
+    --create-bucket-configuration LocationConstraint="${REGION}"
+
+aws lambda add-permission           \
+    --region "${REGION}"            \
     --function-name S3EventNotifier \
     --statement-id S3InvokeFunction \
-    --action lambda:InvokeFunction \
-    --principal s3.amazonaws.com \
+    --action lambda:InvokeFunction  \
+    --principal s3.amazonaws.com    \
     --source-arn arn:aws:s3:::my-test-bucket
 
 aws s3api put-bucket-notification-configuration \
-    --region eu-west-1 \
+    --region "${REGION}"    \
     --bucket my-test-bucket \
     --notification-configuration '{
         "LambdaFunctionConfigurations": [{
-            "LambdaFunctionArn": "arn:aws:lambda:<REGION>:<YOUR_ACCOUNT_ID>:function:S3EventNotifier",
+            "LambdaFunctionArn": "arn:aws:lambda:${REGION}:<YOUR_ACCOUNT_ID>:function:S3EventNotifier",
             "Events": ["s3:ObjectCreated:*"]
         }]
     }'
@@ -77,12 +83,12 @@ touch testfile.txt && aws s3 cp testfile.txt s3://my-test-bucket/
 ```
 
 This will:
- - create a bucket named `my-test-bucket` in the `eu-west-1` region;
+ - create a bucket named `my-test-bucket` in the `$REGION` region;
  - add a permission to the Lambda function to be invoked by Amazon S3;
  - configure the bucket to send `s3:ObjectCreated:*` events to the Lambda function named `S3EventNotifier`;
  - upload a file named `testfile.txt` to the bucket.
 
-Replace `my-test-bucket` with your bucket name (bucket names are unique globaly and this one is already taken). Also replace `<REGION>` with the region where you deployed the Lambda function and `<YOUR_ACCOUNT_ID>` with your actual AWS account ID.
+Replace `my-test-bucket` with your bucket name (bucket names are unique globaly and this one is already taken). Also replace `REGION` environment variable with the AWS Region where you deployed the Lambda function and `<YOUR_ACCOUNT_ID>` with your actual AWS account ID.
 
 [!IMPORTANT]
 The Lambda function and the S3 bucket must be located in the same AWS Region. Adjust the code above according to your closest AWS Region.
