@@ -15,6 +15,12 @@
 import AWSLambdaEvents
 import AWSLambdaRuntime
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
 let runtime = LambdaRuntime { (event: S3Event, context: LambdaContext) async throws in
     context.logger.debug("Received S3 event: \(event)")
 
