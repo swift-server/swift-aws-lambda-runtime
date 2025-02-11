@@ -4,7 +4,7 @@ This example demonstrates how to write a Lambda that is invoked by an event orig
 
 ## Code
 
-In this example the lambda function receives an `S3Event` object defined in the `AWSLambdaEvents` library as input object. The `S3Event` object contains all the information about the S3 event that triggered the function, but what we are interested in is the bucket name and the object key, which are inside of a notification `Record`. The object contains an array of records, however since the lambda is triggered by a single event, we can safely assume that there is only one record in the array: the first one. Inside of this record, we can find the bucket name and the object key:
+In this example the Lambda function receives an `S3Event` object defined in the `AWSLambdaEvents` library as input object. The `S3Event` object contains all the information about the S3 event that triggered the function, but what we are interested in is the bucket name and the object key, which are inside of a notification `Record`. The object contains an array of records, however since the Lambda function is triggered by a single event, we can safely assume that there is only one record in the array: the first one. Inside of this record, we can find the bucket name and the object key:
 
 ```swift
 guard let s3NotificationRecord = event.records.first else {
@@ -46,13 +46,13 @@ The `--architectures` flag is only required when you build the binary on an Appl
 
 Be sure to replace `<YOUR_ACCOUNT_ID>` with your actual AWS account ID (for example: 012345678901).
 
-Besides deploying the lambda function you also need to create the S3 bucket and configure it to send events to the lambda function. You can do this using the following commands:
+Besides deploying the Lambda function you also need to create the S3 bucket and configure it to send events to the Lambda function. You can do this using the following commands:
 
 ```bash
 aws s3api create-bucket --bucket my-test-bucket --region eu-west-1 --create-bucket-configuration LocationConstraint=eu-west-1
 
 aws lambda add-permission \
-    --function-name ProcessS3Upload \
+    --function-name S3EventNotifier \
     --statement-id S3InvokeFunction \
     --action lambda:InvokeFunction \
     --principal s3.amazonaws.com \
@@ -62,7 +62,7 @@ aws s3api put-bucket-notification-configuration \
     --bucket my-test-bucket \
     --notification-configuration '{
         "LambdaFunctionConfigurations": [{
-            "LambdaFunctionArn": "arn:aws:lambda:<REGION>:<YOUR_ACCOUNT_ID>:function:ProcessS3Upload",
+            "LambdaFunctionArn": "arn:aws:lambda:<REGION>:<YOUR_ACCOUNT_ID>:function:S3EventNotifier",
             "Events": ["s3:ObjectCreated:*"]
         }]
     }'
@@ -72,8 +72,8 @@ aws s3 cp testfile.txt s3://my-test-bucket/
 
 This will:
  - create a bucket named `my-test-bucket` in the `eu-west-1` region;
- - add a permission to the lambda function to be invoked by the bucket;
- - configure the bucket to send `s3:ObjectCreated:*` events to the lambda function named `ProcessS3Upload`;
+ - add a permission to the Lambda function to be invoked by Amazon S3;
+ - configure the bucket to send `s3:ObjectCreated:*` events to the Lambda function named `S3EventNotifier`;
  - upload a file named `testfile.txt` to the bucket.
 
-Replace `<REGION>` with the region where you deployed the lambda function and `<YOUR_ACCOUNT_ID>` with your actual AWS account ID.
+Replace `<REGION>` with the region where you deployed the Lambda function and `<YOUR_ACCOUNT_ID>` with your actual AWS account ID.

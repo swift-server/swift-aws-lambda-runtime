@@ -14,16 +14,9 @@
 
 import AWSLambdaEvents
 import AWSLambdaRuntime
-
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
 import Foundation
-#endif
 
 let runtime = LambdaRuntime { (event: S3Event, context: LambdaContext) async throws in
-    context.logger.debug("Received S3 event: \(event)")
-
     guard let s3NotificationRecord = event.records.first else {
         context.logger.error("No S3 notification record found in the event")
         return
