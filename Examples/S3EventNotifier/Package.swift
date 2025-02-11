@@ -5,20 +5,18 @@ import PackageDescription
 import struct Foundation.URL
 
 let package = Package(
-    name: "CSVUploadAPINotificationLambda",
+    name: "S3EventNotifier",
     platforms: [.macOS(.v15)],
     dependencies: [
         .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
         .package(url: "https://github.com/swift-server/swift-aws-lambda-events", branch: "main"),
-        .package(url: "https://github.com/swift-server/async-http-client.git", from: "1.24.0"),
     ],
     targets: [
         .executableTarget(
-            name: "CSVUploadAPINotificationLambda",
+            name: "S3EventNotifier",
             dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
                 .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
-                .product(name: "AsyncHTTPClient", package: "async-http-client"),
             ]
         )
     ]
