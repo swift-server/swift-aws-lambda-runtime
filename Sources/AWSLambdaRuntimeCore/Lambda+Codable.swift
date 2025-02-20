@@ -58,7 +58,7 @@ public struct LambdaHandlerAdapter<
     /// Initializes an instance given a concrete handler.
     /// - Parameter handler: The ``LambdaHandler`` conforming handler that is to be adapted to ``LambdaWithBackgroundProcessingHandler``.
     @inlinable
-    public init(handler: Handler) {
+    public init(handler: sending Handler) {
         self.handler = handler
     }
 
@@ -98,7 +98,7 @@ public struct LambdaCodableAdapter<
     ///   - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`.
     ///   - handler: The handler object.
     @inlinable
-    public init(encoder: Encoder, decoder: Decoder, handler: Handler) where Output: Encodable {
+    public init(encoder: sending Encoder, decoder: sending Decoder, handler: sending Handler) where Output: Encodable {
         self.encoder = encoder
         self.decoder = decoder
         self.handler = handler
@@ -109,7 +109,7 @@ public struct LambdaCodableAdapter<
     ///     - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`.
     ///     - handler: The handler object.
     @inlinable
-    public init(decoder: Decoder, handler: Handler) where Output == Void, Encoder == VoidEncoder {
+    public init(decoder: sending Decoder, handler: Handler) where Output == Void, Encoder == VoidEncoder {
         self.encoder = VoidEncoder()
         self.decoder = decoder
         self.handler = handler

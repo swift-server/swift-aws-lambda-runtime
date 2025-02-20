@@ -66,7 +66,7 @@ extension LambdaCodableAdapter {
     public init(
         encoder: JSONEncoder = JSONEncoder(),
         decoder: JSONDecoder = JSONDecoder(),
-        handler: Handler
+        handler: sending Handler
     )
     where
         Output: Encodable,
