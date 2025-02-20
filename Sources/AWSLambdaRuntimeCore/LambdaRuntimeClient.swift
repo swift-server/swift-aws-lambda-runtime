@@ -49,9 +49,11 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         }
     }
 
+    private typealias ConnectionContinuation = CheckedContinuation<NIOLoopBound<LambdaChannelHandler<LambdaRuntimeClient>>, any Error>
+
     private enum ConnectionState {
         case disconnected
-        case connecting([CheckedContinuation<NIOLoopBound<LambdaChannelHandler<LambdaRuntimeClient>>, any Error>])
+        case connecting([ConnectionContinuation])
         case connected(Channel, LambdaChannelHandler<LambdaRuntimeClient>)
     }
 
@@ -283,8 +285,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         case .connecting(var array):
             // Since we do get sequential invocations this case normally should never be hit.
             // We'll support it anyway.
-            let loopBound = try await withCheckedThrowingContinuation {
-                (continuation: CheckedContinuation<NIOLoopBound<LambdaChannelHandler<LambdaRuntimeClient>>, any Error>) in
+            let loopBound = try await withCheckedThrowingContinuation { (continuation: ConnectionContinuation) in
                 array.append(continuation)
                 self.connectionState = .connecting(array)
             }
