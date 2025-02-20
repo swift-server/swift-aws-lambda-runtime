@@ -51,7 +51,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
 
     private enum ConnectionState {
         case disconnected
-        case connecting([CheckedContinuation<LambdaChannelHandler<LambdaRuntimeClient>, any Error>])
+        case connecting([CheckedContinuation<NIOLoopBound<LambdaChannelHandler<LambdaRuntimeClient>>, any Error>])
         case connected(Channel, LambdaChannelHandler<LambdaRuntimeClient>)
     }
 
@@ -158,7 +158,6 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             .sentResponse:
             fatalError("Invalid state: \(self.lambdaState)")
         }
-
     }
 
     private func write(_ buffer: NIOCore.ByteBuffer) async throws {
@@ -284,11 +283,12 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         case .connecting(var array):
             // Since we do get sequential invocations this case normally should never be hit.
             // We'll support it anyway.
-            return try await withCheckedThrowingContinuation {
-                (continuation: CheckedContinuation<LambdaChannelHandler<LambdaRuntimeClient>, any Error>) in
+            let loopBound = try await withCheckedThrowingContinuation {
+                (continuation: CheckedContinuation<NIOLoopBound<LambdaChannelHandler<LambdaRuntimeClient>>, any Error>) in
                 array.append(continuation)
                 self.connectionState = .connecting(array)
             }
+            return loopBound.value
         case .connected(_, let handler):
             return handler
         }
@@ -339,8 +339,9 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             case .connecting(let array):
                 self.connectionState = .connected(channel, handler)
                 defer {
+                    let loopBound = NIOLoopBound(handler, eventLoop: self.eventLoop)
                     for continuation in array {
-                        continuation.resume(returning: handler)
+                        continuation.resume(returning: loopBound)
                     }
                 }
                 return handler

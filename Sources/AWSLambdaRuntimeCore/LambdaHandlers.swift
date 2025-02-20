@@ -154,7 +154,7 @@ public struct ClosureHandler<Event: Decodable, Output>: LambdaHandler {
 
     /// Initialize with a closure handler over generic `Input` and `Output` types.
     /// - Parameter body: The handler function written as a closure.
-    public init(body: @escaping (Event, LambdaContext) async throws -> Output) where Output: Encodable {
+    public init(body: sending @escaping (Event, LambdaContext) async throws -> Output) where Output: Encodable {
         self.body = body
     }
 
@@ -192,8 +192,8 @@ extension LambdaRuntime {
         Encoder: LambdaOutputEncoder,
         Decoder: LambdaEventDecoder
     >(
-        encoder: Encoder,
-        decoder: Decoder,
+        encoder: sending Encoder,
+        decoder: sending Decoder,
         body: sending @escaping (Event, LambdaContext) async throws -> Output
     )
     where
@@ -205,13 +205,15 @@ extension LambdaRuntime {
             Encoder
         >
     {
-        let handler = LambdaCodableAdapter(
+        let closureHandler = ClosureHandler(body: body)
+        let streamingAdapter = LambdaHandlerAdapter(handler: closureHandler)
+        let codableWrapper = LambdaCodableAdapter(
             encoder: encoder,
             decoder: decoder,
-            handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
+            handler: streamingAdapter
         )
 
-        self.init(handler: handler)
+        self.init(handler: codableWrapper)
     }
 
     /// Initialize an instance with a ``LambdaHandler`` defined in the form of a closure **with a `Void` return type**, an encoder, and a decoder.
@@ -219,7 +221,7 @@ extension LambdaRuntime {
     ///   - decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type.
     ///   - body: The handler in the form of a closure.
     public convenience init<Event: Decodable, Decoder: LambdaEventDecoder>(
-        decoder: Decoder,
+        decoder: sending Decoder,
         body: sending @escaping (Event, LambdaContext) async throws -> Void
     )
     where
