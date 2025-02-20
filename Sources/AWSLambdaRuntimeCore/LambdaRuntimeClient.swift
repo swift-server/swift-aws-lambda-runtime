@@ -49,7 +49,9 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         }
     }
 
-    private typealias ConnectionContinuation = CheckedContinuation<NIOLoopBound<LambdaChannelHandler<LambdaRuntimeClient>>, any Error>
+    private typealias ConnectionContinuation = CheckedContinuation<
+        NIOLoopBound<LambdaChannelHandler<LambdaRuntimeClient>>, any Error
+    >
 
     private enum ConnectionState {
         case disconnected
