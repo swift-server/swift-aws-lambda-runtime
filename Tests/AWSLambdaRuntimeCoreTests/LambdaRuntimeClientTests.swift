@@ -89,20 +89,52 @@ struct LambdaRuntimeClientTests {
 
     @Test
     func testCancellation() async throws {
-        try await LambdaRuntimeClient.withRuntimeClient(
-            configuration: .init(ip: "127.0.0.1", port: 7000),
-            eventLoop: NIOSingletons.posixEventLoopGroup.next(),
-            logger: self.logger
-        ) { runtimeClient in
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                group.addTask {
-                    while true {
-                        _ = try await runtimeClient.nextInvocation()
+        struct HappyBehavior: LambdaServerBehavior {
+            let requestId = UUID().uuidString
+            let event = "hello"
+
+            func getInvocation() -> GetInvocationResult {
+                .success((self.requestId, self.event))
+            }
+
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+                #expect(self.requestId == requestId)
+                #expect(self.event == response)
+                return .success(())
+            }
+
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                Issue.record("should not report error")
+                return .failure(.internalServerError)
+            }
+
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                Issue.record("should not report init error")
+                return .failure(.internalServerError)
+            }
+        }
+
+        try await withMockServer(behaviour: HappyBehavior()) { port in
+            try await LambdaRuntimeClient.withRuntimeClient(
+                configuration: .init(ip: "127.0.0.1", port: port),
+                eventLoop: NIOSingletons.posixEventLoopGroup.next(),
+                logger: self.logger
+            ) { runtimeClient in
+                try await withThrowingTaskGroup(of: Void.self) { group in
+                    group.addTask {
+                        while true {
+                            print("Waiting")
+                            let (_, writer) = try await runtimeClient.nextInvocation()
+                            try await Task {
+                                try await writer.write(ByteBuffer(string: "hello"))
+                                try await writer.finish()
+                            }.value
+                        }
                     }
+                    // wait a small amount to ensure we are waiting for continuation
+                    try await Task.sleep(for: .milliseconds(100))
+                    group.cancelAll()
                 }
-                // wait a small amount to ensure we are waiting for continuation
-                try await Task.sleep(for: .milliseconds(100))
-                group.cancelAll()
             }
         }
     }

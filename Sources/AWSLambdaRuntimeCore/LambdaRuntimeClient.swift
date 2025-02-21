@@ -145,22 +145,28 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
     }
 
     func nextInvocation() async throws -> (Invocation, Writer) {
-        switch self.lambdaState {
-        case .idle:
-            self.lambdaState = .waitingForNextInvocation
-            let handler = try await self.makeOrGetConnection()
-            let invocation = try await handler.nextInvocation()
-            guard case .waitingForNextInvocation = self.lambdaState else {
+        try await withTaskCancellationHandler {
+            switch self.lambdaState {
+            case .idle:
+                self.lambdaState = .waitingForNextInvocation
+                let handler = try await self.makeOrGetConnection()
+                let invocation = try await handler.nextInvocation()
+                guard case .waitingForNextInvocation = self.lambdaState else {
+                    fatalError("Invalid state: \(self.lambdaState)")
+                }
+                self.lambdaState = .waitingForResponse(requestID: invocation.metadata.requestID)
+                return (invocation, Writer(runtimeClient: self))
+
+            case .waitingForNextInvocation,
+                .waitingForResponse,
+                .sendingResponse,
+                .sentResponse:
                 fatalError("Invalid state: \(self.lambdaState)")
             }
-            self.lambdaState = .waitingForResponse(requestID: invocation.metadata.requestID)
-            return (invocation, Writer(runtimeClient: self))
-
-        case .waitingForNextInvocation,
-            .waitingForResponse,
-            .sendingResponse,
-            .sentResponse:
-            fatalError("Invalid state: \(self.lambdaState)")
+        } onCancel: {
+            Task {
+                await self.close()
+            }
         }
     }
 
@@ -469,37 +475,10 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
     func nextInvocation(isolation: isolated (any Actor)? = #isolation) async throws -> Invocation {
         switch self.state {
         case .connected(let context, .idle):
-            return try await withTaskCancellationHandler {
-                try Task.checkCancellation()
-                return try await withCheckedThrowingContinuation {
-                    (continuation: CheckedContinuation<Invocation, any Error>) in
-                    self.state = .connected(context, .waitingForNextInvocation(continuation))
-
-                    let unsafeContext = NIOLoopBound(context, eventLoop: context.eventLoop)
-                    context.eventLoop.execute { [nextInvocationPath, defaultHeaders] in
-                        // Send next request. The function `sendNextRequest` requires `self` which is not
-                        // Sendable so just inlined the code instead
-                        let httpRequest = HTTPRequestHead(
-                            version: .http1_1,
-                            method: .GET,
-                            uri: nextInvocationPath,
-                            headers: defaultHeaders
-                        )
-                        let context = unsafeContext.value
-                        context.write(Self.wrapOutboundOut(.head(httpRequest)), promise: nil)
-                        context.write(Self.wrapOutboundOut(.end(nil)), promise: nil)
-                        context.flush()
-                    }
-                }
-            } onCancel: {
-                switch self.state {
-                case .connected(_, .waitingForNextInvocation(let continuation)):
-                    continuation.resume(throwing: CancellationError())
-                case .connected(_, .idle):
-                    break
-                default:
-                    fatalError("Invalid state: \(self.state)")
-                }
+            return try await withCheckedThrowingContinuation {
+                (continuation: CheckedContinuation<Invocation, any Error>) in
+                self.state = .connected(context, .waitingForNextInvocation(continuation))
+                self.sendNextRequest(context: context)
             }
 
         case .connected(_, .sendingResponse),
@@ -846,6 +825,12 @@ extension LambdaChannelHandler: ChannelInboundHandler {
 
     func channelInactive(context: ChannelHandlerContext) {
         // fail any pending responses with last error or assume peer disconnected
+        switch self.state {
+        case .connected(_, .waitingForNextInvocation(let continuation)):
+            continuation.resume(throwing: self.lastError ?? ChannelError.ioOnClosedChannel)
+        default:
+            break
+        }
 
         // we don't need to forward channelInactive to the delegate, as the delegate observes the
         // closeFuture
