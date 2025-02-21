@@ -410,17 +410,6 @@ private protocol LambdaChannelHandlerDelegate {
     func connectionErrorHappened(_ error: any Error, channel: any Channel)
 }
 
-struct UnsafeContext: @unchecked Sendable {
-    private let _context: ChannelHandlerContext
-    var context: ChannelHandlerContext {
-        self._context.eventLoop.preconditionInEventLoop()
-        return _context
-    }
-    init(_ context: ChannelHandlerContext) {
-        self._context = context
-    }
-}
-
 private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate> {
     let nextInvocationPath = Consts.invocationURLPrefix + Consts.getNextInvocationURLSuffix
 
@@ -486,7 +475,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
                     (continuation: CheckedContinuation<Invocation, any Error>) in
                     self.state = .connected(context, .waitingForNextInvocation(continuation))
 
-                    let unsafeContext = UnsafeContext(context)
+                    let unsafeContext = NIOLoopBound(context, eventLoop: context.eventLoop)
                     context.eventLoop.execute { [nextInvocationPath, defaultHeaders] in
                         // Send next request. The function `sendNextRequest` requires `self` which is not
                         // Sendable so just inlined the code instead
@@ -496,7 +485,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
                             uri: nextInvocationPath,
                             headers: defaultHeaders
                         )
-                        let context = unsafeContext.context
+                        let context = unsafeContext.value
                         context.write(Self.wrapOutboundOut(.head(httpRequest)), promise: nil)
                         context.write(Self.wrapOutboundOut(.end(nil)), promise: nil)
                         context.flush()
