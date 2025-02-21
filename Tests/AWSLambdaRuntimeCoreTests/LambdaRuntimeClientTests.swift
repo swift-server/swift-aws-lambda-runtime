@@ -123,8 +123,8 @@ struct LambdaRuntimeClientTests {
                 try await withThrowingTaskGroup(of: Void.self) { group in
                     group.addTask {
                         while true {
-                            print("Waiting")
                             let (_, writer) = try await runtimeClient.nextInvocation()
+                            // Wrap this is a task so cancellation isn't propagated to the write calls
                             try await Task {
                                 try await writer.write(ByteBuffer(string: "hello"))
                                 try await writer.finish()
