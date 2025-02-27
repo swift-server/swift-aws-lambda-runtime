@@ -19,6 +19,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.81.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.4"),
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.1.4"),
     ],
     targets: [
         .target(
@@ -31,10 +32,10 @@ let package = Package(
         .target(
             name: "AWSLambdaRuntimeCore",
             dependencies: [
+                .product(name: "DequeModule", package: "swift-collections"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOCore", package: "swift-nio"),
-                .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
             ]
         ),
