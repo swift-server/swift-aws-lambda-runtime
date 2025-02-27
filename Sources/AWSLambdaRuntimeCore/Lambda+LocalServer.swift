@@ -104,7 +104,7 @@ private struct LambdaHTTPServer {
         invocationEndpoint: String?,
         host: String = "127.0.0.1",
         port: Int = 7000,
-        eventLoopGroup: MultiThreadedEventLoopGroup  = .singleton,
+        eventLoopGroup: MultiThreadedEventLoopGroup = .singleton,
         logger: Logger,
         _ closure: sending @escaping () async throws -> Result
     ) async throws -> Result {
@@ -145,7 +145,8 @@ private struct LambdaHTTPServer {
         // Sadly the Swift compiler does not understand that the passed in closure will only be
         // invoked once. Because of this we need an unsafe transfer box here. Buuuh!
         let closureBox = UnsafeTransferBox(value: closure)
-        let result = await withTaskGroup(of: TaskResult<Result>.self, returning: Swift.Result<Result, any Error>.self) { group in
+        let result = await withTaskGroup(of: TaskResult<Result>.self, returning: Swift.Result<Result, any Error>.self) {
+            group in
             group.addTask {
                 let c = closureBox.value
                 do {
@@ -196,9 +197,12 @@ private struct LambdaHTTPServer {
                 return result
 
             case .serverReturned(let result):
-                logger.error("Server shutdown before closure completed", metadata: [
-                    "error": "\(result.maybeError != nil ? "\(result.maybeError!)" : "none")"
-                ])
+                logger.error(
+                    "Server shutdown before closure completed",
+                    metadata: [
+                        "error": "\(result.maybeError != nil ? "\(result.maybeError!)" : "none")"
+                    ]
+                )
                 switch await group.next()! {
                 case .closureResult(let result):
                     return result
@@ -212,8 +216,6 @@ private struct LambdaHTTPServer {
         logger.info("Server shutting down")
         return try result.get()
     }
-
-
 
     /// This method handles individual TCP connections
     private func handleConnection(
@@ -272,7 +274,11 @@ private struct LambdaHTTPServer {
     ///   - body: the HTTP request body
     /// - Throws:
     /// - Returns: the response to send back to the client or the Lambda function
-    private func processRequest(head: HTTPRequestHead, body: ByteBuffer?, logger: Logger) async throws -> LocalServerResponse {
+    private func processRequest(
+        head: HTTPRequestHead,
+        body: ByteBuffer?,
+        logger: Logger
+    ) async throws -> LocalServerResponse {
 
         if let body {
             logger.trace(
@@ -296,7 +302,7 @@ private struct LambdaHTTPServer {
             // we always accept the /invoke request and push them to the pool
             let requestId = "\(DispatchTime.now().uptimeNanoseconds)"
             var logger = logger
-            logger[metadataKey: "requestID"] =  "\(requestId)"
+            logger[metadataKey: "requestID"] = "\(requestId)"
             logger.trace("/invoke received invocation")
             await self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body))
 
