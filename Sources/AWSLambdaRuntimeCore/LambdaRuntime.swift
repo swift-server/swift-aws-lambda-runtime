@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Synchronization
 import Logging
-import NIOConcurrencyHelpers
 import NIOCore
 
 #if canImport(FoundationEssentials)
@@ -26,8 +26,7 @@ import Foundation
 // We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
 // sadly crashes the compiler today.
 public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
-    // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
-    let handlerMutex: NIOLockedValueBox<Handler?>
+    let handlerMutex: Mutex<Handler?>
     let logger: Logger
     let eventLoop: EventLoop
 
@@ -36,7 +35,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
     ) {
-        self.handlerMutex = NIOLockedValueBox(handler)
+        self.handlerMutex = Mutex(handler)
         self.eventLoop = eventLoop
 
         // by setting the log level here, we understand it can not be changed dynamically at runtime
@@ -49,7 +48,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
     }
 
     public func run() async throws {
-        let handler = self.handlerMutex.withLockedValue { handler in
+        let handler = self.handlerMutex.withLock { handler in
             let result = handler
             handler = nil
             return result
