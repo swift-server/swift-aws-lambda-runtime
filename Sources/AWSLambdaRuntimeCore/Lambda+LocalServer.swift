@@ -93,6 +93,14 @@ private struct LambdaHTTPServer {
         case serverReturned(Swift.Result<Void, any Error>)
     }
 
+    struct UnsafeTransferBox<Value>: @unchecked Sendable {
+        let value: Value
+
+        init(value: sending Value) {
+            self.value = value
+        }
+    }
+
     static func withLocalServer<Result: Sendable>(
         invocationEndpoint: String?,
         host: String = "127.0.0.1",
@@ -135,18 +143,13 @@ private struct LambdaHTTPServer {
 
         let server = LambdaHTTPServer(invocationEndpoint: invocationEndpoint)
 
-        // We are handling each incoming connection in a separate child task. It is important
-        // to use a discarding task group here which automatically discards finished child tasks.
-        // A normal task group retains all child tasks and their outputs in memory until they are
-        // consumed by iterating the group or by exiting the group. Since, we are never consuming
-        // the results of the group we need the group to automatically discard them; otherwise, this
-        // would result in a memory leak over time.
+        // Sadly the Swift compiler does not understand that the passed in closure will only be
+        // invoked once. Because of this we need an unsafe transfer box here. Buuuh!
+        let closureBox = UnsafeTransferBox(value: closure)
         let result = await withTaskGroup(of: TaskResult<Result>.self, returning: Swift.Result<Result, any Error>.self) { group in
-
-            let c = closure
             group.addTask {
+                let c = closureBox.value
                 do {
-
                     let result = try await c()
                     return .closureResult(.success(result))
                 } catch {
@@ -156,6 +159,12 @@ private struct LambdaHTTPServer {
 
             group.addTask {
                 do {
+                    // We are handling each incoming connection in a separate child task. It is important
+                    // to use a discarding task group here which automatically discards finished child tasks.
+                    // A normal task group retains all child tasks and their outputs in memory until they are
+                    // consumed by iterating the group or by exiting the group. Since, we are never consuming
+                    // the results of the group we need the group to automatically discard them; otherwise, this
+                    // would result in a memory leak over time.
                     try await withThrowingDiscardingTaskGroup { taskGroup in
                         try await channel.executeThenClose { inbound in
                             for try await connectionChannel in inbound {
