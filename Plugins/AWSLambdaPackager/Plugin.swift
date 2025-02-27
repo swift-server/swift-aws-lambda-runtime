@@ -307,7 +307,7 @@ struct AWSLambdaPackager: CommandPlugin {
 
             USAGE: swift package --allow-network-connections docker archive
                                                        [--help] [--verbose]
-                                                       [--output-directory <path>]
+                                                       [--output-path <path>]
                                                        [--products <list of products>]
                                                        [--configuration debug | release]
                                                        [--swift-version <version>]
@@ -317,7 +317,7 @@ struct AWSLambdaPackager: CommandPlugin {
 
             OPTIONS:
             --verbose                     Produce verbose output for debugging.
-            --output-directory <path>     The path of the binary package.
+            --output-path <path>          The path of the binary package.
                                           (default is `.build/plugins/AWSLambdaPackager/outputs/...`)
             --products <list>             The list of executable targets to build.
                                           (default is taken from Package.swift)

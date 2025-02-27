@@ -174,13 +174,14 @@ private struct LambdaHttpServer {
         do {
             try await channel.executeThenClose { inbound, outbound in
                 for try await inboundData in inbound {
-                    if case .head(let head) = inboundData {
+                    switch inboundData {
+                    case .head(let head):
                         requestHead = head
-                    }
-                    if case .body(let body) = inboundData {
+
+                    case .body(let body):
                         requestBody = body
-                    }
-                    if case .end = inboundData {
+
+                    case .end:
                         precondition(requestHead != nil, "Received .end without .head")
                         // process the request
                         let response = try await self.processRequest(
