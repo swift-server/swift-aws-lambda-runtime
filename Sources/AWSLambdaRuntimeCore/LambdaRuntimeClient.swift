@@ -145,22 +145,28 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
     }
 
     func nextInvocation() async throws -> (Invocation, Writer) {
-        switch self.lambdaState {
-        case .idle:
-            self.lambdaState = .waitingForNextInvocation
-            let handler = try await self.makeOrGetConnection()
-            let invocation = try await handler.nextInvocation()
-            guard case .waitingForNextInvocation = self.lambdaState else {
+        try await withTaskCancellationHandler {
+            switch self.lambdaState {
+            case .idle:
+                self.lambdaState = .waitingForNextInvocation
+                let handler = try await self.makeOrGetConnection()
+                let invocation = try await handler.nextInvocation()
+                guard case .waitingForNextInvocation = self.lambdaState else {
+                    fatalError("Invalid state: \(self.lambdaState)")
+                }
+                self.lambdaState = .waitingForResponse(requestID: invocation.metadata.requestID)
+                return (invocation, Writer(runtimeClient: self))
+
+            case .waitingForNextInvocation,
+                .waitingForResponse,
+                .sendingResponse,
+                .sentResponse:
                 fatalError("Invalid state: \(self.lambdaState)")
             }
-            self.lambdaState = .waitingForResponse(requestID: invocation.metadata.requestID)
-            return (invocation, Writer(runtimeClient: self))
-
-        case .waitingForNextInvocation,
-            .waitingForResponse,
-            .sendingResponse,
-            .sentResponse:
-            fatalError("Invalid state: \(self.lambdaState)")
+        } onCancel: {
+            Task {
+                await self.close()
+            }
         }
     }
 
@@ -819,6 +825,12 @@ extension LambdaChannelHandler: ChannelInboundHandler {
 
     func channelInactive(context: ChannelHandlerContext) {
         // fail any pending responses with last error or assume peer disconnected
+        switch self.state {
+        case .connected(_, .waitingForNextInvocation(let continuation)):
+            continuation.resume(throwing: self.lastError ?? ChannelError.ioOnClosedChannel)
+        default:
+            break
+        }
 
         // we don't need to forward channelInactive to the delegate, as the delegate observes the
         // closeFuture
