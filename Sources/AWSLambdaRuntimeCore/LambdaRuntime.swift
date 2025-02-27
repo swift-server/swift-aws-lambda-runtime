@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Synchronization
 import Logging
 import NIOCore
+import Synchronization
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
