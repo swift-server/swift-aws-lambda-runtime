@@ -16,7 +16,6 @@
 import DequeModule
 import Dispatch
 import Logging
-import NIOConcurrencyHelpers
 import NIOCore
 import NIOHTTP1
 import NIOPosix
@@ -183,21 +182,29 @@ private struct LambdaHTTPServer {
                 }
             }
 
-            let task1 = await group.next()!
-            group.cancelAll()
-            let task2 = await group.next()!
+            // Now that the local HTTP server and LambdaHandler tasks are started, wait for the
+            // first of the two that will terminate.
+            // When the first task terminates, cancel the group and collect the result of the
+            // second task.
 
-            switch task1 {
+            // collect and return the result of the LambdaHandler
+            let serverOrHandlerResult1 = await group.next()!
+            group.cancelAll()
+
+            switch serverOrHandlerResult1 {
             case .closureResult(let result):
                 return result
 
-            case .serverReturned:
-                switch task2 {
+            case .serverReturned(let result):
+                logger.error("Server shutdown before closure completed", metadata: [
+                    "error": "\(result.maybeError != nil ? "\(result.maybeError!)" : "none")"
+                ])
+                switch await group.next()! {
                 case .closureResult(let result):
                     return result
 
                 case .serverReturned:
-                    fatalError()
+                    fatalError("Only one task is a server, and only one can return `serverReturned`")
                 }
             }
         }
@@ -404,34 +411,26 @@ private struct LambdaHTTPServer {
     private final class Pool<T>: AsyncSequence, AsyncIteratorProtocol, Sendable where T: Sendable {
         typealias Element = T
 
-        struct State {
-            enum State {
-                case buffer(Deque<T>)
-                case continuation(CheckedContinuation<T, any Error>?)
-            }
-
-            var state: State
-
-            init() {
-                self.state = .buffer([])
-            }
+        enum State: ~Copyable {
+            case buffer(Deque<T>)
+            case continuation(CheckedContinuation<T, any Error>?)
         }
 
-        private let lock = Mutex<State>(.init())
+        private let lock = Mutex<State>(.buffer([]))
 
         /// enqueue an element, or give it back immediately to the iterator if it is waiting for an element
         public func push(_ invocation: T) async {
             // if the iterator is waiting for an element, give it to it
             // otherwise, enqueue the element
             let maybeContinuation = self.lock.withLock { state -> CheckedContinuation<T, any Error>? in
-                switch state.state {
+                switch consume state {
                 case .continuation(let continuation):
-                    state.state = .buffer([])
+                    state = .buffer([])
                     return continuation
 
                 case .buffer(var buffer):
                     buffer.append(invocation)
-                    state.state = .buffer(buffer)
+                    state = .buffer(buffer)
                     return nil
                 }
             }
@@ -447,18 +446,18 @@ private struct LambdaHTTPServer {
 
             return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, any Error>) in
                 let nextAction = self.lock.withLock { state -> T? in
-                    switch state.state {
+                    switch consume state {
                     case .buffer(var buffer):
                         if let first = buffer.popFirst() {
-                            state.state = .buffer(buffer)
+                            state = .buffer(buffer)
                             return first
                         } else {
-                            state.state = .continuation(continuation)
+                            state = .continuation(continuation)
                             return nil
                         }
 
                     case .continuation:
-                        fatalError("Concurrent invocations to next(). This is illigal.")
+                        fatalError("Concurrent invocations to next(). This is illegal.")
                     }
                 }
 
@@ -509,3 +508,14 @@ private struct LambdaHTTPServer {
     }
 }
 #endif
+
+extension Result {
+    var maybeError: Failure? {
+        switch self {
+        case .success:
+            return nil
+        case .failure(let error):
+            return error
+        }
+    }
+}
