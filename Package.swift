@@ -85,12 +85,6 @@ let package = Package(
                 .byName(name: "AWSLambdaTesting")
             ]
         ),
-        .executableTarget(
-            name: "HelloWorldLambda",
-            dependencies: [
-                "AWSLambdaRuntime"
-            ]
-        ),
         // for perf testing
         .executableTarget(
             name: "MockServer",
