@@ -88,7 +88,7 @@ let package = Package(
         .executableTarget(
             name: "HelloWorldLambda",
             dependencies: [
-                "AWSLambdaRuntime",
+                "AWSLambdaRuntime"
             ]
         ),
         // for perf testing
