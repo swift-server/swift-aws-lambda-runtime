@@ -14,7 +14,7 @@
 
 import XCTest
 
-@testable import AWSLambdaRuntimeCore
+@testable import AWSLambdaRuntime
 
 class UtilsTest: XCTestCase {
     func testGenerateXRayTraceID() {

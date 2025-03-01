@@ -19,7 +19,7 @@ import Testing
 
 import struct Foundation.UUID
 
-@testable import AWSLambdaRuntimeCore
+@testable import AWSLambdaRuntime
 
 @Suite
 struct LambdaRuntimeClientTests {

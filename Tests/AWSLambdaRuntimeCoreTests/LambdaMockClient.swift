@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntimeCore
+import AWSLambdaRuntime
 import Logging
 import NIOCore
 

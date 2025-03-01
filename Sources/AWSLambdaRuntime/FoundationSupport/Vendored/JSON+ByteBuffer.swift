@@ -26,6 +26,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FoundationJSONSupport
 import NIOCore
 
 #if canImport(FoundationEssentials)
@@ -147,3 +148,4 @@ extension JSONEncoder {
         return buffer
     }
 }
+#endif // trait: FoundationJSONSupport

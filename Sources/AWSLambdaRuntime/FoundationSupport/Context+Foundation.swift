@@ -12,8 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntimeCore
-
+#if FoundationJSONSupport
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -26,3 +25,4 @@ extension LambdaContext {
         return Date(timeIntervalSince1970: secondsSinceEpoch)
     }
 }
+#endif // trait: FoundationJSONSupport

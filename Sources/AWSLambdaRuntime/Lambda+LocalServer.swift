@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if DEBUG
+#if LocalServerSupport
 import DequeModule
 import Dispatch
 import Logging
@@ -513,7 +513,6 @@ private struct LambdaHTTPServer {
         }
     }
 }
-#endif
 
 extension Result {
     var maybeError: Failure? {
@@ -525,3 +524,4 @@ extension Result {
         }
     }
 }
+#endif
