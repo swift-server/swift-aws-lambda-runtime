@@ -17,7 +17,7 @@ import NIOEmbedded
 import NIOHTTP1
 import XCTest
 
-@testable import AWSLambdaRuntimeCore
+@testable import AWSLambdaRuntime
 
 final class ControlPlaneRequestEncoderTests: XCTestCase {
     let host = "192.168.0.1"

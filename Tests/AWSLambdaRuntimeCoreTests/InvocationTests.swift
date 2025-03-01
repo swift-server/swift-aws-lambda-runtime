@@ -15,7 +15,7 @@
 import NIOHTTP1
 import Testing
 
-@testable import AWSLambdaRuntimeCore
+@testable import AWSLambdaRuntime
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials

@@ -82,7 +82,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
 
         } else {
 
-            #if DEBUG
+            #if LocalServerSupport
             // we're not running on Lambda and we're compiled in DEBUG mode,
             // let's start a local server for testing
             try await Lambda.withLocalServer(invocationEndpoint: Lambda.env("LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT"))
