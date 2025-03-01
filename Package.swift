@@ -1,4 +1,4 @@
-// swift-tools-version:6.0
+// swift-tools-version:6.1
 
 import PackageDescription
 
@@ -8,34 +8,38 @@ let package = Package(
     products: [
         // this library exports `AWSLambdaRuntimeCore` and adds Foundation convenience methods
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
-        // this has all the main functionality for lambda and it does not link Foundation
-        .library(name: "AWSLambdaRuntimeCore", targets: ["AWSLambdaRuntimeCore"]),
         // plugin to package the lambda, creating an archive that can be uploaded to AWS
         // requires Linux or at least macOS v15
         .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
         // for testing only
         .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
+    traits: [
+        "FoundationJSONSupport",
+        "ServiceLifecycleSupport",
+        "LocalServerSupport",
+        .default(
+            enabledTraits: [
+                "FoundationJSONSupport",
+                "ServiceLifecycleSupport",
+                "LocalServerSupport",
+            ]
+        )
+    ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.81.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.4"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.1.4"),
+        .package(url: "https://github.com/apple/swift-service-lifecycle.git", from: "2.6.3", traits: ["ServiceLifecycleSupport"]),
     ],
     targets: [
         .target(
             name: "AWSLambdaRuntime",
             dependencies: [
-                .byName(name: "AWSLambdaRuntimeCore"),
                 .product(name: "NIOCore", package: "swift-nio"),
-            ]
-        ),
-        .target(
-            name: "AWSLambdaRuntimeCore",
-            dependencies: [
                 .product(name: "DequeModule", package: "swift-collections"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "NIOHTTP1", package: "swift-nio"),
-                .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
             ]
         ),
@@ -58,7 +62,7 @@ let package = Package(
         .testTarget(
             name: "AWSLambdaRuntimeCoreTests",
             dependencies: [
-                .byName(name: "AWSLambdaRuntimeCore"),
+                .byName(name: "AWSLambdaRuntime"),
                 .product(name: "NIOTestUtils", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
             ]
@@ -66,7 +70,7 @@ let package = Package(
         .testTarget(
             name: "AWSLambdaRuntimeTests",
             dependencies: [
-                .byName(name: "AWSLambdaRuntimeCore"),
+//                .byName(name: "AWSLambdaRuntimeCore"),
                 .byName(name: "AWSLambdaRuntime"),
             ]
         ),

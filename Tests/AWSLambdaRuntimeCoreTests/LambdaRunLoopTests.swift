@@ -16,7 +16,7 @@ import Logging
 import NIOCore
 import Testing
 
-@testable import AWSLambdaRuntimeCore
+@testable import AWSLambdaRuntime
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
