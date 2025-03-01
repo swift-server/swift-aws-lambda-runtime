@@ -30,7 +30,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.81.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.4"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.1.4"),
-        .package(url: "https://github.com/apple/swift-service-lifecycle.git", from: "2.6.3", traits: ["ServiceLifecycleSupport"]),
+        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.6.3"),
     ],
     targets: [
         .target(
@@ -41,6 +41,7 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
+                .product(name: "ServiceLifecycle", package: "swift-service-lifecycle", condition: .when(traits: ["ServiceLifecycleSupport"]))
             ]
         ),
         .plugin(
