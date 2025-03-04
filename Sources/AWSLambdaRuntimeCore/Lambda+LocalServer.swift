@@ -352,15 +352,15 @@ private struct LambdaHTTPServer {
         // :requestID/response endpoint is called by the lambda posting the response
         case (.POST, let url) where url.hasSuffix(Consts.postResponseURLSuffix):
             let parts = head.uri.split(separator: "/")
-            guard let requestId = parts.count > 2 ? String(parts[parts.count - 2]) : nil else {
+            guard let requestID = parts.count > 2 ? String(parts[parts.count - 2]) : nil else {
                 // the request is malformed, since we were expecting a requestId in the path
                 return .init(status: .badRequest)
             }
             // enqueue the lambda function response to be served as response to the client /invoke
-            logger.trace("/:requestID/response received response", metadata: ["requestId": "\(requestId)"])
+            logger.trace("/:requestID/response received response", metadata: ["requestId": "\(requestID)"])
             await self.responsePool.push(
                 LocalServerResponse(
-                    id: requestId,
+                    id: requestID,
                     status: .ok,
                     headers: [("Content-Type", "application/json")],
                     body: body
@@ -368,17 +368,28 @@ private struct LambdaHTTPServer {
             )
 
             // tell the Lambda function we accepted the response
-            return .init(id: requestId, status: .accepted)
+            return .init(id: requestID, status: .accepted)
 
         // :requestID/error endpoint is called by the lambda posting an error response
         // we accept all requestID and we do not handle the body, we just acknowledge the request
         case (.POST, let url) where url.hasSuffix(Consts.postErrorURLSuffix):
             let parts = head.uri.split(separator: "/")
-            guard let _ = parts.count > 2 ? String(parts[parts.count - 2]) : nil else {
+            guard let requestID = parts.count > 2 ? String(parts[parts.count - 2]) : nil else {
                 // the request is malformed, since we were expecting a requestId in the path
                 return .init(status: .badRequest)
             }
-            return .init(status: .ok)
+            // enqueue the lambda function response to be served as response to the client /invoke
+            logger.trace("/:requestID/response received response", metadata: ["requestId": "\(requestID)"])
+            await self.responsePool.push(
+                LocalServerResponse(
+                    id: requestID,
+                    status: .internalServerError,
+                    headers: [("Content-Type", "application/json")],
+                    body: body
+                )
+            )
+
+            return .init(status: .accepted)
 
         // unknown call
         default:
