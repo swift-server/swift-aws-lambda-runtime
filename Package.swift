@@ -24,7 +24,7 @@ let package = Package(
                 "ServiceLifecycleSupport",
                 "LocalServerSupport",
             ]
-        )
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.81.0"),
@@ -41,7 +41,11 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
-                .product(name: "ServiceLifecycle", package: "swift-service-lifecycle", condition: .when(traits: ["ServiceLifecycleSupport"]))
+                .product(
+                    name: "ServiceLifecycle",
+                    package: "swift-service-lifecycle",
+                    condition: .when(traits: ["ServiceLifecycleSupport"])
+                ),
             ]
         ),
         .plugin(
@@ -71,8 +75,7 @@ let package = Package(
         .testTarget(
             name: "AWSLambdaRuntimeTests",
             dependencies: [
-//                .byName(name: "AWSLambdaRuntimeCore"),
-                .byName(name: "AWSLambdaRuntime"),
+                .byName(name: "AWSLambdaRuntime")
             ]
         ),
         // testing helper

@@ -64,7 +64,6 @@ let package = Package(
         .testTarget(
             name: "AWSLambdaRuntimeTests",
             dependencies: [
-//                .byName(name: "AWSLambdaRuntimeCore"),
                 .byName(name: "AWSLambdaRuntime"),
             ]
         ),
