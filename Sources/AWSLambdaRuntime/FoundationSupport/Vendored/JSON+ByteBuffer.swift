@@ -148,4 +148,4 @@ extension JSONEncoder {
         return buffer
     }
 }
-#endif // trait: FoundationJSONSupport
+#endif  // trait: FoundationJSONSupport

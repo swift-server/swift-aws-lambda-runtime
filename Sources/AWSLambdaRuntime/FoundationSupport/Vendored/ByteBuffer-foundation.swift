@@ -105,4 +105,4 @@ extension ByteBuffer {
         }
     }
 }
-#endif // trait: FoundationJSONSupport
+#endif  // trait: FoundationJSONSupport

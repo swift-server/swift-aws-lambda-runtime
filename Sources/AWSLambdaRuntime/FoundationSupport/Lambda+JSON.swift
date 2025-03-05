@@ -135,4 +135,4 @@ extension LambdaRuntime {
         self.init(handler: handler)
     }
 }
-#endif // trait: FoundationJSONSupport
+#endif  // trait: FoundationJSONSupport

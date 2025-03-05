@@ -25,4 +25,4 @@ extension LambdaContext {
         return Date(timeIntervalSince1970: secondsSinceEpoch)
     }
 }
-#endif // trait: FoundationJSONSupport
+#endif  // trait: FoundationJSONSupport
