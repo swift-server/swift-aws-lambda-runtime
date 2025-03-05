@@ -339,6 +339,6 @@ Swift provides great Unicode support via [ICU](http://site.icu-project.org/home)
 
 <!-- links -->
 
-[lh]: ./AWSLambdaRuntimeCore/Protocols/LambdaHandler.html
-[ellh]: ./AWSLambdaRuntimeCore/Protocols/EventLoopLambdaHandler.html
-[bblh]: ./AWSLambdaRuntimeCore/Protocols/ByteBufferLambdaHandler.html
+[lh]: ./AWSLambdaRuntime/Protocols/LambdaHandler.html
+[ellh]: ./AWSLambdaRuntime/Protocols/EventLoopLambdaHandler.html
+[bblh]: ./AWSLambdaRuntime/Protocols/ByteBufferLambdaHandler.html

@@ -6,7 +6,6 @@ let package = Package(
     name: "swift-aws-lambda-runtime",
     platforms: [.macOS(.v15)],
     products: [
-        // this library exports `AWSLambdaRuntimeCore` and adds Foundation convenience methods
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
         // plugin to package the lambda, creating an archive that can be uploaded to AWS
         // requires Linux or at least macOS v15

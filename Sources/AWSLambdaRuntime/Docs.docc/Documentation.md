@@ -1,4 +1,4 @@
-# ``AWSLambdaRuntimeCore``
+# ``AWSLambdaRuntime``
 
 An AWS Lambda runtime for the Swift programming language
 
