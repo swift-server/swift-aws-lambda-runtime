@@ -1,4 +1,4 @@
 version: 1
 builder:
   configs:
-    - documentation_targets: [AWSLambdaRuntimeCore, AWSLambdaRuntime]
+    - documentation_targets: [AWSLambdaRuntime]

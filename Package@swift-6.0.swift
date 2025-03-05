@@ -29,7 +29,7 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
-                .product(name: "ServiceLifecycle", package: "swift-service-lifecycle")
+                .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
             ],
             swiftSettings: [
                 .define("FoundationJSONSupport"),
@@ -64,7 +64,7 @@ let package = Package(
         .testTarget(
             name: "AWSLambdaRuntimeTests",
             dependencies: [
-                .byName(name: "AWSLambdaRuntime"),
+                .byName(name: "AWSLambdaRuntime")
             ]
         ),
         // testing helper
