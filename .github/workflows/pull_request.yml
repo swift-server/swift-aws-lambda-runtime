@@ -13,7 +13,7 @@ jobs:
       shell_check_enabled: true
       python_lint_check_enabled: true
       api_breakage_check_container_image: "swiftlang/swift:nightly-6.1-jammy"
-      docs_check_container_image: "swiftlang/swift:nightly-6.1-noble"
+      docs_check_container_image: "swift:6.0-noble"
       format_check_container_image: "swiftlang/swift:nightly-6.1-jammy"
       yamllint_check_enabled: true
 
