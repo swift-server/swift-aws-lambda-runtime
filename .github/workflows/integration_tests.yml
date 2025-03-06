@@ -38,8 +38,8 @@ on:
         required: true
       matrix_linux_swift_container_image:
         type: string
-        description: "Container image for the matrix job. Defaults to matching latest Swift Ubuntu image."
-        default: "swiftlang/swift:nightly-6.1-jammy"
+        description: "Container image for the matrix job. Defaults to matching latest Swift 6.1 Amazon Linux 2 image."
+        default: "swiftlang/swift:nightly-6.1-amazonlinux2"
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
