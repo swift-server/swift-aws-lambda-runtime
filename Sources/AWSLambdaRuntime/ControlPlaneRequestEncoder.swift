@@ -93,7 +93,8 @@ struct ControlPlaneRequestEncoder: _EmittingChannelHandler {
 extension String {
     static let CRLF: String = "\r\n"
 
-    static let userAgentHeader: String = "user-agent: Swift-Lambda/Unknown\r\n"
+    static let userAgent = "Swift-Lambda/Unknown"
+    static let userAgentHeader: String = "user-agent: \(userAgent)\r\n"
     static let unhandledErrorHeader: String = "lambda-runtime-function-error-type: Unhandled\r\n"
 
     static let nextInvocationRequestLine: String =
