@@ -10,8 +10,6 @@ let package = Package(
         // plugin to package the lambda, creating an archive that can be uploaded to AWS
         // requires Linux or at least macOS v15
         .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
-        // for testing only
-        .library(name: "AWSLambdaTesting", targets: ["AWSLambdaTesting"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.81.0"),
@@ -58,21 +56,6 @@ let package = Package(
                 .byName(name: "AWSLambdaRuntime"),
                 .product(name: "NIOTestUtils", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
-            ]
-        ),
-        // testing helper
-        .target(
-            name: "AWSLambdaTesting",
-            dependencies: [
-                .byName(name: "AWSLambdaRuntime"),
-                .product(name: "NIOCore", package: "swift-nio"),
-                .product(name: "NIOPosix", package: "swift-nio"),
-            ]
-        ),
-        .testTarget(
-            name: "AWSLambdaTestingTests",
-            dependencies: [
-                .byName(name: "AWSLambdaTesting")
             ]
         ),
         // for perf testing
