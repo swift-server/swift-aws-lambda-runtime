@@ -26,6 +26,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FoundationJSONSupport
 import NIOCore
 
 #if canImport(FoundationEssentials)
@@ -104,3 +105,4 @@ extension ByteBuffer {
         }
     }
 }
+#endif  // trait: FoundationJSONSupport

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,17 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntimeCore
+#if ServiceLifecycleSupport
+import ServiceLifecycle
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import struct Foundation.Date
+extension LambdaRuntime: Service {}
 #endif
-
-extension LambdaContext {
-    var deadlineDate: Date {
-        let secondsSinceEpoch = Double(Int64(bitPattern: self.deadline.rawValue)) / -1_000_000_000
-        return Date(timeIntervalSince1970: secondsSinceEpoch)
-    }
-}
