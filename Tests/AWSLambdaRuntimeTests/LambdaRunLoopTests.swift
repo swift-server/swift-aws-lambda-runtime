@@ -32,6 +32,7 @@ struct LambdaRunLoopTests {
             responseWriter: some LambdaResponseStreamWriter,
             context: LambdaContext
         ) async throws {
+            context.logger.info("Test")
             try await responseWriter.writeAndFinish(event)
         }
     }
@@ -42,6 +43,7 @@ struct LambdaRunLoopTests {
             responseWriter: some LambdaResponseStreamWriter,
             context: LambdaContext
         ) async throws {
+            context.logger.info("Test")
             throw LambdaError.handlerError
         }
     }
@@ -54,16 +56,19 @@ struct LambdaRunLoopTests {
         let inputEvent = ByteBuffer(string: "Test Invocation Event")
 
         try await withThrowingTaskGroup(of: Void.self) { group in
+            let logStore = CollectEverythingLogHandler.LogStore()
             group.addTask {
                 try await Lambda.runLoop(
                     runtimeClient: self.mockClient,
                     handler: self.mockEchoHandler,
-                    logger: Logger(label: "RunLoopTest")
+                    logger: Logger(label: "RunLoopTest", factory: { _ in CollectEverythingLogHandler(logStore: logStore) })
                 )
             }
 
-            let response = try await self.mockClient.invoke(event: inputEvent)
+            let requestID = UUID().uuidString
+            let response = try await self.mockClient.invoke(event: inputEvent, requestID: requestID)
             #expect(response == inputEvent)
+            logStore.assertContainsLog("Test", ("aws-request-id", .exactMatch(requestID)))
 
             group.cancelAll()
         }
@@ -73,20 +78,23 @@ struct LambdaRunLoopTests {
         let inputEvent = ByteBuffer(string: "Test Invocation Event")
 
         await withThrowingTaskGroup(of: Void.self) { group in
+            let logStore = CollectEverythingLogHandler.LogStore()
             group.addTask {
                 try await Lambda.runLoop(
                     runtimeClient: self.mockClient,
                     handler: self.failingHandler,
-                    logger: Logger(label: "RunLoopTest")
+                    logger: Logger(label: "RunLoopTest", factory: { _ in CollectEverythingLogHandler(logStore: logStore) })
                 )
             }
 
+            let requestID = UUID().uuidString
             await #expect(
                 throws: LambdaError.handlerError,
                 performing: {
-                    try await self.mockClient.invoke(event: inputEvent)
+                    try await self.mockClient.invoke(event: inputEvent, requestID: requestID)
                 }
             )
+            logStore.assertContainsLog("Test", ("aws-request-id", .exactMatch(requestID)))
 
             group.cancelAll()
         }
