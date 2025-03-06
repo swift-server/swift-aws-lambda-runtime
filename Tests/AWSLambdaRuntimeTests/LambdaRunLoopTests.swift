@@ -61,7 +61,10 @@ struct LambdaRunLoopTests {
                 try await Lambda.runLoop(
                     runtimeClient: self.mockClient,
                     handler: self.mockEchoHandler,
-                    logger: Logger(label: "RunLoopTest", factory: { _ in CollectEverythingLogHandler(logStore: logStore) })
+                    logger: Logger(
+                        label: "RunLoopTest",
+                        factory: { _ in CollectEverythingLogHandler(logStore: logStore) }
+                    )
                 )
             }
 
@@ -83,7 +86,10 @@ struct LambdaRunLoopTests {
                 try await Lambda.runLoop(
                     runtimeClient: self.mockClient,
                     handler: self.failingHandler,
-                    logger: Logger(label: "RunLoopTest", factory: { _ in CollectEverythingLogHandler(logStore: logStore) })
+                    logger: Logger(
+                        label: "RunLoopTest",
+                        factory: { _ in CollectEverythingLogHandler(logStore: logStore) }
+                    )
                 )
             }
 
