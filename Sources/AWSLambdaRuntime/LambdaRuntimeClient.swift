@@ -458,16 +458,16 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
         self.configuration = configuration
         self.defaultHeaders = [
             "host": "\(self.configuration.ip):\(self.configuration.port)",
-            "user-agent": "Swift-Lambda/Unknown",
+            "user-agent": .userAgent,
         ]
         self.errorHeaders = [
             "host": "\(self.configuration.ip):\(self.configuration.port)",
-            "user-agent": "Swift-Lambda/Unknown",
+            "user-agent": .userAgent,
             "lambda-runtime-function-error-type": "Unhandled",
         ]
         self.streamingHeaders = [
             "host": "\(self.configuration.ip):\(self.configuration.port)",
-            "user-agent": "Swift-Lambda/Unknown",
+            "user-agent": .userAgent,
             "transfer-encoding": "chunked",
         ]
     }
@@ -638,7 +638,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
                 if byteBuffer?.readableBytes ?? 0 < 6_000_000 {
                     [
                         "host": "\(self.configuration.ip):\(self.configuration.port)",
-                        "user-agent": "Swift-Lambda/Unknown",
+                        "user-agent": .userAgent,
                         "content-length": "\(byteBuffer?.readableBytes ?? 0)",
                     ]
                 } else {

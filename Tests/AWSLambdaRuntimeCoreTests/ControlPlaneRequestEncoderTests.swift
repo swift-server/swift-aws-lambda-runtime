@@ -49,7 +49,7 @@ final class ControlPlaneRequestEncoderTests: XCTestCase {
         XCTAssertEqual(request?.head.uri, "/2018-06-01/runtime/invocation/next")
         XCTAssertEqual(request?.head.version, .http1_1)
         XCTAssertEqual(request?.head.headers["host"], [self.host])
-        XCTAssertEqual(request?.head.headers["user-agent"], ["Swift-Lambda/Unknown"])
+        XCTAssertEqual(request?.head.headers["user-agent"], [.userAgent])
 
         XCTAssertNil(try self.server.readInbound(as: NIOHTTPServerRequestFull.self))
     }
@@ -64,7 +64,7 @@ final class ControlPlaneRequestEncoderTests: XCTestCase {
         XCTAssertEqual(request?.head.uri, "/2018-06-01/runtime/invocation/\(requestID)/response")
         XCTAssertEqual(request?.head.version, .http1_1)
         XCTAssertEqual(request?.head.headers["host"], [self.host])
-        XCTAssertEqual(request?.head.headers["user-agent"], ["Swift-Lambda/Unknown"])
+        XCTAssertEqual(request?.head.headers["user-agent"], [.userAgent])
         XCTAssertEqual(request?.head.headers["content-length"], ["0"])
 
         XCTAssertNil(try self.server.readInbound(as: NIOHTTPServerRequestFull.self))
@@ -82,7 +82,7 @@ final class ControlPlaneRequestEncoderTests: XCTestCase {
         XCTAssertEqual(request?.head.uri, "/2018-06-01/runtime/invocation/\(requestID)/response")
         XCTAssertEqual(request?.head.version, .http1_1)
         XCTAssertEqual(request?.head.headers["host"], [self.host])
-        XCTAssertEqual(request?.head.headers["user-agent"], ["Swift-Lambda/Unknown"])
+        XCTAssertEqual(request?.head.headers["user-agent"], [.userAgent])
         XCTAssertEqual(request?.head.headers["content-length"], ["\(payload.readableBytes)"])
         XCTAssertEqual(request?.body, payload)
 
@@ -100,7 +100,7 @@ final class ControlPlaneRequestEncoderTests: XCTestCase {
         XCTAssertEqual(request?.head.uri, "/2018-06-01/runtime/invocation/\(requestID)/error")
         XCTAssertEqual(request?.head.version, .http1_1)
         XCTAssertEqual(request?.head.headers["host"], [self.host])
-        XCTAssertEqual(request?.head.headers["user-agent"], ["Swift-Lambda/Unknown"])
+        XCTAssertEqual(request?.head.headers["user-agent"], [.userAgent])
         XCTAssertEqual(request?.head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
         let expectedBody = #"{"errorType":"SomeError","errorMessage":"An error happened"}"#
 
@@ -123,7 +123,7 @@ final class ControlPlaneRequestEncoderTests: XCTestCase {
         XCTAssertEqual(request?.head.uri, "/2018-06-01/runtime/init/error")
         XCTAssertEqual(request?.head.version, .http1_1)
         XCTAssertEqual(request?.head.headers["host"], [self.host])
-        XCTAssertEqual(request?.head.headers["user-agent"], ["Swift-Lambda/Unknown"])
+        XCTAssertEqual(request?.head.headers["user-agent"], [.userAgent])
         XCTAssertEqual(request?.head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
         let expectedBody = #"{"errorType":"StartupError","errorMessage":"Urgh! Startup failed. 😨"}"#
         XCTAssertEqual(request?.head.headers["content-length"], ["\(expectedBody.utf8.count)"])
