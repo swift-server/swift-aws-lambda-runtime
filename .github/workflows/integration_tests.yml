@@ -59,7 +59,6 @@ jobs:
         # We are using only one Swift version
         swift:
           - image: ${{ inputs.matrix_linux_swift_container_image }}
-            swift_version: "6.0.3-amazonlinux2"
     container:
       image: ${{ matrix.swift.image }}
     steps:
@@ -93,7 +92,6 @@ jobs:
       - name: Run matrix job
         working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
         env:
-          SWIFT_VERSION: ${{ matrix.swift.swift_version }}
           COMMAND: ${{ inputs.matrix_linux_command }}
           EXAMPLE: ${{ matrix.examples }}
         run: |
