@@ -38,8 +38,8 @@ on:
         required: true
       matrix_linux_swift_container_image:
         type: string
-        description: "Container image for the matrix job. Defaults to matching latest Swift Ubuntu image."
-        default: "swiftlang/swift:nightly-6.1-jammy"
+        description: "Container image for the matrix job. Defaults to matching latest Swift 6.1 Amazon Linux 2 image."
+        default: "swiftlang/swift:nightly-6.1-amazonlinux2"
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -59,7 +59,6 @@ jobs:
         # We are using only one Swift version
         swift:
           - image: ${{ inputs.matrix_linux_swift_container_image }}
-            swift_version: "6.0.3-amazonlinux2"
     container:
       image: ${{ matrix.swift.image }}
     steps:
@@ -93,7 +92,6 @@ jobs:
       - name: Run matrix job
         working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
         env:
-          SWIFT_VERSION: ${{ matrix.swift.swift_version }}
           COMMAND: ${{ inputs.matrix_linux_command }}
           EXAMPLE: ${{ matrix.examples }}
         run: |
