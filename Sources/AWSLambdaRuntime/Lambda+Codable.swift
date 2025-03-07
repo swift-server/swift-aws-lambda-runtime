@@ -116,7 +116,7 @@ public struct LambdaCodableAdapter<
     }
 
     /// A ``StreamingLambdaHandler/handle(_:responseWriter:context:)`` wrapper.
-    ///   - Parameters:
+    /// - Parameters:
     ///   - event: The received event.
     ///   - outputWriter: The writer to write the computed response to.
     ///   - context: The ``LambdaContext`` containing the invocation's metadata.
