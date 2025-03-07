@@ -37,9 +37,11 @@ public enum Lambda {
     ) async throws where Handler: StreamingLambdaHandler {
         var handler = handler
 
+        var logger = logger
         do {
             while !Task.isCancelled {
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
+                logger[metadataKey: "aws-request-id"] = "\(invocation.metadata.requestID)"
 
                 do {
                     try await handler.handle(

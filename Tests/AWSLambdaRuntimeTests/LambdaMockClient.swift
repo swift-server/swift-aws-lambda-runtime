@@ -214,12 +214,12 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
         let eventProcessedHandler: CheckedContinuation<ByteBuffer, any Error>
     }
 
-    func invoke(event: ByteBuffer) async throws -> ByteBuffer {
+    func invoke(event: ByteBuffer, requestID: String = UUID().uuidString) async throws -> ByteBuffer {
         try await withCheckedThrowingContinuation { eventProcessedHandler in
             do {
                 let metadata = try InvocationMetadata(
                     headers: .init([
-                        ("Lambda-Runtime-Aws-Request-Id", "100"),  // arbitrary values
+                        ("Lambda-Runtime-Aws-Request-Id", "\(requestID)"),  // arbitrary values
                         ("Lambda-Runtime-Deadline-Ms", "100"),
                         ("Lambda-Runtime-Invoked-Function-Arn", "100"),
                     ])
