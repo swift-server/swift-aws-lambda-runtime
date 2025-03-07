@@ -1,4 +1,4 @@
-// swift-tools-version:6.1
+// swift-tools-version:6.0
 
 import PackageDescription
 
@@ -10,18 +10,6 @@ let package = Package(
         // plugin to package the lambda, creating an archive that can be uploaded to AWS
         // requires Linux or at least macOS v15
         .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
-    ],
-    traits: [
-        "FoundationJSONSupport",
-        "ServiceLifecycleSupport",
-        "LocalServerSupport",
-        .default(
-            enabledTraits: [
-                "FoundationJSONSupport",
-                "ServiceLifecycleSupport",
-                "LocalServerSupport",
-            ]
-        ),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.81.0"),
@@ -38,11 +26,12 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
-                .product(
-                    name: "ServiceLifecycle",
-                    package: "swift-service-lifecycle",
-                    condition: .when(traits: ["ServiceLifecycleSupport"])
-                ),
+                .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
+            ],
+            swiftSettings: [
+                .define("FoundationJSONSupport"),
+                .define("ServiceLifecycleSupport"),
+                .define("LocalServerSupport"),
             ]
         ),
         .plugin(

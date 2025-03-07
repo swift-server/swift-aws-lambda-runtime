@@ -1,25 +1,25 @@
-// swift-tools-version:6.0
+// swift-tools-version:6.1
 
 import PackageDescription
 
 // needed for CI to test the local version of the library
 import struct Foundation.URL
 
-#if os(macOS)
-let platforms: [PackageDescription.SupportedPlatform]? = [.macOS(.v15)]
-#else
-let platforms: [PackageDescription.SupportedPlatform]? = nil
-#endif
-
 let package = Package(
     name: "swift-aws-lambda-runtime-example",
-    platforms: platforms,
+    platforms: [.macOS(.v15)],
     products: [
         .executable(name: "HelloJSON", targets: ["HelloJSON"])
     ],
     dependencies: [
         // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main")
+        .package(
+            url: "https://github.com/swift-server/swift-aws-lambda-runtime.git",
+            branch: "ff-package-traits",
+            traits: [
+                .trait(name: "FoundationJSONSupport")
+            ]
+        )
     ],
     targets: [
         .executableTarget(

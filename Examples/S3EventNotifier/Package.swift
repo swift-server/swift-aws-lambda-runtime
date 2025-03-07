@@ -1,37 +1,24 @@
-// swift-tools-version:6.0
-
+// swift-tools-version: 6.0
 import PackageDescription
 
 // needed for CI to test the local version of the library
 import struct Foundation.URL
 
 let package = Package(
-    name: "swift-aws-lambda-runtime-example",
+    name: "S3EventNotifier",
     platforms: [.macOS(.v15)],
-    products: [
-        .executable(name: "APIGatewayLambda", targets: ["APIGatewayLambda"]),
-        .executable(name: "AuthorizerLambda", targets: ["AuthorizerLambda"]),
-    ],
     dependencies: [
-        // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
         .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", from: "1.0.0"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-events", branch: "main"),
     ],
     targets: [
         .executableTarget(
-            name: "APIGatewayLambda",
+            name: "S3EventNotifier",
             dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
                 .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
             ]
-        ),
-        .executableTarget(
-            name: "AuthorizerLambda",
-            dependencies: [
-                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-                .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
-            ]
-        ),
+        )
     ]
 )
 

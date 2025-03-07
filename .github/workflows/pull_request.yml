@@ -12,9 +12,9 @@ jobs:
       license_header_check_project_name: "SwiftAWSLambdaRuntime"
       shell_check_enabled: true
       python_lint_check_enabled: true
-      api_breakage_check_container_image: "swift:6.0-noble"
+      api_breakage_check_container_image: "swiftlang/swift:nightly-6.1-jammy"
       docs_check_container_image: "swift:6.0-noble"
-      format_check_container_image: "swiftlang/swift:nightly-6.0-jammy"
+      format_check_container_image: "swiftlang/swift:nightly-6.1-jammy"
       yamllint_check_enabled: true
 
   unit-tests:
@@ -36,7 +36,7 @@ jobs:
       # We pass the list of examples here, but we can't pass an array as argument
       # Instead, we pass a String with a valid JSON array.
       # The workaround is mentioned here https://github.com/orgs/community/discussions/11692
-      examples: "[ 'APIGateway', 'APIGateway+LambdaAuthorizer', 'BackgroundTasks', 'HelloJSON', 'HelloWorld', 'ResourcesPackaging', 'S3_AWSSDK', 'S3_Soto', 'Streaming', 'Testing', 'Tutorial' ]"
+      examples: "[ 'APIGateway', 'APIGateway+LambdaAuthorizer', 'BackgroundTasks', 'HelloJSON', 'HelloWorld', 'ResourcesPackaging', 'S3EventNotifier', 'S3_AWSSDK', 'S3_Soto', 'Streaming', 'Testing', 'Tutorial' ]"
       archive_plugin_examples: "[ 'HelloWorld', 'ResourcesPackaging' ]"
       archive_plugin_enabled: true
 
