@@ -61,7 +61,7 @@ let package = Package(
                 .define("FoundationJSONSupport"),
                 .define("ServiceLifecycleSupport"),
                 .define("LocalServerSupport"),
-            ]            
+            ]
         ),
         // for perf testing
         .executableTarget(
