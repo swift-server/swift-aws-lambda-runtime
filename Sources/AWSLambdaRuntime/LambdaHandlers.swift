@@ -67,7 +67,7 @@ public protocol LambdaResponseStreamWriter {
 public protocol LambdaHandler {
     /// Generic input type.
     /// The body of the request sent to Lambda will be decoded into this type for the handler to consume.
-    associatedtype Event: Decodable
+    associatedtype Event
     /// Generic output type.
     /// This is the return type of the ``LambdaHandler/handle(_:context:)`` function.
     associatedtype Output
@@ -89,7 +89,7 @@ public protocol LambdaHandler {
 public protocol LambdaWithBackgroundProcessingHandler {
     /// Generic input type.
     /// The body of the request sent to Lambda will be decoded into this type for the handler to consume.
-    associatedtype Event: Decodable
+    associatedtype Event
     /// Generic output type.
     /// This is the type that the `handle` function will send through the ``LambdaResponseWriter``.
     associatedtype Output
@@ -183,9 +183,10 @@ extension LambdaRuntime {
     }
 
     /// Initialize an instance with a ``LambdaHandler`` defined in the form of a closure **with a non-`Void` return type**, an encoder, and a decoder.
-    /// - Parameter body: The handler in the form of a closure.
-    /// - Parameter encoder: The encoder object that will be used to encode the generic `Output` into a `ByteBuffer`.
-    /// - Parameter decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type.
+    /// - Parameters:
+    ///   - encoder: The encoder object that will be used to encode the generic `Output` into a `ByteBuffer`.
+    ///   - decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type.
+    ///   - body: The handler in the form of a closure.
     public convenience init<
         Event: Decodable,
         Output: Encodable,
