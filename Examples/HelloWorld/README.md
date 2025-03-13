@@ -12,6 +12,35 @@ The handler is `(event: String, context: LambdaContext)`. The function takes two
 
 The function return value will be encoded as your Lambda function response.
 
+## Test locally 
+
+You can test your function locally before deploying it to AWS Lambda.
+
+To start the local function, type the following commands:
+
+```bash
+swift run
+```
+
+It will compile your code and start the local server. You know the local server is ready to accept connections when you see this message.
+
+```txt
+Building for debugging...
+[1/1] Write swift-version--644A47CB88185983.txt
+Build of product 'MyLambda' complete! (0.31s)
+2025-01-29T12:44:48+0100 info LocalServer : host="127.0.0.1" port=7000 [AWSLambdaRuntime] Server started and listening
+```
+
+Then, from another Terminal, send your payload with `curl`. Note that the payload must be a valid JSON string. In the case of this function that accepts a simple String, it means the String must be wrapped in between double quotes.
+
+```bash
+curl -d '"seb"' http://127.0.0.1:7000/invoke    
+"Hello seb"
+```
+
+> [!IMPORTANT]
+> The local server is only available in `DEBUG` mode. It will not start with `swift -c release run`.
+
 ## Build & Package 
 
 To build & archive the package, type the following commands.

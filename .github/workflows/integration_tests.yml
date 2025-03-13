@@ -19,6 +19,11 @@ on:
         type: boolean
         description: "Boolean to enable the compilation of examples. Defaults to true."
         default: true
+      archive_plugin_examples:
+        type: string
+        description: "The list of examples to run through the archive plugin test. Pass a String with a valid JSON array such as \"[ 'HelloWorld', 'APIGateway' ]\""
+        required: true
+        default: ""
       archive_plugin_enabled:
         type: boolean
         description: "Boolean to enable the test of the archive plugin. Defaults to true."
@@ -33,8 +38,8 @@ on:
         required: true
       matrix_linux_swift_container_image:
         type: string
-        description: "Container image for the matrix job. Defaults to matching latest Swift Ubuntu image."
-        default: "swift:amazonlinux2"
+        description: "Container image for the matrix job. Defaults to matching latest Swift 6.1 Amazon Linux 2 image."
+        default: "swiftlang/swift:nightly-6.1-amazonlinux2"
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -54,7 +59,6 @@ jobs:
         # We are using only one Swift version
         swift:
           - image: ${{ inputs.matrix_linux_swift_container_image }}
-            swift_version: "6.0.1-amazonlinux2"
     container:
       image: ${{ matrix.swift.image }}
     steps:
@@ -88,7 +92,6 @@ jobs:
       - name: Run matrix job
         working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
         env:
-          SWIFT_VERSION: ${{ matrix.swift.swift_version }}
           COMMAND: ${{ inputs.matrix_linux_command }}
           EXAMPLE: ${{ matrix.examples }}
         run: |
@@ -98,6 +101,10 @@ jobs:
     name: Test archive plugin
     if: ${{ inputs.archive_plugin_enabled }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        examples: ${{ fromJson(inputs.archive_plugin_examples) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -107,8 +114,10 @@ jobs:
         # https://github.com/actions/checkout/issues/766
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
       - name: Test the archive plugin
+        env:
+          EXAMPLE: ${{ matrix.examples }}
         run: |
-          .github/workflows/scripts/check-archive-plugin.sh
+            .github/workflows/scripts/check-archive-plugin.sh
 
   check-foundation:
     name: No dependencies on Foundation

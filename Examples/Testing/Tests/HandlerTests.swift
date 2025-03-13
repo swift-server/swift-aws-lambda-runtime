@@ -18,7 +18,7 @@ import Logging
 import Testing
 
 @testable import APIGatewayLambda  // to access the business code
-@testable import AWSLambdaRuntimeCore  // to access the LambdaContext
+@testable import AWSLambdaRuntime  // to access the LambdaContext
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials

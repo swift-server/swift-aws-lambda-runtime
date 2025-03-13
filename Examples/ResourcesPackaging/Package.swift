@@ -1,4 +1,5 @@
-// swift-tools-version:6.0
+// swift-tools-version: 6.0
+// The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
@@ -6,32 +7,25 @@ import PackageDescription
 import struct Foundation.URL
 
 let package = Package(
-    name: "swift-aws-lambda-runtime-example",
+    name: "ResourcesPackaging",
     platforms: [.macOS(.v15)],
     products: [
-        .executable(name: "APIGatewayLambda", targets: ["APIGatewayLambda"]),
-        .executable(name: "AuthorizerLambda", targets: ["AuthorizerLambda"]),
+        .executable(name: "MyLambda", targets: ["MyLambda"])
     ],
     dependencies: [
-        // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", from: "1.0.0"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main")
     ],
     targets: [
         .executableTarget(
-            name: "APIGatewayLambda",
+            name: "MyLambda",
             dependencies: [
-                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-                .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime")
+            ],
+            path: ".",
+            resources: [
+                .process("hello.txt")
             ]
-        ),
-        .executableTarget(
-            name: "AuthorizerLambda",
-            dependencies: [
-                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-                .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
-            ]
-        ),
+        )
     ]
 )
 
