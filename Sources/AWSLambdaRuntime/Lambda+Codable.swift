@@ -116,9 +116,9 @@ public struct LambdaCodableAdapter<
     }
 
     /// A ``StreamingLambdaHandler/handle(_:responseWriter:context:)`` wrapper.
-    ///   - Parameters:
-    ///   - event: The received event.
-    ///   - outputWriter: The writer to write the computed response to.
+    /// - Parameters:
+    ///   - request: The received event.
+    ///   - responseWriter: The writer to write the computed response to.
     ///   - context: The ``LambdaContext`` containing the invocation's metadata.
     @inlinable
     public mutating func handle<Writer: LambdaResponseStreamWriter>(
