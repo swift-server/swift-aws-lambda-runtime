@@ -1,16 +1,24 @@
 # v2 Plugin Proposal for swift-aws-lambda-runtime
 
-`swift-aws-lambda-runtime` is an important library for the Swift on Server ecosystem. The initial versions of the library focused on the API, enabling developers to write Lambda functions in the Swift programming language. The library provided developers with basic support for building and packaging their functions.
+`swift-aws-lambda-runtime` is a library for the Swift on Server ecosystem. The initial version of the library focused on the API, enabling developers to write Lambda functions in the Swift programming language. The library provided developers with basic support for building and packaging their functions.
 
-We believe it is time to consider the end-to-end developer experience, from project scaffolding to deployment, taking into account the needs of Swift developers new to AWS and Lambda.
+We believe it is time to consider the end-to-end developer experience, from project scaffolding to deployment, taking into account the needs of Swift developers that are new to AWS and Lambda.
 
-This document describes the proposal for the v2 plugins for `swift-aws-lambda-runtime`. The plugins will focus on project scaffolding, building, archiving, and deployment of Lambda functions.
+This document describes a proposal for the v2 plugins for `swift-aws-lambda-runtime`. The plugins will focus on project scaffolding, building, archiving, and deployment of Lambda functions.
 
 ## Overview
 
 Versions:
 
 * v1 (2024-12-25): Initial version
+* v2 (2025-03-13): 
+- Include [comments from the community](https://forums.swift.org/t/lambda-plugins-for-v2/76859).
+- [init] Add the templates for `main.swift`
+- [build] Add the section **Cross-compiling options**
+- [deploy] Add details about locating AWS Credentials.
+- [deploy] Add `--input-path` parameter.
+- [deploy] Add details how the function name is computed.
+- [deploy] Add `--architecture` option and details how the default is computed.
 
 ## Motivation
 
@@ -18,16 +26,16 @@ The current version of `swift-aws-lambda-runtime` provides a solid foundation fo
 
 This creates a high barrier to entry for Swift developers new to AWS and Lambda, as well as for AWS professionals learning Swift. We propose to lower this barrier by providing a set of plugins that will assist developers in creating, building, packaging, and deploying Lambda functions.
 
-As a source of inspiration, we looked to the Rust community, which created Cargo-Lambda ([https://www.cargo-lambda.info/guide/what-is-cargo-lambda.html](https://www.cargo-lambda.info/guide/what-is-cargo-lambda.html)). Cargo-Lambda helps developers deploy Rust Lambda functions. We aim to provide a similar experience for Swift developers.
+As a source of inspiration, we looked at the Rust community, which created Cargo-Lambda ([https://www.cargo-lambda.info/guide/what-is-cargo-lambda.html](https://www.cargo-lambda.info/guide/what-is-cargo-lambda.html)). Cargo-Lambda helps developers deploy Rust Lambda functions. We aim to provide a similar experience for Swift developers.
 
 ### Current Limitations
 
-The current version of `swift-aws-lambda-runtime` does not provide any support for project **scaffolding** or **deployment** of Lambda functions. This makes it difficult for Swift developers new to AWS and Lambda, or AWS Professionals new to Swift, to get started.
+The current version of the `archive` plugin support the following tasks:
 
-The main limitations of the current version of the `archive` plugin are as follows:
+* The cross-compilation using Docker.
+* The archiving of the Lambda function and it's resources as a ZIP file.
 
-* It only handles cross-compilation using Docker.
-* It only supports archiving of the Lambda function as a ZIP file.
+The current version of `swift-aws-lambda-runtime` does not provide support for project **scaffolding** or **deployment** of Lambda functions. This makes it difficult for Swift developers new to AWS and Lambda, or AWS Professionals new to Swift, to get started.
 
 ### New Plugins
 
@@ -84,11 +92,66 @@ OPTIONS:
 
 The initial implementation will use hardcoded templates. In a future release, we might consider fetching the templates from a GitHub repository and allowing developers to create custom templates.
 
+The default templates are currently implemented in the [sebsto/new-plugins branch of this repo](https://github.com/sebsto/swift-aws-lambda-runtime/blob/sebsto/new-plugins/Sources/AWSLambdaPluginHelper/lambda-init/Template.swift).
+
+### Default template 
+
+```swift
+import AWSLambdaRuntime
+
+// the data structure to represent the input parameter
+struct HelloRequest: Decodable {
+    let name: String
+    let age: Int
+}
+
+// the data structure to represent the output response
+struct HelloResponse: Encodable {
+    let greetings: String
+}
+
+// in this example we receive a HelloRequest JSON and we return a HelloResponse JSON    
+
+// the Lambda runtime
+let runtime = LambdaRuntime {
+    (event: HelloRequest, context: LambdaContext) in
+
+    HelloResponse(
+        greetings: "Hello \(event.name). You look \(event.age > 30 ? "younger" : "older") than your age."
+    )
+}
+
+// start the loop
+try await runtime.run() 
+```
+
+### URL Template 
+
+```swift
+import AWSLambdaRuntime
+import AWSLambdaEvents
+
+// in this example we receive a FunctionURLRequest and we return a FunctionURLResponse
+// https://docs.aws.amazon.com/lambda/latest/dg/urls-invocation.html#urls-payloads
+
+let runtime = LambdaRuntime {
+        (event: FunctionURLRequest, context: LambdaContext) -> FunctionURLResponse in
+        
+        guard let name = event.queryStringParameters?["name"] else {
+            return FunctionURLResponse(statusCode: .badRequest)
+        }
+
+        return FunctionURLResponse(statusCode: .ok, body: #"{ "message" : "Hello \#\#(name)" } "#)
+}
+
+try await runtime.run()
+```
+
 ### Build and Package (lambda-build)
 
 The `lambda-build` plugin will assist developers in building and packaging their Lambda function. It will allow for multiple cross-compilation options. We will retain the current Docker-based cross-compilation but also provide a way to cross-compile without Docker, such as using the Swift Static Linux SDK (with musl) or a custom Swift SDK for Amazon Linux.
 
-We also propose to automatically strip the binary of debug symbols to reduce the size of the ZIP file. Our tests showed that this can reduce the size by up to 50%. An option to disable stripping will be provided.
+We also propose to automatically strip the binary of debug symbols (`-Xlinker -s`) to reduce the size of the ZIP file. Our tests showed that this can reduce the size by up to 50%. An option to disable stripping will be provided.
 
 The `lambda-build` plugin is similar to the existing `archive` plugin. We propose to keep the same interface to facilitate migration of existing projects and CI chains. If technically feasible, we will also consider keeping the `archive` plugin as an alias to the `lambda-build` plugin.
 
@@ -131,15 +194,28 @@ OPTIONS:
                                 (default: docker) Accepted values are: docker, swift-static-sdk, custom-sdk
 ```
 
+#### Cross compiling options
+
+We propose to release an initial version based on the current `archive` plugin implementation, which uses docker.  But for the future, we would like to explore the possibility to cross compile with a custom Swift SDK for Amazon Linux. Our [initial tests](https://github.com/swiftlang/swift-sdk-generator/issues/138#issuecomment-2719540021) demonstrated it is possible to build such an SDK using the Swift SDK Generator project.
+
+For an ideal developer experience, we would imagine the following sequence:
+
+- developer runs `swift package build --cross-compile custom-sdk`
+- the plugin checks if the custom sdk is installed on the machine (`swift sdk list`) [questions : is it possible to call `swift` from a package ? Should we check the file systems instead ? Should this work on multiple OSes, such as macOS and Linux? ]
+- if not installed or outdated, the plugin downloads a custom SDK from a safe source and installs it [questions : who should maintain such SDK binaries? Where to host them? We must have a kind of signature to ensure the SDK has not been modified. How to manage Swift version and align with the local toolchain?]
+- the plugin build the archive using the custom sdk
+
 ### Deploy (lambda-deploy)
 
 The `lambda-deploy` plugin will assist developers in deploying their Lambda function to AWS. It will handle the deployment process, including creating the IAM role, the Lambda function itself, and optionally configuring a Lambda function URL.
 
 The plugin will not depends on nay third-party library. It will interact directly with the AWS REST API, without using the AWS SDK fro Swift or Soto.
 
-Users will need to provide AWS access key and secret access key credentials. The plugin will attempt to locate these credentials in standard locations, such as environment variables or the `~/.aws/credentials` file.
+Users will need to provide AWS access key and secret access key credentials. The plugin will attempt to locate these credentials in standard locations. It will first check for the `~/.aws/credentials` file, then the environment variables `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and (optional) `AWS_SESSION_TOKEN`. Finally, it will check the [meta data service v2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html) in case the plugin runs from a virtual machine (Amazon EC2) or a container (Amazon ECS or AMazon EKS).
 
 The plugin supports deployment through either the REST and Base64 payload or by uploading the code to a temporary S3 bucket. Refer to [the `Function Code` section](https://docs.aws.amazon.com/lambda/latest/api/API_FunctionCode.html) of the [CreateFunction](https://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html) API for more details.
+
+The plugin will use teh function name as defined in the `executableTarget` in `Package.swift`. This approach is similar to how the `archive` plugin works today.
 
 The plugin can deploy to multiple regions. Users can specify the desired region as a command-line argument.
 
@@ -163,16 +239,22 @@ USAGE: swift package lambda-deploy
                         [--help] [--verbose]
 
 OPTIONS:
---region       The AWS region to deploy the Lambda function to.
-               (default is us-east-1)
---iam-role     The name of the IAM role to use for the Lambda function.
-               when none is provided, a new role will be created.
---with-url     Add an URL to access the Lambda function
---delete       Delete the Lambda function and its associated IAM role
---verbose      Produce verbose output for debugging.
---help         Show help information.
+--region                   The AWS region to deploy the Lambda function to.
+                              (default is us-east-1)
+--iam-role                 The name of the IAM role to use for the Lambda function.
+                           when none is provided, a new role will be created.
+--input-directory  <path>  The path of the binary package (zip file) to deploy
+                              (default: .build/plugins/AWSLambdaPackager/outputs/...)
+--architecture x64 | arm64 The target architecture of the Lambda function
+                              (default: the architecture of the machine where the plugin runs)                              
+--with-url                 Add an URL to access the Lambda function
+--delete                   Delete the Lambda function and its associated IAM role
+--verbose                  Produce verbose output for debugging.
+--help                     Show help information.
 """
 ```
+
+In a future version, we might consider adding an `--export` option that would easily migrate the current deployment to an infrastructure as code (IaC) tool, such as AWS SAM, AWS CDK, or Swift Cloud.
 
 ### Dependencies
 
