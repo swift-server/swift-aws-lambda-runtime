@@ -108,7 +108,11 @@ extension LambdaRuntime {
             handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
         )
 
-        self.init(handler: handler)
+        do {
+            try self.init(handler: handler)
+        } catch {
+            fatalError("Failed to initialize LambdaRuntime: \(error)")
+        }
     }
 
     /// Initialize an instance with a `LambdaHandler` defined in the form of a closure **with a `Void` return type**.
@@ -132,7 +136,11 @@ extension LambdaRuntime {
             handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
         )
 
-        self.init(handler: handler)
+        do {
+            try self.init(handler: handler)
+        } catch {
+            fatalError("Failed to initialize LambdaRuntime: \(error)")
+        }
     }
 }
 #endif  // trait: FoundationJSONSupport

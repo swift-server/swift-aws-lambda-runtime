@@ -15,6 +15,7 @@
 import Logging
 import NIOConcurrencyHelpers
 import NIOCore
+import Synchronization
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -22,6 +23,13 @@ import FoundationEssentials
 import Foundation
 #endif
 
+// This is our gardian to ensure only one LambdaRuntime is initialized
+// We use a Mutex here to ensure thread safety
+// We don't use LambdaRuntime<> as the type here, as we don't know the concrete type that will be used
+private let _singleton = Mutex<Bool>(false)
+public enum LambdaRuntimeError: Error {
+    case moreThanOneLambdaRuntimeInstance
+}
 // We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
 // We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
 // sadly crashes the compiler today.
@@ -35,7 +43,22 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         handler: sending Handler,
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
-    ) {
+    ) throws(LambdaRuntimeError) {
+
+        do {
+            try _singleton.withLock {
+                let alreadyCreated = $0
+                guard alreadyCreated == false else {
+                    throw LambdaRuntimeError.moreThanOneLambdaRuntimeInstance
+                }
+                $0 = true
+            }
+        } catch _ as LambdaRuntimeError {
+            throw LambdaRuntimeError.moreThanOneLambdaRuntimeInstance
+        } catch {
+            fatalError("An unknown error occurred: \(error)")
+        }
+
         self.handlerMutex = NIOLockedValueBox(handler)
         self.eventLoop = eventLoop
 
@@ -56,7 +79,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         }
 
         guard let handler else {
-            throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
+            throw LambdaRuntimeClientError(code: .runtimeCanOnlyBeStartedOnce)
         }
 
         // are we running inside an AWS Lambda runtime environment ?
@@ -66,7 +89,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
 
             let ipAndPort = runtimeEndpoint.split(separator: ":", maxSplits: 1)
             let ip = String(ipAndPort[0])
-            guard let port = Int(ipAndPort[1]) else { throw LambdaRuntimeError(code: .invalidPort) }
+            guard let port = Int(ipAndPort[1]) else { throw LambdaRuntimeClientError(code: .invalidPort) }
 
             try await LambdaRuntimeClient.withRuntimeClient(
                 configuration: .init(ip: ip, port: port),
