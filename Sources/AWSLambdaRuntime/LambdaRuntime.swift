@@ -15,7 +15,9 @@
 import Logging
 import NIOConcurrencyHelpers
 import NIOCore
-import Synchronization
+
+// To be re-enabled when we will be able to use Mutex on Linux
+// import Synchronization
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -26,12 +28,18 @@ import Foundation
 // This is our gardian to ensure only one LambdaRuntime is initialized
 // We use a Mutex here to ensure thread safety
 // We use Bool instead of LambdaRuntime<Handler> as the type here, as we don't know the concrete type that will be used
-private let _singleton = Mutex<Bool>(false)
+// We would love to use Mutex here, but this sadly crashes the compiler today (on Linux).
+// private let _singleton = Mutex<Bool>(false)
+private let _singleton: NIOLockedValueBox<Bool> = NIOLockedValueBox<Bool>(false)
 public enum LambdaRuntimeError: Error {
     case moreThanOneLambdaRuntimeInstance
 }
-public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLambdaHandler {
-    let handlerMutex: Mutex<Handler?>
+// We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
+// We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
+// sadly crashes the compiler today (on Linux).
+public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
+    // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
+    let handlerMutex: NIOLockedValueBox<Handler?>
     let logger: Logger
     let eventLoop: EventLoop
 
@@ -42,7 +50,14 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
     ) throws(LambdaRuntimeError) {
 
         do {
-            try _singleton.withLock {
+            // try _singleton.withLock {
+            //     let alreadyCreated = $0
+            //     guard alreadyCreated == false else {
+            //         throw LambdaRuntimeError.moreThanOneLambdaRuntimeInstance
+            //     }
+            //     $0 = true
+            // }
+            try _singleton.withLockedValue {
                 let alreadyCreated = $0
                 guard alreadyCreated == false else {
                     throw LambdaRuntimeError.moreThanOneLambdaRuntimeInstance
@@ -55,7 +70,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
             fatalError("An unknown error occurred: \(error)")
         }
 
-        self.handlerMutex = Mutex(handler)
+        self.handlerMutex = NIOLockedValueBox(handler)
         self.eventLoop = eventLoop
 
         // by setting the log level here, we understand it can not be changed dynamically at runtime
@@ -68,7 +83,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
     }
 
     public func run() async throws {
-        let handler = self.handlerMutex.withLock { handler in
+        let handler = self.handlerMutex.withLockedValue { handler in
             let result = handler
             handler = nil
             return result
