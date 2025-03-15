@@ -15,9 +15,7 @@
 import Logging
 import NIOConcurrencyHelpers
 import NIOCore
-
-// To be re-enabled when we will be able to use Mutex on Linux
-// import Synchronization
+import Synchronization
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -28,9 +26,7 @@ import Foundation
 // This is our gardian to ensure only one LambdaRuntime is initialized
 // We use a Mutex here to ensure thread safety
 // We use Bool instead of LambdaRuntime<Handler> as the type here, as we don't know the concrete type that will be used
-// We would love to use Mutex here, but this sadly crashes the compiler today (on Linux).
-// private let _singleton = Mutex<Bool>(false)
-private let _singleton: NIOLockedValueBox<Bool> = NIOLockedValueBox<Bool>(false)
+private let _singleton = Mutex<Bool>(false)
 public enum LambdaRuntimeError: Error {
     case moreThanOneLambdaRuntimeInstance
 }
@@ -53,14 +49,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         //    ) throws(LambdaRuntimeError) {
 
         do {
-            // try _singleton.withLock {
-            //     let alreadyCreated = $0
-            //     guard alreadyCreated == false else {
-            //         throw LambdaRuntimeError.moreThanOneLambdaRuntimeInstance
-            //     }
-            //     $0 = true
-            // }
-            try _singleton.withLockedValue {
+            try _singleton.withLock {
                 let alreadyCreated = $0
                 guard alreadyCreated == false else {
                     throw LambdaRuntimeError.moreThanOneLambdaRuntimeInstance
