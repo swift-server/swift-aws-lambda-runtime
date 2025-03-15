@@ -47,7 +47,10 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         handler: sending Handler,
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
-    ) throws(LambdaRuntimeError) {
+    ) throws {
+        // technically, this initializer only throws LambdaRuntime Error but the below line crashes the compiler on Linux
+        // https://github.com/swiftlang/swift/issues/80020
+        //    ) throws(LambdaRuntimeError) {
 
         do {
             // try _singleton.withLock {
