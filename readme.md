@@ -248,7 +248,7 @@ struct SendNumbersWithPause: StreamingLambdaHandler {
     }
 }
 
-let runtime = LambdaRuntime.init(handler: SendNumbersWithPause())
+let runtime = try LambdaRuntime.init(handler: SendNumbersWithPause())
 try await runtime.run()
 ```
 
@@ -328,7 +328,7 @@ struct BackgroundProcessingHandler: LambdaWithBackgroundProcessingHandler {
 }
 
 let adapter = LambdaCodableAdapter(handler: BackgroundProcessingHandler())
-let runtime = LambdaRuntime.init(handler: adapter)
+let runtime = try LambdaRuntime.init(handler: adapter)
 try await runtime.run()
 ```
 
