@@ -40,7 +40,14 @@ unzip -l "${ZIP_FILE}" | grep --silent bootstrap
 
 # if EXAMPLE is ResourcesPackaging, check if the ZIP file contains hello.txt
 if [ "$EXAMPLE" == "ResourcesPackaging" ]; then
+    echo "Checking if resource was added to the ZIP file"
     unzip -l "${ZIP_FILE}" | grep --silent hello.txt
+    SUCCESS=$?
+    if [ "$SUCCESS" -eq 1 ]; then
+        log "❌ Resource not found." && exit 1
+    else
+        log "✅ Resource found."
+    fi
 fi    
 
 echo "✅ The archive plugin is OK with example ${EXAMPLE}"
