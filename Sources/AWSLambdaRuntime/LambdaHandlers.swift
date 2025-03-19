@@ -213,6 +213,7 @@ extension LambdaRuntime {
             decoder: decoder,
             handler: streamingAdapter
         )
+
         self.init(handler: codableWrapper)
     }
 
@@ -237,6 +238,7 @@ extension LambdaRuntime {
             decoder: decoder,
             handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
         )
+        
         self.init(handler: handler)
     }
 }
