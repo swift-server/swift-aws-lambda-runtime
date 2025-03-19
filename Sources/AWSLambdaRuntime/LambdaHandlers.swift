@@ -238,7 +238,7 @@ extension LambdaRuntime {
             decoder: decoder,
             handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
         )
-        
+
         self.init(handler: handler)
     }
 }
