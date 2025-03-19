@@ -31,6 +31,7 @@ jobs:
       # this currently resolves to 6.2.dev
       # It crashes some of our tests https://github.com/swift-server/swift-aws-lambda-runtime/issues/509
       linux_nightly_main_enabled: true
+      linux_nightly_main_arguments_override: "--explicit-target-dependency-import-check error"
 
   integration-tests:
     name: Integration Tests
