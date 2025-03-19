@@ -37,7 +37,7 @@ package struct InvocationMetadata: Hashable {
     package let cognitoIdentity: String?
 
     package init(headers: HTTPHeaders) throws(LambdaRuntimeError) {
-        guard let requestID: String = headers.first(name: AmazonHeaders.requestID), !requestID.isEmpty else {
+        guard let requestID = headers.first(name: AmazonHeaders.requestID), !requestID.isEmpty else {
             throw LambdaRuntimeError(code: .nextInvocationMissingHeaderRequestID)
         }
 
