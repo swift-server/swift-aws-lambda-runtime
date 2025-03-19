@@ -23,21 +23,52 @@ import Testing
 @Suite("LambdaRuntimeTests")
 final class LambdaRuntimeTests {
 
-    @Test("LambdaRuntime can only be initialized once")
-    func testLambdaRuntimeInitializationFatalError() throws {
+    @Test("LambdaRuntime can only be run once")
+    func testLambdaRuntimerunOnce() async throws {
 
-        // First initialization should succeed
-        try _ = LambdaRuntime(handler: MockHandler(), eventLoop: Lambda.defaultEventLoop, logger: Logger(label: "Test"))
+        // First runtime
+        let runtime1 = LambdaRuntime(
+            handler: MockHandler(),
+            eventLoop: Lambda.defaultEventLoop,
+            logger: Logger(label: "Runtime1")
+        )
 
-        // Second initialization should trigger LambdaRuntimeError
-        #expect(throws: LambdaRuntimeError.self) {
-            try _ = LambdaRuntime(
-                handler: MockHandler(),
-                eventLoop: Lambda.defaultEventLoop,
-                logger: Logger(label: "Test")
-            )
+        // Second runtime
+        let runtime2 = LambdaRuntime(
+            handler: MockHandler(),
+            eventLoop: Lambda.defaultEventLoop,
+            logger: Logger(label: "Runtime1")
+        )
+
+        // start the first runtime
+        let task1 = Task {
+            try await runtime1.run()
         }
 
+        // wait a small amount to ensure runtime1 task is started
+        try await Task.sleep(for: .seconds(1))
+
+        // Running the second runtime should trigger LambdaRuntimeError
+        await #expect(throws: LambdaRuntimeError.self) {
+            try await runtime2.run()
+        }
+
+        // cancel runtime 1 / task 1
+        print("--- cancelling ---")
+        task1.cancel()
+
+        // Running the second runtime should work now
+        await #expect(throws: Never.self) {
+
+            let nonReturningTask = Task.detached(priority: .userInitiated) {
+                try await runtime2.run()
+            }
+
+            // Set timeout and cancel the runtime 2
+            try await Task.sleep(for: .seconds(2))
+            nonReturningTask.cancel()
+
+        }
     }
 }
 

@@ -32,5 +32,5 @@ struct SendNumbersWithPause: StreamingLambdaHandler {
     }
 }
 
-let runtime = try LambdaRuntime.init(handler: SendNumbersWithPause())
+let runtime = LambdaRuntime.init(handler: SendNumbersWithPause())
 try await runtime.run()

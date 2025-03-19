@@ -53,5 +53,5 @@ struct BackgroundProcessingHandler: LambdaWithBackgroundProcessingHandler {
 }
 
 let adapter = LambdaCodableAdapter(handler: BackgroundProcessingHandler())
-let runtime = try LambdaRuntime.init(handler: adapter)
+let runtime = LambdaRuntime.init(handler: adapter)
 try await runtime.run()

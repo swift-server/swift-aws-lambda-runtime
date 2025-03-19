@@ -23,13 +23,10 @@ import FoundationEssentials
 import Foundation
 #endif
 
-// This is our gardian to ensure only one LambdaRuntime is initialized
-// We use a Mutex here to ensure thread safety
-// We use Bool instead of LambdaRuntime<Handler> as the type here, as we don't know the concrete type that will be used
-private let _singleton = Mutex<Bool>(false)
-public enum LambdaRuntimeError: Error {
-    case moreThanOneLambdaRuntimeInstance
-}
+// This is our gardian to ensure only one LambdaRuntime is running at the time
+// We use an Atomic here to ensure thread safety
+private let _isRunning = Atomic<Bool>(false)
+
 // We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
 // We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
 // sadly crashes the compiler today (on Linux).
@@ -43,25 +40,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         handler: sending Handler,
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
-    ) throws {
-        // technically, this initializer only throws LambdaRuntime Error but the below line crashes the compiler on Linux
-        // https://github.com/swiftlang/swift/issues/80020
-        //    ) throws(LambdaRuntimeError) {
-
-        do {
-            try _singleton.withLock {
-                let alreadyCreated = $0
-                guard alreadyCreated == false else {
-                    throw LambdaRuntimeError.moreThanOneLambdaRuntimeInstance
-                }
-                $0 = true
-            }
-        } catch _ as LambdaRuntimeError {
-            throw LambdaRuntimeError.moreThanOneLambdaRuntimeInstance
-        } catch {
-            fatalError("An unknown error occurred: \(error)")
-        }
-
+    ) {
         self.handlerMutex = NIOLockedValueBox(handler)
         self.eventLoop = eventLoop
 
@@ -74,7 +53,36 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         self.logger.debug("LambdaRuntime initialized")
     }
 
+    /// Make sure only one run() is called at a time
     public func run() async throws {
+
+        // we use an atomic global variable to ensure only one LambdaRuntime is running at the time
+        let (_, original) = _isRunning.compareExchange(expected: false, desired: true, ordering: .relaxed)
+
+        // if the original value was already true, run() is already running
+        if original {
+            throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
+        }
+
+        try await withTaskCancellationHandler {
+            // call the internal _run() method
+            do {
+                try await self._run()
+            } catch {
+                // when we catch an error, flip back the global variable to false
+                _isRunning.store(false, ordering: .relaxed)
+                throw error
+            }
+        } onCancel: {
+            // when task is cancelled, flip back the global variable to false
+            _isRunning.store(false, ordering: .relaxed)
+        }
+
+        // when we're done without error and without cancellation, flip back the global variable to false
+        _isRunning.store(false, ordering: .relaxed)
+    }
+
+    private func _run() async throws {
         let handler = self.handlerMutex.withLockedValue { handler in
             let result = handler
             handler = nil
@@ -82,7 +90,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         }
 
         guard let handler else {
-            throw LambdaRuntimeClientError(code: .runtimeCanOnlyBeStartedOnce)
+            throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
         }
 
         // are we running inside an AWS Lambda runtime environment ?
@@ -92,7 +100,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
 
             let ipAndPort = runtimeEndpoint.split(separator: ":", maxSplits: 1)
             let ip = String(ipAndPort[0])
-            guard let port = Int(ipAndPort[1]) else { throw LambdaRuntimeClientError(code: .invalidPort) }
+            guard let port = Int(ipAndPort[1]) else { throw LambdaRuntimeError(code: .invalidPort) }
 
             try await LambdaRuntimeClient.withRuntimeClient(
                 configuration: .init(ip: ip, port: port),

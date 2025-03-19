@@ -36,19 +36,19 @@ package struct InvocationMetadata: Hashable {
     package let clientContext: String?
     package let cognitoIdentity: String?
 
-    package init(headers: HTTPHeaders) throws(LambdaRuntimeClientError) {
-        guard let requestID = headers.first(name: AmazonHeaders.requestID), !requestID.isEmpty else {
-            throw LambdaRuntimeClientError(code: .nextInvocationMissingHeaderRequestID)
+    package init(headers: HTTPHeaders) throws(LambdaRuntimeError) {
+        guard let requestID: String = headers.first(name: AmazonHeaders.requestID), !requestID.isEmpty else {
+            throw LambdaRuntimeError(code: .nextInvocationMissingHeaderRequestID)
         }
 
         guard let deadline = headers.first(name: AmazonHeaders.deadline),
             let unixTimeInMilliseconds = Int64(deadline)
         else {
-            throw LambdaRuntimeClientError(code: .nextInvocationMissingHeaderDeadline)
+            throw LambdaRuntimeError(code: .nextInvocationMissingHeaderDeadline)
         }
 
         guard let invokedFunctionARN = headers.first(name: AmazonHeaders.invokedFunctionARN) else {
-            throw LambdaRuntimeClientError(code: .nextInvocationMissingHeaderInvokeFuctionARN)
+            throw LambdaRuntimeError(code: .nextInvocationMissingHeaderInvokeFuctionARN)
         }
 
         self.requestID = requestID

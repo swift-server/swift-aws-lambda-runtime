@@ -179,11 +179,7 @@ extension LambdaRuntime {
     public convenience init(
         body: @Sendable @escaping (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
     ) where Handler == StreamingClosureHandler {
-        do {
-            try self.init(handler: StreamingClosureHandler(body: body))
-        } catch {
-            fatalError("Failed to initialize LambdaRuntime: \(error)")
-        }
+        self.init(handler: StreamingClosureHandler(body: body))
     }
 
     /// Initialize an instance with a ``LambdaHandler`` defined in the form of a closure **with a non-`Void` return type**, an encoder, and a decoder.
@@ -217,11 +213,7 @@ extension LambdaRuntime {
             decoder: decoder,
             handler: streamingAdapter
         )
-        do {
-            try self.init(handler: codableWrapper)
-        } catch {
-            fatalError("Failed to initialize LambdaRuntime: \(error)")
-        }
+        self.init(handler: codableWrapper)
     }
 
     /// Initialize an instance with a ``LambdaHandler`` defined in the form of a closure **with a `Void` return type**, an encoder, and a decoder.
@@ -245,10 +237,6 @@ extension LambdaRuntime {
             decoder: decoder,
             handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
         )
-        do {
-            try self.init(handler: handler)
-        } catch {
-            fatalError("Failed to initialize LambdaRuntime: \(error)")
-        }
+        self.init(handler: handler)
     }
 }
