@@ -237,7 +237,7 @@ private struct LambdaHTTPServer {
                         requestHead = head
 
                     case .body(let body):
-                        requestBody = body
+                        requestBody.setOrWriteImmutableBuffer(body)
 
                     case .end:
                         precondition(requestHead != nil, "Received .end without .head")
