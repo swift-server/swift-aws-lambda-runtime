@@ -29,7 +29,9 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
     // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
     @usableFromInline
     let handlerMutex: NIOLockedValueBox<Handler?>
+    @usableFromInline
     let logger: Logger
+    @usableFromInline
     let eventLoop: EventLoop
 
     public init(
