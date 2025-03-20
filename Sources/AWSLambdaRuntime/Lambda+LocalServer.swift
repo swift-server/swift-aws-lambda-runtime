@@ -45,6 +45,7 @@ extension Lambda {
     ///     - body: Code to run within the context of the mock server. Typically this would be a Lambda.run function call.
     ///
     /// - note: This API is designed strictly for local testing and is behind a DEBUG flag
+    @usableFromInline
     static func withLocalServer(
         invocationEndpoint: String? = nil,
         _ body: sending @escaping () async throws -> Void
