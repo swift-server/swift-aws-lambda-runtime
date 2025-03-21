@@ -57,7 +57,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
     public func run() async throws {
 
         // we use an atomic global variable to ensure only one LambdaRuntime is running at the time
-        let (_, original) = _isRunning.compareExchange(expected: false, desired: true, ordering: .relaxed)
+        let (_, original) = _isRunning.compareExchange(expected: false, desired: true, ordering: .acquiringAndReleasing)
 
         // if the original value was already true, run() is already running
         if original {
