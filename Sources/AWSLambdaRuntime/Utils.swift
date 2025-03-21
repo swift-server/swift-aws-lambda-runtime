@@ -59,6 +59,7 @@ enum Signal: Int32 {
 }
 
 extension DispatchWallTime {
+    @usableFromInline
     init(millisSinceEpoch: Int64) {
         let nanoSinceEpoch = UInt64(millisSinceEpoch) * 1_000_000
         let seconds = UInt64(nanoSinceEpoch / 1_000_000_000)

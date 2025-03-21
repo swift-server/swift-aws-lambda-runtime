@@ -17,33 +17,47 @@ import NIOCore
 import NIOHTTP1
 import NIOPosix
 
+@usableFromInline
 final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
+    @usableFromInline
     nonisolated let unownedExecutor: UnownedSerialExecutor
 
-    struct Configuration {
+    @usableFromInline
+    struct Configuration: Sendable {
         var ip: String
         var port: Int
+
+        @usableFromInline
+        init(ip: String, port: Int) {
+            self.ip = ip
+            self.port = port
+        }
     }
 
-    struct Writer: LambdaRuntimeClientResponseStreamWriter {
+    @usableFromInline
+    struct Writer: LambdaRuntimeClientResponseStreamWriter, Sendable {
         private var runtimeClient: LambdaRuntimeClient
 
         fileprivate init(runtimeClient: LambdaRuntimeClient) {
             self.runtimeClient = runtimeClient
         }
 
+        @usableFromInline
         func write(_ buffer: NIOCore.ByteBuffer) async throws {
             try await self.runtimeClient.write(buffer)
         }
 
+        @usableFromInline
         func finish() async throws {
             try await self.runtimeClient.writeAndFinish(nil)
         }
 
+        @usableFromInline
         func writeAndFinish(_ buffer: NIOCore.ByteBuffer) async throws {
             try await self.runtimeClient.writeAndFinish(buffer)
         }
 
+        @usableFromInline
         func reportError(_ error: any Error) async throws {
             try await self.runtimeClient.reportError(error)
         }
@@ -90,6 +104,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
     // being fully closed before we can return from it.
     private var closingConnections: [any Channel] = []
 
+    @inlinable
     static func withRuntimeClient<Result>(
         configuration: Configuration,
         eventLoop: any EventLoop,
@@ -110,14 +125,16 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         return try result.get()
     }
 
-    private init(configuration: Configuration, eventLoop: any EventLoop, logger: Logger) {
+    @usableFromInline
+    init(configuration: Configuration, eventLoop: any EventLoop, logger: Logger) {
         self.unownedExecutor = eventLoop.executor.asUnownedSerialExecutor()
         self.configuration = configuration
         self.eventLoop = eventLoop
         self.logger = logger
     }
 
-    private func close() async {
+    @usableFromInline
+    func close() async {
         self.logger.trace("Close lambda runtime client")
 
         guard case .notClosing = self.closingState else {
@@ -144,6 +161,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         }
     }
 
+    @usableFromInline
     func nextInvocation() async throws -> (Invocation, Writer) {
         try await withTaskCancellationHandler {
             switch self.lambdaState {
