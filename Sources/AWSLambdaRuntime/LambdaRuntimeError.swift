@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 public struct LambdaRuntimeError: Error {
-    enum Code: Sendable {
+    package enum Code: Sendable {
 
         /// internal error codes for LambdaRuntimeClient
         case closingRuntimeClient
