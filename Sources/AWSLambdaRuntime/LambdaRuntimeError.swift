@@ -44,7 +44,7 @@ public struct LambdaRuntimeError: Error {
         self.underlying = underlying
     }
 
-    public var code: Code
+    var code: Code
     public var underlying: (any Error)?
 
 }
