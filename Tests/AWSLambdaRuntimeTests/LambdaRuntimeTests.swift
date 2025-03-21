@@ -40,22 +40,26 @@ struct LambdaRuntimeTests {
             logger: Logger(label: "Runtime1")
         )
 
-        // start the first runtime
-        let task1 = Task {
-            try await runtime1.run()
+        try await withThrowingTaskGroup(of: Void.self) { taskGroup in
+            // start the first runtime
+            taskGroup.addTask {
+                await #expect(throws: Never.self) {
+                    try await runtime1.run()
+                }
+            }
+            
+            // wait a small amount to ensure runtime1 task is started
+            try await Task.sleep(for: .seconds(1))
+
+            // Running the second runtime should trigger LambdaRuntimeError
+            await #expect(throws: LambdaRuntimeError.self) {
+                try await runtime2.run()
+            }
+            
+            // cancel runtime 1 / task 1
+            print("--- cancelling ---")
+            taskGroup.cancelAll()
         }
-
-        // wait a small amount to ensure runtime1 task is started
-        try await Task.sleep(for: .seconds(1))
-
-        // Running the second runtime should trigger LambdaRuntimeError
-        await #expect(throws: LambdaRuntimeError.self) {
-            try await runtime2.run()
-        }
-
-        // cancel runtime 1 / task 1
-        print("--- cancelling ---")
-        task1.cancel()
 
         // Running the second runtime should work now
         await #expect(throws: Never.self) {
