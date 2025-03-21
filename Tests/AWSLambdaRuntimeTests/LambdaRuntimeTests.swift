@@ -62,16 +62,14 @@ struct LambdaRuntimeTests {
         }
 
         // Running the second runtime should work now
-        await #expect(throws: Never.self) {
-
-            let nonReturningTask = Task.detached(priority: .userInitiated) {
-                try await runtime2.run()
+        try await withThrowingTaskGroup(of: Void.self) { taskGroup in
+            taskGroup.addTask {
+                await #expect(throws: Never.self) { try await runtime2.run() }
             }
 
             // Set timeout and cancel the runtime 2
             try await Task.sleep(for: .seconds(2))
-            nonReturningTask.cancel()
-
+            taskGroup.cancelAll()
         }
     }
 }
