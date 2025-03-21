@@ -21,7 +21,7 @@ import Testing
 @testable import AWSLambdaRuntime
 
 @Suite("LambdaRuntimeTests")
-final class LambdaRuntimeTests {
+struct LambdaRuntimeTests {
 
     @Test("LambdaRuntime can only be run once")
     func testLambdaRuntimerunOnce() async throws {
