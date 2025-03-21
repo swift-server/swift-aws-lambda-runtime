@@ -61,25 +61,14 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
 
         // if the original value was already true, run() is already running
         if original {
-            throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
+            throw LambdaRuntimeError(code: .moreThanOneLambdaRuntimeInstance)
         }
-
-        try await withTaskCancellationHandler {
-            // call the internal _run() method
-            do {
-                try await self._run()
-            } catch {
-                // when we catch an error, flip back the global variable to false
-                _isRunning.store(false, ordering: .relaxed)
-                throw error
-            }
-        } onCancel: {
-            // when task is cancelled, flip back the global variable to false
-            _isRunning.store(false, ordering: .relaxed)
+        
+        defer {
+            _isRunning.store(false, ordering: . releasing)
         }
-
-        // when we're done without error and without cancellation, flip back the global variable to false
-        _isRunning.store(false, ordering: .relaxed)
+        
+        try await self._run()
     }
 
     private func _run() async throws {
