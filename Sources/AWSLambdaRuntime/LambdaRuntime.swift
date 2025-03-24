@@ -63,11 +63,11 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         if original {
             throw LambdaRuntimeError(code: .moreThanOneLambdaRuntimeInstance)
         }
-        
+
         defer {
-            _isRunning.store(false, ordering: . releasing)
+            _isRunning.store(false, ordering: .releasing)
         }
-        
+
         try await self._run()
     }
 
