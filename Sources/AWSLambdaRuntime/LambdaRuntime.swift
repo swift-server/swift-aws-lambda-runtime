@@ -15,6 +15,7 @@
 import Logging
 import NIOConcurrencyHelpers
 import NIOCore
+import Synchronization
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -22,9 +23,13 @@ import FoundationEssentials
 import Foundation
 #endif
 
+// This is our gardian to ensure only one LambdaRuntime is running at the time
+// We use an Atomic here to ensure thread safety
+private let _isRunning = Atomic<Bool>(false)
+
 // We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
 // We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
-// sadly crashes the compiler today.
+// sadly crashes the compiler today (on Linux).
 public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
     // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
     @usableFromInline
@@ -51,8 +56,26 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         self.logger.debug("LambdaRuntime initialized")
     }
 
+    /// Make sure only one run() is called at a time
     @inlinable
     public func run() async throws {
+
+        // we use an atomic global variable to ensure only one LambdaRuntime is running at the time
+        let (_, original) = _isRunning.compareExchange(expected: false, desired: true, ordering: .acquiringAndReleasing)
+
+        // if the original value was already true, run() is already running
+        if original {
+            throw LambdaRuntimeError(code: .moreThanOneLambdaRuntimeInstance)
+        }
+
+        defer {
+            _isRunning.store(false, ordering: .releasing)
+        }
+
+        try await self._run()
+    }
+
+    private func _run() async throws {
         let handler = self.handlerMutex.withLockedValue { handler in
             let result = handler
             handler = nil

@@ -13,8 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 @usableFromInline
-package struct LambdaRuntimeError: Error {
+public struct LambdaRuntimeError: Error {
     @usableFromInline
+    /// internal error codes for LambdaRuntimeClient
     package enum Code: Sendable {
         case closingRuntimeClient
 
@@ -34,6 +35,9 @@ package struct LambdaRuntimeError: Error {
         case missingLambdaRuntimeAPIEnvironmentVariable
         case runtimeCanOnlyBeStartedOnce
         case invalidPort
+
+        /// public error codes for LambdaRuntime
+        case moreThanOneLambdaRuntimeInstance
     }
 
     @usableFromInline
