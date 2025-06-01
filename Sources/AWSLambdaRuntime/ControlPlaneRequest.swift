@@ -28,12 +28,19 @@ enum ControlPlaneResponse: Hashable {
     case error(ErrorResponse)
 }
 
-package struct InvocationMetadata: Hashable {
+@usableFromInline
+package struct InvocationMetadata: Hashable, Sendable {
+    @usableFromInline
     package let requestID: String
+    @usableFromInline
     package let deadlineInMillisSinceEpoch: Int64
+    @usableFromInline
     package let invokedFunctionARN: String
+    @usableFromInline
     package let traceID: String
+    @usableFromInline
     package let clientContext: String?
+    @usableFromInline
     package let cognitoIdentity: String?
 
     package init(headers: HTTPHeaders) throws(LambdaRuntimeError) {
