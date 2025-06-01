@@ -30,6 +30,7 @@ import ucrt
 #endif
 
 public enum Lambda {
+    @inlinable
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
         runtimeClient: RuntimeClient,
         handler: Handler,
