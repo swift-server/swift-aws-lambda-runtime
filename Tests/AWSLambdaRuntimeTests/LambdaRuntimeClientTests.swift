@@ -26,6 +26,7 @@ struct LambdaRuntimeClientTests {
 
     let logger = {
         var logger = Logger(label: "NewLambdaClientRuntimeTest")
+        // Uncomment the line below to enable trace-level logging for debugging purposes.
         // logger.logLevel = .trace
         return logger
     }()
