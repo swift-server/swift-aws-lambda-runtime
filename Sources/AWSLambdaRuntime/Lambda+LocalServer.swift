@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -76,7 +76,7 @@ extension Lambda {
 /// 1. POST /invoke - the client posts the event to the lambda function
 ///
 /// This server passes the data received from /invoke POST request to the lambda function (GET /next) and then forwards the response back to the client.
-private struct LambdaHTTPServer {
+internal struct LambdaHTTPServer {
     private let invocationEndpoint: String
 
     private let invocationPool = Pool<LocalServerInvocation>()
@@ -426,7 +426,7 @@ private struct LambdaHTTPServer {
     /// A shared data structure to store the current invocation or response requests and the continuation objects.
     /// This data structure is shared between instances of the HTTPHandler
     /// (one instance to serve requests from the Lambda function and one instance to serve requests from the client invoking the lambda function).
-    private final class Pool<T>: AsyncSequence, AsyncIteratorProtocol, Sendable where T: Sendable {
+    internal final class Pool<T>: AsyncSequence, AsyncIteratorProtocol, Sendable where T: Sendable {
         typealias Element = T
 
         enum State: ~Copyable {
