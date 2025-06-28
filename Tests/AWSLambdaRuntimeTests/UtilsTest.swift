@@ -19,11 +19,11 @@ import Testing
 struct UtilsTest {
     @Test
     func testGenerateXRayTraceID() {
+        // the time and identifier should be in hexadecimal digits
+        let allowedCharacters = "0123456789abcdef"
         let numTests = 1000
         var values = Set<String>()
         for _ in 0..<numTests {
-            // the time and identifier should be in hexadecimal digits
-            let allowedCharacters = "0123456789abcdef"
             // check the format, see https://docs.aws.amazon.com/xray/latest/devguide/xray-api-sendingdata.html#xray-api-traceids)
             let traceId = AmazonHeaders.generateXRayTraceID()
             let segments = traceId.split(separator: "-")
