@@ -26,7 +26,7 @@ struct LambdaRuntimeClientTests {
 
     let logger = {
         var logger = Logger(label: "NewLambdaClientRuntimeTest")
-        logger.logLevel = .trace
+        // logger.logLevel = .trace
         return logger
     }()
 
