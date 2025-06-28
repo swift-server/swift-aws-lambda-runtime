@@ -58,16 +58,17 @@ struct PoolTests {
     func testConcurrentPushAndIteration() async throws {
         let pool = LambdaHTTPServer.Pool<Int>()
         let iterations = 1000
-        var receivedValues = Set<Int>()
 
         // Start consumer task first
-        let consumer = Task {
+        let consumer = Task { @Sendable in
+            var receivedValues = Set<Int>()
             var count = 0
             for try await value in pool {
                 receivedValues.insert(value)
                 count += 1
                 if count >= iterations { break }
             }
+            return receivedValues
         }
 
         // Create multiple producer tasks
@@ -81,7 +82,7 @@ struct PoolTests {
         }
 
         // Wait for consumer to complete
-        try await consumer.value
+        let receivedValues = try await consumer.value
 
         // Verify all values were received exactly once
         #expect(receivedValues.count == iterations)
@@ -116,16 +117,17 @@ struct PoolTests {
         let pool = LambdaHTTPServer.Pool<Int>()
         let producerCount = 10
         let messagesPerProducer = 1000
-        var receivedValues = [Int]()
 
         // Start consumer
-        let consumer = Task {
+        let consumer = Task { @Sendable in
+            var receivedValues = [Int]()
             var count = 0
             for try await value in pool {
                 receivedValues.append(value)
                 count += 1
                 if count >= producerCount * messagesPerProducer { break }
             }
+            return receivedValues
         }
 
         // Create multiple producers
@@ -141,7 +143,7 @@ struct PoolTests {
         }
 
         // Wait for consumer to complete
-        try await consumer.value
+        let receivedValues = try await consumer.value
 
         // Verify we received all values
         #expect(receivedValues.count == producerCount * messagesPerProducer)
