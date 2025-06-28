@@ -88,7 +88,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         self.storage.logger
     }
 
-    init(
+    public init(
         requestID: String,
         traceID: String,
         invokedFunctionARN: String,

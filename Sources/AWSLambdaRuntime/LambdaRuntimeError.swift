@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-public struct LambdaRuntimeError: Error {
+@usableFromInline
+package struct LambdaRuntimeError: Error {
+    @usableFromInline
     package enum Code: Sendable {
-
         /// internal error codes for LambdaRuntimeClient
         case closingRuntimeClient
 
@@ -39,12 +40,15 @@ public struct LambdaRuntimeError: Error {
         case moreThanOneLambdaRuntimeInstance
     }
 
+    @usableFromInline
     package init(code: Code, underlying: (any Error)? = nil) {
         self.code = code
         self.underlying = underlying
     }
 
-    var code: Code
-    public var underlying: (any Error)?
+    @usableFromInline
+    package var code: Code
+    @usableFromInline
+    package var underlying: (any Error)?
 
 }
