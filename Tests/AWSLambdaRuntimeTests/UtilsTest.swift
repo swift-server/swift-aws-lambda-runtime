@@ -16,29 +16,23 @@ import Testing
 
 @testable import AWSLambdaRuntime
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-
 struct UtilsTest {
     @Test
     func testGenerateXRayTraceID() {
-        // the time and identifier should be in hexadecimal digits
-        let invalidCharacters = CharacterSet(charactersIn: "abcdef0123456789").inverted
         let numTests = 1000
         var values = Set<String>()
         for _ in 0..<numTests {
+            // the time and identifier should be in hexadecimal digits
+            let allowedCharacters = "0123456789abcdef"
             // check the format, see https://docs.aws.amazon.com/xray/latest/devguide/xray-api-sendingdata.html#xray-api-traceids)
             let traceId = AmazonHeaders.generateXRayTraceID()
             let segments = traceId.split(separator: "-")
             #expect(segments.count == 3)
             #expect(segments[0] == "1")
             #expect(segments[1].count == 8)
-            #expect(segments[1].rangeOfCharacter(from: invalidCharacters) == nil)
             #expect(segments[2].count == 24)
-            #expect(segments[2].rangeOfCharacter(from: invalidCharacters) == nil)
+            #expect(segments[1].allSatisfy { allowedCharacters.contains($0) })
+            #expect(segments[2].allSatisfy { allowedCharacters.contains($0) })
             values.insert(traceId)
         }
         // check that the generated values are different
