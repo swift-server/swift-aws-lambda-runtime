@@ -20,7 +20,7 @@ import NIOCore
 /// Background work can also be executed after returning the response. After closing the response stream by calling
 /// ``LambdaResponseStreamWriter/finish()`` or ``LambdaResponseStreamWriter/writeAndFinish(_:)``,
 /// the ``handle(_:responseWriter:context:)`` function is free to execute any background work.
-public protocol StreamingLambdaHandler {
+public protocol StreamingLambdaHandler: _Lambda_SendableMetatype {
     /// The handler function -- implement the business logic of the Lambda function here.
     /// - Parameters:
     ///   - event: The invocation's input data.
