@@ -100,16 +100,16 @@ final class MockLambdaServer<Behavior: LambdaServerBehavior> {
         guard let localAddress = channel.localAddress else {
             throw ServerError.cantBind
         }
-        self.logger.info("\(self) started and listening on \(localAddress)")
+        self.logger.trace("\(self) started and listening on \(localAddress)")
         return localAddress.port!
     }
 
     fileprivate func stop() async throws {
-        self.logger.info("stopping \(self)")
+        self.logger.trace("stopping \(self)")
         let channel = self.channel!
         try? await channel.close().get()
         self.shutdown = true
-        self.logger.info("\(self) stopped")
+        self.logger.trace("\(self) stopped")
     }
 }
 
@@ -150,7 +150,7 @@ final class HTTPHandler: ChannelInboundHandler {
     }
 
     func processRequest(context: ChannelHandlerContext, request: (head: HTTPRequestHead, body: ByteBuffer?)) {
-        self.logger.info("\(self) processing \(request.head.uri)")
+        self.logger.trace("\(self) processing \(request.head.uri)")
 
         let requestBody = request.body.flatMap { (buffer: ByteBuffer) -> String? in
             var buffer = buffer

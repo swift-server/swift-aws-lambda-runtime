@@ -14,6 +14,7 @@
 
 import NIOCore
 
+@usableFromInline
 package protocol LambdaRuntimeClientResponseStreamWriter: LambdaResponseStreamWriter {
     func write(_ buffer: ByteBuffer) async throws
     func finish() async throws
@@ -21,14 +22,18 @@ package protocol LambdaRuntimeClientResponseStreamWriter: LambdaResponseStreamWr
     func reportError(_ error: any Error) async throws
 }
 
+@usableFromInline
 package protocol LambdaRuntimeClientProtocol {
     associatedtype Writer: LambdaRuntimeClientResponseStreamWriter
 
     func nextInvocation() async throws -> (Invocation, Writer)
 }
 
-package struct Invocation {
+@usableFromInline
+package struct Invocation: Sendable {
+    @usableFromInline
     package var metadata: InvocationMetadata
+    @usableFromInline
     package var event: ByteBuffer
 
     package init(metadata: InvocationMetadata, event: ByteBuffer) {

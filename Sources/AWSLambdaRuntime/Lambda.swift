@@ -30,6 +30,7 @@ import ucrt
 #endif
 
 public enum Lambda {
+    @inlinable
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
         runtimeClient: RuntimeClient,
         handler: Handler,
@@ -37,9 +38,11 @@ public enum Lambda {
     ) async throws where Handler: StreamingLambdaHandler {
         var handler = handler
 
+        var logger = logger
         do {
             while !Task.isCancelled {
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
+                logger[metadataKey: "aws-request-id"] = "\(invocation.metadata.requestID)"
 
                 do {
                     try await handler.handle(

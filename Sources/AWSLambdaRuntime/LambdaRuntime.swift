@@ -27,8 +27,11 @@ import Foundation
 // sadly crashes the compiler today.
 public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
     // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
+    @usableFromInline
     let handlerMutex: NIOLockedValueBox<Handler?>
+    @usableFromInline
     let logger: Logger
+    @usableFromInline
     let eventLoop: EventLoop
 
     public init(
@@ -48,6 +51,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         self.logger.debug("LambdaRuntime initialized")
     }
 
+    @inlinable
     public func run() async throws {
         let handler = self.handlerMutex.withLockedValue { handler in
             let result = handler
