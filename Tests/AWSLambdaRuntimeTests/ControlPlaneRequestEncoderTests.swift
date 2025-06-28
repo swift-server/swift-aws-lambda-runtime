@@ -17,13 +17,13 @@ import NIOEmbedded
 import NIOHTTP1
 import Testing
 
+@testable import AWSLambdaRuntime
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
 import Foundation
 #endif
-
-@testable import AWSLambdaRuntime
 
 struct ControlPlaneRequestEncoderTests {
     let host = "192.168.0.1"
@@ -44,7 +44,7 @@ struct ControlPlaneRequestEncoderTests {
             _ = try? client.finish(acceptAlreadyClosed: false)
             _ = try? server.finish(acceptAlreadyClosed: false)
         }
-        
+
         let request = try sendRequest(.next, client: client, server: server)
 
         #expect(request?.head.isKeepAlive == true)
@@ -64,7 +64,7 @@ struct ControlPlaneRequestEncoderTests {
             _ = try? client.finish(acceptAlreadyClosed: false)
             _ = try? server.finish(acceptAlreadyClosed: false)
         }
-        
+
         let requestID = UUID().uuidString
         let request = try sendRequest(.invocationResponse(requestID, nil), client: client, server: server)
 
@@ -86,7 +86,7 @@ struct ControlPlaneRequestEncoderTests {
             _ = try? client.finish(acceptAlreadyClosed: false)
             _ = try? server.finish(acceptAlreadyClosed: false)
         }
-        
+
         let requestID = UUID().uuidString
         let payload = ByteBuffer(string: "hello swift lambda!")
 
@@ -111,7 +111,7 @@ struct ControlPlaneRequestEncoderTests {
             _ = try? client.finish(acceptAlreadyClosed: false)
             _ = try? server.finish(acceptAlreadyClosed: false)
         }
-        
+
         let requestID = UUID().uuidString
         let error = ErrorResponse(errorType: "SomeError", errorMessage: "An error happened")
         let request = try sendRequest(.invocationError(requestID, error), client: client, server: server)
@@ -139,7 +139,7 @@ struct ControlPlaneRequestEncoderTests {
             _ = try? client.finish(acceptAlreadyClosed: false)
             _ = try? server.finish(acceptAlreadyClosed: false)
         }
-        
+
         let error = ErrorResponse(errorType: "StartupError", errorMessage: "Urgh! Startup failed. 😨")
         let request = try sendRequest(.initializationError(error), client: client, server: server)
 
@@ -165,7 +165,7 @@ struct ControlPlaneRequestEncoderTests {
             _ = try? client.finish(acceptAlreadyClosed: false)
             _ = try? server.finish(acceptAlreadyClosed: false)
         }
-        
+
         for _ in 0..<1000 {
             let nextRequest = try sendRequest(.next, client: client, server: server)
             #expect(nextRequest?.head.method == .GET)
@@ -173,13 +173,21 @@ struct ControlPlaneRequestEncoderTests {
 
             let requestID = UUID().uuidString
             let payload = ByteBuffer(string: "hello swift lambda!")
-            let successRequest = try sendRequest(.invocationResponse(requestID, payload), client: client, server: server)
+            let successRequest = try sendRequest(
+                .invocationResponse(requestID, payload),
+                client: client,
+                server: server
+            )
             #expect(successRequest?.head.method == .POST)
             #expect(successRequest?.head.uri == "/2018-06-01/runtime/invocation/\(requestID)/response")
         }
     }
 
-    func sendRequest(_ request: ControlPlaneRequest, client: EmbeddedChannel, server: EmbeddedChannel) throws -> NIOHTTPServerRequestFull? {
+    func sendRequest(
+        _ request: ControlPlaneRequest,
+        client: EmbeddedChannel,
+        server: EmbeddedChannel
+    ) throws -> NIOHTTPServerRequestFull? {
         try client.writeOutbound(request)
         while let part = try client.readOutbound(as: ByteBuffer.self) {
             try server.writeInbound(part)
