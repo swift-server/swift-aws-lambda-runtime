@@ -147,12 +147,11 @@ struct LambdaRuntimeClientTests {
             (event: String, context: LambdaContext) in
             "Hello \(event)"
         }
-        var logger = Logger(label: "LambdaRuntime")
-        // logger.logLevel = .debug
+
         let serviceGroup = ServiceGroup(
             services: [runtime],
             gracefulShutdownSignals: [.sigterm, .sigint],
-            logger: logger
+            logger: Logger(label: "TestLambdaRuntimeGracefulShutdown")
         )
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
