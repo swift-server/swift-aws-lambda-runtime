@@ -14,6 +14,9 @@ Resources:
       MemorySize: 128
       Architectures:
         - arm64
+      Environment:
+        Variables:
+          LOG_LEVEL: trace
       FunctionUrlConfig:
         AuthType: AWS_IAM
         InvokeMode: RESPONSE_STREAM

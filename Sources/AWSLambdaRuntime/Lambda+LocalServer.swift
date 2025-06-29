@@ -248,6 +248,7 @@ internal struct LambdaHTTPServer {
                         case .end:
                             precondition(requestHead != nil, "Received .end without .head")
                             // process the request
+                            // FIXME: this do not support response streaming
                             let response = try await self.processRequest(
                                 head: requestHead,
                                 body: requestBody,

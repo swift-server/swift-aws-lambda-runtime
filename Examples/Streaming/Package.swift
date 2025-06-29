@@ -1,7 +1,6 @@
-// swift-tools-version:6.0
+// swift-tools-version:6.1
 
 import PackageDescription
-
 // needed for CI to test the local version of the library
 import struct Foundation.URL
 

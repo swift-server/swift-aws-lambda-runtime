@@ -43,6 +43,11 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         }
 
         @usableFromInline
+        func writeHeaders(_ headers: HTTPHeaders) async throws {
+            try await self.runtimeClient.appendHeaders(headers)
+        }
+
+        @usableFromInline
         func write(_ buffer: NIOCore.ByteBuffer) async throws {
             try await self.runtimeClient.write(buffer)
         }
@@ -188,6 +193,13 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         }
     }
 
+    // we can use a var here because we are always isolated to this actor
+    private var userHeaders = HTTPHeaders()
+    private func appendHeaders(_ headers: HTTPHeaders) async throws {
+        // buffer the data to send them when we will send the headers 
+        userHeaders.add(contentsOf: headers)
+    }
+    
     private func write(_ buffer: NIOCore.ByteBuffer) async throws {
         switch self.lambdaState {
         case .idle, .sentResponse:
@@ -205,7 +217,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             guard case .sendingResponse(requestID) = self.lambdaState else {
                 fatalError("Invalid state: \(self.lambdaState)")
             }
-            return try await handler.writeResponseBodyPart(buffer, requestID: requestID)
+            return try await handler.writeResponseBodyPart(self.userHeaders, buffer, requestID: requestID)
         }
     }
 
@@ -555,6 +567,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
 
     func writeResponseBodyPart(
         isolation: isolated (any Actor)? = #isolation,
+        _ userHeaders: HTTPHeaders,
         _ byteBuffer: ByteBuffer,
         requestID: String
     ) async throws {
@@ -564,10 +577,10 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
 
         case .connected(let context, .waitingForResponse):
             self.state = .connected(context, .sendingResponse)
-            try await self.sendResponseBodyPart(byteBuffer, sendHeadWithRequestID: requestID, context: context)
+            try await self.sendResponseBodyPart(userHeaders, byteBuffer, sendHeadWithRequestID: requestID, context: context)
 
         case .connected(let context, .sendingResponse):
-            try await self.sendResponseBodyPart(byteBuffer, sendHeadWithRequestID: nil, context: context)
+            try await self.sendResponseBodyPart(userHeaders, byteBuffer, sendHeadWithRequestID: nil, context: context)
 
         case .connected(_, .idle),
             .connected(_, .sentResponse):
@@ -616,6 +629,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
 
     private func sendResponseBodyPart(
         isolation: isolated (any Actor)? = #isolation,
+        _ userHeaders: HTTPHeaders,
         _ byteBuffer: ByteBuffer,
         sendHeadWithRequestID: String?,
         context: ChannelHandlerContext
@@ -625,13 +639,16 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             // TODO: This feels super expensive. We should be able to make this cheaper. requestIDs are fixed length
             let url = Consts.invocationURLPrefix + "/" + requestID + Consts.postResponseURLSuffix
 
+            var responseHeaders = self.streamingHeaders
+            responseHeaders.add(contentsOf: userHeaders)
+            logger.trace("sendResponseBodyPart : ========== Sending response headers: \(responseHeaders)")
             let httpRequest = HTTPRequestHead(
                 version: .http1_1,
                 method: .POST,
                 uri: url,
-                headers: self.streamingHeaders
+                headers: responseHeaders
             )
-
+            
             context.write(self.wrapOutboundOut(.head(httpRequest)), promise: nil)
         }
 
@@ -663,13 +680,13 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
                     self.streamingHeaders
                 }
 
+            logger.trace("sendResponseFinish : ========== Sending response headers: \(headers)")
             let httpRequest = HTTPRequestHead(
                 version: .http1_1,
                 method: .POST,
                 uri: url,
                 headers: headers
             )
-
             context.write(self.wrapOutboundOut(.head(httpRequest)), promise: nil)
         }
 

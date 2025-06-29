@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
+import NIOHTTP1
 
 /// The base handler protocol that receives a `ByteBuffer` representing the incoming event and returns the response as a `ByteBuffer` too.
 /// This handler protocol supports response streaming. Bytes can be streamed outwards through the ``LambdaResponseStreamWriter``
@@ -46,6 +47,10 @@ public protocol StreamingLambdaHandler: _Lambda_SendableMetatype {
 /// A writer object to write the Lambda response stream into. The HTTP response is started lazily.
 /// before the first call to ``write(_:)`` or ``writeAndFinish(_:)``.
 public protocol LambdaResponseStreamWriter {
+    /// Write the headers parts of the stream. This allows client to set headers before the first response part is written.
+    /// - Parameter buffer: The buffer to write.
+    func writeHeaders(_ headers: HTTPHeaders) async throws
+
     /// Write a response part into the stream. Bytes written are streamed continually.
     /// - Parameter buffer: The buffer to write.
     func write(_ buffer: ByteBuffer) async throws

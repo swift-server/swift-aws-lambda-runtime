@@ -14,6 +14,7 @@
 
 import AWSLambdaRuntime
 import NIOCore
+import NIOHTTP1
 
 struct SendNumbersWithPause: StreamingLambdaHandler {
     func handle(
@@ -21,6 +22,16 @@ struct SendNumbersWithPause: StreamingLambdaHandler {
         responseWriter: some LambdaResponseStreamWriter,
         context: LambdaContext
     ) async throws {
+        context.logger.info("Received event: \(event)")
+        try await responseWriter.writeHeaders(
+            HTTPHeaders([
+                ("X-Example-Header", "This is an example header")
+            ])
+        )
+
+        try await responseWriter.write(
+            ByteBuffer(string: "Starting to send numbers with a pause...\n")
+        )
         for i in 1...10 {
             // Send partial data
             try await responseWriter.write(ByteBuffer(string: "\(i)\n"))
