@@ -238,7 +238,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             guard case .sentResponse(requestID) = self.lambdaState else {
                 fatalError("Invalid state: \(self.lambdaState)")
             }
-            try await handler.finishResponseRequest(finalData: buffer, requestID: requestID)
+            try await handler.finishResponseRequest(userHeaders: self.userHeaders, finalData: buffer, requestID: requestID)
             guard case .sentResponse(requestID) = self.lambdaState else {
                 fatalError("Invalid state: \(self.lambdaState)")
             }
@@ -496,9 +496,11 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             "lambda-runtime-function-error-type": "Unhandled",
         ]
         self.streamingHeaders = [
-            "host": "\(self.configuration.ip):\(self.configuration.port)",
+            "Host": "\(self.configuration.ip):\(self.configuration.port)",
             "user-agent": .userAgent,
-            "transfer-encoding": "chunked",
+            // "Content-type": "application/vnd.awslambda.http-integration-response",           
+            // "Transfer-encoding": "chunked",
+            // "Lambda-Runtime-Function-Response-Mode": "streaming",
         ]
     }
 
@@ -596,6 +598,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
 
     func finishResponseRequest(
         isolation: isolated (any Actor)? = #isolation,
+        userHeaders: HTTPHeaders,
         finalData: ByteBuffer?,
         requestID: String
     ) async throws {
@@ -607,13 +610,13 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
         case .connected(let context, .waitingForResponse):
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
                 self.state = .connected(context, .sentResponse(continuation))
-                self.sendResponseFinish(finalData, sendHeadWithRequestID: requestID, context: context)
+                self.sendResponseFinish(userHeaders, finalData, sendHeadWithRequestID: requestID, context: context)
             }
 
         case .connected(let context, .sendingResponse):
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
                 self.state = .connected(context, .sentResponse(continuation))
-                self.sendResponseFinish(finalData, sendHeadWithRequestID: nil, context: context)
+                self.sendResponseFinish(userHeaders, finalData, sendHeadWithRequestID: nil, context: context)
             }
 
         case .connected(_, .sentResponse):
@@ -639,14 +642,15 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             // TODO: This feels super expensive. We should be able to make this cheaper. requestIDs are fixed length
             let url = Consts.invocationURLPrefix + "/" + requestID + Consts.postResponseURLSuffix
 
-            var responseHeaders = self.streamingHeaders
-            responseHeaders.add(contentsOf: userHeaders)
-            logger.trace("sendResponseBodyPart : ========== Sending response headers: \(responseHeaders)")
+            var headers = HTTPHeaders()
+            headers.add(contentsOf: userHeaders)
+            headers.add(contentsOf: self.streamingHeaders)
+            logger.trace("sendResponseBodyPart : ========== Sending response headers: \(headers)")
             let httpRequest = HTTPRequestHead(
                 version: .http1_1,
                 method: .POST,
                 uri: url,
-                headers: responseHeaders
+                headers: headers // FIXME these are the headers returned to the control plane. I'm not sure if we should use the streaming headers here
             )
             
             context.write(self.wrapOutboundOut(.head(httpRequest)), promise: nil)
@@ -659,6 +663,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
 
     private func sendResponseFinish(
         isolation: isolated (any Actor)? = #isolation,
+        _ userHeaders: HTTPHeaders,
         _ byteBuffer: ByteBuffer?,
         sendHeadWithRequestID: String?,
         context: ChannelHandlerContext
@@ -669,7 +674,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
 
             // If we have less than 6MB, we don't want to use the streaming API. If we have more
             // than 6MB we must use the streaming mode.
-            let headers: HTTPHeaders =
+            var headers: HTTPHeaders =
                 if byteBuffer?.readableBytes ?? 0 < 6_000_000 {
                     [
                         "host": "\(self.configuration.ip):\(self.configuration.port)",
@@ -679,7 +684,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
                 } else {
                     self.streamingHeaders
                 }
-
+            headers.add(contentsOf: userHeaders)
             logger.trace("sendResponseFinish : ========== Sending response headers: \(headers)")
             let httpRequest = HTTPRequestHead(
                 version: .http1_1,
