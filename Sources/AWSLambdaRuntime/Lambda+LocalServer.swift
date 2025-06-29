@@ -440,7 +440,6 @@ internal struct LambdaHTTPServer {
         enum State: ~Copyable {
             case buffer(Deque<T>)
             case continuation(CheckedContinuation<T, any Error>?)
-            case cancelled
         }
 
         private let lock = Mutex<State>(.buffer([]))
@@ -458,10 +457,6 @@ internal struct LambdaHTTPServer {
                 case .buffer(var buffer):
                     buffer.append(invocation)
                     state = .buffer(buffer)
-                    return nil
-
-                case .cancelled:
-                    state = .cancelled
                     return nil
                 }
             }
@@ -490,10 +485,6 @@ internal struct LambdaHTTPServer {
 
                         case .continuation:
                             fatalError("Concurrent invocations to next(). This is illegal.")
-
-                        case .cancelled:
-                            state = .cancelled
-                            return nil
                         }
                     }
 
@@ -508,9 +499,7 @@ internal struct LambdaHTTPServer {
                         state = .buffer(buffer)
                     case .continuation(let continuation):
                         continuation?.resume(throwing: CancellationError())
-                        state = .continuation(continuation)
-                    case .cancelled:
-                        state = .cancelled
+                        state = .buffer([])
                     }
                 }
             }
