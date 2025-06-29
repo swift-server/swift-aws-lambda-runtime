@@ -30,20 +30,21 @@ struct LambdaRuntimeTests {
         let runtime1 = LambdaRuntime(
             handler: MockHandler(),
             eventLoop: Lambda.defaultEventLoop,
-            logger: Logger(label: "Runtime1")
+            logger: Logger(label: "LambdaRuntimeTests.Runtime1")
         )
 
         // Second runtime
         let runtime2 = LambdaRuntime(
             handler: MockHandler(),
             eventLoop: Lambda.defaultEventLoop,
-            logger: Logger(label: "Runtime1")
+            logger: Logger(label: "LambdaRuntimeTests.Runtime2")
         )
 
         try await withThrowingTaskGroup(of: Void.self) { taskGroup in
             // start the first runtime
             taskGroup.addTask {
-                await #expect(throws: Never.self) {
+                // ChannelError will be thrown when we cancel the task group
+                await #expect(throws: ChannelError.self) {
                     try await runtime1.run()
                 }
             }
@@ -63,7 +64,10 @@ struct LambdaRuntimeTests {
         // Running the second runtime should work now
         try await withThrowingTaskGroup(of: Void.self) { taskGroup in
             taskGroup.addTask {
-                await #expect(throws: Never.self) { try await runtime2.run() }
+                // ChannelError will be thrown when we cancel the task group
+                await #expect(throws: ChannelError.self) {
+                    try await runtime2.run()
+                }
             }
 
             // Set timeout and cancel the runtime 2
