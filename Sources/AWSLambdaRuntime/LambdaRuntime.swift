@@ -56,9 +56,16 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         self.logger.debug("LambdaRuntime initialized")
     }
 
+    #if !ServiceLifecycleSupport
+    @inlinable
+    internal func run() async throws {
+        try await _run()
+    }
+    #endif
+
     /// Make sure only one run() is called at a time
     // @inlinable
-    public func run() async throws {
+    internal func _run() async throws {
 
         // we use an atomic global variable to ensure only one LambdaRuntime is running at the time
         let (_, original) = _isRunning.compareExchange(expected: false, desired: true, ordering: .acquiringAndReleasing)
@@ -72,10 +79,6 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
             _isRunning.store(false, ordering: .releasing)
         }
 
-        try await self._run()
-    }
-
-    private func _run() async throws {
         let handler = self.handlerMutex.withLockedValue { handler in
             let result = handler
             handler = nil
