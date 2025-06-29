@@ -51,8 +51,15 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         self.logger.debug("LambdaRuntime initialized")
     }
 
+    #if !ServiceLifecycleSupport
     @inlinable
-    public func run() async throws {
+    internal func run() async throws {
+        try await _run()
+    }
+    #endif
+
+    @inlinable
+    internal func _run() async throws {
         let handler = self.handlerMutex.withLockedValue { handler in
             let result = handler
             handler = nil
