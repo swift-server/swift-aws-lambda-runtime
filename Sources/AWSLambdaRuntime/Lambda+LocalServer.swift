@@ -48,11 +48,9 @@ extension Lambda {
     @usableFromInline
     static func withLocalServer(
         invocationEndpoint: String? = nil,
+        logger: Logger,
         _ body: sending @escaping () async throws -> Void
     ) async throws {
-        var logger = Logger(label: "LocalServer")
-        logger.logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
-
         try await LambdaHTTPServer.withLocalServer(
             invocationEndpoint: invocationEndpoint,
             logger: logger
@@ -133,6 +131,7 @@ internal struct LambdaHTTPServer {
                 }
             }
 
+        // it's ok to keep this at `info` level because it is only used for local testing and unit tests
         logger.info(
             "Server started and listening",
             metadata: [
@@ -202,12 +201,18 @@ internal struct LambdaHTTPServer {
                 return result
 
             case .serverReturned(let result):
-                logger.error(
-                    "Server shutdown before closure completed",
-                    metadata: [
-                        "error": "\(result.maybeError != nil ? "\(result.maybeError!)" : "none")"
-                    ]
-                )
+
+                if (result.maybeError as? CancellationError) != nil {
+                    logger.trace("Server's task cancelled")
+                } else {
+                    logger.error(
+                        "Server shutdown before closure completed",
+                        metadata: [
+                            "error": "\(result.maybeError != nil ? "\(result.maybeError!)" : "none")"
+                        ]
+                    )
+                }
+
                 switch await group.next()! {
                 case .closureResult(let result):
                     return result
@@ -265,9 +270,12 @@ internal struct LambdaHTTPServer {
                         }
                     }
                 }
+            } catch let error as CancellationError {
+                logger.trace("The task was cancelled", metadata: ["error": "\(error)"])
             } catch {
                 logger.error("Hit error: \(error)")
             }
+
         } onCancel: {
             channel.channel.close(promise: nil)
         }
