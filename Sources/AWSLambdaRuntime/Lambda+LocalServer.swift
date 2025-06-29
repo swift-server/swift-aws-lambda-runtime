@@ -166,17 +166,21 @@ internal struct LambdaHTTPServer {
                     // consumed by iterating the group or by exiting the group. Since, we are never consuming
                     // the results of the group we need the group to automatically discard them; otherwise, this
                     // would result in a memory leak over time.
-                    try await withThrowingDiscardingTaskGroup { taskGroup in
-                        try await channel.executeThenClose { inbound in
-                            for try await connectionChannel in inbound {
+                    try await withTaskCancellationHandler {
+                        try await withThrowingDiscardingTaskGroup { taskGroup in
+                            try await channel.executeThenClose { inbound in
+                                for try await connectionChannel in inbound {
 
-                                taskGroup.addTask {
-                                    logger.trace("Handling a new connection")
-                                    await server.handleConnection(channel: connectionChannel, logger: logger)
-                                    logger.trace("Done handling the connection")
+                                    taskGroup.addTask {
+                                        logger.trace("Handling a new connection")
+                                        await server.handleConnection(channel: connectionChannel, logger: logger)
+                                        logger.trace("Done handling the connection")
+                                    }
                                 }
                             }
                         }
+                    } onCancel: {
+                        channel.channel.close(promise: nil)
                     }
                     return .serverReturned(.success(()))
                 } catch {
@@ -230,38 +234,42 @@ internal struct LambdaHTTPServer {
         // Note that this method is non-throwing and we are catching any error.
         // We do this since we don't want to tear down the whole server when a single connection
         // encounters an error.
-        do {
-            try await channel.executeThenClose { inbound, outbound in
-                for try await inboundData in inbound {
-                    switch inboundData {
-                    case .head(let head):
-                        requestHead = head
+        await withTaskCancellationHandler {
+            do {
+                try await channel.executeThenClose { inbound, outbound in
+                    for try await inboundData in inbound {
+                        switch inboundData {
+                        case .head(let head):
+                            requestHead = head
 
-                    case .body(let body):
-                        requestBody.setOrWriteImmutableBuffer(body)
+                        case .body(let body):
+                            requestBody.setOrWriteImmutableBuffer(body)
 
-                    case .end:
-                        precondition(requestHead != nil, "Received .end without .head")
-                        // process the request
-                        let response = try await self.processRequest(
-                            head: requestHead,
-                            body: requestBody,
-                            logger: logger
-                        )
-                        // send the responses
-                        try await self.sendResponse(
-                            response: response,
-                            outbound: outbound,
-                            logger: logger
-                        )
+                        case .end:
+                            precondition(requestHead != nil, "Received .end without .head")
+                            // process the request
+                            let response = try await self.processRequest(
+                                head: requestHead,
+                                body: requestBody,
+                                logger: logger
+                            )
+                            // send the responses
+                            try await self.sendResponse(
+                                response: response,
+                                outbound: outbound,
+                                logger: logger
+                            )
 
-                        requestHead = nil
-                        requestBody = nil
+                            requestHead = nil
+                            requestBody = nil
+                        }
                     }
                 }
+            } catch {
+                logger.error("Hit error: \(error)")
             }
-        } catch {
-            logger.error("Hit error: \(error)")
+        } onCancel: {
+            channel.channel.close(promise: nil)
         }
     }
 
@@ -432,6 +440,7 @@ internal struct LambdaHTTPServer {
         enum State: ~Copyable {
             case buffer(Deque<T>)
             case continuation(CheckedContinuation<T, any Error>?)
+            case cancelled
         }
 
         private let lock = Mutex<State>(.buffer([]))
@@ -450,6 +459,10 @@ internal struct LambdaHTTPServer {
                     buffer.append(invocation)
                     state = .buffer(buffer)
                     return nil
+
+                case .cancelled:
+                    state = .cancelled
+                    return nil
                 }
             }
 
@@ -462,26 +475,44 @@ internal struct LambdaHTTPServer {
                 return nil
             }
 
-            return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, any Error>) in
-                let nextAction = self.lock.withLock { state -> T? in
-                    switch consume state {
-                    case .buffer(var buffer):
-                        if let first = buffer.popFirst() {
-                            state = .buffer(buffer)
-                            return first
-                        } else {
-                            state = .continuation(continuation)
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, any Error>) in
+                    let nextAction = self.lock.withLock { state -> T? in
+                        switch consume state {
+                        case .buffer(var buffer):
+                            if let first = buffer.popFirst() {
+                                state = .buffer(buffer)
+                                return first
+                            } else {
+                                state = .continuation(continuation)
+                                return nil
+                            }
+
+                        case .continuation:
+                            fatalError("Concurrent invocations to next(). This is illegal.")
+
+                        case .cancelled:
+                            state = .cancelled
                             return nil
                         }
+                    }
 
-                    case .continuation:
-                        fatalError("Concurrent invocations to next(). This is illegal.")
+                    guard let nextAction else { return }
+
+                    continuation.resume(returning: nextAction)
+                }
+            } onCancel: {
+                self.lock.withLock { state in
+                    switch consume state {
+                    case .buffer(let buffer):
+                        state = .buffer(buffer)
+                    case .continuation(let continuation):
+                        continuation?.resume(throwing: CancellationError())
+                        state = .continuation(continuation)
+                    case .cancelled:
+                        state = .cancelled
                     }
                 }
-
-                guard let nextAction else { return }
-
-                continuation.resume(returning: nextAction)
             }
         }
 

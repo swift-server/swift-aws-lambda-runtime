@@ -15,5 +15,11 @@
 #if ServiceLifecycleSupport
 import ServiceLifecycle
 
-extension LambdaRuntime: Service {}
+extension LambdaRuntime: Service {
+    public func run() async throws {
+        try await cancelWhenGracefulShutdown {
+            try await self._run()
+        }
+    }
+}
 #endif
