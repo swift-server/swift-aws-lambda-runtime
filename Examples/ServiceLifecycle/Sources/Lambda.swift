@@ -21,32 +21,26 @@ import ServiceLifecycle
 struct LambdaFunction {
 
     static func main() async throws {
+        LambdaFunction().main()
+    }
 
-        var logger = Logger(label: "ServiceLifecycleExample")
+    private let pgClient: PostgresClient
+    private var logger: Logger
+    private init() throws {
+        self.logger = Logger(label: "ServiceLifecycleExample")
         logger.logLevel = .trace
 
-        let pgClient = try preparePostgresClient(
+        self.pgClient = try preparePostgresClient(
             host: Lambda.env("DB_HOST") ?? "localhost",
             user: Lambda.env("DB_USER") ?? "postgres",
             password: Lambda.env("DB_PASSWORD") ?? "secret",
             dbName: Lambda.env("DB_NAME") ?? "test"
         )
+    }
+    private func main() {
 
         /// Instantiate LambdaRuntime with a closure handler implementing the business logic of the Lambda function
-        let runtime = LambdaRuntimeService(logger: logger) { (event: String, context: LambdaContext) in
-
-            do {
-                // Use initialized service within the handler
-                // IMPORTANT - CURRENTLY WHEN THERE IS AN ERROR, THIS CALL HANGS WHEN DB IS NOT REACHABLE
-                // https://github.com/vapor/postgres-nio/issues/489
-                let rows = try await pgClient.query("SELECT id, username FROM users")
-                for try await (id, username) in rows.decode((Int, String).self) {
-                    logger.debug("\(id) : \(username)")
-                }
-            } catch {
-                logger.error("PG Error: \(error)")
-            }
-        }
+        let runtime = LambdaRuntime(logger: logger, body: handler)
 
         /// Use ServiceLifecycle to manage the initialization and termination
         /// of the PGClient together with the LambdaRuntime
@@ -59,9 +53,24 @@ struct LambdaFunction {
         try await serviceGroup.run()
 
         // perform any cleanup here
+
     }
 
-    private static func preparePostgresClient(
+    private func handler(event: String, context: LambdaContext) -> String {
+        do {
+            // Use initialized service within the handler
+            // IMPORTANT - CURRENTLY WHEN THERE IS AN ERROR, THIS CALL HANGS WHEN DB IS NOT REACHABLE
+            // https://github.com/vapor/postgres-nio/issues/489
+            let rows = try await pgClient.query("SELECT id, username FROM users")
+            for try await (id, username) in rows.decode((Int, String).self) {
+                logger.debug("\(id) : \(username)")
+            }
+        } catch {
+            logger.error("PG Error: \(error)")
+        }
+    }
+
+    private func preparePostgresClient(
         host: String,
         user: String,
         password: String,
