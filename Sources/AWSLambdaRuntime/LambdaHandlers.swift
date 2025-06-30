@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
+import Logging
 
 /// The base handler protocol that receives a `ByteBuffer` representing the incoming event and returns the response as a `ByteBuffer` too.
 /// This handler protocol supports response streaming. Bytes can be streamed outwards through the ``LambdaResponseStreamWriter``
@@ -175,11 +176,15 @@ public struct ClosureHandler<Event: Decodable, Output>: LambdaHandler {
 
 extension LambdaRuntime {
     /// Initialize an instance with a ``StreamingLambdaHandler`` in the form of a closure.
-    /// - Parameter body: The handler in the form of a closure.
+    /// - Parameter
+    ///   - logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
+    ///   - body: The handler in the form of a closure.
     public convenience init(
+        logger: Logger = Logger(label: "LambdaRuntime"),
         body: @Sendable @escaping (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
+
     ) where Handler == StreamingClosureHandler {
-        self.init(handler: StreamingClosureHandler(body: body))
+        self.init(handler: StreamingClosureHandler(body: body), logger: logger)
     }
 
     /// Initialize an instance with a ``LambdaHandler`` defined in the form of a closure **with a non-`Void` return type**, an encoder, and a decoder.

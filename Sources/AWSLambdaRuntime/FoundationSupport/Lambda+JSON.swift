@@ -23,6 +23,8 @@ import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
 #endif
 
+import Logging 
+
 public struct LambdaJSONEventDecoder: LambdaEventDecoder {
     @usableFromInline let jsonDecoder: JSONDecoder
 
@@ -85,10 +87,12 @@ extension LambdaCodableAdapter {
 extension LambdaRuntime {
     /// Initialize an instance with a `LambdaHandler` defined in the form of a closure **with a non-`Void` return type**.
     /// - Parameters:
+    ///   - logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
     ///   - decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type. `JSONDecoder()` used as default.
     ///   - encoder: The encoder object that will be used to encode the generic `Output` into a `ByteBuffer`. `JSONEncoder()` used as default.
     ///   - body: The handler in the form of a closure.
     public convenience init<Event: Decodable, Output>(
+        logger: Logger = Logger(label: "LambdaRuntime"),
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder(),
         body: sending @escaping (Event, LambdaContext) async throws -> Output
@@ -108,13 +112,15 @@ extension LambdaRuntime {
             handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
         )
 
-        self.init(handler: handler)
+        self.init(handler: handler, logger: logger)
     }
 
     /// Initialize an instance with a `LambdaHandler` defined in the form of a closure **with a `Void` return type**.
+    /// - Parameter logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
     /// - Parameter body: The handler in the form of a closure.
     /// - Parameter decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type. `JSONDecoder()` used as default.
     public convenience init<Event: Decodable>(
+        logger: Logger = Logger(label: "LambdaRuntime"),
         decoder: JSONDecoder = JSONDecoder(),
         body: sending @escaping (Event, LambdaContext) async throws -> Void
     )
@@ -132,7 +138,7 @@ extension LambdaRuntime {
             handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
         )
 
-        self.init(handler: handler)
+        self.init(handler: handler, logger: logger)
     }
 }
 #endif  // trait: FoundationJSONSupport
