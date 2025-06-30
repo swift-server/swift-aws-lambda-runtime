@@ -23,7 +23,7 @@ import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
 #endif
 
-import Logging 
+import Logging
 
 public struct LambdaJSONEventDecoder: LambdaEventDecoder {
     @usableFromInline let jsonDecoder: JSONDecoder
