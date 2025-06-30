@@ -21,33 +21,34 @@ import ServiceLifecycle
 struct LambdaFunction {
 
     static func main() async throws {
-        LambdaFunction().main()
+        try await LambdaFunction().main()
     }
 
     private let pgClient: PostgresClient
     private var logger: Logger
     private init() throws {
         self.logger = Logger(label: "ServiceLifecycleExample")
-        logger.logLevel = .trace
 
-        self.pgClient = try preparePostgresClient(
+        self.pgClient = try LambdaFunction.preparePostgresClient(
             host: Lambda.env("DB_HOST") ?? "localhost",
             user: Lambda.env("DB_USER") ?? "postgres",
             password: Lambda.env("DB_PASSWORD") ?? "secret",
             dbName: Lambda.env("DB_NAME") ?? "test"
         )
     }
-    private func main() {
+    private func main() async throws {
 
-        /// Instantiate LambdaRuntime with a closure handler implementing the business logic of the Lambda function
-        let runtime = LambdaRuntime(logger: logger, body: handler)
+        // Instantiate LambdaRuntime with a handler implementing the business logic of the Lambda function
+        // ok when https://github.com/swift-server/swift-aws-lambda-runtime/pull/523 will be merged
+        //let runtime = LambdaRuntime(logger: logger, body: handler)
+        let runtime = LambdaRuntime(body: handler)
 
         /// Use ServiceLifecycle to manage the initialization and termination
         /// of the PGClient together with the LambdaRuntime
         let serviceGroup = ServiceGroup(
             services: [pgClient, runtime],
-            gracefulShutdownSignals: [.sigterm, .sigint],  // add SIGINT for CTRL+C in local testing
-            // cancellationSignals: [.sigint],
+            // gracefulShutdownSignals: [.sigterm, .sigint],  // add SIGINT for CTRL+C in local testing
+            cancellationSignals: [.sigint],
             logger: logger
         )
         try await serviceGroup.run()
@@ -56,7 +57,7 @@ struct LambdaFunction {
 
     }
 
-    private func handler(event: String, context: LambdaContext) -> String {
+    private func handler(event: String, context: LambdaContext) async -> String {
         do {
             // Use initialized service within the handler
             // IMPORTANT - CURRENTLY WHEN THERE IS AN ERROR, THIS CALL HANGS WHEN DB IS NOT REACHABLE
@@ -68,9 +69,10 @@ struct LambdaFunction {
         } catch {
             logger.error("PG Error: \(error)")
         }
+        return "Done"
     }
 
-    private func preparePostgresClient(
+    private static func preparePostgresClient(
         host: String,
         user: String,
         password: String,
