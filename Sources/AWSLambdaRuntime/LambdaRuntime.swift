@@ -15,7 +15,6 @@
 import Logging
 import NIOConcurrencyHelpers
 import NIOCore
-import ServiceLifecycle
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
