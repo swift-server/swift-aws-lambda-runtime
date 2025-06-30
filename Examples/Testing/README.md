@@ -160,8 +160,8 @@ You must pass an event to the Lambda function. You can use the `event.json` file
 sam local invoke -e Tests/event.json
 
 START RequestId: 3270171f-46d3-45f9-9bb6-3c2e5e9dc625 Version: $LATEST
-2024-12-21T16:49:31+0000 debug LambdaRuntime : [AWSLambdaRuntimeCore] LambdaRuntime initialized
-2024-12-21T16:49:31+0000 trace LambdaRuntime : lambda_ip=127.0.0.1 lambda_port=9001 [AWSLambdaRuntimeCore] Connection to control plane created
+2024-12-21T16:49:31+0000 debug LambdaRuntime : [AWSLambdaRuntime] LambdaRuntime initialized
+2024-12-21T16:49:31+0000 trace LambdaRuntime : lambda_ip=127.0.0.1 lambda_port=9001 [AWSLambdaRuntime] Connection to control plane created
 2024-12-21T16:49:31+0000 debug LambdaRuntime : [APIGatewayLambda] HTTP API Message received
 2024-12-21T16:49:31+0000 trace LambdaRuntime : [APIGatewayLambda] Event: APIGatewayV2Request(version: "2.0", routeKey: "$default", rawPath: "/", rawQueryString: "", cookies: [], headers: ["x-forwarded-proto": "https", "host": "a5q74es3k2.execute-api.us-east-1.amazonaws.com", "content-length": "0", "x-forwarded-for": "81.0.0.43", "accept": "*/*", "x-amzn-trace-id": "Root=1-66fb03de-07533930192eaf5f540db0cb", "x-forwarded-port": "443", "user-agent": "curl/8.7.1"], queryStringParameters: [:], pathParameters: [:], context: AWSLambdaEvents.APIGatewayV2Request.Context(accountId: "012345678901", apiId: "a5q74es3k2", domainName: "a5q74es3k2.execute-api.us-east-1.amazonaws.com", domainPrefix: "a5q74es3k2", stage: "$default", requestId: "e72KxgsRoAMEMSA=", http: AWSLambdaEvents.APIGatewayV2Request.Context.HTTP(method: GET, path: "/", protocol: "HTTP/1.1", sourceIp: "81.0.0.43", userAgent: "curl/8.7.1"), authorizer: nil, authentication: nil, time: "30/Sep/2024:20:02:38 +0000", timeEpoch: 1727726558220), stageVariables: [:], body: Optional("aGVsbG8gd29ybGQgb2YgU1dJRlQgTEFNQkRBIQ=="), isBase64Encoded: false)
 END RequestId: 5b71587a-39da-445e-855d-27a700e57efd

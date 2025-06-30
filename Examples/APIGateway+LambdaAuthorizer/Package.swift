@@ -5,12 +5,6 @@ import PackageDescription
 // needed for CI to test the local version of the library
 import struct Foundation.URL
 
-#if os(macOS)
-let platforms: [PackageDescription.SupportedPlatform]? = [.macOS(.v15)]
-#else
-let platforms: [PackageDescription.SupportedPlatform]? = nil
-#endif
-
 let package = Package(
     name: "swift-aws-lambda-runtime-example",
     platforms: [.macOS(.v15)],
@@ -21,7 +15,7 @@ let package = Package(
     dependencies: [
         // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
         .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", branch: "main"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", from: "1.0.0"),
     ],
     targets: [
         .executableTarget(

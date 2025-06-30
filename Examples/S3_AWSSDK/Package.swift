@@ -14,7 +14,7 @@ let package = Package(
     dependencies: [
         // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
         .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-events", branch: "main"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-events", from: "1.0.0"),
         .package(url: "https://github.com/awslabs/aws-sdk-swift", from: "1.0.0"),
     ],
     targets: [
