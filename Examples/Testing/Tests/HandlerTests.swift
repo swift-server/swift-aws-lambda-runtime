@@ -32,11 +32,9 @@ public struct HandlerTest {
     public func invokeHandler() async throws {
 
         // read event.json file
-        let testBundle = Bundle.module
-        guard let eventURL = testBundle.url(forResource: "event", withExtension: "json") else {
-            Issue.record("event.json not found in test bundle")
-            return
-        }
+        let eventURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("event.json")
         let eventData = try Data(contentsOf: eventURL)
 
         // decode the event
