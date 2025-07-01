@@ -87,14 +87,14 @@ extension LambdaCodableAdapter {
 extension LambdaRuntime {
     /// Initialize an instance with a `LambdaHandler` defined in the form of a closure **with a non-`Void` return type**.
     /// - Parameters:
-    ///   - logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
     ///   - decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type. `JSONDecoder()` used as default.
     ///   - encoder: The encoder object that will be used to encode the generic `Output` into a `ByteBuffer`. `JSONEncoder()` used as default.
+    ///   - logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
     ///   - body: The handler in the form of a closure.
     public convenience init<Event: Decodable, Output>(
-        logger: Logger = Logger(label: "LambdaRuntime"),
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder(),
+        logger: Logger = Logger(label: "LambdaRuntime"),
         body: sending @escaping (Event, LambdaContext) async throws -> Output
     )
     where
@@ -116,12 +116,12 @@ extension LambdaRuntime {
     }
 
     /// Initialize an instance with a `LambdaHandler` defined in the form of a closure **with a `Void` return type**.
-    /// - Parameter logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
     /// - Parameter body: The handler in the form of a closure.
     /// - Parameter decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type. `JSONDecoder()` used as default.
+    /// - Parameter logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
     public convenience init<Event: Decodable>(
-        logger: Logger = Logger(label: "LambdaRuntime"),
         decoder: JSONDecoder = JSONDecoder(),
+        logger: Logger = Logger(label: "LambdaRuntime"),
         body: sending @escaping (Event, LambdaContext) async throws -> Void
     )
     where
