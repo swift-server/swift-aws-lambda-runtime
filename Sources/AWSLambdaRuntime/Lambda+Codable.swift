@@ -16,7 +16,7 @@ import NIOCore
 
 /// The protocol a decoder must conform to so that it can be used with ``LambdaCodableAdapter`` to decode incoming
 /// `ByteBuffer` events.
-public protocol LambdaEventDecoder: Sendable {
+public protocol LambdaEventDecoder {
     /// Decode the `ByteBuffer` representing the received event into the generic `Event` type
     /// the handler will receive.
     /// - Parameters:
@@ -28,7 +28,7 @@ public protocol LambdaEventDecoder: Sendable {
 
 /// The protocol an encoder must conform to so that it can be used with ``LambdaCodableAdapter`` to encode the generic
 /// ``LambdaOutputEncoder/Output`` object into a `ByteBuffer`.
-public protocol LambdaOutputEncoder: Sendable {
+public protocol LambdaOutputEncoder {
     associatedtype Output
 
     /// Encode the generic type `Output` the handler has returned into a `ByteBuffer`.
@@ -52,7 +52,7 @@ public struct LambdaHandlerAdapter<
     Event: Decodable,
     Output,
     Handler: LambdaHandler
->: LambdaWithBackgroundProcessingHandler where Handler.Event == Event, Handler.Output == Output, Handler: Sendable {
+>: LambdaWithBackgroundProcessingHandler where Handler.Event == Event, Handler.Output == Output {
     @usableFromInline let handler: Handler
 
     /// Initializes an instance given a concrete handler.
@@ -86,15 +86,7 @@ public struct LambdaCodableAdapter<
     Output,
     Decoder: LambdaEventDecoder,
     Encoder: LambdaOutputEncoder
->: StreamingLambdaHandler
-where
-    Handler.Event == Event,
-    Handler.Output == Output,
-    Encoder.Output == Output,
-    Handler: Sendable,
-    Decoder: Sendable,
-    Encoder: Sendable
-{
+>: StreamingLambdaHandler where Handler.Event == Event, Handler.Output == Output, Encoder.Output == Output {
     @usableFromInline let handler: Handler
     @usableFromInline let encoder: Encoder
     @usableFromInline let decoder: Decoder

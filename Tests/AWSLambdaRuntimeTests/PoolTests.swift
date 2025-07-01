@@ -60,7 +60,7 @@ struct PoolTests {
         let iterations = 1000
 
         // Start consumer task first
-        let consumer = Task { [iterations] in
+        let consumer = Task { @Sendable in
             var receivedValues = Set<Int>()
             var count = 0
             for try await value in pool {
@@ -119,7 +119,7 @@ struct PoolTests {
         let messagesPerProducer = 1000
 
         // Start consumer
-        let consumer = Task { [producerCount, messagesPerProducer] in
+        let consumer = Task { @Sendable in
             var receivedValues = [Int]()
             var count = 0
             for try await value in pool {
