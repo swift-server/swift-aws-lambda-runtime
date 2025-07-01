@@ -16,8 +16,8 @@ import AWSLambdaEvents
 import Logging
 import Testing
 
-@testable import TestedLambda  // to access the business code
 @testable import AWSLambdaRuntime  // to access the LambdaContext
+@testable import TestedLambda  // to access the business code
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials

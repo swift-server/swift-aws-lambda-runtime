@@ -165,7 +165,7 @@ let package = Package(
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime")
             ],
             path: "Tutorial/Sources"
-        )
+        ),
     ]
 )
 
