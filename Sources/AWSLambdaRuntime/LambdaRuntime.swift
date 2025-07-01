@@ -25,7 +25,7 @@ import Foundation
 
 // This is our guardian to ensure only one LambdaRuntime is running at the time
 // We use an Atomic here to ensure thread safety
-fileprivate let _isRunning = Atomic<Bool>(false)
+private let _isRunning = Atomic<Bool>(false)
 
 // we use unchecked here because Handler are not Sendable
 public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
