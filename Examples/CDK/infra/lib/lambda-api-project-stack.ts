@@ -26,7 +26,7 @@ export class LambdaApiStack extends cdk.Stack {
       runtime: lambda.Runtime.PROVIDED_AL2,
       architecture: lambda.Architecture.ARM_64,
       handler: 'bootstrap',
-      code: lambda.Code.fromAsset('../.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip'),
+      code: lambda.Code.fromAsset('../.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/CDKAPIGatewayLambda/CDKAPIGatewayLambda.zip'),
       memorySize: 512,
       timeout: cdk.Duration.seconds(30),
       environment: {

@@ -18,8 +18,8 @@ This example uses an authorizer that returns the simple response. The authorizer
 To build the package, type the following commands.
 
 ```bash
-swift build
-swift package archive --allow-network-connections docker
+swift build --target APIGatewayLambda --target AuthorizerLambda
+swift package archive --products APIGatewayLambda --products AuthorizerLambda --allow-network-connections docker
 ```
 
 If there is no error, there are two ZIP files ready to deploy, one for the authorizer function and one for the business function.

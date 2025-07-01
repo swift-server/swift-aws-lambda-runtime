@@ -24,8 +24,8 @@ It then extracts the list of bucket names from the output and creates a `\n`-sep
 To build the package, type the following commands.
 
 ```bash
-swift build
-swift package archive --allow-network-connections docker
+swift build --target AWSSDKExample
+swift package archive --products AWSSDKExample --allow-network-connections docker
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 

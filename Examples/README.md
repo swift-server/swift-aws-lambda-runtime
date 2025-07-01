@@ -16,6 +16,8 @@ This directory contains example code for Lambda functions.
 
 ## Examples 
 
+All the commands in the example's README are supposed to be run from the Example/ directory, unless otherwise instructed.
+
 - **[API Gateway](APIGateway/README.md)**: an HTTPS REST API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) and a Lambda function as backend (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
 
 - **[API Gateway with Lambda Authorizer](APIGateway+LambdaAuthorizer/README.md)**: an HTTPS REST API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) protected by a Lambda authorizer (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).

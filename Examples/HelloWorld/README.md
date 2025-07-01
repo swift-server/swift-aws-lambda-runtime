@@ -19,7 +19,7 @@ You can test your function locally before deploying it to AWS Lambda.
 To start the local function, type the following commands:
 
 ```bash
-swift run
+swift run HelloWorld
 ```
 
 It will compile your code and start the local server. You know the local server is ready to accept connections when you see this message.
@@ -46,12 +46,12 @@ curl -d '"seb"' http://127.0.0.1:7000/invoke
 To build & archive the package, type the following commands.
 
 ```bash
-swift build
-swift package archive --allow-network-connections docker
+swift build --target HelloWorld
+swift package archive --products HelloWorld --allow-network-connections docker
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
-The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip`
+The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/HelloWorld/HelloWorld.zip`
 
 ## Deploy
 
@@ -60,7 +60,7 @@ Here is how to deploy using the `aws` command line.
 ```bash
 aws lambda create-function \
 --function-name MyLambda \
---zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip \
+--zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/HelloWorld/HelloWorld.zip \
 --runtime provided.al2 \
 --handler provided  \
 --architectures arm64 \

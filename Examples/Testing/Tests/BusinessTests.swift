@@ -14,7 +14,7 @@
 
 import Testing
 
-@testable import APIGatewayLambda  // to access the business code
+@testable import TestedLambda  // to access the business code
 
 let valuesToTest: [(String, String)] = [
     ("hello world", "Hello world"),  // happy path

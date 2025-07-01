@@ -11,12 +11,12 @@ The Lambda function takes all HTTP headers it receives as input and returns them
 To build the package, type the following commands.
 
 ```bash
-swift build
-swift package archive --allow-network-connections docker
+swift build --target CDKAPIGatewayLambda
+swift package archive --products CDKAPIGatewayLambda --allow-network-connections docker
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
-The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip`
+The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/CDKAPIGatewayLambda/CDKAPIGatewayLambda.zip`
 
 ## Deploy
 

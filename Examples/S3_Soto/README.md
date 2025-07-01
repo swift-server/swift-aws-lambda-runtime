@@ -24,8 +24,8 @@ Finally, the handler extracts the list of bucket names from the output to create
 To build the package, type the following command.
 
 ```bash
-swift build
-swift package archive --allow-network-connections docker
+swift build --target SotoExample
+swift package archive --products SotoExample --allow-network-connections docker
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 

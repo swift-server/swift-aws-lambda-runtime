@@ -13,11 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaEvents
-import AWSLambdaRuntime
 import Logging
 import Testing
 
-@testable import APIGatewayLambda  // to access the business code
+@testable import TestedLambda  // to access the business code
 @testable import AWSLambdaRuntime  // to access the LambdaContext
 
 #if canImport(FoundationEssentials)

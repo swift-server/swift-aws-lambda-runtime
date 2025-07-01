@@ -17,7 +17,7 @@ To include a sample event in your test targets, you must add the `event.json` fi
 ```swift
         .testTarget(
             name: "LambdaFunctionTests",
-            dependencies: ["APIGatewayLambda"],
+            dependencies: ["TestingAPIGatewayLambda"],
             path: "Tests",
             resources: [
                 .process("event.json")
@@ -54,7 +54,7 @@ class BusinessTests {
 ```swift
         .testTarget(
             name: "BusinessTests",
-            dependencies: ["APIGatewayLambda"],
+            dependencies: ["TestingAPIGatewayLambda"],
             path: "Tests"
         )
 ```
@@ -134,7 +134,7 @@ You can test your Lambda function locally by invoking it with the Swift AWS Lamb
 
 You must pass an event to the Lambda function. You can use the `Tests/event.json` file for this purpose. The return value is a `APIGatewayV2Response` object in this example.
 
-Just type `swift run` to run the Lambda function locally, this starts a local HTTP endpoint on localhost:7000.
+Just type `swift run --target TestedLambda` to run the Lambda function locally, this starts a local HTTP endpoint on localhost:7000.
 
 ```sh
 LOG_LEVEL=trace swift run

@@ -25,7 +25,7 @@ Once the struct is created and the `handle(...)` method is defined, the sample c
 To build & archive the package, type the following commands.
 
 ```bash
-swift package archive --allow-network-connections docker
+swift package archive --products BackgroundTasks --allow-network-connections docker
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 

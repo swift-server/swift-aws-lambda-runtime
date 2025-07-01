@@ -21,7 +21,7 @@ The function return value will be encoded to a `HelloResponse` as your Lambda fu
 To build & archive the package, type the following commands.
 
 ```bash
-swift package archive --allow-network-connections docker
+swift package archive --products HelloJSON --allow-network-connections docker
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
