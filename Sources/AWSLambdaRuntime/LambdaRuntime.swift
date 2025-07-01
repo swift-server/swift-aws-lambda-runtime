@@ -52,7 +52,11 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         // developers have to wait for AWS Lambda to dispose and recreate a runtime environment to pickup a change
         // this approach is less flexible but more performant than reading the value of the environment variable at each invocation
         var log = logger
-        log.logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
+
+        // use the LOG_LEVEL environment variable to set the log level.
+        // if the environment variable is not set, use the default log level from the logger provided
+        log.logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? logger.logLevel
+
         self.logger = log
         self.logger.debug("LambdaRuntime initialized")
     }

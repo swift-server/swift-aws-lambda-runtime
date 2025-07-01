@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
 import NIOCore
 
 /// The base handler protocol that receives a `ByteBuffer` representing the incoming event and returns the response as a `ByteBuffer` too.
@@ -175,17 +176,22 @@ public struct ClosureHandler<Event: Decodable, Output>: LambdaHandler {
 
 extension LambdaRuntime {
     /// Initialize an instance with a ``StreamingLambdaHandler`` in the form of a closure.
-    /// - Parameter body: The handler in the form of a closure.
+    /// - Parameter
+    ///   - logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
+    ///   - body: The handler in the form of a closure.
     public convenience init(
+        logger: Logger = Logger(label: "LambdaRuntime"),
         body: @Sendable @escaping (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
+
     ) where Handler == StreamingClosureHandler {
-        self.init(handler: StreamingClosureHandler(body: body))
+        self.init(handler: StreamingClosureHandler(body: body), logger: logger)
     }
 
     /// Initialize an instance with a ``LambdaHandler`` defined in the form of a closure **with a non-`Void` return type**, an encoder, and a decoder.
     /// - Parameters:
     ///   - encoder: The encoder object that will be used to encode the generic `Output` into a `ByteBuffer`.
     ///   - decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type.
+    ///   - logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
     ///   - body: The handler in the form of a closure.
     public convenience init<
         Event: Decodable,
@@ -195,6 +201,7 @@ extension LambdaRuntime {
     >(
         encoder: sending Encoder,
         decoder: sending Decoder,
+        logger: Logger = Logger(label: "LambdaRuntime"),
         body: sending @escaping (Event, LambdaContext) async throws -> Output
     )
     where
@@ -214,15 +221,17 @@ extension LambdaRuntime {
             handler: streamingAdapter
         )
 
-        self.init(handler: codableWrapper)
+        self.init(handler: codableWrapper, logger: logger)
     }
 
     /// Initialize an instance with a ``LambdaHandler`` defined in the form of a closure **with a `Void` return type**, an encoder, and a decoder.
     /// - Parameters:
     ///   - decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type.
+    ///   - logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
     ///   - body: The handler in the form of a closure.
     public convenience init<Event: Decodable, Decoder: LambdaEventDecoder>(
         decoder: sending Decoder,
+        logger: Logger = Logger(label: "LambdaRuntime"),
         body: sending @escaping (Event, LambdaContext) async throws -> Void
     )
     where
@@ -239,6 +248,6 @@ extension LambdaRuntime {
             handler: LambdaHandlerAdapter(handler: ClosureHandler(body: body))
         )
 
-        self.init(handler: handler)
+        self.init(handler: handler, logger: logger)
     }
 }
