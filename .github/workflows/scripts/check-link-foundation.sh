@@ -19,13 +19,13 @@ fatal() { error "$@"; exit 1; }
 
 EXAMPLE=APIGateway
 OUTPUT_DIR=.build/release
-OUTPUT_FILE=${OUTPUT_DIR}/APIGatewayLambda
+OUTPUT_FILE=${OUTPUT_DIR}/APIGateway
 LIBS_TO_CHECK="libFoundation.so libFoundationInternationalization.so lib_FoundationICU.so"
 
-pushd Examples/${EXAMPLE} || fatal "Failed to change directory to Examples/${EXAMPLE}."
+pushd Examples || fatal "Failed to change directory to Examples."
 
 # recompile the example without the --static-swift-stdlib flag
-LAMBDA_USE_LOCAL_DEPS=../.. swift build -c release -Xlinker -s || fatal "Failed to build the example."
+LAMBDA_USE_LOCAL_DEPS=.. swift build --target "${EXAMPLE}" -c release -Xlinker -s || fatal "Failed to build the example."
 
 # check if the binary exists
 if [ ! -f "${OUTPUT_FILE}" ]; then

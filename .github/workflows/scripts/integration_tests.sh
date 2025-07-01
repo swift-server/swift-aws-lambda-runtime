@@ -21,12 +21,10 @@ fatal() { error "$@"; exit 1; }
 
 SWIFT_VERSION=$(swift --version)
 test -n "${SWIFT_VERSION:-}" || fatal "SWIFT_VERSION unset"
-test -n "${COMMAND:-}" || fatal "COMMAND unset"
-test -n "${EXAMPLE:-}" || fatal "EXAMPLE unset"
 
 pushd Examples > /dev/null
 
 log "Running command with Swift $SWIFT_VERSION"
-eval "$COMMAND --target $EXAMPLE"
+eval "swift build && swift test"
 
 popd

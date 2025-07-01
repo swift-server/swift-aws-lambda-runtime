@@ -23,10 +23,10 @@ OUTPUT_DIR=.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager
 OUTPUT_FILE=${OUTPUT_DIR}/MyLambda/bootstrap
 ZIP_FILE=${OUTPUT_DIR}/MyLambda/MyLambda.zip
 
-pushd "Examples/${EXAMPLE}" || exit 1
+pushd "Examples" || exit 1
 
 # package the example (docker and swift toolchain are installed on the GH runner)
-LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker || exit 1
+LAMBDA_USE_LOCAL_DEPS=.. swift package archive --product "${EXAMPLE}" --allow-network-connections docker || exit 1
 
 # did the plugin generated a Linux binary?
 [ -f "${OUTPUT_FILE}" ]

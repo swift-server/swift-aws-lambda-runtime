@@ -7,14 +7,6 @@ on:
         type: string
         description: "The name of the workflow used for the concurrency group."
         required: true
-      # We pass the list of examples here, but we can't pass an array as argument
-      # Instead, we pass a String with a valid JSON array.
-      # The workaround is mentioned here https://github.com/orgs/community/discussions/11692
-      examples:
-        type: string
-        description: "The list of examples to run. Pass a String with a valid JSON array such as \"[ 'HelloWorld', 'APIGateway' ]\""
-        required: true
-        default: ""
       examples_enabled:
         type: boolean
         description: "Boolean to enable the compilation of examples. Defaults to true."
@@ -32,10 +24,6 @@ on:
         type: boolean
         description: "Boolean to enable the check for Foundation dependency. Defaults to true."
         default: true
-      matrix_linux_command:
-        type: string
-        description: "The command of the current Swift version linux matrix job to execute."
-        required: true
       matrix_linux_swift_container_image:
         type: string
         description: "Container image for the matrix job. Defaults to matching latest Swift 6.1 Amazon Linux 2 image."
@@ -48,19 +36,9 @@ concurrency:
 
 jobs:
   test-examples:
-    name: Test Examples/${{ matrix.examples }} on ${{ matrix.swift.swift_version }}
+    name: Test Examples
     if: ${{ inputs.examples_enabled }}
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        examples: ${{ fromJson(inputs.examples) }}
-
-        # We are using only one Swift version
-        swift:
-          - image: ${{ inputs.matrix_linux_swift_container_image }}
-    container:
-      image: ${{ matrix.swift.image }}
     steps:
       # GitHub checkout action has a dep on NodeJS 20 which is not running on Amazonlinux2
       # workaround is to manually checkout the repository
@@ -89,11 +67,8 @@ jobs:
         # https://github.com/actions/checkout/issues/766
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
 
-      - name: Run matrix job
+      - name: Run build for all examples
         working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
-        env:
-          COMMAND: ${{ inputs.matrix_linux_command }}
-          EXAMPLE: ${{ matrix.examples }}
         run: |
           .github/workflows/scripts/integration_tests.sh
 
