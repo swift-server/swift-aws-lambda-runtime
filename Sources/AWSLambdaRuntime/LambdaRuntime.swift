@@ -23,13 +23,14 @@ import FoundationEssentials
 import Foundation
 #endif
 
-// This is our gardian to ensure only one LambdaRuntime is running at the time
+// This is our guardian to ensure only one LambdaRuntime is running at the time
 // We use an Atomic here to ensure thread safety
 private let _isRunning = Atomic<Bool>(false)
 
 // We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
 // We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
 // sadly crashes the compiler today (on Linux).
+// See https://github.com/swiftlang/swift/issues/80036
 public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
     // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
     @usableFromInline
