@@ -25,16 +25,12 @@ import Foundation
 
 // This is our guardian to ensure only one LambdaRuntime is running at the time
 // We use an Atomic here to ensure thread safety
-private let _isRunning = Atomic<Bool>(false)
+fileprivate let _isRunning = Atomic<Bool>(false)
 
-// We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
-// We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
-// sadly crashes the compiler today (on Linux).
-// See https://github.com/swiftlang/swift/issues/80036
+// we use unchecked here because Handler are not Sendable
 public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
-    // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
     @usableFromInline
-    let handlerMutex: NIOLockedValueBox<Handler?>
+    let handler: Handler
     @usableFromInline
     let logger: Logger
     @usableFromInline
@@ -45,7 +41,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
     ) {
-        self.handlerMutex = NIOLockedValueBox(handler)
+        self.handler = handler
         self.eventLoop = eventLoop
 
         // by setting the log level here, we understand it can not be changed dynamically at runtime
@@ -77,21 +73,11 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
 
         // if the original value was already true, run() is already running
         if original {
-            throw LambdaRuntimeError(code: .moreThanOneLambdaRuntimeInstance)
+            throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
         }
 
         defer {
             _isRunning.store(false, ordering: .releasing)
-        }
-
-        let handler = self.handlerMutex.withLockedValue { handler in
-            let result = handler
-            handler = nil
-            return result
-        }
-
-        guard let handler else {
-            throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
         }
 
         // are we running inside an AWS Lambda runtime environment ?
@@ -132,7 +118,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
                 ) { runtimeClient in
                     try await Lambda.runLoop(
                         runtimeClient: runtimeClient,
-                        handler: handler,
+                        handler: self.handler,
                         logger: self.logger
                     )
                 }

@@ -35,9 +35,6 @@ package struct LambdaRuntimeError: Error {
         case missingLambdaRuntimeAPIEnvironmentVariable
         case runtimeCanOnlyBeStartedOnce
         case invalidPort
-
-        /// public error codes for LambdaRuntime
-        case moreThanOneLambdaRuntimeInstance
     }
 
     @usableFromInline
