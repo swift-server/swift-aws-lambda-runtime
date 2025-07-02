@@ -22,7 +22,7 @@ import AWSLambdaRuntime
 // This code is shown for the example only and is not used in this demo.
 // This code doesn't perform any type of token validation. It should be used as a reference only.
 let policyAuthorizerHandler:
-    @Sendable (APIGatewayLambdaAuthorizerRequest, LambdaContext) async throws ->
+    (APIGatewayLambdaAuthorizerRequest, LambdaContext) async throws ->
         APIGatewayLambdaAuthorizerPolicyResponse = {
             (request: APIGatewayLambdaAuthorizerRequest, context: LambdaContext) in
 
@@ -51,7 +51,9 @@ let policyAuthorizerHandler:
                 ]
             )
         }
-// let runtime = LambdaRuntime(body: policyAuthorizerHandler)
+// let runtime = LambdaRuntime() { try await policyAuthorizerHandler($0, $1) }
+// start polling for new events.
+// try await runtime.run()
 
 //
 // This is an example of a simple authorizer that always authorizes the request.
