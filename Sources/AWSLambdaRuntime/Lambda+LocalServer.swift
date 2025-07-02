@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2020 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftAWSLambdaRuntime project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -76,7 +76,7 @@ extension Lambda {
 /// 1. POST /invoke - the client posts the event to the lambda function
 ///
 /// This server passes the data received from /invoke POST request to the lambda function (GET /next) and then forwards the response back to the client.
-private struct LambdaHTTPServer {
+internal struct LambdaHTTPServer {
     private let invocationEndpoint: String
 
     private let invocationPool = Pool<LocalServerInvocation>()
@@ -166,17 +166,21 @@ private struct LambdaHTTPServer {
                     // consumed by iterating the group or by exiting the group. Since, we are never consuming
                     // the results of the group we need the group to automatically discard them; otherwise, this
                     // would result in a memory leak over time.
-                    try await withThrowingDiscardingTaskGroup { taskGroup in
-                        try await channel.executeThenClose { inbound in
-                            for try await connectionChannel in inbound {
+                    try await withTaskCancellationHandler {
+                        try await withThrowingDiscardingTaskGroup { taskGroup in
+                            try await channel.executeThenClose { inbound in
+                                for try await connectionChannel in inbound {
 
-                                taskGroup.addTask {
-                                    logger.trace("Handling a new connection")
-                                    await server.handleConnection(channel: connectionChannel, logger: logger)
-                                    logger.trace("Done handling the connection")
+                                    taskGroup.addTask {
+                                        logger.trace("Handling a new connection")
+                                        await server.handleConnection(channel: connectionChannel, logger: logger)
+                                        logger.trace("Done handling the connection")
+                                    }
                                 }
                             }
                         }
+                    } onCancel: {
+                        channel.channel.close(promise: nil)
                     }
                     return .serverReturned(.success(()))
                 } catch {
@@ -230,38 +234,42 @@ private struct LambdaHTTPServer {
         // Note that this method is non-throwing and we are catching any error.
         // We do this since we don't want to tear down the whole server when a single connection
         // encounters an error.
-        do {
-            try await channel.executeThenClose { inbound, outbound in
-                for try await inboundData in inbound {
-                    switch inboundData {
-                    case .head(let head):
-                        requestHead = head
+        await withTaskCancellationHandler {
+            do {
+                try await channel.executeThenClose { inbound, outbound in
+                    for try await inboundData in inbound {
+                        switch inboundData {
+                        case .head(let head):
+                            requestHead = head
 
-                    case .body(let body):
-                        requestBody.setOrWriteImmutableBuffer(body)
+                        case .body(let body):
+                            requestBody.setOrWriteImmutableBuffer(body)
 
-                    case .end:
-                        precondition(requestHead != nil, "Received .end without .head")
-                        // process the request
-                        let response = try await self.processRequest(
-                            head: requestHead,
-                            body: requestBody,
-                            logger: logger
-                        )
-                        // send the responses
-                        try await self.sendResponse(
-                            response: response,
-                            outbound: outbound,
-                            logger: logger
-                        )
+                        case .end:
+                            precondition(requestHead != nil, "Received .end without .head")
+                            // process the request
+                            let response = try await self.processRequest(
+                                head: requestHead,
+                                body: requestBody,
+                                logger: logger
+                            )
+                            // send the responses
+                            try await self.sendResponse(
+                                response: response,
+                                outbound: outbound,
+                                logger: logger
+                            )
 
-                        requestHead = nil
-                        requestBody = nil
+                            requestHead = nil
+                            requestBody = nil
+                        }
                     }
                 }
+            } catch {
+                logger.error("Hit error: \(error)")
             }
-        } catch {
-            logger.error("Hit error: \(error)")
+        } onCancel: {
+            channel.channel.close(promise: nil)
         }
     }
 
@@ -426,7 +434,7 @@ private struct LambdaHTTPServer {
     /// A shared data structure to store the current invocation or response requests and the continuation objects.
     /// This data structure is shared between instances of the HTTPHandler
     /// (one instance to serve requests from the Lambda function and one instance to serve requests from the client invoking the lambda function).
-    private final class Pool<T>: AsyncSequence, AsyncIteratorProtocol, Sendable where T: Sendable {
+    internal final class Pool<T>: AsyncSequence, AsyncIteratorProtocol, Sendable where T: Sendable {
         typealias Element = T
 
         enum State: ~Copyable {
@@ -462,26 +470,38 @@ private struct LambdaHTTPServer {
                 return nil
             }
 
-            return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, any Error>) in
-                let nextAction = self.lock.withLock { state -> T? in
-                    switch consume state {
-                    case .buffer(var buffer):
-                        if let first = buffer.popFirst() {
-                            state = .buffer(buffer)
-                            return first
-                        } else {
-                            state = .continuation(continuation)
-                            return nil
-                        }
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, any Error>) in
+                    let nextAction = self.lock.withLock { state -> T? in
+                        switch consume state {
+                        case .buffer(var buffer):
+                            if let first = buffer.popFirst() {
+                                state = .buffer(buffer)
+                                return first
+                            } else {
+                                state = .continuation(continuation)
+                                return nil
+                            }
 
-                    case .continuation:
-                        fatalError("Concurrent invocations to next(). This is illegal.")
+                        case .continuation:
+                            fatalError("Concurrent invocations to next(). This is illegal.")
+                        }
+                    }
+
+                    guard let nextAction else { return }
+
+                    continuation.resume(returning: nextAction)
+                }
+            } onCancel: {
+                self.lock.withLock { state in
+                    switch consume state {
+                    case .buffer(let buffer):
+                        state = .buffer(buffer)
+                    case .continuation(let continuation):
+                        continuation?.resume(throwing: CancellationError())
+                        state = .buffer([])
                     }
                 }
-
-                guard let nextAction else { return }
-
-                continuation.resume(returning: nextAction)
             }
         }
 

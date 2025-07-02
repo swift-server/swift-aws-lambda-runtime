@@ -12,14 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if ServiceLifecycleSupport
-import ServiceLifecycle
-
-extension LambdaRuntime: Service {
-    public func run() async throws {
-        try await cancelWhenGracefulShutdown {
-            try await self._run()
-        }
-    }
-}
+#if compiler(>=6.2)
+@_documentation(visibility: internal)
+public typealias _Lambda_SendableMetatype = SendableMetatype
+#else
+@_documentation(visibility: internal)
+public typealias _Lambda_SendableMetatype = Any
 #endif
