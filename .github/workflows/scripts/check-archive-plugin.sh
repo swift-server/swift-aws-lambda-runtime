@@ -20,28 +20,30 @@ fatal() { error "$@"; exit 1; }
 test -n "${EXAMPLE:-}" || fatal "EXAMPLE unset"
 
 OUTPUT_DIR=.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager
-OUTPUT_FILE=${OUTPUT_DIR}/MyLambda/bootstrap
-ZIP_FILE=${OUTPUT_DIR}/MyLambda/MyLambda.zip
 
 pushd "Examples" || exit 1
 
 # package the example (docker and swift toolchain are installed on the GH runner)
 LAMBDA_USE_LOCAL_DEPS=.. swift package archive --product "${EXAMPLE}" --allow-network-connections docker || exit 1
 
+# find the zip file in the OUTPUT_FILE directory
+ZIP_FILE=$(find "${OUTPUT_DIR}" -type f -name "*.zip" | head -n 1)
+OUTPUT_FILE=$(find "${OUTPUT_DIR}" -type f -name "bootstrap" | head -n 1)
+
 # did the plugin generated a Linux binary?
-[ -f "${OUTPUT_FILE}" ]
-file "${OUTPUT_FILE}" | grep --silent ELF
+[ -f "${OUTPUT_FILE}" ] || exit 1
+file "${OUTPUT_FILE}" | grep --silent ELF || exit 1
 
 # did the plugin created a ZIP file?
-[ -f "${ZIP_FILE}" ]
+[ -f "${ZIP_FILE}" ] || exit 1
 
 # does the ZIP file contain the bootstrap?
-unzip -l "${ZIP_FILE}" | grep --silent bootstrap
+unzip -l "${ZIP_FILE}" | grep --silent bootstrap || exit 1
 
 # if EXAMPLE is ResourcesPackaging, check if the ZIP file contains hello.txt
 if [ "$EXAMPLE" == "ResourcesPackaging" ]; then
     echo "Checking if resource was added to the ZIP file"
-    unzip -l "${ZIP_FILE}" | grep --silent hello.txt
+    unzip -l "${ZIP_FILE}" | grep --silent hello.txt 
     SUCCESS=$?
     if [ "$SUCCESS" -eq 1 ]; then
         log "❌ Resource not found." && exit 1
