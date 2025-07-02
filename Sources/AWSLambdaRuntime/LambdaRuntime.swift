@@ -22,13 +22,9 @@ import FoundationEssentials
 import Foundation
 #endif
 
-// We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
-// We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
-// sadly crashes the compiler today.
-public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
-    // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
+public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLambdaHandler {
     @usableFromInline
-    let handlerMutex: NIOLockedValueBox<Handler?>
+    let handler: Handler
     @usableFromInline
     let logger: Logger
     @usableFromInline
@@ -39,7 +35,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
     ) {
-        self.handlerMutex = NIOLockedValueBox(handler)
+        self.handler = handler
         self.eventLoop = eventLoop
 
         // by setting the log level here, we understand it can not be changed dynamically at runtime
@@ -64,16 +60,6 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
 
     @inlinable
     internal func _run() async throws {
-        let handler = self.handlerMutex.withLockedValue { handler in
-            let result = handler
-            handler = nil
-            return result
-        }
-
-        guard let handler else {
-            throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
-        }
-
         // are we running inside an AWS Lambda runtime environment ?
         // AWS_LAMBDA_RUNTIME_API is set when running on Lambda
         // https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html
@@ -110,7 +96,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
                 ) { runtimeClient in
                     try await Lambda.runLoop(
                         runtimeClient: runtimeClient,
-                        handler: handler,
+                        handler: self.handler,
                         logger: self.logger
                     )
                 }
