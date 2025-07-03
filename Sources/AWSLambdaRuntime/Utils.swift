@@ -13,7 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import NIOConcurrencyHelpers
 import NIOPosix
+
+// import Synchronization
 
 enum Consts {
     static let apiPrefix = "/2018-06-01"
@@ -130,5 +133,36 @@ extension AmazonHeaders {
             String(UInt64.random(in: UInt64.min...UInt64.max) | 1 << 63, radix: 16, uppercase: false)
             + String(UInt32.random(in: UInt32.min...UInt32.max) | 1 << 31, radix: 16, uppercase: false)
         return "\(version)-\(datePadding)\(dateValue)-\(identifier)"
+    }
+}
+
+/// Temporary storage for value being sent from one isolation domain to another
+// use NIOLockedValueBox instead of Mutex to avoid compiler crashes on 6.0
+// see https://github.com/swiftlang/swift/issues/78048
+@usableFromInline
+struct SendingStorage<Value>: ~Copyable, @unchecked Sendable {
+    @usableFromInline
+    struct ValueAlreadySentError: Error {
+        @usableFromInline
+        init() {}
+    }
+
+    @usableFromInline
+    // let storage: Mutex<Value?>
+    let storage: NIOLockedValueBox<Value?>
+
+    @inlinable
+    init(_ value: sending Value) {
+        self.storage = .init(value)
+    }
+
+    @inlinable
+    func get() throws -> Value {
+        // try self.storage.withLock {
+        try self.storage.withLockedValue {
+            guard let value = $0 else { throw ValueAlreadySentError() }
+            $0 = nil
+            return value
+        }
     }
 }

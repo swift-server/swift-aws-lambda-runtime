@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
-import NIOConcurrencyHelpers
 import NIOCore
 import Synchronization
 
@@ -27,10 +26,10 @@ import Foundation
 // We use an Atomic here to ensure thread safety
 private let _isRunning = Atomic<Bool>(false)
 
-// we use unchecked here because Handler are not Sendable
-public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
+public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLambdaHandler {
     @usableFromInline
-    let handler: Handler
+    /// we protect the handler behind a Mutex to ensure that we only ever have one copy of it
+    let handlerMutex: SendingStorage<Handler>
     @usableFromInline
     let logger: Logger
     @usableFromInline
@@ -41,7 +40,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
     ) {
-        self.handler = handler
+        self.handlerMutex = SendingStorage(handler)
         self.eventLoop = eventLoop
 
         // by setting the log level here, we understand it can not be changed dynamically at runtime
@@ -78,6 +77,12 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
 
         defer {
             _isRunning.store(false, ordering: .releasing)
+        }
+
+        // The handler can be non-sendable, we want to ensure we only ever have one copy of it
+        let handler = try? self.handlerMutex.get()
+        guard let handler else {
+            throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
         }
 
         // are we running inside an AWS Lambda runtime environment ?
@@ -118,7 +123,7 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
                 ) { runtimeClient in
                     try await Lambda.runLoop(
                         runtimeClient: runtimeClient,
-                        handler: self.handler,
+                        handler: handler,
                         logger: self.logger
                     )
                 }
