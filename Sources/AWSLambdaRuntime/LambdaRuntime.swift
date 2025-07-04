@@ -40,7 +40,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
     ) {
-        self.handlerMutex = SendingStorage(handler)
+        self.handlerStorage = SendingStorage(handler)
         self.eventLoop = eventLoop
 
         // by setting the log level here, we understand it can not be changed dynamically at runtime
