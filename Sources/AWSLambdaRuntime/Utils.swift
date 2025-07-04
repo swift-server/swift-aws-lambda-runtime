@@ -39,28 +39,6 @@ enum AmazonHeaders {
     static let invokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
 }
 
-/// Helper function to trap signals
-func trap(signal sig: Signal, handler: @escaping (Signal) -> Void) -> DispatchSourceSignal {
-    let signalSource = DispatchSource.makeSignalSource(signal: sig.rawValue, queue: DispatchQueue.global())
-    signal(sig.rawValue, SIG_IGN)
-    signalSource.setEventHandler(handler: {
-        signalSource.cancel()
-        handler(sig)
-    })
-    signalSource.resume()
-    return signalSource
-}
-
-enum Signal: Int32 {
-    case HUP = 1
-    case INT = 2
-    case QUIT = 3
-    case ABRT = 6
-    case KILL = 9  // ignore-unacceptable-language
-    case ALRM = 14
-    case TERM = 15
-}
-
 extension DispatchWallTime {
     @usableFromInline
     init(millisSinceEpoch: Int64) {
