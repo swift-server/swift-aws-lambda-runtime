@@ -29,7 +29,7 @@ private let _isRunning = Atomic<Bool>(false)
 public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLambdaHandler {
     @usableFromInline
     /// we protect the handler behind a Mutex to ensure that we only ever have one copy of it
-    let handlerMutex: SendingStorage<Handler>
+    let handlerStorage: SendingStorage<Handler>
     @usableFromInline
     let logger: Logger
     @usableFromInline
@@ -80,7 +80,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
         }
 
         // The handler can be non-sendable, we want to ensure we only ever have one copy of it
-        let handler = try? self.handlerMutex.get()
+        let handler = try? self.handlerStorage.get()
         guard let handler else {
             throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
         }
