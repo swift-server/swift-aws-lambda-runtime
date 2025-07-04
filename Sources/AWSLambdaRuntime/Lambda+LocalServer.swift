@@ -91,7 +91,7 @@ internal struct LambdaHTTPServer {
         case serverReturned(Swift.Result<Void, any Error>)
     }
 
-    struct UnsafeTransferBox<Value>: @unchecked Sendable {
+    fileprivate struct UnsafeTransferBox<Value>: @unchecked Sendable {
         let value: Value
 
         init(value: sending Value) {
