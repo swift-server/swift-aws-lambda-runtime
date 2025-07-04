@@ -202,7 +202,7 @@ internal struct LambdaHTTPServer {
 
             case .serverReturned(let result):
 
-                if (result.maybeError as? CancellationError) != nil {
+                if result.maybeError is CancellationError {
                     logger.trace("Server's task cancelled")
                 } else {
                     logger.error(
