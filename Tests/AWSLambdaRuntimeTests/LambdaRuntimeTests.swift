@@ -75,6 +75,53 @@ struct LambdaRuntimeTests {
             taskGroup.cancelAll()
         }
     }
+    @Test("run() must be cancellable")
+    func testLambdaRuntimeCancellable() async throws {
+
+        let logger = Logger(label: "LambdaRuntimeTests.RuntimeCancellable")
+        // create a runtime
+        let runtime = LambdaRuntime(
+            handler: MockHandler(),
+            eventLoop: Lambda.defaultEventLoop,
+            logger: logger
+        )
+
+        // Running the runtime with structured concurrency
+        // Task group returns when all tasks are completed.
+        // Even cancelled tasks must cooperatlivly complete
+        await #expect(throws: Never.self) {
+            try await withThrowingTaskGroup(of: Void.self) { taskGroup in
+                taskGroup.addTask {
+                    logger.trace("--- launching runtime ----")
+                    try await runtime.run()
+                }
+
+                // Add a timeout task to the group
+                taskGroup.addTask {
+                    logger.trace("--- launching timeout task ----")
+                    try await Task.sleep(for: .seconds(5))
+                    if Task.isCancelled { return }
+                    logger.trace("--- throwing timeout error ----")
+                    throw TestError.timeout  // Fail the test if the timeout triggers
+                }
+
+                do {
+                    // Wait for the runtime to start
+                    logger.trace("--- waiting for runtime to start ----")
+                    try await Task.sleep(for: .seconds(1))
+
+                    // Cancel all tasks, this should not throw an error
+                    // and should allow the runtime to complete gracefully
+                    logger.trace("--- cancel all tasks ----")
+                    taskGroup.cancelAll()  // Cancel all tasks
+                } catch {
+                    logger.error("--- catch an error: \(error)")
+                    throw error  // Propagate the error to fail the test
+                }
+            }
+        }
+
+    }
 }
 
 struct MockHandler: StreamingLambdaHandler {
@@ -84,5 +131,17 @@ struct MockHandler: StreamingLambdaHandler {
         context: AWSLambdaRuntime.LambdaContext
     ) async throws {
 
+    }
+}
+
+// Define a custom error for timeout
+enum TestError: Error, CustomStringConvertible {
+    case timeout
+
+    var description: String {
+        switch self {
+        case .timeout:
+            return "Test timed out waiting for the task to complete."
+        }
     }
 }
