@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
-import NIOConcurrencyHelpers
 import NIOCore
+import Synchronization
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -22,13 +22,14 @@ import FoundationEssentials
 import Foundation
 #endif
 
-// We need `@unchecked` Sendable here, as `NIOLockedValueBox` does not understand `sending` today.
-// We don't want to use `NIOLockedValueBox` here anyway. We would love to use Mutex here, but this
-// sadly crashes the compiler today.
-public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: StreamingLambdaHandler {
-    // TODO: We want to change this to Mutex as soon as this doesn't crash the Swift compiler on Linux anymore
+// This is our guardian to ensure only one LambdaRuntime is running at the time
+// We use an Atomic here to ensure thread safety
+private let _isRunning = Atomic<Bool>(false)
+
+public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLambdaHandler {
     @usableFromInline
-    let handlerMutex: NIOLockedValueBox<Handler?>
+    /// we protect the handler behind a Mutex to ensure that we only ever have one copy of it
+    let handlerStorage: SendingStorage<Handler>
     @usableFromInline
     let logger: Logger
     @usableFromInline
@@ -39,14 +40,18 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
     ) {
-        self.handlerMutex = NIOLockedValueBox(handler)
+        self.handlerStorage = SendingStorage(handler)
         self.eventLoop = eventLoop
 
         // by setting the log level here, we understand it can not be changed dynamically at runtime
         // developers have to wait for AWS Lambda to dispose and recreate a runtime environment to pickup a change
         // this approach is less flexible but more performant than reading the value of the environment variable at each invocation
         var log = logger
-        log.logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
+
+        // use the LOG_LEVEL environment variable to set the log level.
+        // if the environment variable is not set, use the default log level from the logger provided
+        log.logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? logger.logLevel
+
         self.logger = log
         self.logger.debug("LambdaRuntime initialized")
     }
@@ -58,14 +63,24 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
     }
     #endif
 
-    @inlinable
+    /// Make sure only one run() is called at a time
+    // @inlinable
     internal func _run() async throws {
-        let handler = self.handlerMutex.withLockedValue { handler in
-            let result = handler
-            handler = nil
-            return result
+
+        // we use an atomic global variable to ensure only one LambdaRuntime is running at the time
+        let (_, original) = _isRunning.compareExchange(expected: false, desired: true, ordering: .acquiringAndReleasing)
+
+        // if the original value was already true, run() is already running
+        if original {
+            throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
         }
 
+        defer {
+            _isRunning.store(false, ordering: .releasing)
+        }
+
+        // The handler can be non-sendable, we want to ensure we only ever have one copy of it
+        let handler = try? self.handlerStorage.get()
         guard let handler else {
             throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
         }
@@ -96,8 +111,10 @@ public final class LambdaRuntime<Handler>: @unchecked Sendable where Handler: St
             #if LocalServerSupport
             // we're not running on Lambda and we're compiled in DEBUG mode,
             // let's start a local server for testing
-            try await Lambda.withLocalServer(invocationEndpoint: Lambda.env("LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT"))
-            {
+            try await Lambda.withLocalServer(
+                invocationEndpoint: Lambda.env("LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT"),
+                logger: self.logger
+            ) {
 
                 try await LambdaRuntimeClient.withRuntimeClient(
                     configuration: .init(ip: "127.0.0.1", port: 7000),

@@ -16,6 +16,7 @@
 package struct LambdaRuntimeError: Error {
     @usableFromInline
     package enum Code: Sendable {
+        /// internal error codes for LambdaRuntimeClient
         case closingRuntimeClient
 
         case connectionToControlPlaneLost

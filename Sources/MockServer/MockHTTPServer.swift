@@ -123,6 +123,7 @@ struct HttpServer {
                 }
             }
         }
+        // it's ok to keep this at `info` level because it is only used for local testing and unit tests
         logger.info("Server shutting down")
     }
 
