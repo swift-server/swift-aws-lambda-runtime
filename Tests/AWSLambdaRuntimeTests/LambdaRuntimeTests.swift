@@ -61,6 +61,9 @@ struct LambdaRuntimeTests {
             taskGroup.cancelAll()
         }
 
+        // wait a small amount to ensure everything is cancelled and cleanup
+        try await Task.sleep(for: .seconds(0.5))
+
         // Running the second runtime should work now
         try await withThrowingTaskGroup(of: Void.self) { taskGroup in
             taskGroup.addTask {
