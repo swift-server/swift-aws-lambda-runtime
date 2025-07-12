@@ -358,7 +358,11 @@ internal struct LambdaHTTPServer {
         // client POST /invoke
         case (.POST, let url) where url.hasSuffix(self.invocationEndpoint):
             guard let body else {
-                return try await sendResponse(.init(status: .badRequest), outbound: outbound, logger: logger)
+                return try await sendResponse(
+                    .init(status: .badRequest, final: true),
+                    outbound: outbound,
+                    logger: logger
+                )
             }
             // we always accept the /invoke request and push them to the pool
             let requestId = "\(DispatchTime.now().uptimeNanoseconds)"
@@ -394,7 +398,11 @@ internal struct LambdaHTTPServer {
 
         // client uses incorrect HTTP method
         case (_, let url) where url.hasSuffix(self.invocationEndpoint):
-            return try await sendResponse(.init(status: .methodNotAllowed), outbound: outbound, logger: logger)
+            return try await sendResponse(
+                .init(status: .methodNotAllowed, final: true),
+                outbound: outbound,
+                logger: logger
+            )
 
         //
         // lambda invocations
@@ -420,7 +428,11 @@ internal struct LambdaHTTPServer {
         case (.POST, let url) where url.hasSuffix(Consts.postResponseURLSuffix):
             guard let requestId = getRequestId(from: head) else {
                 // the request is malformed, since we were expecting a requestId in the path
-                return try await sendResponse(.init(status: .badRequest), outbound: outbound, logger: logger)
+                return try await sendResponse(
+                    .init(status: .badRequest, final: true),
+                    outbound: outbound,
+                    logger: logger
+                )
             }
             // enqueue the lambda function response to be served as response to the client /invoke
             logger.trace("/:requestId/response received response", metadata: ["requestId": "\(requestId)"])
@@ -435,14 +447,22 @@ internal struct LambdaHTTPServer {
             )
 
             // tell the Lambda function we accepted the response
-            return try await sendResponse(.init(id: requestId, status: .accepted, final: true), outbound: outbound, logger: logger)
+            return try await sendResponse(
+                .init(id: requestId, status: .accepted, final: true),
+                outbound: outbound,
+                logger: logger
+            )
 
         // :requestId/error endpoint is called by the lambda posting an error response
         // we accept all requestId and we do not handle the body, we just acknowledge the request
         case (.POST, let url) where url.hasSuffix(Consts.postErrorURLSuffix):
             guard let requestId = getRequestId(from: head) else {
                 // the request is malformed, since we were expecting a requestId in the path
-                return try await sendResponse(.init(status: .badRequest), outbound: outbound, logger: logger)
+                return try await sendResponse(
+                    .init(status: .badRequest, final: true),
+                    outbound: outbound,
+                    logger: logger
+                )
             }
             // enqueue the lambda function response to be served as response to the client /invoke
             logger.trace("/:requestId/response received response", metadata: ["requestId": "\(requestId)"])
@@ -451,15 +471,16 @@ internal struct LambdaHTTPServer {
                     id: requestId,
                     status: .internalServerError,
                     headers: HTTPHeaders([("Content-Type", "application/json")]),
-                    body: body
+                    body: body,
+                    final: true
                 )
             )
 
-            return try await sendResponse(.init(status: .accepted), outbound: outbound, logger: logger)
+            return try await sendResponse(.init(status: .accepted, final: true), outbound: outbound, logger: logger)
 
         // unknown call
         default:
-            return try await sendResponse(.init(status: .notFound), outbound: outbound, logger: logger)
+            return try await sendResponse(.init(status: .notFound, final: true), outbound: outbound, logger: logger)
         }
     }
 
