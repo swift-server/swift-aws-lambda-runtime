@@ -363,7 +363,7 @@ internal struct LambdaHTTPServer {
             // we always accept the /invoke request and push them to the pool
             let requestId = "\(DispatchTime.now().uptimeNanoseconds)"
             logger[metadataKey: "requestId"] = "\(requestId)"
-            logger.trace("/invoke received invocation, pushing it to the stack")
+            logger.trace("/invoke received invocation, pushing it to the pool and wait for a lambda response")
             await self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body))
 
             // wait for the lambda function to process the request
@@ -429,12 +429,13 @@ internal struct LambdaHTTPServer {
                     id: requestId,
                     status: .ok,
                     headers: HTTPHeaders([("Content-Type", "application/json")]),
-                    body: body
+                    body: body,
+                    final: true
                 )
             )
 
             // tell the Lambda function we accepted the response
-            return try await sendResponse(.init(id: requestId, status: .accepted), outbound: outbound, logger: logger)
+            return try await sendResponse(.init(id: requestId, status: .accepted, final: true), outbound: outbound, logger: logger)
 
         // :requestId/error endpoint is called by the lambda posting an error response
         // we accept all requestId and we do not handle the body, we just acknowledge the request
@@ -469,7 +470,7 @@ internal struct LambdaHTTPServer {
     ) async throws {
         var logger = logger
         logger[metadataKey: "requestId"] = "\(response.requestId ?? "nil")"
-        logger.trace("Writing response")
+        logger.trace("Writing response for \(response.status?.code ?? 0)")
 
         var headers = response.headers ?? HTTPHeaders()
         if let body = response.body {
