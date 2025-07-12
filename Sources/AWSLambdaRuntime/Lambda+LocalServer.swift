@@ -67,8 +67,8 @@ extension Lambda {
 ///
 /// It accepts three types of requests from the Lambda function (through the LambdaRuntimeClient):
 /// 1. GET /next - the lambda function polls this endpoint to get the next invocation request
-/// 2. POST /:requestID/response - the lambda function posts the response to the invocation request
-/// 3. POST /:requestID/error - the lambda function posts an error response to the invocation request
+/// 2. POST /:requestId/response - the lambda function posts the response to the invocation request
+/// 3. POST /:requestId/error - the lambda function posts an error response to the invocation request
 ///
 /// It also accepts one type of request from the client invoking the lambda function:
 /// 1. POST /invoke - the client posts the event to the lambda function
@@ -309,14 +309,15 @@ internal struct LambdaHTTPServer {
     }
 
     /// This function checks if the request is a streaming response request
-    /// verb = POST, uri = :requestID/response, HTTP Header contains "Transfer-Encoding: chunked"
+    /// verb = POST, uri = :requestId/response, HTTP Header contains "Transfer-Encoding: chunked"
     private func isStreamingResponse(_ requestHead: HTTPRequestHead) -> Bool {
         requestHead.method == .POST && requestHead.uri.hasSuffix(Consts.postResponseURLSuffix)
             && requestHead.headers.contains(name: "Transfer-Encoding")
-            && requestHead.headers["Transfer-Encoding"].contains("chunked")
+            && (requestHead.headers["Transfer-Encoding"].contains("chunked")
+                || requestHead.headers["Transfer-Encoding"].contains("Chunked"))
     }
 
-    /// This function pareses and returns the requestId or nil if the request is malformed
+    /// This function parses and returns the requestId or nil if the request doesn't contain a requestId
     private func getRequestId(from head: HTTPRequestHead) -> String? {
         let parts = head.uri.split(separator: "/")
         return parts.count > 2 ? String(parts[parts.count - 2]) : nil
@@ -324,7 +325,7 @@ internal struct LambdaHTTPServer {
     /// This function process the URI request sent by the client and by the Lambda function
     ///
     /// It enqueues the client invocation and iterate over the invocation queue when the Lambda function sends /next request
-    /// It answers the /:requestID/response and /:requestID/error requests sent by the Lambda function but do not process the body
+    /// It answers the /:requestId/response and /:requestId/error requests sent by the Lambda function but do not process the body
     ///
     /// - Parameters:
     ///   - head: the HTTP request head
@@ -361,13 +362,13 @@ internal struct LambdaHTTPServer {
             }
             // we always accept the /invoke request and push them to the pool
             let requestId = "\(DispatchTime.now().uptimeNanoseconds)"
-            logger[metadataKey: "requestID"] = "\(requestId)"
+            logger[metadataKey: "requestId"] = "\(requestId)"
             logger.trace("/invoke received invocation, pushing it to the stack")
             await self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body))
 
             // wait for the lambda function to process the request
             for try await response in self.responsePool {
-                logger[metadataKey: "requestID"] = "\(requestId)"
+                logger[metadataKey: "response requestId"] = "\(response.requestId ?? "nil")"
                 logger.trace("Received response to return to client")
                 if response.requestId == requestId {
                     logger.trace("/invoke requestId is valid, sending the response")
@@ -415,17 +416,17 @@ internal struct LambdaHTTPServer {
             // This should not happen as the async iterator blocks until there is a task to process
             fatalError("No more invocations to process - the async for loop should not return")
 
-        // :requestID/response endpoint is called by the lambda posting the response
+        // :requestId/response endpoint is called by the lambda posting the response
         case (.POST, let url) where url.hasSuffix(Consts.postResponseURLSuffix):
-            guard let requestID = getRequestId(from: head) else {
+            guard let requestId = getRequestId(from: head) else {
                 // the request is malformed, since we were expecting a requestId in the path
                 return try await sendResponse(.init(status: .badRequest), outbound: outbound, logger: logger)
             }
             // enqueue the lambda function response to be served as response to the client /invoke
-            logger.trace("/:requestID/response received response", metadata: ["requestId": "\(requestID)"])
+            logger.trace("/:requestId/response received response", metadata: ["requestId": "\(requestId)"])
             await self.responsePool.push(
                 LocalServerResponse(
-                    id: requestID,
+                    id: requestId,
                     status: .ok,
                     headers: HTTPHeaders([("Content-Type", "application/json")]),
                     body: body
@@ -433,20 +434,20 @@ internal struct LambdaHTTPServer {
             )
 
             // tell the Lambda function we accepted the response
-            return try await sendResponse(.init(id: requestID, status: .accepted), outbound: outbound, logger: logger)
+            return try await sendResponse(.init(id: requestId, status: .accepted), outbound: outbound, logger: logger)
 
-        // :requestID/error endpoint is called by the lambda posting an error response
-        // we accept all requestID and we do not handle the body, we just acknowledge the request
+        // :requestId/error endpoint is called by the lambda posting an error response
+        // we accept all requestId and we do not handle the body, we just acknowledge the request
         case (.POST, let url) where url.hasSuffix(Consts.postErrorURLSuffix):
-            guard let requestID = getRequestId(from: head) else {
+            guard let requestId = getRequestId(from: head) else {
                 // the request is malformed, since we were expecting a requestId in the path
                 return try await sendResponse(.init(status: .badRequest), outbound: outbound, logger: logger)
             }
             // enqueue the lambda function response to be served as response to the client /invoke
-            logger.trace("/:requestID/response received response", metadata: ["requestId": "\(requestID)"])
+            logger.trace("/:requestId/response received response", metadata: ["requestId": "\(requestId)"])
             await self.responsePool.push(
                 LocalServerResponse(
-                    id: requestID,
+                    id: requestId,
                     status: .internalServerError,
                     headers: HTTPHeaders([("Content-Type", "application/json")]),
                     body: body
