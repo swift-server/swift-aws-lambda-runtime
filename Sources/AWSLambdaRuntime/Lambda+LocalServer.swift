@@ -274,7 +274,7 @@ internal struct LambdaHTTPServer {
 
                         case .end:
                             precondition(requestHead != nil, "Received .end without .head")
-                            
+
                             // process the buffered response for non streaming requests
                             if !self.isStreamingResponse(requestHead) {
                                 // process the request and send the response
@@ -288,7 +288,7 @@ internal struct LambdaHTTPServer {
                                 await self.responsePool.push(
                                     LocalServerResponse(id: requestId, final: true)
                                 )
-                            
+
                             }
 
                             requestHead = nil
@@ -311,16 +311,15 @@ internal struct LambdaHTTPServer {
     /// This function checks if the request is a streaming response request
     /// verb = POST, uri = :requestID/response, HTTP Header contains "Transfer-Encoding: chunked"
     private func isStreamingResponse(_ requestHead: HTTPRequestHead) -> Bool {
-        requestHead.method == .POST &&
-        requestHead.uri.hasSuffix(Consts.postResponseURLSuffix) &&
-        requestHead.headers.contains(name: "Transfer-Encoding") &&
-        requestHead.headers["Transfer-Encoding"].contains("chunked")
+        requestHead.method == .POST && requestHead.uri.hasSuffix(Consts.postResponseURLSuffix)
+            && requestHead.headers.contains(name: "Transfer-Encoding")
+            && requestHead.headers["Transfer-Encoding"].contains("chunked")
     }
 
     /// This function pareses and returns the requestId or nil if the request is malformed
     private func getRequestId(from head: HTTPRequestHead) -> String? {
-            let parts = head.uri.split(separator: "/")
-            return parts.count > 2 ? String(parts[parts.count - 2]) : nil  
+        let parts = head.uri.split(separator: "/")
+        return parts.count > 2 ? String(parts[parts.count - 2]) : nil
     }
     /// This function process the URI request sent by the client and by the Lambda function
     ///
@@ -378,7 +377,7 @@ internal struct LambdaHTTPServer {
                     try await self.sendResponse(response, outbound: outbound, logger: logger)
                     if response.final == true {
                         logger.trace("/invoke returning")
-                        return // if the response is final, we can return and close the connection
+                        return  // if the response is final, we can return and close the connection
                     }
                 } else {
                     logger.error(
@@ -497,7 +496,7 @@ internal struct LambdaHTTPServer {
         if response.final {
             logger.trace("Sending end")
             try await outbound.write(HTTPServerResponsePart.end(nil))
-        } 
+        }
     }
 
     /// A shared data structure to store the current invocation or response requests and the continuation objects.
@@ -585,7 +584,13 @@ internal struct LambdaHTTPServer {
         let headers: HTTPHeaders?
         let body: ByteBuffer?
         let final: Bool
-        init(id: String? = nil, status: HTTPResponseStatus? = nil, headers: HTTPHeaders? = nil, body: ByteBuffer? = nil, final: Bool = false) {
+        init(
+            id: String? = nil,
+            status: HTTPResponseStatus? = nil,
+            headers: HTTPHeaders? = nil,
+            body: ByteBuffer? = nil,
+            final: Bool = false
+        ) {
             self.requestId = id
             self.status = status
             self.headers = headers
@@ -604,14 +609,20 @@ internal struct LambdaHTTPServer {
             let headers = HTTPHeaders([
                 (AmazonHeaders.requestID, self.requestId),
                 (
-                AmazonHeaders.invokedFunctionARN,
-                "arn:aws:lambda:us-east-1:\(Int16.random(in: Int16.min ... Int16.max)):function:custom-runtime"
+                    AmazonHeaders.invokedFunctionARN,
+                    "arn:aws:lambda:us-east-1:\(Int16.random(in: Int16.min ... Int16.max)):function:custom-runtime"
                 ),
                 (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
                 (AmazonHeaders.deadline, "\(DispatchWallTime.distantFuture.millisSinceEpoch)"),
             ])
 
-            return LocalServerResponse(id: self.requestId, status: .accepted, headers: headers, body: self.request, final: true)
+            return LocalServerResponse(
+                id: self.requestId,
+                status: .accepted,
+                headers: headers,
+                body: self.request,
+                final: true
+            )
         }
     }
 }
