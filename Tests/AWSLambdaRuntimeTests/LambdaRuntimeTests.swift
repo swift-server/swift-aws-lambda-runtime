@@ -50,7 +50,8 @@ struct LambdaRuntimeTests {
             }
 
             // wait a small amount to ensure runtime1 task is started
-            try await Task.sleep(for: .seconds(1))
+            // on GH Actions, it might take a bit longer to start the runtime
+            try await Task.sleep(for: .seconds(2))
 
             // Running the second runtime should trigger LambdaRuntimeError
             await #expect(throws: LambdaRuntimeError.self) {
