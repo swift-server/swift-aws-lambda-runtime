@@ -22,10 +22,10 @@ import FoundationEssentials
 import Foundation
 #endif
 
-struct LambdaMockWriter: LambdaRuntimeClientResponseStreamWriter {
-    var underlying: LambdaMockClient
+struct MockLambdaWriter: LambdaRuntimeClientResponseStreamWriter {
+    var underlying: MockLambdaClient
 
-    init(underlying: LambdaMockClient) {
+    init(underlying: MockLambdaClient) {
         self.underlying = underlying
     }
 
@@ -55,8 +55,8 @@ enum LambdaError: Error, Equatable {
     case handlerError
 }
 
-final actor LambdaMockClient: LambdaRuntimeClientProtocol {
-    typealias Writer = LambdaMockWriter
+final actor MockLambdaClient: LambdaRuntimeClientProtocol {
+    typealias Writer = MockLambdaWriter
 
     private struct StateMachine {
         private enum State {
