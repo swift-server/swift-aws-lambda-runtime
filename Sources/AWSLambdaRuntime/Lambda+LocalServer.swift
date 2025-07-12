@@ -248,36 +248,22 @@ internal struct LambdaHTTPServer {
                             requestHead = head
 
                         case .body(let body):
-                            precondition(requestHead != nil, "Received .body without .head")
-
-                            // if this is a request from a Streaming Lambda Handler,
-                            // stream the response instead of buffering it
-                            if self.isStreamingResponse(requestHead) {
-                                // we are receiving a chunked body,
-                                // we can stream the response and not accumulate the chunks 
-                                print(String(buffer: body))
-                            } else {
-                                requestBody.setOrWriteImmutableBuffer(body)
-                            }
+                            requestBody.setOrWriteImmutableBuffer(body)
 
                         case .end:
                             precondition(requestHead != nil, "Received .end without .head")
-                            
-                            // process the buffered response for non streaming requests
-                            if !self.isStreamingResponse(requestHead) {
-                                // process the complete request
-                                let response = try await self.processCompleteRequest(
-                                    head: requestHead,
-                                    body: requestBody,
-                                    logger: logger
-                                )
-                                // send the responses
-                                try await self.sendCompleteResponse(
-                                    response: response,
-                                    outbound: outbound,
-                                    logger: logger
-                                )
-                            }
+                            // process the request
+                            let response = try await self.processRequest(
+                                head: requestHead,
+                                body: requestBody,
+                                logger: logger
+                            )
+                            // send the responses
+                            try await self.sendResponse(
+                                response: response,
+                                outbound: outbound,
+                                logger: logger
+                            )
 
                             requestHead = nil
                             requestBody = nil
@@ -295,15 +281,6 @@ internal struct LambdaHTTPServer {
         }
     }
 
-    /// This function checks if the request is a streaming response request
-    /// verb = POST, uri = :requestID/response, HTTP Header contains "Transfer-Encoding: chunked"
-    private func isStreamingResponse(_ requestHead: HTTPRequestHead) -> Bool {
-        requestHead.method == .POST &&
-        requestHead.uri.hasSuffix(Consts.postResponseURLSuffix) &&
-        requestHead.headers.contains(name: "Transfer-Encoding") &&
-        requestHead.headers["Transfer-Encoding"].contains("chunked")
-    }
-
     /// This function process the URI request sent by the client and by the Lambda function
     ///
     /// It enqueues the client invocation and iterate over the invocation queue when the Lambda function sends /next request
@@ -314,7 +291,7 @@ internal struct LambdaHTTPServer {
     ///   - body: the HTTP request body
     /// - Throws:
     /// - Returns: the response to send back to the client or the Lambda function
-    private func processCompleteRequest(
+    private func processRequest(
         head: HTTPRequestHead,
         body: ByteBuffer?,
         logger: Logger
@@ -437,7 +414,7 @@ internal struct LambdaHTTPServer {
         }
     }
 
-    private func sendCompleteResponse(
+    private func sendResponse(
         response: LocalServerResponse,
         outbound: NIOAsyncChannelOutboundWriter<HTTPServerResponsePart>,
         logger: Logger
