@@ -50,7 +50,7 @@ struct LambdaRuntimeTests {
             }
 
             // wait a small amount to ensure runtime1 task is started
-            try await Task.sleep(for: .seconds(0.5))
+            try await Task.sleep(for: .seconds(1))
 
             // Running the second runtime should trigger LambdaRuntimeError
             await #expect(throws: LambdaRuntimeError.self) {
@@ -62,7 +62,7 @@ struct LambdaRuntimeTests {
         }
 
         // wait a small amount to ensure everything is cancelled and cleanup
-        try await Task.sleep(for: .seconds(0.5))
+        try await Task.sleep(for: .seconds(1))
 
         // Running the second runtime should work now
         try await withThrowingTaskGroup(of: Void.self) { taskGroup in
