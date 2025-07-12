@@ -50,7 +50,7 @@ struct LambdaRuntimeTests {
             }
 
             // wait a small amount to ensure runtime1 task is started
-            try await Task.sleep(for: .seconds(1))
+            try await Task.sleep(for: .seconds(0.5))
 
             // Running the second runtime should trigger LambdaRuntimeError
             await #expect(throws: LambdaRuntimeError.self) {
@@ -71,7 +71,7 @@ struct LambdaRuntimeTests {
             }
 
             // Set timeout and cancel the runtime 2
-            try await Task.sleep(for: .seconds(2))
+            try await Task.sleep(for: .seconds(1))
             taskGroup.cancelAll()
         }
     }
