@@ -275,22 +275,22 @@ internal struct LambdaHTTPServer {
                         case .end:
                             precondition(requestHead != nil, "Received .end without .head")
 
-                            // process the buffered response for non streaming requests
-                            if !self.isStreamingResponse(requestHead) {
-                                // process the request and send the response
+                            if self.isStreamingResponse(requestHead) {
+                                // for streaming response, send the final response
+                                await self.responsePool.push(
+                                    LocalServerResponse(id: requestId, final: true)
+                                )
+                            } else {
+                                // process the buffered response for non streaming requests
                                 try await self.processRequestAndSendResponse(
                                     head: requestHead,
                                     body: requestBody,
                                     outbound: outbound,
                                     logger: logger
                                 )
-                            } else {
-                                await self.responsePool.push(
-                                    LocalServerResponse(id: requestId, final: true)
-                                )
-
                             }
 
+                            // reset the request state for next request
                             requestHead = nil
                             requestBody = nil
                             requestId = nil
