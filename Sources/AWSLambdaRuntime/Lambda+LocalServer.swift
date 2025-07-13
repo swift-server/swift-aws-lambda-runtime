@@ -440,7 +440,7 @@ internal struct LambdaHTTPServer {
                 LocalServerResponse(
                     id: requestId,
                     status: .ok,
-                    headers: HTTPHeaders([("Content-Type", "application/json")]),
+                    headers: HTTPHeaders(), // the local server has no mecanism to collect headers set by the lambda function
                     body: body,
                     final: true
                 )
