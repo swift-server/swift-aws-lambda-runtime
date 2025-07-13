@@ -89,7 +89,7 @@ struct LambdaRuntimeClientTests {
     }
 
     @Test
-    func testCancellation() async throws {
+    func testRuntimeClientCancellation() async throws {
         struct HappyBehavior: LambdaServerBehavior {
             let requestId = UUID().uuidString
             let event = "hello"
