@@ -57,21 +57,19 @@ struct LambdaRuntimeTests {
                 try await runtime2.run()
             }
 
-            // get the first result (should be a LambdaRuntimeError)
-            let error1 = try await #require(throws: (any Error).self) {
+            // get the first result (should throw a LambdaRuntimeError)
+            try await #require(throws: LambdaRuntimeError.self) {
                 try await taskGroup.next()
             }
 
             // cancel the other task
             taskGroup.cancelAll()
 
-            // get the second result (should be a ChannelError)
-            let error2 = try await #require(throws: (any Error).self) {
+            // get the second result (should throw a ChannelError)
+            try await #require(throws: ChannelError.self) {
                 try await taskGroup.next()
             }
 
-            #expect(error1 is LambdaRuntimeError, "First runtime should throw LambdaRuntimeError")
-            #expect(error2 is ChannelError, "Second runtime should throw ChannelError")
         }
 
         // wait a small amount to ensure everything is cancelled and cleanup
