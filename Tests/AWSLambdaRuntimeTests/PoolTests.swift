@@ -37,7 +37,7 @@ struct PoolTests {
     }
 
     @Test
-    func testCancellation() async throws {
+    func testPoolCancellation() async throws {
         let pool = LambdaHTTPServer.Pool<String>()
 
         // Create a task that will be cancelled
