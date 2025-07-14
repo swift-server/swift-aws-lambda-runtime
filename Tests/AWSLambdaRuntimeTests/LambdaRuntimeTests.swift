@@ -41,32 +41,41 @@ struct LambdaRuntimeTests {
         )
 
         try await withThrowingTaskGroup(of: Void.self) { taskGroup in
+
             // start the first runtime
             taskGroup.addTask {
-                // ChannelError will be thrown when we cancel the task group
-                await #expect(throws: ChannelError.self) {
-                    try await runtime1.run()
-                }
+                // will throw LambdaRuntimeError when run() is called second or ChannelError when cancelled
+                try await runtime1.run()
             }
 
             // wait a small amount to ensure runtime1 task is started
-            // on GH Actions, it might take a bit longer to start the runtime
-            try await Task.sleep(for: .seconds(2))
+            try await Task.sleep(for: .seconds(0.5))
 
-            // Running the second runtime should trigger LambdaRuntimeError
-            // start the first runtime
+            // start the second runtime
             taskGroup.addTask {
-                await #expect(throws: LambdaRuntimeError.self) {
-                    try await runtime2.run()
-                }
+                // will throw LambdaRuntimeError when run() is called second or ChannelError when cancelled
+                try await runtime2.run()
             }
 
-            // cancel runtime 1 / task 1
+            // get the first result (should be a LambdaRuntimeError)
+            let error1 = try await #require(throws: (any Error).self) {
+                try await taskGroup.next()
+            }
+
+            // cancel the other task
             taskGroup.cancelAll()
+
+            // get the second result (should be a ChannelError)
+            let error2 = try await #require(throws: (any Error).self) {
+                try await taskGroup.next()
+            }
+
+            #expect(error1 is LambdaRuntimeError, "First runtime should throw LambdaRuntimeError")
+            #expect(error2 is ChannelError, "Second runtime should throw ChannelError")
         }
 
         // wait a small amount to ensure everything is cancelled and cleanup
-        try await Task.sleep(for: .seconds(1))
+        try await Task.sleep(for: .seconds(0.5))
 
         // Running the second runtime should work now
         try await withThrowingTaskGroup(of: Void.self) { taskGroup in
