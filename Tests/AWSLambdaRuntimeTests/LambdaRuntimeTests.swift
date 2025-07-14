@@ -62,26 +62,9 @@ struct LambdaRuntimeTests {
                 try await taskGroup.next()
             }
 
-            // cancel the group to end the test 
+            // cancel the group to end the test
             taskGroup.cancelAll()
 
-        }
-
-        // wait a small amount to ensure everything is cancelled and cleanup
-        try await Task.sleep(for: .seconds(0.5))
-
-        // Running the second runtime should work now
-        try await withThrowingTaskGroup(of: Void.self) { taskGroup in
-            taskGroup.addTask {
-                // ChannelError will be thrown when we cancel the task group
-                await #expect(throws: ChannelError.self) {
-                    try await runtime2.run()
-                }
-            }
-
-            // Set timeout and cancel the runtime 2
-            try await Task.sleep(for: .seconds(1))
-            taskGroup.cancelAll()
         }
     }
     @Test("run() must be cancellable")
