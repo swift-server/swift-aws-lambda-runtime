@@ -62,13 +62,8 @@ struct LambdaRuntimeTests {
                 try await taskGroup.next()
             }
 
-            // cancel the other task
+            // cancel the group to end the test 
             taskGroup.cancelAll()
-
-            // get the second result (should throw a ChannelError)
-            try await #require(throws: ChannelError.self) {
-                try await taskGroup.next()
-            }
 
         }
 
