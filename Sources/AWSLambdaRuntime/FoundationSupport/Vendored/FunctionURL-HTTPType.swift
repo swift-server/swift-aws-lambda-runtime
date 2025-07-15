@@ -20,8 +20,10 @@ import Foundation
 
 // https://docs.aws.amazon.com/lambda/latest/dg/urls-invocation.html
 
+/// This is a simplified version of the FunctionURLRequest structure, with no dependencies on the HTTPType module.
+/// This file is copied from AWS Lambda Event project at https://github.com/swift-server/swift-aws-lambda-events
+
 /// FunctionURLRequest contains data coming from a bare Lambda Function URL
-/// This is a simplified version of teh request structure, with no dependencies on the HTTPType module.
 public struct FunctionURLRequest: Codable, Sendable {
     public struct Context: Codable, Sendable {
         public struct Authorizer: Codable, Sendable {
