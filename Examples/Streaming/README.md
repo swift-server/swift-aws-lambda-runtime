@@ -220,3 +220,69 @@ When done testing, you can delete the infrastructure with this command.
 ```bash
 sam delete 
 ```
+
+## Payload decoding
+
+The content of the input `ByteBuffer` depends on how you invoke the function:
+
+- when you invoke the function with the [`InvokeWithresponseStream` API](https://docs.aws.amazon.com/lambda/latest/api/API_InvokeWithResponseStream.html) to invoke the function, the function incoming payload is what you pass to the API. You can decode the `ByteBuffer` with a [`JSONDecoder.decode()`](https://developer.apple.com/documentation/foundation/jsondecoder) function call.
+- when you invoke the function through a [Lambda function URL](https://docs.aws.amazon.com/lambda/latest/dg/urls-configuration.html), the incoming `ByteBuffer` contains a payload that gives developer access to the underlying HTTP call. The payload contains information about the HTTP verb used, the headers received, the authentication method and so on. The [AWS documentation contains the details](https://docs.aws.amazon.com/lambda/latest/dg/urls-invocation.html) of the payload. The [Swift lambda Event library](https://github.com/swift-server/swift-aws-lambda-events) contains a [FunctionURL Swift struct definition](https://github.com/swift-server/swift-aws-lambda-events/blob/main/Sources/AWSLambdaEvents/FunctionURL.swift) ready to use in your projects.
+
+Here is an example of Lambda function URL payload:
+
+```
+// This is an example of payload received when
+// the function is invoked by a Lambda function URL.
+// You can use the `FunctionURL`` structure provided by the Lambda Event library to decode this
+// See, https://github.com/swift-server/swift-aws-lambda-events/blob/main/Sources/AWSLambdaEvents/FunctionURL.swift
+
+/* 
+{
+    "version": "2.0",
+    "routeKey": "$default",
+    "rawPath": "/",
+    "rawQueryString": "",
+    "headers": {
+        "x-amzn-tls-cipher-suite": "TLS_AES_128_GCM_SHA256",
+        "x-amzn-tls-version": "TLSv1.3",
+        "x-amzn-trace-id": "Root=1-68762f44-4f6a87d1639e7fc356aa6f96",
+        "x-amz-date": "20250715T103651Z",
+        "x-forwarded-proto": "https",
+        "host": "zvnsvhpx7u5gn3l3euimg4jjou0jvbfe.lambda-url.us-east-1.on.aws",
+        "x-forwarded-port": "443",
+        "x-forwarded-for": "2a01:cb0c:6de:8300:a1be:8004:e31a:b9f",
+        "accept": "*/*",
+        "user-agent": "curl/8.7.1"
+    },
+    "requestContext": {
+        "accountId": "0123456789",
+        "apiId": "zvnsvhpx7u5gn3l3euimg4jjou0jvbfe",
+        "authorizer": {
+            "iam": {
+                "accessKey": "AKIA....",
+                "accountId": "0123456789",
+                "callerId": "AIDA...",
+                "cognitoIdentity": null,
+                "principalOrgId": "o-rlrup7z3ao",
+                "userArn": "arn:aws:iam::0123456789:user/sst",
+                "userId": "AIDA..."
+            }
+        },
+        "domainName": "zvnsvhpx7u5gn3l3euimg4jjou0jvbfe.lambda-url.us-east-1.on.aws",
+        "domainPrefix": "zvnsvhpx7u5gn3l3euimg4jjou0jvbfe",
+        "http": {
+            "method": "GET",
+            "path": "/",
+            "protocol": "HTTP/1.1",
+            "sourceIp": "2a01:...:b9f",
+            "userAgent": "curl/8.7.1"
+        },
+        "requestId": "f942509a-283f-4c4f-94f8-0d4ccc4a00f8",
+        "routeKey": "$default",
+        "stage": "$default",
+        "time": "15/Jul/2025:10:36:52 +0000",
+        "timeEpoch": 1752575812081
+    },
+    "isBase64Encoded": false
+}
+```
