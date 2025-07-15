@@ -111,7 +111,7 @@ public struct StreamingLambdaCodableAdapter<
             } else {
                 context.logger.trace("Can't decode FunctionURLRequest's body", metadata: ["Event": "\(event)"])
             }
-            
+
         } else {
             // otherwise, decode the event as a user-provided JSON event
             let decodedEvent = try self.decoder.decode(Handler.Event.self, from: event)
