@@ -85,7 +85,7 @@ public struct StreamingLambdaCodableAdapter<
         // try to decode the event as a FunctionURLRequest and extract its body
         let urlRequestBody = bodyFromFunctionURLRequest(event)
 
-        // decode the body or the event as user-provided JSON 
+        // decode the body or the event as user-provided JSON
         let decodedEvent = try self.decoder.decode(Handler.Event.self, from: urlRequestBody ?? event)
 
         // and pass it to the handler
