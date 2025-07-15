@@ -82,19 +82,21 @@ public struct StreamingLambdaCodableAdapter<
         context: LambdaContext
     ) async throws {
 
-        // try to decode the event as a FunctionURLRequest and extract it's body
+        // try to decode the event as a FunctionURLRequest and extract its body
         let urlRequestBody = bodyFromFunctionURLRequest(event)
 
-        // otherwise, decode the event as a user-provided JSON event
+        // decode the body or the event as user-provided JSON 
         let decodedEvent = try self.decoder.decode(Handler.Event.self, from: urlRequestBody ?? event)
+
+        // and pass it to the handler
         try await self.handler.handle(decodedEvent, responseWriter: responseWriter, context: context)
     }
 
-    /// Extract the body payload from the event.
+    /// Extract the body payload from a FunctionURLRequest event.
     /// This function checks if the event is a valid `FunctionURLRequest` and decodes the body if it is base64 encoded.
     /// If the event is not a valid `FunctionURLRequest`, it returns nil.
     /// - Parameter event: The raw ByteBuffer event to check.
-    /// - Returns: the base64 decodeded body of the FunctionURLRequest if it is a valid FunctionURLRequest, otherwise nil.
+    /// - Returns: The base64 decoded body of the FunctionURLRequest if it is a valid FunctionURLRequest, otherwise nil.
     @inlinable
     package func bodyFromFunctionURLRequest(_ event: ByteBuffer) -> ByteBuffer? {
         do {
