@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for Streaming Example
+
+Resources:
+  # Lambda function
+  StreamingNumbers:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/StreamingNumbers/StreamingNumbers.zip
+      Timeout: 15
+      Handler: swift.bootstrap  # ignored by the Swift runtime
+      Runtime: provided.al2
+      MemorySize: 128
+      Architectures:
+        - arm64
+      FunctionUrlConfig:
+        AuthType: AWS_IAM
+        InvokeMode: RESPONSE_STREAM
+
+Outputs:
+  # print Lambda function URL
+  LambdaURL:
+    Description: Lambda URL
+    Value: !GetAtt StreamingNumbersUrl.FunctionUrl

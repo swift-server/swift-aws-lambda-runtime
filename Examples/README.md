@@ -34,7 +34,9 @@ This directory contains example code for Lambda functions.
 
 - **[S3_Soto](S3_Soto/README.md)**: a Lambda function that uses [Soto](https://github.com/soto-project/soto) to invoke an [Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html) API (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
 
-- **[Streaming]**: create a Lambda function exposed as an URL. The Lambda function streams its response over time. (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
+- **[Streaming](Streaming/README.md)**: create a Lambda function exposed as an URL. The Lambda function streams its response over time. (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
+
+- **[StreamingFromEvent](StreamingFromEvent/README.md)**: a Lambda function that combines JSON input decoding with response streaming capabilities, demonstrating the new streaming codable interface (requires [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
 
 - **[Testing](Testing/README.md)**: a test suite for Lambda functions.
 

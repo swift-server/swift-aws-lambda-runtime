@@ -1,0 +1,5 @@
+{
+  "count": 5,
+  "message": "Hello from streaming Lambda!",
+  "delayMs": 1000
+}
