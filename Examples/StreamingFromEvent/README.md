@@ -1,12 +1,12 @@
 # Streaming Codable Lambda function
 
-This example demonstrates how to use the new `StreamingLambdaHandlerWithEvent` protocol to create Lambda functions that:
+This example demonstrates how to use the `StreamingLambdaHandlerWithEvent` protocol to create Lambda functions that:
 
 1. **Receive JSON input**: Automatically decode JSON events into Swift structs
 2. **Stream responses**: Send data incrementally as it becomes available
 3. **Execute background work**: Perform additional processing after the response is sent
 
-The example uses the new streaming codable interface that combines the benefits of:
+The example uses the streaming codable interface that combines the benefits of:
 - Type-safe JSON input decoding (like regular `LambdaHandler`)
 - Response streaming capabilities (like `StreamingLambdaHandler`)
 - Background work execution after response completion
@@ -68,7 +68,7 @@ The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPa
 You can test the function locally before deploying:
 
 ```bash
-swift run &
+swift run 
 
 # In another terminal, test with curl:
 curl -v \
@@ -95,19 +95,70 @@ aws lambda create-function \
 --role arn:aws:iam::${AWS_ACCOUNT_ID}:role/lambda_basic_execution
 ```
 
+> [!IMPORTANT] 
+> The timeout value must be bigger than the time it takes for your function to stream its output. Otherwise, the Lambda control plane will terminate the execution environment before your code has a chance to finish writing the stream. Here, the sample function stream responses during 10 seconds and we set the timeout for 15 seconds.
+
 The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
 
 Be sure to set `AWS_ACCOUNT_ID` with your actual AWS account ID (for example: 012345678901).
 
-### Invoke your Lambda function
+### Step2: Give permission to invoke that function through an URL
 
-To invoke the Lambda function, use the AWS CLI:
+Anyone with a valid signature from your AWS account will have permission to invoke the function through its URL.
 
 ```bash
-aws lambda invoke \
+aws lambda add-permission \
   --function-name StreamingFromEvent \
-  --payload $(echo '{"count": 5, "message": "Streaming from AWS!", "delayMs": 500}' | base64) \
-  response.txt && cat response.txt
+  --action lambda:InvokeFunctionUrl \
+  --principal ${AWS_ACCOUNT_ID} \
+  --function-url-auth-type AWS_IAM \
+  --statement-id allowURL
+```  
+
+### Step3: Create the URL 
+
+This creates [a URL with IAM authentication](https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html). Only calls with a valid signature will be authorized.
+
+```bash
+aws lambda create-function-url-config \
+  --function-name StreamingFromEvent \
+  --auth-type AWS_IAM \
+  --invoke-mode RESPONSE_STREAM 
+```
+This calls return various information, including the URL to invoke your function.
+
+```json
+{
+    "FunctionUrl": "https://ul3nf4dogmgyr7ffl5r5rs22640fwocc.lambda-url.us-east-1.on.aws/",
+    "FunctionArn": "arn:aws:lambda:us-east-1:012345678901:function:StreamingFromEvent",
+    "AuthType": "AWS_IAM",
+    "CreationTime": "2024-10-22T07:57:23.112599Z",
+    "InvokeMode": "RESPONSE_STREAM"
+}
+```
+
+### Invoke your Lambda function
+
+To invoke the Lambda function, use `curl` with the AWS Sigv4 option to generate the signature.
+
+Read the [AWS Credentials and Signature](../README.md/#AWS-Credentials-and-Signature) section for more details about the AWS Sigv4 protocol and how to obtain AWS credentials.
+
+When you have the `aws` command line installed and configured, you will find the credentials in the `~/.aws/credentials` file.
+
+```bash
+URL=https://ul3nf4dogmgyr7ffl5r5rs22640fwocc.lambda-url.us-east-1.on.aws/
+REGION=us-east-1
+ACCESS_KEY=AK...
+SECRET_KEY=...
+AWS_SESSION_TOKEN=...
+
+curl --user "${ACCESS_KEY}":"${SECRET_KEY}"   \
+     --aws-sigv4 "aws:amz:${REGION}:lambda" \
+     -H "x-amz-security-token: ${AWS_SESSION_TOKEN}" \
+     --no-buffer \
+     --header "Content-Type: application/json" \
+     --data '{"count": 3, "message": "Hello World!", "delayMs": 1000}' \
+     "$URL"  
 ```
 
 This should output the following result, with configurable delays between each message:
@@ -125,4 +176,83 @@ When done testing, you can delete the Lambda function with this command.
 
 ```bash
 aws lambda delete-function --function-name StreamingFromEvent
+```
+
+## Deploy with AWS SAM 
+
+Alternatively, you can use [AWS SAM](https://aws.amazon.com/serverless/sam/) to deploy the Lambda function.
+
+**Prerequisites** : Install the [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
+
+### SAM Template
+
+The template file is provided as part of the example in the `template.yaml` file. It defines a Lambda function based on the binary ZIP file. It creates the function url with IAM authentication and sets the function timeout to 15 seconds.
+
+```yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for StreamingFromEvent Example
+
+Resources:
+  # Lambda function
+  StreamingNumbers:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/StreamingFromEvent/StreamingFromEvent.zip
+      Timeout: 15
+      Handler: swift.bootstrap  # ignored by the Swift runtime
+      Runtime: provided.al2
+      MemorySize: 128
+      Architectures:
+        - arm64
+      FunctionUrlConfig:
+        AuthType: AWS_IAM
+        InvokeMode: RESPONSE_STREAM
+
+Outputs:
+  # print Lambda function URL
+  LambdaURL:
+    Description: Lambda URL
+    Value: !GetAtt StreamingNumbersUrl.FunctionUrl
+```
+
+### Deploy with SAM 
+
+```bash
+sam deploy \
+--resolve-s3 \
+--template-file template.yaml \
+--stack-name StreamingFromEvent \
+--capabilities CAPABILITY_IAM 
+```
+
+The URL of the function is provided as part of the output.
+
+```
+CloudFormation outputs from deployed stack
+-----------------------------------------------------------------------------------------------------------------------------
+Outputs                                                                                                                                   
+-----------------------------------------------------------------------------------------------------------------------------
+Key                 LambdaURL                                                                                                             
+Description         Lambda URL                                                                                                            
+Value               https://gaudpin2zjqizfujfnqxstnv6u0czrfu.lambda-url.us-east-1.on.aws/                                                 
+-----------------------------------------------------------------------------------------------------------------------------
+```
+
+Once the function is deployed, you can invoke it with `curl`, similarly to what you did when deploying with the AWS CLI.
+
+```bash
+curl "$URL"                              \
+     --user "$ACCESS_KEY":"$SECRET_KEY"   \
+     --aws-sigv4 "aws:amz:${REGION}:lambda" \
+     -H "x-amz-security-token: $AWS_SESSION_TOKEN" \
+     --no-buffer
+```
+
+### Undeploy with SAM 
+
+When done testing, you can delete the infrastructure with this command.
+
+```bash
+sam delete 
 ```
