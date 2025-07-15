@@ -36,7 +36,7 @@ Where:
 - `message`: The message content to repeat
 - `delayMs`: Optional delay between messages in milliseconds (defaults to 500ms)
 
-The response is streamed through the `LambdaResponseStreamWriter`, which is passed as an argument in the `handle` function. The code calls the `write(_:)` function of the `LambdaResponseStreamWriter` with partial data repeatedly written before finally closing the response stream by calling `finish()`. Developers can also choose to return the entire output and not stream the response by calling `writeAndFinish(_:)`.
+The response is streamed through the `LambdaResponseStreamWriter`, which is passed as an argument in the `handle` function. The code calls the `write(_:)` function of the `LambdaResponseStreamWriter` with partial data written repeatedly before finally closing the response stream by calling `finish()`. Developers can also choose to return the entire output and not stream the response by calling `writeAndFinish(_:)`.
 
 An error is thrown if `finish()` is called multiple times or if it is called after having called `writeAndFinish(_:)`.
 
@@ -111,7 +111,7 @@ The `--architectures` flag is only required when you build the binary on an Appl
 
 Be sure to set `AWS_ACCOUNT_ID` with your actual AWS account ID (for example: 012345678901).
 
-### Step2: Give permission to invoke that function through an URL
+### Step 2: Give permission to invoke that function through a URL
 
 Anyone with a valid signature from your AWS account will have permission to invoke the function through its URL.
 
@@ -124,7 +124,7 @@ aws lambda add-permission \
   --statement-id allowURL
 ```  
 
-### Step3: Create the URL 
+### Step 3: Create the URL 
 
 This creates [a URL with IAM authentication](https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html). Only calls with a valid signature will be authorized.
 
@@ -134,7 +134,7 @@ aws lambda create-function-url-config \
   --auth-type AWS_IAM \
   --invoke-mode RESPONSE_STREAM 
 ```
-This calls return various information, including the URL to invoke your function.
+This call returns various information, including the URL to invoke your function.
 
 ```json
 {
@@ -251,7 +251,8 @@ Value               https://gaudpin2zjqizfujfnqxstnv6u0czrfu.lambda-url.us-east-
 Once the function is deployed, you can invoke it with `curl`, similarly to what you did when deploying with the AWS CLI.
 
 ```bash
-curl -X POST -d @events/sample-request.json" \
+curl -X POST \
+     --data '{"count": 3, "message": "Hello World!", "delayMs": 1000}' \
      --user "$ACCESS_KEY":"$SECRET_KEY"   \
      --aws-sigv4 "aws:amz:${REGION}:lambda" \
      -H "x-amz-security-token: $AWS_SESSION_TOKEN" \
