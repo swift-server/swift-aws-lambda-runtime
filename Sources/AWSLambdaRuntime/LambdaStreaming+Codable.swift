@@ -15,6 +15,12 @@
 import Logging
 import NIOCore
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
 /// A streaming handler protocol that receives a decoded JSON event and can stream responses.
 /// This handler protocol supports response streaming and background work execution.
 /// Background work can be executed after closing the response stream by calling
@@ -75,8 +81,35 @@ public struct StreamingLambdaCodableAdapter<
         responseWriter: some LambdaResponseStreamWriter,
         context: LambdaContext
     ) async throws {
-        let decodedEvent = try self.decoder.decode(Handler.Event.self, from: event)
-        try await self.handler.handle(decodedEvent, responseWriter: responseWriter, context: context)
+
+        // for some reasons I don't understand the "body" param contains the complete FunctionURL request
+        // so, 1/ we decode the event we receive, 2/ we base64 decode the body, 3/ we decode a FunnctionURLRequest again,
+        // then 4/ we can access the actual payload body, decode it pass it to the handler
+        let functionUrlEvent1 = try self.decoder.decode(FunctionURLRequest.self, from: event)
+        if let base64EncodedString = functionUrlEvent1.body,
+
+            // this is the minimal way to base64 decode without importing new dependecies
+            let decodedData = Data(base64Encoded: base64EncodedString),
+            let decodedString = String(data: decodedData, encoding: .utf8)
+        {
+
+            // decode the FunCtionURL event inside the body
+            let functionUrlEvent2 = try self.decoder.decode(
+                FunctionURLRequest.self,
+                from: ByteBuffer(string: decodedString)
+            )
+
+            // finally decode the actual payload passed by the caller
+            let decodedEvent = try self.decoder.decode(
+                Handler.Event.self,
+                from: ByteBuffer(string: functionUrlEvent2.body ?? "")
+            )
+
+            // and invoke the user-provided handler
+            try await self.handler.handle(decodedEvent, responseWriter: responseWriter, context: context)
+        } else {
+            context.logger.trace("Can't decode FunctionURLRequest's body", metadata: ["Event": "\(event)"])
+        }
     }
 }
 

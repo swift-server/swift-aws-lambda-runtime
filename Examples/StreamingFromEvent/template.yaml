@@ -4,7 +4,7 @@ Description: SAM Template for StreamingfromEvent Example
 
 Resources:
   # Lambda function
-  StreamingNumbers:
+  StreamingFromEvent:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/StreamingFromEvent/StreamingFromEvent.zip
@@ -22,4 +22,4 @@ Outputs:
   # print Lambda function URL
   LambdaURL:
     Description: Lambda URL
-    Value: !GetAtt StreamingNumbersUrl.FunctionUrl
+    Value: !GetAtt StreamingFromEventUrl.FunctionUrl
