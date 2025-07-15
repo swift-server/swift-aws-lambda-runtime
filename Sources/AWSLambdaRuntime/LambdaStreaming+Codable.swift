@@ -82,51 +82,39 @@ public struct StreamingLambdaCodableAdapter<
         context: LambdaContext
     ) async throws {
 
-        // try to decode the event as a FunctionURLRequest
-        if let functionUrlEvent1 = isFunctionURLRequest(event) {
+        // try to decode the event as a FunctionURLRequest and extract it's body
+        let urlRequestBody = bodyFromFunctionURLRequest(event)
 
-            // for some reasons I don't understand the "body" param contains the complete FunctionURL request
-            // so, 1/ we decode the event we receive, 2/ we base64 decode the body, 3/ we decode a FunctionURLRequest again,
-            // then 4/ we can access the actual payload body, decode it pass it to the handler
-            if let base64EncodedString = functionUrlEvent1.body,
+        // otherwise, decode the event as a user-provided JSON event
+        let decodedEvent = try self.decoder.decode(Handler.Event.self, from: urlRequestBody ?? event)
+        try await self.handler.handle(decodedEvent, responseWriter: responseWriter, context: context)
+    }
+
+    /// Extract the body payload from the event.
+    /// This function checks if the event is a valid `FunctionURLRequest` and decodes the body if it is base64 encoded.
+    /// If the event is not a valid `FunctionURLRequest`, it returns nil.
+    /// - Parameter event: The raw ByteBuffer event to check.
+    /// - Returns: the base64 decodeded body of the FunctionURLRequest if it is a valid FunctionURLRequest, otherwise nil.
+    @inlinable
+    package func bodyFromFunctionURLRequest(_ event: ByteBuffer) -> ByteBuffer? {
+        do {
+            // try to decode as a FunctionURLRequest
+            let request = try self.decoder.decode(FunctionURLRequest.self, from: event)
+
+            // if the body is encoded in base64, decode it
+            if request.isBase64Encoded,
+                let base64EncodedString = request.body,
                 // this is the minimal way to base64 decode without importing new dependencies
                 let decodedData = Data(base64Encoded: base64EncodedString),
                 let decodedString = String(data: decodedData, encoding: .utf8)
             {
 
-                // decode the FunctionURL event inside the body
-                let functionUrlEvent2 = try self.decoder.decode(
-                    FunctionURLRequest.self,
-                    from: ByteBuffer(string: decodedString)
-                )
-
-                // finally decode the actual payload passed by the caller
-                let decodedEvent = try self.decoder.decode(
-                    Handler.Event.self,
-                    from: ByteBuffer(string: functionUrlEvent2.body ?? "")
-                )
-
-                // and invoke the user-provided handler
-                try await self.handler.handle(decodedEvent, responseWriter: responseWriter, context: context)
+                return ByteBuffer(string: decodedString)
             } else {
-                context.logger.trace("Can't decode FunctionURLRequest's body", metadata: ["Event": "\(event)"])
+                return ByteBuffer(string: request.body ?? "")
             }
-
-        } else {
-            // otherwise, decode the event as a user-provided JSON event
-            let decodedEvent = try self.decoder.decode(Handler.Event.self, from: event)
-            try await self.handler.handle(decodedEvent, responseWriter: responseWriter, context: context)
-        }
-    }
-
-    /// Check if the payload is an FunctionURLlRequest or a direct invocation
-    /// - Parameter event: The raw ByteBuffer event to check.
-    /// - Returns: the FunctionURLRequest if the event is a FunctionURLRequest, nil otherwise
-    @inlinable
-    package func isFunctionURLRequest(_ event: ByteBuffer) -> FunctionURLRequest? {
-        do {
-            return try self.decoder.decode(FunctionURLRequest.self, from: event)
         } catch {
+            // not a FunctionURLRequest, return nil
             return nil
         }
     }
@@ -160,11 +148,6 @@ public struct StreamingFromEventClosureHandler<Event: Decodable>: StreamingLambd
 }
 
 #if FoundationJSONSupport
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import class Foundation.JSONDecoder
-#endif
 
 extension StreamingLambdaCodableAdapter {
     /// Initialize with a JSON decoder and handler.

@@ -77,6 +77,15 @@ curl -v \
   http://127.0.0.1:7000/invoke
 ```
 
+Or simulate a call from a Lambda Function URL (where the body is encapsulated in a Lambda Function URL request):
+
+```bash 
+curl -v \
+  --header "Content-Type: application/json" \
+  --data @events/sample-request.json \
+  http://127.0.0.1:7000/invoke
+  ```
+
 ## Deploy with the AWS CLI
 
 Here is how to deploy using the `aws` command line.
@@ -242,11 +251,12 @@ Value               https://gaudpin2zjqizfujfnqxstnv6u0czrfu.lambda-url.us-east-
 Once the function is deployed, you can invoke it with `curl`, similarly to what you did when deploying with the AWS CLI.
 
 ```bash
-curl "$URL"                              \
+curl -X POST -d @events/sample-request.json" \
      --user "$ACCESS_KEY":"$SECRET_KEY"   \
      --aws-sigv4 "aws:amz:${REGION}:lambda" \
      -H "x-amz-security-token: $AWS_SESSION_TOKEN" \
-     --no-buffer
+     --no-buffer \
+     "$URL"
 ```
 
 ### Undeploy with SAM 
