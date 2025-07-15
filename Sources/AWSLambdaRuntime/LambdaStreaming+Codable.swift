@@ -83,17 +83,17 @@ public struct StreamingLambdaCodableAdapter<
     ) async throws {
 
         // for some reasons I don't understand the "body" param contains the complete FunctionURL request
-        // so, 1/ we decode the event we receive, 2/ we base64 decode the body, 3/ we decode a FunnctionURLRequest again,
+        // so, 1/ we decode the event we receive, 2/ we base64 decode the body, 3/ we decode a FunctionURLRequest again,
         // then 4/ we can access the actual payload body, decode it pass it to the handler
         let functionUrlEvent1 = try self.decoder.decode(FunctionURLRequest.self, from: event)
-        if let base64EncodedString = functionUrlEvent1.body,
 
-            // this is the minimal way to base64 decode without importing new dependecies
+        if let base64EncodedString = functionUrlEvent1.body,
+            // this is the minimal way to base64 decode without importing new dependencies
             let decodedData = Data(base64Encoded: base64EncodedString),
             let decodedString = String(data: decodedData, encoding: .utf8)
         {
 
-            // decode the FunCtionURL event inside the body
+            // decode the FunctionURL event inside the body
             let functionUrlEvent2 = try self.decoder.decode(
                 FunctionURLRequest.self,
                 from: ByteBuffer(string: decodedString)
