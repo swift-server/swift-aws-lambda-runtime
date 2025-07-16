@@ -1,0 +1,100 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the SwiftAWSLambdaRuntime open source project
+//
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Licensed under Apache License v2.0
+//
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
+
+import NIOCore
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
+/// A response structure specifically designed for streaming Lambda responses that contains
+/// HTTP status code and headers without body content.
+///
+/// This structure is used with `LambdaResponseStreamWriter.writeStatusAndHeaders(_:)` to send
+/// HTTP response metadata before streaming the response body.
+public struct StreamingLambdaStatusAndHeadersResponse: Codable, Sendable {
+    /// The HTTP status code for the response (e.g., 200, 404, 500)
+    public let statusCode: Int
+
+    /// Dictionary of single-value HTTP headers
+    public let headers: [String: String]?
+
+    /// Dictionary of multi-value HTTP headers (e.g., Set-Cookie headers)
+    public let multiValueHeaders: [String: [String]]?
+
+    /// Creates a new streaming Lambda response with status code and optional headers
+    ///
+    /// - Parameters:
+    ///   - statusCode: The HTTP status code for the response
+    ///   - headers: Optional dictionary of single-value HTTP headers
+    ///   - multiValueHeaders: Optional dictionary of multi-value HTTP headers
+    public init(
+        statusCode: Int,
+        headers: [String: String]? = nil,
+        multiValueHeaders: [String: [String]]? = nil
+    ) {
+        self.statusCode = statusCode
+        self.headers = headers
+        self.multiValueHeaders = multiValueHeaders
+    }
+}
+
+extension LambdaResponseStreamWriter {
+    /// Writes the HTTP status code and headers to the response stream.
+    ///
+    /// This method serializes the status and headers as JSON and writes them to the stream,
+    /// followed by eight null bytes as a separator before the response body.
+    ///
+    /// - Parameters:
+    ///   - response: The status and headers response to write
+    ///   - encoder: The encoder to use for serializing the response,
+    /// - Throws: An error if JSON serialization or writing fails
+    public func writeStatusAndHeaders<Encoder: LambdaOutputEncoder>(
+        _ response: StreamingLambdaStatusAndHeadersResponse,
+        encoder: Encoder
+    ) async throws where Encoder.Output == StreamingLambdaStatusAndHeadersResponse {
+
+        // Convert Data to ByteBuffer
+        var buffer = ByteBuffer()
+        try encoder.encode(response, into: &buffer)
+
+        // Write the JSON data
+        try await write(buffer)
+
+        // Write eight null bytes as separator
+        var separatorBuffer = ByteBuffer()
+        separatorBuffer.writeBytes([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+        try await write(separatorBuffer)
+    }
+}
+
+extension LambdaResponseStreamWriter {
+    /// Writes the HTTP status code and headers to the response stream.
+    ///
+    /// This method serializes the status and headers as JSON and writes them to the stream,
+    /// followed by eight null bytes as a separator before the response body.
+    ///
+    /// - Parameters:
+    ///   - response: The status and headers response to write
+    ///   - encoder: The encoder to use for serializing the response, use JSONEncoder by default
+    /// - Throws: An error if JSON serialization or writing fails
+    public func writeStatusAndHeaders(
+        _ response: StreamingLambdaStatusAndHeadersResponse,
+        encoder: JSONEncoder = JSONEncoder()
+    ) async throws {
+        try await self.writeStatusAndHeaders(response, encoder: LambdaJSONOutputEncoder(encoder))
+    }
+}

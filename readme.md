@@ -225,6 +225,8 @@ Streaming responses incurs a cost. For more information, see [AWS Lambda Pricing
 
 You can stream responses through [Lambda function URLs](https://docs.aws.amazon.com/lambda/latest/dg/urls-configuration.html), the AWS SDK, or using the Lambda [InvokeWithResponseStream](https://docs.aws.amazon.com/lambda/latest/dg/API_InvokeWithResponseStream.html) API. In this example, we create an authenticated Lambda function URL.
 
+#### Simple Streaming Example
+
 Here is an example of a minimal function that streams 10 numbers with an interval of one second for each number.
 
 ```swift
@@ -251,6 +253,50 @@ struct SendNumbersWithPause: StreamingLambdaHandler {
 let runtime = LambdaRuntime.init(handler: SendNumbersWithPause())
 try await runtime.run()
 ```
+
+#### Streaming with HTTP Headers and Status Code
+
+When streaming responses, you can also set HTTP status codes and headers before sending the response body. This is particularly useful when your Lambda function is invoked through API Gateway or Lambda function URLs, allowing you to control the HTTP response metadata.
+
+```swift
+import AWSLambdaRuntime
+import NIOCore
+
+struct StreamingWithHeaders: StreamingLambdaHandler {
+    func handle(
+        _ event: ByteBuffer,
+        responseWriter: some LambdaResponseStreamWriter,
+        context: LambdaContext
+    ) async throws {
+        // Set HTTP status code and headers before streaming the body
+        let response = StreamingLambdaStatusAndHeadersResponse(
+            statusCode: 200,
+            headers: [
+                "Content-Type": "text/plain",
+                "Cache-Control": "no-cache"
+            ]
+        )
+        try await responseWriter.writeStatusAndHeaders(response)
+        
+        // Now stream the response body
+        for i in 1...5 {
+            try await responseWriter.write(ByteBuffer(string: "Chunk \(i)\n"))
+            try await Task.sleep(for: .milliseconds(500))
+        }
+        
+        try await responseWriter.finish()
+    }
+}
+
+let runtime = LambdaRuntime.init(handler: StreamingWithHeaders())
+try await runtime.run()
+```
+
+The `writeStatusAndHeaders` method allows you to:
+- Set HTTP status codes (200, 404, 500, etc.)
+- Add custom HTTP headers for content type, caching, CORS, etc.
+- Control response metadata before streaming begins
+- Maintain compatibility with API Gateway and Lambda function URLs
 
 You can learn how to deploy and invoke this function in [the streaming example README file](Examples/Streaming/README.md).
 
