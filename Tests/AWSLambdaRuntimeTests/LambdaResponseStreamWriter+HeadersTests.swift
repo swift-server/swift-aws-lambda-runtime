@@ -587,6 +587,12 @@ final class MockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
         writtenBuffers.append(buffer)
         isFinished = true
     }
+
+    func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
+        // This is a mock, so we don't actually write custom headers.
+        // In a real implementation, this would handle writing custom headers.
+        fatalError("Unexpected call to writeCustomHeader")
+    }
 }
 
 // MARK: - Error Handling Mock Implementations
@@ -619,6 +625,12 @@ final class FailingMockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     func writeAndFinish(_ buffer: ByteBuffer) async throws {
         try await write(buffer)
         try await finish()
+    }
+
+    func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
+        // This is a mock, so we don't actually write custom headers.
+        // In a real implementation, this would handle writing custom headers.
+        fatalError("Unexpected call to writeCustomHeader")
     }
 }
 
@@ -716,6 +728,12 @@ final class TrackingLambdaResponseStreamWriter: LambdaResponseStreamWriter {
         writtenBuffers.append(buffer)
         isFinished = true
     }
+
+    func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
+        // This is a mock, so we don't actually write custom headers.
+        // In a real implementation, this would handle writing custom headers.
+        fatalError("Unexpected call to writeCustomHeader")
+    }
 }
 
 /// Mock implementation with custom behavior for integration testing
@@ -738,5 +756,11 @@ final class CustomBehaviorLambdaResponseStreamWriter: LambdaResponseStreamWriter
         customBehaviorTriggered = true
         writtenBuffers.append(buffer)
         isFinished = true
+    }
+
+    func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
+        // This is a mock, so we don't actually write custom headers.
+        // In a real implementation, this would handle writing custom headers.
+        fatalError("Unexpected call to writeCustomHeader")
     }
 }

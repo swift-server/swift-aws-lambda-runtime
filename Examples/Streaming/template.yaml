@@ -17,6 +17,9 @@ Resources:
       FunctionUrlConfig:
         AuthType: AWS_IAM
         InvokeMode: RESPONSE_STREAM
+      Environment:
+        Variables:
+          LOG_LEVEL: trace
 
 Outputs:
   # print Lambda function URL

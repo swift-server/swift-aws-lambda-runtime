@@ -20,6 +20,7 @@ package protocol LambdaRuntimeClientResponseStreamWriter: LambdaResponseStreamWr
     func finish() async throws
     func writeAndFinish(_ buffer: ByteBuffer) async throws
     func reportError(_ error: any Error) async throws
+    func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws
 }
 
 @usableFromInline

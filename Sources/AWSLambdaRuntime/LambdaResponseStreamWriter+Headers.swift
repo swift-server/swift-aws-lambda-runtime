@@ -44,7 +44,7 @@ public struct StreamingLambdaStatusAndHeadersResponse: Codable, Sendable {
     public init(
         statusCode: Int,
         headers: [String: String]? = nil,
-        multiValueHeaders: [String: [String]]? = nil
+        multiValueHeaders: [String: [String]]? = nil,
     ) {
         self.statusCode = statusCode
         self.headers = headers
@@ -67,17 +67,15 @@ extension LambdaResponseStreamWriter {
         encoder: Encoder
     ) async throws where Encoder.Output == StreamingLambdaStatusAndHeadersResponse {
 
-        // Convert Data to ByteBuffer
+        // Convert JSON headers to an array of bytes in a ByteBuffer
         var buffer = ByteBuffer()
         try encoder.encode(response, into: &buffer)
 
-        // Write the JSON data
-        try await write(buffer)
-
         // Write eight null bytes as separator
-        var separatorBuffer = ByteBuffer()
-        separatorBuffer.writeBytes([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
-        try await write(separatorBuffer)
+        buffer.writeBytes([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+
+        // Write the JSON data and the separator
+        try await writeCustomHeader(buffer)
     }
 }
 
@@ -95,6 +93,7 @@ extension LambdaResponseStreamWriter {
         _ response: StreamingLambdaStatusAndHeadersResponse,
         encoder: JSONEncoder = JSONEncoder()
     ) async throws {
+        encoder.outputFormatting = .withoutEscapingSlashes
         try await self.writeStatusAndHeaders(response, encoder: LambdaJSONOutputEncoder(encoder))
     }
 }
