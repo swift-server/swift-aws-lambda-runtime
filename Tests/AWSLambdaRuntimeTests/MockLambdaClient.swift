@@ -45,6 +45,9 @@ struct MockLambdaWriter: LambdaRuntimeClientResponseStreamWriter {
     func reportError(_ error: any Error) async throws {
         await self.underlying.reportError(error)
     }
+
+    func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
+    }
 }
 
 enum LambdaError: Error, Equatable {
