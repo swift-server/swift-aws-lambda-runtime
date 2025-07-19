@@ -47,9 +47,6 @@ struct MockLambdaWriter: LambdaRuntimeClientResponseStreamWriter {
     }
 
     func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
-        // This is a mock, so we don't actually write custom headers.
-        // In a real implementation, this would handle writing custom headers.
-        fatalError("Unexpected call to writeCustomHeader")
     }
 }
 

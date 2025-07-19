@@ -574,6 +574,7 @@ struct LambdaResponseStreamWriterHeadersTests {
 final class MockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     private(set) var writtenBuffers: [ByteBuffer] = []
     private(set) var isFinished = false
+    private(set) var hasCustomHeaders = false
 
     func write(_ buffer: ByteBuffer) async throws {
         writtenBuffers.append(buffer)
@@ -589,9 +590,7 @@ final class MockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     }
 
     func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
-        // This is a mock, so we don't actually write custom headers.
-        // In a real implementation, this would handle writing custom headers.
-        fatalError("Unexpected call to writeCustomHeader")
+        hasCustomHeaders = true
     }
 }
 
@@ -602,6 +601,7 @@ final class FailingMockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     private(set) var writtenBuffers: [ByteBuffer] = []
     private(set) var writeCallCount = 0
     private(set) var isFinished = false
+    private(set) var hasCustomHeaders = false
     private let failOnWriteCall: Int
 
     init(failOnWriteCall: Int) {
@@ -628,9 +628,7 @@ final class FailingMockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     }
 
     func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
-        // This is a mock, so we don't actually write custom headers.
-        // In a real implementation, this would handle writing custom headers.
-        fatalError("Unexpected call to writeCustomHeader")
+        hasCustomHeaders = true
     }
 }
 
@@ -712,6 +710,7 @@ final class TrackingLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     private(set) var finishCallCount = 0
     private(set) var writeAndFinishCallCount = 0
     private(set) var isFinished = false
+    private(set) var hasCustomHeaders = false
 
     func write(_ buffer: ByteBuffer) async throws {
         writeCallCount += 1
@@ -730,9 +729,7 @@ final class TrackingLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     }
 
     func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
-        // This is a mock, so we don't actually write custom headers.
-        // In a real implementation, this would handle writing custom headers.
-        fatalError("Unexpected call to writeCustomHeader")
+        hasCustomHeaders = true
     }
 }
 
@@ -741,6 +738,7 @@ final class CustomBehaviorLambdaResponseStreamWriter: LambdaResponseStreamWriter
     private(set) var writtenBuffers: [ByteBuffer] = []
     private(set) var customBehaviorTriggered = false
     private(set) var isFinished = false
+    private(set) var hasCustomHeaders = false
 
     func write(_ buffer: ByteBuffer) async throws {
         // Trigger custom behavior on any write
@@ -759,8 +757,6 @@ final class CustomBehaviorLambdaResponseStreamWriter: LambdaResponseStreamWriter
     }
 
     func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
-        // This is a mock, so we don't actually write custom headers.
-        // In a real implementation, this would handle writing custom headers.
-        fatalError("Unexpected call to writeCustomHeader")
+        hasCustomHeaders = true
     }
 }

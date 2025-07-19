@@ -122,7 +122,7 @@ struct LambdaRuntimeClientTests {
             }
         }
 
-        var behavior = StreamingBehavior()
+        let behavior = StreamingBehavior()
         try await withMockServer(behaviour: behavior) { port in
             let configuration = LambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: port)
 
@@ -131,7 +131,7 @@ struct LambdaRuntimeClientTests {
                 eventLoop: NIOSingletons.posixEventLoopGroup.next(),
                 logger: self.logger
             ) { runtimeClient in
-                let (invocation, writer) = try await runtimeClient.nextInvocation()
+                let (_, writer) = try await runtimeClient.nextInvocation()
 
                 // Start streaming response
                 try await writer.write(ByteBuffer(string: "streaming"))

@@ -44,7 +44,7 @@ public struct StreamingLambdaStatusAndHeadersResponse: Codable, Sendable {
     public init(
         statusCode: Int,
         headers: [String: String]? = nil,
-        multiValueHeaders: [String: [String]]? = nil,
+        multiValueHeaders: [String: [String]]? = nil
     ) {
         self.statusCode = statusCode
         self.headers = headers
