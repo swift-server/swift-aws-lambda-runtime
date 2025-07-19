@@ -26,9 +26,6 @@ try await responseWriter.writeStatusAndHeaders(
         headers: [
             "Content-Type": "text/plain",
             "x-my-custom-header": "streaming-example"
-        ],
-        multiValueHeaders: [
-            "Set-Cookie": ["session=abc123", "theme=dark"]
         ]
     )
 )
@@ -37,7 +34,6 @@ try await responseWriter.writeStatusAndHeaders(
 The `StreamingLambdaStatusAndHeadersResponse` structure allows you to specify:
 - **statusCode**: HTTP status code (e.g., 200, 404, 500)
 - **headers**: Dictionary of single-value HTTP headers (optional)
-- **multiValueHeaders**: Dictionary of multi-value HTTP headers like Set-Cookie (optional)
 
 ### Streaming the Response Body
 
@@ -45,7 +41,7 @@ After setting headers, you can stream the response body by calling the `write(_:
 
 ```swift
 // Stream data in chunks
-for i in 1...10 {
+for i in 1...3 {
     try await responseWriter.write(ByteBuffer(string: "Number: \(i)\n"))
     try await Task.sleep(for: .milliseconds(1000))
 }
@@ -98,7 +94,7 @@ aws lambda create-function \
 ```
 
 > [!IMPORTANT] 
-> The timeout value must be bigger than the time it takes for your function to stream its output. Otherwise, the Lambda control plane will terminate the execution environment before your code has a chance to finish writing the stream. Here, the sample function stream responses during 10 seconds and we set the timeout for 15 seconds.
+> The timeout value must be bigger than the time it takes for your function to stream its output. Otherwise, the Lambda control plane will terminate the execution environment before your code has a chance to finish writing the stream. Here, the sample function stream responses during 3 seconds and we set the timeout for 5 seconds.
 
 The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
 
@@ -169,13 +165,7 @@ This should output the following result, with a one-second delay between each nu
 1
 2
 3
-4
-5
-6
-7
-8
-9
-10
+Streaming complete!
 ```
 
 ### Undeploy
