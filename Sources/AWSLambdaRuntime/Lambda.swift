@@ -46,6 +46,7 @@ public enum Lambda {
 
                 // when log level is trace or lower, print the first Kb of the payload
                 let bytes = invocation.event
+                let maxPayloadPreviewSize = 1024
                 var metadata: Logger.Metadata? = nil
                 if logger.logLevel <= .trace,
                     let buffer = bytes.getSlice(at: 0, length: min(bytes.readableBytes, maxPayloadPreviewSize))
