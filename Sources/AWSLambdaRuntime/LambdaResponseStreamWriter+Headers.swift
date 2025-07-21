@@ -79,6 +79,7 @@ extension LambdaResponseStreamWriter {
     }
 
     /// Write a response part into the stream. Bytes written are streamed continually.
+    /// This implementation avoids having to modify all the tests and other part of the code that use this function signature
     /// - Parameter buffer: The buffer to write.
     public func write(_ buffer: ByteBuffer) async throws {
         // Write the buffer to the response stream

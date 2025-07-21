@@ -16,7 +16,6 @@ import Logging
 import NIOCore
 import NIOHTTP1
 import NIOPosix
-import Synchronization
 
 @usableFromInline
 final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
