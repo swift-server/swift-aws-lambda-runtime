@@ -11,7 +11,7 @@ Parameters:
     MaxLength: "16"
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
-  
+
   DBPassword:
     Type: String
     Default: MySecretPassword123!
@@ -20,7 +20,7 @@ Parameters:
     MaxLength: "41"
     NoEcho: true
     ConstraintDescription: Must be at least 8 characters long
-  
+
   DBName:
     Type: String
     Default: servicelifecycle

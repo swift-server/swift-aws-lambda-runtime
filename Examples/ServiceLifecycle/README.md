@@ -188,7 +188,7 @@ sam delete --stack-name servicelifecycle-stack
 
 ### Database connection timeout
 
-The PostgreSQL client may hang if the database is unreachable. This is a known issue with PostgresNIO. Ensure:
+The PostgreSQL client may freeze if the database is unreachable. This is a known issue with PostgresNIO. Ensure:
 1. Database is running and accessible
 2. Security groups are properly configured
 3. Network connectivity is available
