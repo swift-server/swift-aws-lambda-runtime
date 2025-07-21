@@ -62,7 +62,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: "!Select [0, !GetAZs '']"
+      AvailabilityZone: !Select [0, !GetAZs '']
       CidrBlock: 10.0.1.0/24
       MapPublicIpOnLaunch: true
       Tags:
@@ -74,7 +74,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: "!Select [1, !GetAZs '']"
+      AvailabilityZone: !Select [1, !GetAZs '']
       CidrBlock: 10.0.2.0/24
       MapPublicIpOnLaunch: true
       Tags:
@@ -183,40 +183,40 @@ Resources:
           Value: ServiceLifecycle-PostgreSQL
 
   # Lambda function
-  ServiceLifecycleLambda:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/LambdaWithServiceLifecycle/LambdaWithServiceLifecycle.zip
-      Timeout: 60
-      Handler: swift.bootstrap  # ignored by the Swift runtime
-      Runtime: provided.al2
-      MemorySize: 512
-      Architectures:
-        - arm64
-      VpcConfig:
-        SecurityGroupIds:
-          - !Ref LambdaSecurityGroup
-        SubnetIds:
-          - !Ref PublicSubnet1
-          - !Ref PublicSubnet2
-      Environment:
-        Variables:
-          LOG_LEVEL: debug
-          DB_HOST: !GetAtt PostgreSQLDatabase.Endpoint.Address
-          DB_USER: !Ref DBUsername
-          DB_PASSWORD: !Ref DBPassword
-          DB_NAME: !Ref DBName
-      Events:
-        HttpApiEvent:
-          Type: HttpApi
+  # ServiceLifecycleLambda:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/LambdaWithServiceLifecycle/LambdaWithServiceLifecycle.zip
+  #     Timeout: 60
+  #     Handler: swift.bootstrap  # ignored by the Swift runtime
+  #     Runtime: provided.al2
+  #     MemorySize: 512
+  #     Architectures:
+  #       - arm64
+  #     VpcConfig:
+  #       SecurityGroupIds:
+  #         - !Ref LambdaSecurityGroup
+  #       SubnetIds:
+  #         - !Ref PublicSubnet1
+  #         - !Ref PublicSubnet2
+  #     Environment:
+  #       Variables:
+  #         LOG_LEVEL: debug
+  #         DB_HOST: !GetAtt PostgreSQLDatabase.Endpoint.Address
+  #         DB_USER: !Ref DBUsername
+  #         DB_PASSWORD: !Ref DBPassword
+  #         DB_NAME: !Ref DBName
+  #     Events:
+  #       HttpApiEvent:
+  #         Type: HttpApi
 
 Outputs:
   # API Gateway endpoint
-  APIGatewayEndpoint:
-    Description: API Gateway endpoint URL for the Lambda function
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
-    Export:
-      Name: !Sub "${AWS::StackName}-APIEndpoint"
+  # APIGatewayEndpoint:
+  #   Description: API Gateway endpoint URL for the Lambda function
+  #   Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  #   Export:
+  #     Name: !Sub "${AWS::StackName}-APIEndpoint"
 
   # Database connection details
   DatabaseEndpoint:
