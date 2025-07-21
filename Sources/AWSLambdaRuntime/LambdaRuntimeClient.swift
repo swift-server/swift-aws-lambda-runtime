@@ -576,7 +576,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             .connected(_, .sentResponse):
             // The final response has already been sent. The only way to report the unhandled error
             // now is to log it. Normally this library never logs higher than debug, we make an
-            // exception here, as there is no other way of reporting the error otherwise.
+            // exception here, as there is no other way of reporting the error.
             self.logger.error(
                 "Unhandled error after stream has finished",
                 metadata: [
@@ -662,12 +662,12 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
     ) async throws {
 
         if let requestID = sendHeadWithRequestID {
-            // TODO: This feels super expensive. We should be able to make this cheaper. requestIDs are fixed length
+            // TODO: This feels super expensive. We should be able to make this cheaper. requestIDs are fixed length.
             let url = Consts.invocationURLPrefix + "/" + requestID + Consts.postResponseURLSuffix
 
             var headers = self.streamingHeaders
             if await self.delegate.hasStreamingCustomHeaders(isolation: #isolation) {
-                // this headers is required by Function URL when the user sends custom status code or headers
+                // this header is required by Function URL when the user sends custom status code or headers
                 headers.add(name: "Content-Type", value: "application/vnd.awslambda.http-integration-response")
             }
             let httpRequest = HTTPRequestHead(
@@ -692,11 +692,11 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
         context: ChannelHandlerContext
     ) {
         if let requestID = sendHeadWithRequestID {
-            // TODO: This feels quite expensive. We should be able to make this cheaper. requestIDs are fixed length
+            // TODO: This feels quite expensive. We should be able to make this cheaper. requestIDs are fixed length.
             let url = "\(Consts.invocationURLPrefix)/\(requestID)\(Consts.postResponseURLSuffix)"
 
             // If we have less than 6MB, we don't want to use the streaming API. If we have more
-            // than 6MB we must use the streaming mode.
+            // than 6MB, we must use the streaming mode.
             var headers: HTTPHeaders!
             if byteBuffer?.readableBytes ?? 0 < 6_000_000 {
                 headers = self.defaultHeaders
