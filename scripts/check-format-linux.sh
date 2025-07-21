@@ -34,7 +34,7 @@ echo "Downloading check-swift-format.sh"
 curl -s ${CHECK_FORMAT_SCRIPT} > format.sh && chmod u+x format.sh 
 
 echo "Running check-swift-format.sh"
-/usr/local/bin/container run  --rm  -v "$(pwd):/workspace" -w /workspace ${SWIFT_IMAGE} bash -clx "./format.sh"
+/usr/local/bin/docker run  --rm  -v "$(pwd):/workspace" -w /workspace ${SWIFT_IMAGE} bash -clx "./format.sh"
 
 echo "Cleaning up"
 rm format.sh
@@ -46,7 +46,7 @@ echo "Downloading yamllint.yml"
 curl -s ${YAML_LINT} > yamllint.yml
 
 echo "Running yamllint"
-/usr/local/bin/container run  --rm  -v "$(pwd):/workspace" -w /workspace ${YAML_IMAGE} bash -clx "apt-get -qq update && apt-get -qq -y install yamllint && yamllint --strict --config-file /workspace/yamllint.yml .github"
+/usr/local/bin/docker run  --rm  -v "$(pwd):/workspace" -w /workspace ${YAML_IMAGE} bash -clx "apt-get -qq update && apt-get -qq -y install yamllint && yamllint --strict --config-file /workspace/yamllint.yml .github"
 
 echo "Cleaning up"
 rm yamllint.yml

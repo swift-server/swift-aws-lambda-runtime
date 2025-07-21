@@ -7,8 +7,8 @@ Parameters:
     Type: String
     Default: postgres
     Description: Database username
-    MinLength: 1
-    MaxLength: 16
+    MinLength: "1"
+    MaxLength: "16"
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
   
@@ -16,8 +16,8 @@ Parameters:
     Type: String
     Default: MySecretPassword123!
     Description: Database password
-    MinLength: 8
-    MaxLength: 41
+    MinLength: "8"
+    MaxLength: "41"
     NoEcho: true
     ConstraintDescription: Must be at least 8 characters long
   
@@ -25,8 +25,8 @@ Parameters:
     Type: String
     Default: servicelifecycle
     Description: Database name
-    MinLength: 1
-    MaxLength: 64
+    MinLength: "1"
+    MaxLength: "64"
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
 
@@ -62,7 +62,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [0, !GetAZs '']
+      AvailabilityZone: "!Select [0, !GetAZs '']"
       CidrBlock: 10.0.1.0/24
       MapPublicIpOnLaunch: true
       Tags:
@@ -74,7 +74,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [1, !GetAZs '']
+      AvailabilityZone: "!Select [1, !GetAZs '']"
       CidrBlock: 10.0.2.0/24
       MapPublicIpOnLaunch: true
       Tags:
@@ -137,7 +137,7 @@ Resources:
       GroupDescription: Security group for Lambda function
       VpcId: !Ref VPC
       SecurityGroupEgress:
-        - IpProtocol: -1
+        - IpProtocol: "-1"
           CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic
       Tags:
@@ -168,7 +168,7 @@ Resources:
       MasterUsername: !Ref DBUsername
       MasterUserPassword: !Ref DBPassword
       DBName: !Ref DBName
-      AllocatedStorage: 20
+      AllocatedStorage: "20"
       StorageType: gp2
       VPCSecurityGroups:
         - !Ref DatabaseSecurityGroup
