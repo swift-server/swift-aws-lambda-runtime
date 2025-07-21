@@ -51,8 +51,10 @@ public enum Lambda {
                 if logger.logLevel <= .trace,
                     let buffer = bytes.getSlice(at: 0, length: min(bytes.readableBytes, maxPayloadPreviewSize))
                 {
-                        metadata = [
-                        "Event's first bytes": .string(String(buffer: buffer) + (bytes.readableBytes > maxPayloadPreviewSize ? "..." : ""))
+                    metadata = [
+                        "Event's first bytes": .string(
+                            String(buffer: buffer) + (bytes.readableBytes > maxPayloadPreviewSize ? "..." : "")
+                        )
                     ]
                 }
                 logger.trace(
