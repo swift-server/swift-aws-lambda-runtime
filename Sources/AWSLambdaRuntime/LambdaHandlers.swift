@@ -49,7 +49,7 @@ public protocol StreamingLambdaHandler: _Lambda_SendableMetatype {
 public protocol LambdaResponseStreamWriter {
     /// Write a response part into the stream. Bytes written are streamed continually.
     /// - Parameter buffer: The buffer to write.
-    func write(_ buffer: ByteBuffer) async throws
+    func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool) async throws
 
     /// End the response stream and the underlying HTTP response.
     func finish() async throws
@@ -57,15 +57,6 @@ public protocol LambdaResponseStreamWriter {
     /// Write a response part into the stream and then end the stream as well as the underlying HTTP response.
     /// - Parameter buffer: The buffer to write.
     func writeAndFinish(_ buffer: ByteBuffer) async throws
-
-    /// Write a response part into the stream.
-    // In the context of streaming Lambda, this is used to allow the user
-    // to send custom headers or statusCode.
-    /// - Note: user should use the writeStatusAndHeaders(:StreamingLambdaStatusAndHeadersResponse)
-    //          function to write the status code and headers
-    /// - Parameter buffer: The buffer corresponding to the status code and headers to write.
-    func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws
-
 }
 
 /// This handler protocol is intended to serve the most common use-cases.

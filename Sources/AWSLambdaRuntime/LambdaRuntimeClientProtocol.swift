@@ -16,11 +16,10 @@ import NIOCore
 
 @usableFromInline
 package protocol LambdaRuntimeClientResponseStreamWriter: LambdaResponseStreamWriter {
-    func write(_ buffer: ByteBuffer) async throws
+    func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool) async throws
     func finish() async throws
     func writeAndFinish(_ buffer: ByteBuffer) async throws
     func reportError(_ error: any Error) async throws
-    func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws
 }
 
 @usableFromInline

@@ -537,11 +537,12 @@ final class MockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
         let nullBytes: [UInt8] = [0, 0, 0, 0, 0, 0, 0, 0]
         buffer.writeBytes(nullBytes)
 
-        try await self.writeCustomHeader(buffer)
+        try await self.write(buffer, hasCustomHeaders: true)
     }
 
-    func write(_ buffer: ByteBuffer) async throws {
+    func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
         writtenBuffers.append(buffer)
+        self.hasCustomHeaders = hasCustomHeaders
     }
 
     func finish() async throws {
@@ -551,11 +552,6 @@ final class MockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     func writeAndFinish(_ buffer: ByteBuffer) async throws {
         writtenBuffers.append(buffer)
         isFinished = true
-    }
-
-    func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
-        hasCustomHeaders = true
-        try await self.write(buffer)
     }
 }
 
@@ -579,11 +575,12 @@ final class FailingMockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     ) async throws {
         var buffer = ByteBuffer()
         buffer.writeString("{\"statusCode\":200}")
-        try await writeCustomHeader(buffer)
+        try await write(buffer, hasCustomHeaders: true)
     }
 
-    func write(_ buffer: ByteBuffer) async throws {
+    func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
         writeCallCount += 1
+        self.hasCustomHeaders = hasCustomHeaders
 
         if writeCallCount == failOnWriteCall {
             throw TestWriteError()
@@ -601,10 +598,6 @@ final class FailingMockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
         try await finish()
     }
 
-    func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
-        hasCustomHeaders = true
-        try await write(buffer)
-    }
 }
 
 // MARK: - Test Error Types
@@ -693,11 +686,12 @@ final class TrackingLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     ) async throws {
         var buffer = ByteBuffer()
         buffer.writeString("{\"statusCode\":200}")
-        try await writeCustomHeader(buffer)
+        try await write(buffer, hasCustomHeaders: true)
     }
 
-    func write(_ buffer: ByteBuffer) async throws {
+    func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
         writeCallCount += 1
+        self.hasCustomHeaders = hasCustomHeaders
         writtenBuffers.append(buffer)
     }
 
@@ -712,10 +706,6 @@ final class TrackingLambdaResponseStreamWriter: LambdaResponseStreamWriter {
         isFinished = true
     }
 
-    func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
-        hasCustomHeaders = true
-        try await write(buffer)
-    }
 }
 
 /// Mock implementation with custom behavior for integration testing
@@ -732,12 +722,13 @@ final class CustomBehaviorLambdaResponseStreamWriter: LambdaResponseStreamWriter
         customBehaviorTriggered = true
         var buffer = ByteBuffer()
         buffer.writeString("{\"statusCode\":200}")
-        try await writeCustomHeader(buffer)
+        try await write(buffer, hasCustomHeaders: true)
     }
 
-    func write(_ buffer: ByteBuffer) async throws {
+    func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
         // Trigger custom behavior on any write
         customBehaviorTriggered = true
+        self.hasCustomHeaders = hasCustomHeaders
         writtenBuffers.append(buffer)
     }
 
@@ -749,10 +740,5 @@ final class CustomBehaviorLambdaResponseStreamWriter: LambdaResponseStreamWriter
         customBehaviorTriggered = true
         writtenBuffers.append(buffer)
         isFinished = true
-    }
-
-    func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
-        hasCustomHeaders = true
-        try await write(buffer)
     }
 }

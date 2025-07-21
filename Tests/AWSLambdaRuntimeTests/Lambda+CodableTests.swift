@@ -89,18 +89,12 @@ struct JSONTests {
             self._buffer = buffer
         }
 
-        func write(_ buffer: ByteBuffer) async throws {
+        func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
             fatalError("Unexpected call")
         }
 
         func finish() async throws {
             fatalError("Unexpected call")
-        }
-
-        func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
-            // This is a mock, so we don't actually write custom headers.
-            // In a real implementation, this would handle writing custom headers.
-            fatalError("Unexpected call to writeCustomHeader")
         }
     }
 }

@@ -75,7 +75,14 @@ extension LambdaResponseStreamWriter {
         buffer.writeBytes([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
 
         // Write the JSON data and the separator
-        try await writeCustomHeader(buffer)
+        try await self.write(buffer, hasCustomHeaders: true)
+    }
+
+    /// Write a response part into the stream. Bytes written are streamed continually.
+    /// - Parameter buffer: The buffer to write.
+    public func write(_ buffer: ByteBuffer) async throws {
+        // Write the buffer to the response stream
+        try await self.write(buffer, hasCustomHeaders: false)
     }
 }
 

@@ -21,9 +21,6 @@ import Synchronization
 @usableFromInline
 final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
     @usableFromInline
-    var _hasStreamingCustomHeaders = false
-
-    @usableFromInline
     nonisolated let unownedExecutor: UnownedSerialExecutor
 
     @usableFromInline
@@ -47,13 +44,8 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         }
 
         @usableFromInline
-        func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
-            try await self.runtimeClient.writeCustomHeader(buffer)
-        }
-
-        @usableFromInline
-        func write(_ buffer: NIOCore.ByteBuffer) async throws {
-            try await self.runtimeClient.write(buffer)
+        func write(_ buffer: NIOCore.ByteBuffer, hasCustomHeaders: Bool = false) async throws {
+            try await self.runtimeClient.write(buffer, hasCustomHeaders: hasCustomHeaders)
         }
 
         @usableFromInline
@@ -197,11 +189,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         }
     }
 
-    private func writeCustomHeader(_ buffer: NIOCore.ByteBuffer) async throws {
-        _hasStreamingCustomHeaders = true
-        try await self.write(buffer)
-    }
-    private func write(_ buffer: NIOCore.ByteBuffer) async throws {
+    private func write(_ buffer: NIOCore.ByteBuffer, hasCustomHeaders: Bool = false) async throws {
         switch self.lambdaState {
         case .idle, .sentResponse:
             throw LambdaRuntimeError(code: .writeAfterFinishHasBeenSent)
@@ -218,12 +206,15 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             guard case .sendingResponse(requestID) = self.lambdaState else {
                 fatalError("Invalid state: \(self.lambdaState)")
             }
-            return try await handler.writeResponseBodyPart(buffer, requestID: requestID)
+            return try await handler.writeResponseBodyPart(
+                buffer,
+                requestID: requestID,
+                hasCustomHeaders: hasCustomHeaders
+            )
         }
     }
 
     private func writeAndFinish(_ buffer: NIOCore.ByteBuffer?) async throws {
-        _hasStreamingCustomHeaders = false
         switch self.lambdaState {
         case .idle, .sentResponse:
             throw LambdaRuntimeError(code: .finishAfterFinishHasBeenSent)
@@ -444,16 +435,11 @@ extension LambdaRuntimeClient: LambdaChannelHandlerDelegate {
             }
         }
     }
-
-    func hasStreamingCustomHeaders(isolation: isolated (any Actor)? = #isolation) async -> Bool {
-        await self._hasStreamingCustomHeaders
-    }
 }
 
 private protocol LambdaChannelHandlerDelegate {
     func connectionWillClose(channel: any Channel)
     func connectionErrorHappened(_ error: any Error, channel: any Channel)
-    func hasStreamingCustomHeaders(isolation: isolated (any Actor)?) async -> Bool
 }
 
 private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate> {
@@ -596,7 +582,8 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
     func writeResponseBodyPart(
         isolation: isolated (any Actor)? = #isolation,
         _ byteBuffer: ByteBuffer,
-        requestID: String
+        requestID: String,
+        hasCustomHeaders: Bool
     ) async throws {
         switch self.state {
         case .connected(_, .waitingForNextInvocation):
@@ -604,10 +591,20 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
 
         case .connected(let context, .waitingForResponse):
             self.state = .connected(context, .sendingResponse)
-            try await self.sendResponseBodyPart(byteBuffer, sendHeadWithRequestID: requestID, context: context)
+            try await self.sendResponseBodyPart(
+                byteBuffer,
+                sendHeadWithRequestID: requestID,
+                context: context,
+                hasCustomHeaders: hasCustomHeaders
+            )
 
         case .connected(let context, .sendingResponse):
-            try await self.sendResponseBodyPart(byteBuffer, sendHeadWithRequestID: nil, context: context)
+            try await self.sendResponseBodyPart(
+                byteBuffer,
+                sendHeadWithRequestID: nil,
+                context: context,
+                hasCustomHeaders: hasCustomHeaders
+            )
 
         case .connected(_, .idle),
             .connected(_, .sentResponse):
@@ -658,7 +655,8 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
         isolation: isolated (any Actor)? = #isolation,
         _ byteBuffer: ByteBuffer,
         sendHeadWithRequestID: String?,
-        context: ChannelHandlerContext
+        context: ChannelHandlerContext,
+        hasCustomHeaders: Bool
     ) async throws {
 
         if let requestID = sendHeadWithRequestID {
@@ -666,7 +664,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             let url = Consts.invocationURLPrefix + "/" + requestID + Consts.postResponseURLSuffix
 
             var headers = self.streamingHeaders
-            if await self.delegate.hasStreamingCustomHeaders(isolation: #isolation) {
+            if hasCustomHeaders {
                 // this header is required by Function URL when the user sends custom status code or headers
                 headers.add(name: "Content-Type", value: "application/vnd.awslambda.http-integration-response")
             }
@@ -764,7 +762,6 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
     }
 
     private func sendResponseStreamingFailure(error: any Error, context: ChannelHandlerContext) {
-        // TODO: Use base64 here
         let trailers: HTTPHeaders = [
             "Lambda-Runtime-Function-Error-Type": "Unhandled",
             "Lambda-Runtime-Function-Error-Body": "Requires base64",
