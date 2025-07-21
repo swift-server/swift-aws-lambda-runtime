@@ -48,7 +48,7 @@ struct LambdaRunLoopTests {
         }
     }
 
-    let mockClient = LambdaMockClient()
+    let mockClient = MockLambdaClient()
     let mockEchoHandler = MockEchoHandler()
     let failingHandler = FailingHandler()
 
