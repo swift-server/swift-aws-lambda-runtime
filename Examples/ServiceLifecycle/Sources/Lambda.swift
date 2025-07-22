@@ -25,72 +25,104 @@ struct User: Codable {
 @main
 struct LambdaFunction {
 
-    static func main() async throws {
-        try await LambdaFunction().main()
-    }
-
     private let pgClient: PostgresClient
-    private var logger: Logger
-    private init() throws {
-        self.logger = Logger(label: "ServiceLifecycleExample")
+    private let logger: Logger
 
-        self.pgClient = try LambdaFunction.preparePostgresClient(
+    private init() throws {
+        var logger = Logger(label: "ServiceLifecycleExample")
+        logger.logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
+        self.logger = logger
+
+        self.pgClient = try LambdaFunction.createPostgresClient(
             host: Lambda.env("DB_HOST") ?? "localhost",
             user: Lambda.env("DB_USER") ?? "postgres",
             password: Lambda.env("DB_PASSWORD") ?? "secret",
-            dbName: Lambda.env("DB_NAME") ?? "test",
-            logger: logger
+            dbName: Lambda.env("DB_NAME") ?? "servicelifecycle",
+            logger: self.logger
         )
     }
+
+    /// Function entry point when the runtime environment is created
     private func main() async throws {
 
         // Instantiate LambdaRuntime with a handler implementing the business logic of the Lambda function
-        // ok when https://github.com/swift-server/swift-aws-lambda-runtime/pull/523 will be merged
-        //let runtime = LambdaRuntime(logger: logger, body: handler)
-        let runtime = LambdaRuntime(body: handler)
+        let runtime = LambdaRuntime(logger: self.logger, body: self.handler)
 
         /// Use ServiceLifecycle to manage the initialization and termination
         /// of the PGClient together with the LambdaRuntime
         let serviceGroup = ServiceGroup(
-            services: [pgClient, runtime],
+            services: [self.pgClient, runtime],
             gracefulShutdownSignals: [.sigterm],
             cancellationSignals: [.sigint],
-            logger: logger
+            logger: self.logger
         )
+
+        // launch the service groups
+        // this call will return upon termination or cancellation of all the services
         try await serviceGroup.run()
 
         // perform any cleanup here
-
     }
 
+    /// Function handler. This code is called at each function invocation
+    /// input event is ignored in this demo.
     private func handler(event: String, context: LambdaContext) async -> [User] {
-
-        // input event is ignored here
 
         var result: [User] = []
         do {
-            // Use initialized service within the handler
-            // IMPORTANT - CURRENTLY WHEN THERE IS AN ERROR, THIS CALL HANGS WHEN DB IS NOT REACHABLE
-            // https://github.com/vapor/postgres-nio/issues/489
-            // this is why there is a timeout, as suggested by
-            // https://github.com/vapor/postgres-nio/issues/489#issuecomment-2186509773
-            logger.info("Connecting to the database")
+            // IMPORTANT - CURRENTLY, THIS CALL STOPS WHEN DB IS NOT REACHABLE
+            // See: https://github.com/vapor/postgres-nio/issues/489
+            // This is why there is a timeout, as suggested Fabian
+            // See: https://github.com/vapor/postgres-nio/issues/489#issuecomment-2186509773
             result = try await timeout(deadline: .seconds(3)) {
-                let rows = try await pgClient.query("SELECT id, username FROM users")
-                var users: [User] = []
-                for try await (id, username) in rows.decode((Int, String).self) {
-                    logger.info("Adding \(id) : \(username)")
-                    users.append(User(id: id, username: username))
-                }
-                return users
+                // check if table exists
+                try await prepareDatabase()
+
+                // query users
+                return try await self.queryUsers()
             }
         } catch {
-            logger.error("PG Error: \(error)")
+            logger.error("Database Error", metadata: ["cause": "\(String(reflecting: error))"])
         }
+
         return result
     }
 
-    private static func preparePostgresClient(
+    /// Prepare the database
+    /// At first run, this functions checks the database exist and is populated.
+    /// This is useful for demo purposes. In real life, the database will contain data already.
+    private func prepareDatabase() async throws {
+        logger.trace("Preparing to the database")
+        do {
+            // initial creation of the table. This will fails if it already exists
+            try await self.pgClient.query(SQLStatements.createTable)
+            // it did not fail, it means the table is new and empty
+            try await self.pgClient.query(SQLStatements.populateTable)
+        } catch is PSQLError {
+            // when there is a database error, it means the table or values already existed
+            // ignore this error
+        } catch {
+            // propagate other errors
+            throw error
+        }
+    }
+
+    /// Query the database
+    private func queryUsers() async throws -> [User] {
+        logger.trace("Querying to the database")
+        var users: [User] = []
+        let query = SQLStatements.queryAllUsers
+        let rows = try await self.pgClient.query(query)
+        for try await (id, username) in rows.decode((Int, String).self) {
+            self.logger.trace("Adding \(id) : \(username)")
+            users.append(User(id: id, username: username))
+        }
+        return users
+    }
+
+    /// Create a postgres client
+    /// ...TODO
+    private static func createPostgresClient(
         host: String,
         user: String,
         password: String,
@@ -125,6 +157,18 @@ struct LambdaFunction {
 
         return PostgresClient(configuration: config)
     }
+
+    private struct SQLStatements {
+        static let createTable: PostgresQuery =
+            "CREATE TABLE users (id SERIAL PRIMARY KEY, username VARCHAR(50) NOT NULL);"
+        static let populateTable: PostgresQuery = "INSERT INTO users (username) VALUES ('alice'), ('bob'), ('charlie');"
+        static let queryAllUsers: PostgresQuery = "SELECT id, username FROM users"
+    }
+
+    static func main() async throws {
+        try await LambdaFunction().main()
+    }
+
 }
 
 public enum LambdaErrors: Error {
