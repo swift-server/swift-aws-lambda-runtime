@@ -63,7 +63,7 @@ Resources:
       Tags:
         - Key: Name
           Value: ServiceLifecycle-Public-Subnet-2
-          
+
   # Private Subnet 1 for RDS
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
@@ -118,7 +118,7 @@ Resources:
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet2
-      
+
   # NAT Gateway for private subnets
   NatGatewayEIP:
     Type: AWS::EC2::EIP
@@ -217,7 +217,7 @@ Resources:
       Name: !Sub "${AWS::StackName}-db-credentials"
       Description: RDS database credentials
       GenerateSecretString:
-        SecretStringTemplate: '{"username":"postgres"}'  
+        SecretStringTemplate: '{"username":"postgres"}'
         GenerateStringKey: "password"
         PasswordLength: 16
         ExcludeCharacters: '"@/\\'
@@ -232,7 +232,7 @@ Resources:
       ToPort: 5432
       SourceSecurityGroupId: !Ref LambdaSecurityGroup
       Description: Allow PostgreSQL access from Lambda security group
-      
+
   # Security Group for SSM VPC Endpoints
   SSMEndpointSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -249,7 +249,7 @@ Resources:
       Tags:
         - Key: Name
           Value: ServiceLifecycle-SSM-Endpoint-SecurityGroup
-          
+  
   # Add ingress rule to Database Security Group for SSM connections
   DatabaseSecurityGroupIngressSSM:
     Type: AWS::EC2::SecurityGroupIngress
@@ -334,7 +334,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./LambdaWithServiceLifecycle.zip
-      #CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/LambdaWithServiceLifecycle/LambdaWithServiceLifecycle.zip
+      # CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/LambdaWithServiceLifecycle/LambdaWithServiceLifecycle.zip
       Timeout: 60
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2
@@ -406,7 +406,7 @@ Outputs:
       Port: ${PostgreSQLDatabase.Endpoint.Port}
       Database: ${DBName}
       Credentials: Use AWS Secrets Manager to retrieve username and password
-      
+
   # SSM VPC Endpoints
   SSMEndpoints:
     Description: SSM VPC Endpoints for CloudShell access
@@ -414,7 +414,7 @@ Outputs:
       SSM Endpoint: ${SSMEndpoint}
       SSM Messages Endpoint: ${SSMMessagesEndpoint}
       EC2 Messages Endpoint: ${EC2MessagesEndpoint}
-      
+
   # CloudShell Connection Instructions
   CloudShellInstructions:
     Description: Instructions for connecting from CloudShell
