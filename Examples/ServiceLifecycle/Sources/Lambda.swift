@@ -76,9 +76,11 @@ struct LambdaFunction {
             // See: https://github.com/vapor/postgres-nio/issues/489#issuecomment-2186509773
             result = try await timeout(deadline: .seconds(3)) {
                 // check if table exists
+                logger.trace("Checking database")
                 try await prepareDatabase()
 
                 // query users
+                logger.trace("Querying database")
                 return try await self.queryUsers()
             }
         } catch {
@@ -94,13 +96,19 @@ struct LambdaFunction {
     private func prepareDatabase() async throws {
         logger.trace("Preparing to the database")
         do {
+
             // initial creation of the table. This will fails if it already exists
+            logger.trace("Testing if table exists")
             try await self.pgClient.query(SQLStatements.createTable)
+
             // it did not fail, it means the table is new and empty
+            logger.trace("Populate table")
             try await self.pgClient.query(SQLStatements.populateTable)
+
         } catch is PSQLError {
             // when there is a database error, it means the table or values already existed
             // ignore this error
+            logger.trace("Table exists already")
         } catch {
             // propagate other errors
             throw error
@@ -109,12 +117,11 @@ struct LambdaFunction {
 
     /// Query the database
     private func queryUsers() async throws -> [User] {
-        logger.trace("Querying to the database")
         var users: [User] = []
         let query = SQLStatements.queryAllUsers
         let rows = try await self.pgClient.query(query)
         for try await (id, username) in rows.decode((Int, String).self) {
-            self.logger.trace("Adding \(id) : \(username)")
+            self.logger.trace("\(id) : \(username)")
             users.append(User(id: id, username: username))
         }
         return users
