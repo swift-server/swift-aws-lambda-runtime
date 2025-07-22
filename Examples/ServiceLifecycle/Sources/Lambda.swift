@@ -76,6 +76,8 @@ struct LambdaFunction {
             // See: https://github.com/vapor/postgres-nio/issues/489#issuecomment-2186509773
             result = try await timeout(deadline: .seconds(3)) {
                 // check if table exists
+                // TODO: ideally, I want to do this once, after serviceGroup.run() is done 
+                // but before the handler is called
                 logger.trace("Checking database")
                 try await prepareDatabase()
 
@@ -94,7 +96,6 @@ struct LambdaFunction {
     /// At first run, this functions checks the database exist and is populated.
     /// This is useful for demo purposes. In real life, the database will contain data already.
     private func prepareDatabase() async throws {
-        logger.trace("Preparing to the database")
         do {
 
             // initial creation of the table. This will fails if it already exists
