@@ -51,7 +51,7 @@ extension Lambda {
         logger: Logger,
         _ body: sending @escaping () async throws -> Void
     ) async throws {
-        try await LambdaHTTPServer.withLocalServer(
+        _ = try await LambdaHTTPServer.withLocalServer(
             invocationEndpoint: invocationEndpoint,
             logger: logger
         ) {
