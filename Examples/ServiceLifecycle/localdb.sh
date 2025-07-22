@@ -37,8 +37,8 @@ docker start postgres-db
 docker run -it --rm --network host \
   -e PGPASSWORD=secret \
   postgres:latest \
-  psql -h localhost -U postgres -d test
+  psql -h localhost -U postgres -d servicelifecycle
 
 # Alternative: Connect using the postgres-db container itself
-docker exec -it postgres-db psql -U postgres -d test
+docker exec -it postgres-db psql -U postgres -d servicelifecycle
 
