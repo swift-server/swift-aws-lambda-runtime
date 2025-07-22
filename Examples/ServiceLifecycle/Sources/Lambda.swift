@@ -17,6 +17,11 @@ import Logging
 import PostgresNIO
 import ServiceLifecycle
 
+struct User: Codable {
+    let id: Int
+    let username: String
+}
+
 @main
 struct LambdaFunction {
 
@@ -33,7 +38,8 @@ struct LambdaFunction {
             host: Lambda.env("DB_HOST") ?? "localhost",
             user: Lambda.env("DB_USER") ?? "postgres",
             password: Lambda.env("DB_PASSWORD") ?? "secret",
-            dbName: Lambda.env("DB_NAME") ?? "test"
+            dbName: Lambda.env("DB_NAME") ?? "test",
+            logger: logger
         )
     }
     private func main() async throws {
@@ -47,7 +53,7 @@ struct LambdaFunction {
         /// of the PGClient together with the LambdaRuntime
         let serviceGroup = ServiceGroup(
             services: [pgClient, runtime],
-            // gracefulShutdownSignals: [.sigterm, .sigint],  // add SIGINT for CTRL+C in local testing
+            gracefulShutdownSignals: [.sigterm],
             cancellationSignals: [.sigint],
             logger: logger
         )
@@ -57,33 +63,52 @@ struct LambdaFunction {
 
     }
 
-    private func handler(event: String, context: LambdaContext) async -> String {
+    private func handler(event: String, context: LambdaContext) async -> [User] {
+
+        // input event is ignored here
+
+        var result: [User] = []
         do {
             // Use initialized service within the handler
             // IMPORTANT - CURRENTLY WHEN THERE IS AN ERROR, THIS CALL HANGS WHEN DB IS NOT REACHABLE
             // https://github.com/vapor/postgres-nio/issues/489
-            let rows = try await pgClient.query("SELECT id, username FROM users")
-            for try await (id, username) in rows.decode((Int, String).self) {
-                logger.debug("\(id) : \(username)")
+            // this is why there is a timeout, as suggested by
+            // https://github.com/vapor/postgres-nio/issues/489#issuecomment-2186509773
+            logger.info("Connecting to the database")
+            result = try await timeout(deadline: .seconds(3)) {
+                let rows = try await pgClient.query("SELECT id, username FROM users")
+                var users: [User] = []
+                for try await (id, username) in rows.decode((Int, String).self) {
+                    logger.info("Adding \(id) : \(username)")
+                    users.append(User(id: id, username: username))
+                }
+                return users
             }
         } catch {
             logger.error("PG Error: \(error)")
         }
-        return "Done"
+        return result
     }
 
     private static func preparePostgresClient(
         host: String,
         user: String,
         password: String,
-        dbName: String
+        dbName: String,
+        logger: Logger
     ) throws -> PostgresClient {
 
-        var tlsConfig = TLSConfiguration.makeClientConfiguration()
         // Load the root certificate
-        let rootCert = try NIOSSLCertificate.fromPEMBytes(Array(eu_central_1_bundle_pem.utf8))
+        let region = Lambda.env("AWS_REGION") ?? "us-east-1"
+        guard let pem = rootRDSCertificates[region] else {
+            logger.error("No root certificate found for the specified AWS region.")
+            throw LambdaErrors.missingRootCertificateForRegion(region)
+        }
+        let certificatePEM = Array(pem.utf8)
+        let rootCert = try NIOSSLCertificate.fromPEMBytes(certificatePEM)
 
         // Add the root certificate to the TLS configuration
+        var tlsConfig = TLSConfiguration.makeClientConfiguration()
         tlsConfig.trustRoots = .certificates(rootCert)
 
         // Enable full verification
@@ -100,4 +125,8 @@ struct LambdaFunction {
 
         return PostgresClient(configuration: config)
     }
+}
+
+public enum LambdaErrors: Error {
+    case missingRootCertificateForRegion(String)
 }

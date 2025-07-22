@@ -3,23 +3,6 @@ Transform: AWS::Serverless-2016-10-31
 Description: SAM Template for ServiceLifecycle Lambda with PostgreSQL RDS
 
 Parameters:
-  DBUsername:
-    Type: String
-    Default: postgres
-    Description: Database username
-    MinLength: "1"
-    MaxLength: "16"
-    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
-    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
-
-  DBPassword:
-    Type: String
-    Default: MySecretPassword123!
-    Description: Database password
-    MinLength: "8"
-    MaxLength: "41"
-    NoEcho: true
-    ConstraintDescription: Must be at least 8 characters long
 
   DBName:
     Type: String
@@ -31,7 +14,7 @@ Parameters:
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
 
 Resources:
-  # VPC for RDS (required for public access configuration)
+  # VPC for RDS and Lambda
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -57,7 +40,7 @@ Resources:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref VPC
 
-  # Public Subnet 1
+  # Public Subnet 1 for Lambda
   PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -69,7 +52,7 @@ Resources:
         - Key: Name
           Value: ServiceLifecycle-Public-Subnet-1
 
-  # Public Subnet 2 (required for RDS subnet group)
+  # Public Subnet 2 for Lambda
   PublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
@@ -80,6 +63,30 @@ Resources:
       Tags:
         - Key: Name
           Value: ServiceLifecycle-Public-Subnet-2
+          
+  # Private Subnet 1 for RDS
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: 10.0.3.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: ServiceLifecycle-Private-Subnet-1
+
+  # Private Subnet 2 for RDS
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: 10.0.4.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: ServiceLifecycle-Private-Subnet-2
 
   # Route Table for public subnets
   PublicRouteTable:
@@ -111,20 +118,60 @@ Resources:
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet2
+      
+  # NAT Gateway for private subnets
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
 
-  # Security Group for RDS (allows public access)
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: ServiceLifecycle-NAT-Gateway
+
+  # Route Table for private subnets
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: ServiceLifecycle-Private-Routes
+
+  # Route to NAT Gateway
+  DefaultPrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  # Associate private subnets with route table
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet2
+
+  # Security Group for RDS
   DatabaseSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: ServiceLifecycle-DB-SG
-      GroupDescription: Security group for PostgreSQL database - allows public access
+      GroupDescription: Security group for PostgreSQL database
       VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 5432
-          ToPort: 5432
-          CidrIp: 0.0.0.0/0
-          Description: Allow PostgreSQL access from anywhere
       Tags:
         - Key: Name
           Value: ServiceLifecycle-DB-SecurityGroup
@@ -137,9 +184,16 @@ Resources:
       GroupDescription: Security group for Lambda function
       VpcId: !Ref VPC
       SecurityGroupEgress:
-        - IpProtocol: "-1"
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 10.0.0.0/16
+          Description: Allow PostgreSQL access within VPC only
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
           CidrIp: 0.0.0.0/0
-          Description: Allow all outbound traffic
+          Description: Allow HTTPS outbound traffic
       Tags:
         - Key: Name
           Value: ServiceLifecycle-Lambda-SecurityGroup
@@ -150,11 +204,104 @@ Resources:
     Properties:
       DBSubnetGroupDescription: Subnet group for PostgreSQL database
       SubnetIds:
-        - !Ref PublicSubnet1
-        - !Ref PublicSubnet2
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
       Tags:
         - Key: Name
           Value: ServiceLifecycle-DB-SubnetGroup
+
+  # Database credentials stored in Secrets Manager
+  DatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub "${AWS::StackName}-db-credentials"
+      Description: RDS database credentials
+      GenerateSecretString:
+        SecretStringTemplate: '{"username":"postgres"}'  
+        GenerateStringKey: "password"
+        PasswordLength: 16
+        ExcludeCharacters: '"@/\\'
+
+  # Database Security Group Ingress Rule (added separately to avoid circular dependency)
+  DatabaseSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref DatabaseSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref LambdaSecurityGroup
+      Description: Allow PostgreSQL access from Lambda security group
+      
+  # Security Group for SSM VPC Endpoints
+  SSMEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: ServiceLifecycle-SSM-Endpoint-SG
+      GroupDescription: Security group for SSM VPC endpoints
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTPS inbound for SSM connections
+      Tags:
+        - Key: Name
+          Value: ServiceLifecycle-SSM-Endpoint-SecurityGroup
+          
+  # Add ingress rule to Database Security Group for SSM connections
+  DatabaseSecurityGroupIngressSSM:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref DatabaseSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref SSMEndpointSecurityGroup
+      Description: Allow PostgreSQL access from SSM endpoints
+
+  # SSM VPC Endpoint
+  SSMEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+      VpcId: !Ref VPC
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
+
+  # SSM Messages VPC Endpoint
+  SSMMessagesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+      VpcId: !Ref VPC
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
+
+  # EC2 Messages VPC Endpoint
+  EC2MessagesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
+      VpcId: !Ref VPC
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
 
   # PostgreSQL RDS Instance
   PostgreSQLDatabase:
@@ -165,58 +312,59 @@ Resources:
       DBInstanceClass: db.t3.micro
       Engine: postgres
       EngineVersion: '15.7'
-      MasterUsername: !Ref DBUsername
-      MasterUserPassword: !Ref DBPassword
+      MasterUsername: !Join ['', ['{{resolve:secretsmanager:', !Ref DatabaseSecret, ':SecretString:username}}']]
+      MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref DatabaseSecret, ':SecretString:password}}']]
       DBName: !Ref DBName
       AllocatedStorage: "20"
       StorageType: gp2
       VPCSecurityGroups:
         - !Ref DatabaseSecurityGroup
       DBSubnetGroupName: !Ref DatabaseSubnetGroup
-      PubliclyAccessible: true
+      PubliclyAccessible: false
       BackupRetentionPeriod: 0
       MultiAZ: false
-      StorageEncrypted: false
+      StorageEncrypted: true
       DeletionProtection: false
       Tags:
         - Key: Name
           Value: ServiceLifecycle-PostgreSQL
 
   # Lambda function
-  # ServiceLifecycleLambda:
-  #   Type: AWS::Serverless::Function
-  #   Properties:
-  #     CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/LambdaWithServiceLifecycle/LambdaWithServiceLifecycle.zip
-  #     Timeout: 60
-  #     Handler: swift.bootstrap  # ignored by the Swift runtime
-  #     Runtime: provided.al2
-  #     MemorySize: 512
-  #     Architectures:
-  #       - arm64
-  #     VpcConfig:
-  #       SecurityGroupIds:
-  #         - !Ref LambdaSecurityGroup
-  #       SubnetIds:
-  #         - !Ref PublicSubnet1
-  #         - !Ref PublicSubnet2
-  #     Environment:
-  #       Variables:
-  #         LOG_LEVEL: debug
-  #         DB_HOST: !GetAtt PostgreSQLDatabase.Endpoint.Address
-  #         DB_USER: !Ref DBUsername
-  #         DB_PASSWORD: !Ref DBPassword
-  #         DB_NAME: !Ref DBName
-  #     Events:
-  #       HttpApiEvent:
-  #         Type: HttpApi
+  ServiceLifecycleLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./LambdaWithServiceLifecycle.zip
+      #CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/LambdaWithServiceLifecycle/LambdaWithServiceLifecycle.zip
+      Timeout: 60
+      Handler: swift.bootstrap  # ignored by the Swift runtime
+      Runtime: provided.al2
+      MemorySize: 512
+      Architectures:
+        - arm64
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - !Ref PublicSubnet1
+          - !Ref PublicSubnet2
+      Environment:
+        Variables:
+          LOG_LEVEL: debug
+          DB_HOST: !GetAtt PostgreSQLDatabase.Endpoint.Address
+          DB_USER: !Join ['', ['{{resolve:secretsmanager:', !Ref DatabaseSecret, ':SecretString:username}}']]
+          DB_PASSWORD: !Join ['', ['{{resolve:secretsmanager:', !Ref DatabaseSecret, ':SecretString:password}}']]
+          DB_NAME: !Ref DBName
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
 
 Outputs:
   # API Gateway endpoint
-  # APIGatewayEndpoint:
-  #   Description: API Gateway endpoint URL for the Lambda function
-  #   Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
-  #   Export:
-  #     Name: !Sub "${AWS::StackName}-APIEndpoint"
+  APIGatewayEndpoint:
+    Description: API Gateway endpoint URL for the Lambda function
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+    Export:
+      Name: !Sub "${AWS::StackName}-APIEndpoint"
 
   # Database connection details
   DatabaseEndpoint:
@@ -237,24 +385,18 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-DBName"
 
-  DatabaseUsername:
-    Description: PostgreSQL database username
-    Value: !Ref DBUsername
+  DatabaseSecretArn:
+    Description: ARN of the secret containing database credentials
+    Value: !Ref DatabaseSecret
     Export:
-      Name: !Sub "${AWS::StackName}-DBUsername"
+      Name: !Sub "${AWS::StackName}-DBSecretArn"
 
-  DatabasePassword:
-    Description: PostgreSQL database password (use with caution)
-    Value: !Ref DBPassword
+  # Connection string instructions
+  DatabaseConnectionInstructions:
+    Description: Instructions to get the connection string
+    Value: !Sub "Use 'aws secretsmanager get-secret-value --secret-id ${DatabaseSecret}' to retrieve credentials"
     Export:
-      Name: !Sub "${AWS::StackName}-DBPassword"
-
-  # Connection string for easy copy-paste
-  DatabaseConnectionString:
-    Description: Complete PostgreSQL connection string
-    Value: !Sub "postgresql://${DBUsername}:${DBPassword}@${PostgreSQLDatabase.Endpoint.Address}:${PostgreSQLDatabase.Endpoint.Port}/${DBName}"
-    Export:
-      Name: !Sub "${AWS::StackName}-DBConnectionString"
+      Name: !Sub "${AWS::StackName}-DBConnectionInstructions"
 
   # Individual connection details for manual connection
   ConnectionDetails:
@@ -263,5 +405,21 @@ Outputs:
       Hostname: ${PostgreSQLDatabase.Endpoint.Address}
       Port: ${PostgreSQLDatabase.Endpoint.Port}
       Database: ${DBName}
-      Username: ${DBUsername}
-      Password: ${DBPassword}
+      Credentials: Use AWS Secrets Manager to retrieve username and password
+      
+  # SSM VPC Endpoints
+  SSMEndpoints:
+    Description: SSM VPC Endpoints for CloudShell access
+    Value: !Sub |
+      SSM Endpoint: ${SSMEndpoint}
+      SSM Messages Endpoint: ${SSMMessagesEndpoint}
+      EC2 Messages Endpoint: ${EC2MessagesEndpoint}
+      
+  # CloudShell Connection Instructions
+  CloudShellInstructions:
+    Description: Instructions for connecting from CloudShell
+    Value: !Sub |
+      1. Open AWS CloudShell
+      2. Run: aws secretsmanager get-secret-value --secret-id ${DatabaseSecret} --query 'SecretString' --output text
+      3. Parse the JSON output to get username and password
+      4. Connect using: PGPASSWORD=<password> psql -h ${PostgreSQLDatabase.Endpoint.Address} -U <username> -d ${DBName}
