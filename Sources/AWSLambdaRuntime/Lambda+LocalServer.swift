@@ -106,7 +106,7 @@ internal struct LambdaHTTPServer {
         eventLoopGroup: MultiThreadedEventLoopGroup = .singleton,
         logger: Logger,
         _ closure: sending @escaping () async throws -> Result
-    ) async throws -> Result {
+    ) async throws -> Swift.Result<Result, any Error> {
         let channel = try await ServerBootstrap(group: eventLoopGroup)
             .serverChannelOption(.backlog, value: 256)
             .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
@@ -224,7 +224,7 @@ internal struct LambdaHTTPServer {
         }
 
         logger.info("Server shutting down")
-        return try result.get()
+        return result  // ignore errors here, we are shutting down anyway
     }
 
     /// This method handles individual TCP connections
