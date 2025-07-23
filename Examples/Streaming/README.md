@@ -245,11 +245,6 @@ The content of the input `ByteBuffer` depends on how you invoke the function:
 Here is an example of Lambda function URL payload:
 
 ```json
-// This is an example of payload received when
-// the function is invoked by a Lambda function URL.
-// You can use the `FunctionURL` structure provided by the Lambda Event library to decode this
-// See, https://github.com/swift-server/swift-aws-lambda-events/blob/main/Sources/AWSLambdaEvents/FunctionURL.swift
-
 /* 
 {
     "version": "2.0",
