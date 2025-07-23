@@ -6,11 +6,10 @@ This example demonstrates a Swift Lambda function that uses ServiceLifecycle to 
 
 - **Swift Lambda Function**: Uses ServiceLifecycle to manage PostgreSQL client lifecycle, deployed in public subnets
 - **PostgreSQL RDS**: Database instance in private subnets with SSL/TLS encryption
-- **Function URL**: HTTP endpoint to invoke the Lambda function
+- **HTTP API Gateway**: HTTP endpoint to invoke the Lambda function
 - **VPC**: Custom VPC with public subnets for Lambda/NAT Gateway and private subnets for RDS
 - **Security**: SSL/TLS connections with RDS root certificate verification, secure networking with security groups
 - **Timeout Handling**: 3-second timeout mechanism to prevent database connection hangs
-- **VPC Endpoints**: SSM endpoints for administrative access to private resources
 - **Secrets Manager**: Secure credential storage and management
 
 For detailed infrastructure information, see `INFRASTRUCTURE.md`.
@@ -37,6 +36,8 @@ The Lambda function demonstrates several key concepts:
 - SAM CLI installed
 
 ## Database Schema
+
+In the context of this demo, the Lambda function creates the table and populates it with data at first run.
 
 The Lambda function expects a `users` table with the following structure and returns results as `User` objects:
 
@@ -89,7 +90,7 @@ The Lambda function uses the following environment variables for database connec
 
 ## Getting Connection Details
 
-After deployment, get the database connection details:
+After deployment, get the database and API Gateway connection details:
 
 ```bash
 aws cloudformation describe-stacks \
@@ -107,63 +108,25 @@ The output will include:
 
 ## Connecting to the Database
 
-### Important: Database Access
+The database is deployed in **private subnets** and is **not directly accessible** from the internet. This follows AWS security best practices.
 
-The PostgreSQL database is deployed in **private subnets** and is **not directly accessible** from the internet. This follows AWS security best practices.
+You may create an Amazon EC2 instance (virtual machine) in the public subnet of the VPC and use it as a jump host to connect to the database.  The SAM template doesn't create this for you. [This is left as an exercise to the reader](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/LaunchingAndUsingInstances.html).
 
-### From Amazon EC2 (Recommended for testing)
-
-an Amazon EC2 instance deployed in the publci subnet of the VPC can connect through the VPC endpoints configured in the template:
+You can access the database connection details in the output of the SAM template:
 
 ```bash
 # Get the connection details from CloudFormation outputs
 DB_HOST=$(aws cloudformation describe-stacks --stack-name servicelifecycle-stack --query 'Stacks[0].Outputs[?OutputKey==`DatabaseEndpoint`].OutputValue' --output text)
-DB_USER=$(aws cloudformation describe-stacks --stack-name servicelifecycle-stack --query 'Stacks[0].Outputs[?OutputKey==`DatabaseUsername`].OutputValue' --output text)
+DB_PORT=$(aws cloudformation describe-stacks --stack-name servicelifecycle-stack --query 'Stacks[0].Outputs[?OutputKey==`DatabasePort`].OutputValue' --output text)
 DB_NAME=$(aws cloudformation describe-stacks --stack-name servicelifecycle-stack --query 'Stacks[0].Outputs[?OutputKey==`DatabaseName`].OutputValue' --output text)
 
 # Get the database password from Secrets Manager
 SECRET_ARN=$(aws cloudformation describe-stacks --stack-name servicelifecycle-stack --query 'Stacks[0].Outputs[?OutputKey==`DatabaseSecretArn`].OutputValue' --output text)
+DB_USERNAME=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ARN" --query 'SecretString' --output text | jq -r '.username')
 DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ARN" --query 'SecretString' --output text | jq -r '.password')
 
 # Connect with psql on Amazon EC2
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME
-```
-
-### From your local machine
-
-Since the database is in private subnets, you have several options:
-
-#### Option 1: AWS Session Manager Port Forwarding
-```bash
-# Create an EC2 instance in the same VPC (if needed) and use Session Manager
-aws ssm start-session --target <instance-id> --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["5432"],"localPortNumber":["5432"]}'
-```
-
-#### Option 2: SSH Tunnel via Bastion Host
-```bash
-# If you have a bastion host in the public subnet
-ssh -L 5432:$DB_HOST:5432 user@bastion-host
-psql -h localhost -U $DB_USER -d $DB_NAME
-```
-
-## Setting up the Database
-
-Once connected to the database, create the required table and sample data:
-
-```sql
--- Create the users table
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(50) NOT NULL
-);
-
--- Insert sample data
-INSERT INTO users (username) VALUES 
-    ('alice'), 
-    ('bob'), 
-    ('charlie'),
-    ('diana'),
-    ('eve');
+psql -h "$DB_HOST:$DB_PORT" -U "$DB_USER" -d "$DB_NAME"
 ```
 
 ## Testing the Lambda Function
@@ -175,7 +138,7 @@ Get the API Gateway endpoint and test the function:
 API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name servicelifecycle-stack --query 'Stacks[0].Outputs[?OutputKey==`APIGatewayEndpoint`].OutputValue' --output text)
 
 # Test the function
-curl "$API_ENDPOINT"
+curl -X POST -d '"empty string - input is not used"' "$API_ENDPOINT"
 ```
 
 The function will:
@@ -247,17 +210,19 @@ To add support for additional regions:
 
 ## Troubleshooting
 
+when deploying with SAM and the `template.yaml` file included in this example, there shouldn't be any error. However, when you try to create such infarstructure on your own or using different infrastructure as code (IaC) tools, it's likely to iterate before getting everything configured. We compiled a couple of the most common configuration errors and their solution:
+
 ### Lambda can't connect to database
 
 1. Check security groups allow traffic on port 5432 between Lambda and RDS security groups
 2. Verify the Lambda function is deployed in subnets with proper routing to private subnets
 3. Check VPC configuration and routing tables
-4. Verify database credentials are correctly retrieved from Secrets Manager
+4. Verify database credentials are correctly retrieved from Secrets Manager and that the Lambda execution policies have permissions to read the secret.
 5. Ensure the RDS instance is running and healthy
 
 ### Database connection timeout
 
-The PostgreSQL client may hang if the database is unreachable. This example implements a 3-second timeout mechanism to prevent this issue. If the connection or query takes longer than 3 seconds, the function will timeout and return an empty array. Ensure:
+The PostgreSQL client may freeze if the database is unreachable. This example implements a 3-second timeout mechanism to prevent this issue. If the connection or query takes longer than 3 seconds, the function will timeout and return an empty array. Ensure:
 1. Database is running and accessible
 2. Security groups are properly configured
 3. Network connectivity is available

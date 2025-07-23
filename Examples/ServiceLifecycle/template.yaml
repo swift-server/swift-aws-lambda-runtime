@@ -233,76 +233,6 @@ Resources:
       SourceSecurityGroupId: !Ref LambdaSecurityGroup
       Description: Allow PostgreSQL access from Lambda security group
 
-  # Security Group for SSM VPC Endpoints
-  SSMEndpointSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: ServiceLifecycle-SSM-Endpoint-SG
-      GroupDescription: Security group for SSM VPC endpoints
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: 0.0.0.0/0
-          Description: Allow HTTPS inbound for SSM connections
-      Tags:
-        - Key: Name
-          Value: ServiceLifecycle-SSM-Endpoint-SecurityGroup
-  
-  # Add ingress rule to Database Security Group for SSM connections
-  DatabaseSecurityGroupIngressSSM:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref DatabaseSecurityGroup
-      IpProtocol: tcp
-      FromPort: 5432
-      ToPort: 5432
-      SourceSecurityGroupId: !Ref SSMEndpointSecurityGroup
-      Description: Allow PostgreSQL access from SSM endpoints
-
-  # SSM VPC Endpoint
-  SSMEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      VpcEndpointType: Interface
-      PrivateDnsEnabled: true
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
-      VpcId: !Ref VPC
-      SubnetIds:
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
-      SecurityGroupIds:
-        - !Ref SSMEndpointSecurityGroup
-
-  # SSM Messages VPC Endpoint
-  SSMMessagesEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      VpcEndpointType: Interface
-      PrivateDnsEnabled: true
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
-      VpcId: !Ref VPC
-      SubnetIds:
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
-      SecurityGroupIds:
-        - !Ref SSMEndpointSecurityGroup
-
-  # EC2 Messages VPC Endpoint
-  EC2MessagesEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      VpcEndpointType: Interface
-      PrivateDnsEnabled: true
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
-      VpcId: !Ref VPC
-      SubnetIds:
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
-      SecurityGroupIds:
-        - !Ref SSMEndpointSecurityGroup
-
   # PostgreSQL RDS Instance
   PostgreSQLDatabase:
     Type: AWS::RDS::DBInstance
@@ -349,7 +279,7 @@ Resources:
           - !Ref PublicSubnet2
       Environment:
         Variables:
-          LOG_LEVEL: debug
+          LOG_LEVEL: trace
           DB_HOST: !GetAtt PostgreSQLDatabase.Endpoint.Address
           DB_USER: !Join ['', ['{{resolve:secretsmanager:', !Ref DatabaseSecret, ':SecretString:username}}']]
           DB_PASSWORD: !Join ['', ['{{resolve:secretsmanager:', !Ref DatabaseSecret, ':SecretString:password}}']]
@@ -406,20 +336,3 @@ Outputs:
       Port: ${PostgreSQLDatabase.Endpoint.Port}
       Database: ${DBName}
       Credentials: Use AWS Secrets Manager to retrieve username and password
-
-  # SSM VPC Endpoints
-  SSMEndpoints:
-    Description: SSM VPC Endpoints for CloudShell access
-    Value: !Sub |
-      SSM Endpoint: ${SSMEndpoint}
-      SSM Messages Endpoint: ${SSMMessagesEndpoint}
-      EC2 Messages Endpoint: ${EC2MessagesEndpoint}
-
-  # CloudShell Connection Instructions
-  CloudShellInstructions:
-    Description: Instructions for connecting from CloudShell
-    Value: !Sub |
-      1. Open AWS CloudShell
-      2. Run: aws secretsmanager get-secret-value --secret-id ${DatabaseSecret} --query 'SecretString' --output text
-      3. Parse the JSON output to get username and password
-      4. Connect using: PGPASSWORD=<password> psql -h ${PostgreSQLDatabase.Endpoint.Address} -U <username> -d ${DBName}
