@@ -245,7 +245,6 @@ The content of the input `ByteBuffer` depends on how you invoke the function:
 Here is an example of Lambda function URL payload:
 
 ```json
-/* 
 {
     "version": "2.0",
     "routeKey": "$default",
