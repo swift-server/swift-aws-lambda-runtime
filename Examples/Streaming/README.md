@@ -239,15 +239,15 @@ sam delete
 
 The content of the input `ByteBuffer` depends on how you invoke the function:
 
-- when you invoke the function with the [`InvokeWithresponseStream` API](https://docs.aws.amazon.com/lambda/latest/api/API_InvokeWithResponseStream.html) to invoke the function, the function incoming payload is what you pass to the API. You can decode the `ByteBuffer` with a [`JSONDecoder.decode()`](https://developer.apple.com/documentation/foundation/jsondecoder) function call.
-- when you invoke the function through a [Lambda function URL](https://docs.aws.amazon.com/lambda/latest/dg/urls-configuration.html), the incoming `ByteBuffer` contains a payload that gives developer access to the underlying HTTP call. The payload contains information about the HTTP verb used, the headers received, the authentication method and so on. The [AWS documentation contains the details](https://docs.aws.amazon.com/lambda/latest/dg/urls-invocation.html) of the payload. The [Swift lambda Event library](https://github.com/swift-server/swift-aws-lambda-events) contains a [FunctionURL Swift struct definition](https://github.com/swift-server/swift-aws-lambda-events/blob/main/Sources/AWSLambdaEvents/FunctionURL.swift) ready to use in your projects.
+- when you use [`InvokeWithResponseStream` API](https://docs.aws.amazon.com/lambda/latest/api/API_InvokeWithResponseStream.html) to invoke the function, the function incoming payload is what you pass to the API. You can decode the `ByteBuffer` with a [`JSONDecoder.decode()`](https://developer.apple.com/documentation/foundation/jsondecoder) function call.
+- when you invoke the function through a [Lambda function URL](https://docs.aws.amazon.com/lambda/latest/dg/urls-configuration.html), the incoming `ByteBuffer` contains a payload that gives developer access to the underlying HTTP call. The payload contains information about the HTTP verb used, the headers received, the authentication method and so on. The [AWS documentation contains the details](https://docs.aws.amazon.com/lambda/latest/dg/urls-invocation.html) of the payload. The [Swift Lambda Event library](https://github.com/swift-server/swift-aws-lambda-events) contains a [`FunctionURL` type](https://github.com/swift-server/swift-aws-lambda-events/blob/main/Sources/AWSLambdaEvents/FunctionURL.swift) ready to use in your projects.
 
 Here is an example of Lambda function URL payload:
 
-```
+```json
 // This is an example of payload received when
 // the function is invoked by a Lambda function URL.
-// You can use the `FunctionURL`` structure provided by the Lambda Event library to decode this
+// You can use the `FunctionURL` structure provided by the Lambda Event library to decode this
 // See, https://github.com/swift-server/swift-aws-lambda-events/blob/main/Sources/AWSLambdaEvents/FunctionURL.swift
 
 /* 
