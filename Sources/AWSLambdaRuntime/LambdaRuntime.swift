@@ -82,7 +82,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
         // The handler can be non-sendable, we want to ensure we only ever have one copy of it
         let handler = try? self.handlerStorage.get()
         guard let handler else {
-            throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
+            throw LambdaRuntimeError(code: .handlerCanOnlyBeGetOnce)
         }
 
         // are we running inside an AWS Lambda runtime environment ?
