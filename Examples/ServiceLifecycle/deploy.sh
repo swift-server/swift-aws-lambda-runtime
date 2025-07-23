@@ -32,4 +32,5 @@ echo "📋 To get the database connection details, run:"
 echo "aws cloudformation describe-stacks --stack-name servicelifecycle-stack --query 'Stacks[0].Outputs'"
 echo ""
 echo "🧪 To test the Lambda function:"
-echo "curl \$(aws cloudformation describe-stacks --stack-name servicelifecycle-stack --query 'Stacks[0].Outputs[?OutputKey==`APIGatewayEndpoint`].OutputValue' --output text)"
+# shellcheck disable=SC2006
+echo "curl $(aws cloudformation describe-stacks --stack-name servicelifecycle-stack --query 'Stacks[0].Outputs[?OutputKey==`APIGatewayEndpoint`].OutputValue' --output text)"
