@@ -9,7 +9,7 @@ This example demonstrates a Swift Lambda function that uses ServiceLifecycle to 
 - **HTTP API Gateway**: HTTP endpoint to invoke the Lambda function
 - **VPC**: Custom VPC with public subnets for Lambda/NAT Gateway and private subnets for RDS
 - **Security**: SSL/TLS connections with RDS root certificate verification, secure networking with security groups
-- **Timeout Handling**: 3-second timeout mechanism to prevent database connection hangs
+- **Timeout Handling**: 3-second timeout mechanism to prevent database connection freeze
 - **Secrets Manager**: Secure credential storage and management
 
 For detailed infrastructure information, see `INFRASTRUCTURE.md`.
@@ -22,7 +22,7 @@ The Lambda function demonstrates several key concepts:
 
 2. **SSL/TLS Security**: Connections to RDS use SSL/TLS with full certificate verification using region-specific RDS root certificates.
 
-3. **Timeout Protection**: A custom timeout mechanism prevents the function from hanging when the database is unreachable (addresses PostgresNIO issue #489).
+3. **Timeout Protection**: A custom timeout mechanism prevents the function from freezing when the database is unreachable (addresses PostgresNIO issue #489).
 
 4. **Structured Response**: Returns a JSON array of `User` objects, making it suitable for API integration.
 
@@ -143,7 +143,7 @@ curl "$API_ENDPOINT"
 
 The function will:
 1. Connect to the PostgreSQL database using SSL/TLS with RDS root certificate verification
-2. Query the `users` table with a 3-second timeout to prevent hanging
+2. Query the `users` table with a 3-second timeout to prevent freezing
 3. Log the results for each user found
 4. Return a JSON array of `User` objects with `id` and `username` fields
 
@@ -243,7 +243,7 @@ Ensure you have:
 - `samconfig.toml`: SAM configuration file
 - `deploy.sh`: Deployment script
 - `Sources/Lambda.swift`: Swift Lambda function code with ServiceLifecycle integration
-- `Sources/Timeout.swift`: Timeout utility to prevent database connection hangs
+- `Sources/Timeout.swift`: Timeout utility to prevent database connection freezes
 - `Sources/RDSCertificates/RootRDSCert.swift`: RDS root certificate management
 - `Sources/RDSCertificates/us-east-1.swift`: US East 1 region root certificate
 - `Sources/RDSCertificates/eu-central-1.swift`: EU Central 1 region root certificate
