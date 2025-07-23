@@ -254,6 +254,56 @@ try await runtime.run()
 
 You can learn how to deploy and invoke this function in [the streaming example README file](Examples/Streaming/README.md).
 
+### Lambda Streaming Response with JSON Input
+
+The Swift AWS Lambda Runtime also provides a convenient interface that combines the benefits of JSON input decoding with response streaming capabilities. This is ideal when you want to receive strongly-typed JSON events while maintaining the ability to stream responses and execute background work.
+
+Here is an example of a function that receives a JSON event and streams multiple responses:
+
+```swift
+import AWSLambdaRuntime
+import NIOCore
+
+// Define your input event structure
+struct StreamingRequest: Decodable {
+    let count: Int
+    let message: String
+    let delayMs: Int?
+}
+
+// Use the new streaming handler with JSON decoding
+let runtime = LambdaRuntime { (event: StreamingRequest, responseWriter, context: LambdaContext) in
+    context.logger.info("Received request to send \(event.count) messages")
+    
+    // Stream the messages
+    for i in 1...event.count {
+        let response = "Message \(i)/\(event.count): \(event.message)\n"
+        try await responseWriter.write(ByteBuffer(string: response))
+        
+        // Optional delay between messages
+        if let delay = event.delayMs, delay > 0 {
+            try await Task.sleep(for: .milliseconds(delay))
+        }
+    }
+    
+    // Finish the stream
+    try await responseWriter.finish()
+    
+    // Optional: Execute background work after response is sent
+    context.logger.info("Background work: processing completed")
+}
+
+try await runtime.run()
+```
+
+This interface provides:
+- **Type-safe JSON input**: Automatic decoding of JSON events into Swift structs
+- **Streaming responses**: Full control over when and how to stream data back to clients  
+- **Background work support**: Ability to execute code after the response stream is finished
+- **Familiar API**: Uses the same closure-based pattern as regular Lambda handlers
+
+You can learn how to deploy and invoke this function in [the streaming codable example README file](Examples/StreamingFromEvent/README.md).
+
 ### Integration with AWS Services
 
  Most Lambda functions are triggered by events originating in other AWS services such as `Amazon SNS`, `Amazon SQS` or `AWS APIGateway`.
