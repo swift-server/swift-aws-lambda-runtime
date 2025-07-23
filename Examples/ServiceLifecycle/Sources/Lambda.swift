@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AWSLambdaRuntime
 import AWSLambdaEvents
+import AWSLambdaRuntime
 import Logging
 import PostgresNIO
 import ServiceLifecycle
@@ -77,7 +77,7 @@ struct LambdaFunction {
             // See: https://github.com/vapor/postgres-nio/issues/489#issuecomment-2186509773
             result = try await timeout(deadline: .seconds(3)) {
                 // check if table exists
-                // TODO: ideally, I want to do this once, after serviceGroup.run() is done 
+                // TODO: ideally, I want to do this once, after serviceGroup.run() is done
                 // but before the handler is called
                 logger.trace("Checking database")
                 try await prepareDatabase()
