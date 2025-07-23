@@ -34,6 +34,20 @@ swift package archive --allow-network-connections docker
 If there is no error, there is a ZIP file ready to deploy. 
 The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/StreamingNumbers/StreamingNumbers.zip`
 
+## Test locally
+
+You can test the function locally before deploying:
+
+```bash
+swift run 
+
+# In another terminal, test with curl:
+curl -v \
+  --header "Content-Type: application/json" \
+  --data '"this is not used"' \
+  http://127.0.0.1:7000/invoke
+```
+
 ## Deploy with the AWS CLI
 
 Here is how to deploy using the `aws` command line.
