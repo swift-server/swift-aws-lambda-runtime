@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import AWSLambdaRuntime
+import AWSLambdaEvents
 import Logging
 import PostgresNIO
 import ServiceLifecycle
@@ -66,7 +67,7 @@ struct LambdaFunction {
 
     /// Function handler. This code is called at each function invocation
     /// input event is ignored in this demo.
-    private func handler(event: String, context: LambdaContext) async -> [User] {
+    private func handler(event: APIGatewayV2Request, context: LambdaContext) async throws -> APIGatewayV2Response {
 
         var result: [User] = []
         do {
@@ -89,7 +90,11 @@ struct LambdaFunction {
             logger.error("Database Error", metadata: ["cause": "\(String(reflecting: error))"])
         }
 
-        return result
+        return try .init(
+            statusCode: .ok,
+            headers: ["content-type": "application/json"],
+            encodableBody: result
+        )
     }
 
     /// Prepare the database

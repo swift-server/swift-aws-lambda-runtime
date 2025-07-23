@@ -138,7 +138,7 @@ Get the API Gateway endpoint and test the function:
 API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name servicelifecycle-stack --query 'Stacks[0].Outputs[?OutputKey==`APIGatewayEndpoint`].OutputValue' --output text)
 
 # Test the function
-curl -X POST -d '"empty string - input is not used"' "$API_ENDPOINT"
+curl "$API_ENDPOINT"
 ```
 
 The function will:
