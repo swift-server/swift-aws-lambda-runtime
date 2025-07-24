@@ -598,6 +598,9 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             )
 
         case .connected(let context, .sendingResponse):
+
+            precondition(!hasCustomHeaders, "Programming error: Custom headers should not be sent in this state")
+
             try await self.sendResponseBodyPart(
                 byteBuffer,
                 sendHeadWithRequestID: nil,
