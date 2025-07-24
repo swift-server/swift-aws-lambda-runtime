@@ -14,6 +14,7 @@
 
 import Logging
 import NIOCore
+import NIOHTTP1
 import NIOPosix
 import Testing
 
@@ -84,6 +85,104 @@ struct LambdaRuntimeClientTests {
                     try await writer.write(ByteBuffer(string: "o"))
                     try await writer.finish()
                 }
+            }
+        }
+    }
+
+    struct StreamingBehavior: LambdaServerBehavior {
+        let requestId = UUID().uuidString
+        let event = "hello"
+        let customHeaders: Bool
+
+        init(customHeaders: Bool = false) {
+            self.customHeaders = customHeaders
+        }
+
+        func getInvocation() -> GetInvocationResult {
+            .success((self.requestId, self.event))
+        }
+
+        func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+            #expect(self.requestId == requestId)
+            return .success(())
+        }
+
+        mutating func captureHeaders(_ headers: HTTPHeaders) {
+            if customHeaders {
+                #expect(headers["Content-Type"].first == "application/vnd.awslambda.http-integration-response")
+            }
+            #expect(headers["Lambda-Runtime-Function-Response-Mode"].first == "streaming")
+            #expect(headers["Trailer"].first?.contains("Lambda-Runtime-Function-Error-Type") == true)
+        }
+
+        func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+            Issue.record("should not report error")
+            return .failure(.internalServerError)
+        }
+
+        func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+            Issue.record("should not report init error")
+            return .failure(.internalServerError)
+        }
+    }
+
+    @Test
+    func testStreamingResponseHeaders() async throws {
+
+        let behavior = StreamingBehavior()
+        try await withMockServer(behaviour: behavior) { port in
+            let configuration = LambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: port)
+
+            try await LambdaRuntimeClient.withRuntimeClient(
+                configuration: configuration,
+                eventLoop: NIOSingletons.posixEventLoopGroup.next(),
+                logger: self.logger
+            ) { runtimeClient in
+                let (_, writer) = try await runtimeClient.nextInvocation()
+
+                // Start streaming response
+                try await writer.write(ByteBuffer(string: "streaming"))
+
+                // Complete the response
+                try await writer.finish()
+
+                // Verify headers were set correctly for streaming mode
+                // this is done in the behavior's captureHeaders method
+            }
+        }
+    }
+
+    @Test
+    func testStreamingResponseHeadersWithCustomStatus() async throws {
+
+        let behavior = StreamingBehavior(customHeaders: true)
+        try await withMockServer(behaviour: behavior) { port in
+            let configuration = LambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: port)
+
+            try await LambdaRuntimeClient.withRuntimeClient(
+                configuration: configuration,
+                eventLoop: NIOSingletons.posixEventLoopGroup.next(),
+                logger: self.logger
+            ) { runtimeClient in
+                let (_, writer) = try await runtimeClient.nextInvocation()
+
+                try await writer.writeStatusAndHeaders(
+                    StreamingLambdaStatusAndHeadersResponse(
+                        statusCode: 418,  // I'm a tea pot
+                        headers: [
+                            "Content-Type": "text/plain",
+                            "x-my-custom-header": "streaming-example",
+                        ]
+                    )
+                )
+                // Start streaming response
+                try await writer.write(ByteBuffer(string: "streaming"))
+
+                // Complete the response
+                try await writer.finish()
+
+                // Verify headers were set correctly for streaming mode
+                // this is done in the behavior's captureHeaders method
             }
         }
     }

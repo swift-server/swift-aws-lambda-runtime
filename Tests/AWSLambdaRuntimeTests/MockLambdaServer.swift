@@ -196,7 +196,12 @@ final class HTTPHandler: ChannelInboundHandler {
             guard let requestId = request.head.uri.split(separator: "/").dropFirst(3).first else {
                 return self.writeResponse(context: context, status: .badRequest)
             }
-            switch self.behavior.processResponse(requestId: String(requestId), response: requestBody) {
+
+            // Capture headers for testing
+            var behavior = self.behavior
+            behavior.captureHeaders(request.head.headers)
+
+            switch behavior.processResponse(requestId: String(requestId), response: requestBody) {
             case .success:
                 responseStatus = .accepted
             case .failure(let error):
@@ -269,6 +274,16 @@ protocol LambdaServerBehavior: Sendable {
     func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError>
     func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError>
     func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError>
+
+    // Optional method to capture headers for testing
+    mutating func captureHeaders(_ headers: HTTPHeaders)
+}
+
+// Default implementation for backward compatibility
+extension LambdaServerBehavior {
+    mutating func captureHeaders(_ headers: HTTPHeaders) {
+        // Default implementation does nothing
+    }
 }
 
 typealias GetInvocationResult = Result<(String, String), GetWorkError>

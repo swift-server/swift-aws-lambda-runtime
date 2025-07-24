@@ -43,8 +43,8 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         }
 
         @usableFromInline
-        func write(_ buffer: NIOCore.ByteBuffer) async throws {
-            try await self.runtimeClient.write(buffer)
+        func write(_ buffer: NIOCore.ByteBuffer, hasCustomHeaders: Bool = false) async throws {
+            try await self.runtimeClient.write(buffer, hasCustomHeaders: hasCustomHeaders)
         }
 
         @usableFromInline
@@ -188,7 +188,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         }
     }
 
-    private func write(_ buffer: NIOCore.ByteBuffer) async throws {
+    private func write(_ buffer: NIOCore.ByteBuffer, hasCustomHeaders: Bool = false) async throws {
         switch self.lambdaState {
         case .idle, .sentResponse:
             throw LambdaRuntimeError(code: .writeAfterFinishHasBeenSent)
@@ -205,7 +205,11 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             guard case .sendingResponse(requestID) = self.lambdaState else {
                 fatalError("Invalid state: \(self.lambdaState)")
             }
-            return try await handler.writeResponseBodyPart(buffer, requestID: requestID)
+            return try await handler.writeResponseBodyPart(
+                buffer,
+                requestID: requestID,
+                hasCustomHeaders: hasCustomHeaders
+            )
         }
     }
 
@@ -330,7 +334,11 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                         NIOHTTPClientResponseAggregator(maxContentLength: 6 * 1024 * 1024)
                     )
                     try channel.pipeline.syncOperations.addHandler(
-                        LambdaChannelHandler(delegate: self, logger: self.logger, configuration: self.configuration)
+                        LambdaChannelHandler(
+                            delegate: self,
+                            logger: self.logger,
+                            configuration: self.configuration
+                        )
                     )
                     return channel.eventLoop.makeSucceededFuture(())
                 } catch {
@@ -425,7 +433,6 @@ extension LambdaRuntimeClient: LambdaChannelHandlerDelegate {
 
             }
         }
-
     }
 }
 
@@ -467,10 +474,16 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
     let defaultHeaders: HTTPHeaders
     /// These headers must be sent along an invocation or initialization error report
     let errorHeaders: HTTPHeaders
-    /// These headers must be sent when streaming a response
+    /// These headers must be sent when streaming a large response
+    let largeResponseHeaders: HTTPHeaders
+    /// These headers must be sent when the handler streams its response
     let streamingHeaders: HTTPHeaders
 
-    init(delegate: Delegate, logger: Logger, configuration: LambdaRuntimeClient.Configuration) {
+    init(
+        delegate: Delegate,
+        logger: Logger,
+        configuration: LambdaRuntimeClient.Configuration
+    ) {
         self.delegate = delegate
         self.logger = logger
         self.configuration = configuration
@@ -483,10 +496,22 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             "user-agent": .userAgent,
             "lambda-runtime-function-error-type": "Unhandled",
         ]
-        self.streamingHeaders = [
+        self.largeResponseHeaders = [
             "host": "\(self.configuration.ip):\(self.configuration.port)",
             "user-agent": .userAgent,
             "transfer-encoding": "chunked",
+        ]
+        // https://docs.aws.amazon.com/lambda/latest/dg/runtimes-custom.html#runtimes-custom-response-streaming
+        // These are the headers returned by the Runtime to the Lambda Data plane.
+        // These are not the headers the Lambda Data plane sends to the caller of the Lambda function
+        // The developer of the function can set the caller's headers in the handler code.
+        self.streamingHeaders = [
+            "host": "\(self.configuration.ip):\(self.configuration.port)",
+            "user-agent": .userAgent,
+            "Lambda-Runtime-Function-Response-Mode": "streaming",
+            // these are not used by this runtime client at the moment
+            // FIXME: the eror handling should inject these headers in the streamed response to report mid-stream errors
+            "Trailer": "Lambda-Runtime-Function-Error-Type, Lambda-Runtime-Function-Error-Body",
         ]
     }
 
@@ -536,7 +561,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             .connected(_, .sentResponse):
             // The final response has already been sent. The only way to report the unhandled error
             // now is to log it. Normally this library never logs higher than debug, we make an
-            // exception here, as there is no other way of reporting the error otherwise.
+            // exception here, as there is no other way of reporting the error.
             self.logger.error(
                 "Unhandled error after stream has finished",
                 metadata: [
@@ -556,7 +581,8 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
     func writeResponseBodyPart(
         isolation: isolated (any Actor)? = #isolation,
         _ byteBuffer: ByteBuffer,
-        requestID: String
+        requestID: String,
+        hasCustomHeaders: Bool
     ) async throws {
         switch self.state {
         case .connected(_, .waitingForNextInvocation):
@@ -564,10 +590,23 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
 
         case .connected(let context, .waitingForResponse):
             self.state = .connected(context, .sendingResponse)
-            try await self.sendResponseBodyPart(byteBuffer, sendHeadWithRequestID: requestID, context: context)
+            try await self.sendResponseBodyPart(
+                byteBuffer,
+                sendHeadWithRequestID: requestID,
+                context: context,
+                hasCustomHeaders: hasCustomHeaders
+            )
 
         case .connected(let context, .sendingResponse):
-            try await self.sendResponseBodyPart(byteBuffer, sendHeadWithRequestID: nil, context: context)
+
+            precondition(!hasCustomHeaders, "Programming error: Custom headers should not be sent in this state")
+
+            try await self.sendResponseBodyPart(
+                byteBuffer,
+                sendHeadWithRequestID: nil,
+                context: context,
+                hasCustomHeaders: hasCustomHeaders
+            )
 
         case .connected(_, .idle),
             .connected(_, .sentResponse):
@@ -618,18 +657,24 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
         isolation: isolated (any Actor)? = #isolation,
         _ byteBuffer: ByteBuffer,
         sendHeadWithRequestID: String?,
-        context: ChannelHandlerContext
+        context: ChannelHandlerContext,
+        hasCustomHeaders: Bool
     ) async throws {
 
         if let requestID = sendHeadWithRequestID {
-            // TODO: This feels super expensive. We should be able to make this cheaper. requestIDs are fixed length
+            // TODO: This feels super expensive. We should be able to make this cheaper. requestIDs are fixed length.
             let url = Consts.invocationURLPrefix + "/" + requestID + Consts.postResponseURLSuffix
 
+            var headers = self.streamingHeaders
+            if hasCustomHeaders {
+                // this header is required by Function URL when the user sends custom status code or headers
+                headers.add(name: "Content-Type", value: "application/vnd.awslambda.http-integration-response")
+            }
             let httpRequest = HTTPRequestHead(
                 version: .http1_1,
                 method: .POST,
                 uri: url,
-                headers: self.streamingHeaders
+                headers: headers
             )
 
             context.write(self.wrapOutboundOut(.head(httpRequest)), promise: nil)
@@ -647,22 +692,18 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
         context: ChannelHandlerContext
     ) {
         if let requestID = sendHeadWithRequestID {
-            // TODO: This feels quite expensive. We should be able to make this cheaper. requestIDs are fixed length
+            // TODO: This feels quite expensive. We should be able to make this cheaper. requestIDs are fixed length.
             let url = "\(Consts.invocationURLPrefix)/\(requestID)\(Consts.postResponseURLSuffix)"
 
             // If we have less than 6MB, we don't want to use the streaming API. If we have more
-            // than 6MB we must use the streaming mode.
-            let headers: HTTPHeaders =
-                if byteBuffer?.readableBytes ?? 0 < 6_000_000 {
-                    [
-                        "host": "\(self.configuration.ip):\(self.configuration.port)",
-                        "user-agent": .userAgent,
-                        "content-length": "\(byteBuffer?.readableBytes ?? 0)",
-                    ]
-                } else {
-                    self.streamingHeaders
-                }
-
+            // than 6MB, we must use the streaming mode.
+            var headers: HTTPHeaders!
+            if byteBuffer?.readableBytes ?? 0 < 6_000_000 {
+                headers = self.defaultHeaders
+                headers.add(name: "content-length", value: "\(byteBuffer?.readableBytes ?? 0)")
+            } else {
+                headers = self.largeResponseHeaders
+            }
             let httpRequest = HTTPRequestHead(
                 version: .http1_1,
                 method: .POST,
@@ -723,7 +764,6 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
     }
 
     private func sendResponseStreamingFailure(error: any Error, context: ChannelHandlerContext) {
-        // TODO: Use base64 here
         let trailers: HTTPHeaders = [
             "Lambda-Runtime-Function-Error-Type": "Unhandled",
             "Lambda-Runtime-Function-Error-Body": "Requires base64",

@@ -49,7 +49,7 @@ public protocol StreamingLambdaHandler: _Lambda_SendableMetatype {
 public protocol LambdaResponseStreamWriter {
     /// Write a response part into the stream. Bytes written are streamed continually.
     /// - Parameter buffer: The buffer to write.
-    func write(_ buffer: ByteBuffer) async throws
+    func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool) async throws
 
     /// End the response stream and the underlying HTTP response.
     func finish() async throws
