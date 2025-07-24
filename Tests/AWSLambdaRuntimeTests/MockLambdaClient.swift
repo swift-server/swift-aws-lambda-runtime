@@ -29,8 +29,8 @@ struct MockLambdaWriter: LambdaRuntimeClientResponseStreamWriter {
         self.underlying = underlying
     }
 
-    func write(_ buffer: ByteBuffer) async throws {
-        try await self.underlying.write(buffer)
+    func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
+        try await self.underlying.write(buffer, hasCustomHeaders: hasCustomHeaders)
     }
 
     func finish() async throws {
@@ -155,7 +155,7 @@ final actor MockLambdaClient: LambdaRuntimeClientProtocol {
             }
         }
 
-        mutating func writeResult(buffer: ByteBuffer) -> ResultAction {
+        mutating func writeResult(buffer: ByteBuffer, hasCustomHeaders: Bool = false) -> ResultAction {
             switch self.state {
             case .handlerIsProcessing(var accumulatedResponse, let eventProcessedHandler):
                 accumulatedResponse.append(buffer)
@@ -276,8 +276,8 @@ final actor MockLambdaClient: LambdaRuntimeClientProtocol {
         }
     }
 
-    func write(_ buffer: ByteBuffer) async throws {
-        switch self.stateMachine.writeResult(buffer: buffer) {
+    func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
+        switch self.stateMachine.writeResult(buffer: buffer, hasCustomHeaders: hasCustomHeaders) {
         case .readyForMore:
             break
         case .fail(let error):

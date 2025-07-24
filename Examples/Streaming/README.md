@@ -13,15 +13,55 @@ The sample code creates a `SendNumbersWithPause` struct that conforms to the `St
 
 The `handle(...)` method of this protocol receives incoming events as a Swift NIO `ByteBuffer` and returns the output as a `ByteBuffer`.
 
-The response is streamed through the `LambdaResponseStreamWriter`, which is passed as an argument in the `handle` function.  The code calls the `write(_:)` function of the `LambdaResponseStreamWriter` with partial data repeatedly written before
-finally closing the response stream by calling `finish()`. Developers can also choose to return the entire output and not
-stream the response by calling `writeAndFinish(_:)`.
+The response is streamed through the `LambdaResponseStreamWriter`, which is passed as an argument in the `handle` function. 
+
+### Setting HTTP Status Code and Headers
+
+Before streaming the response body, you can set the HTTP status code and headers using the `writeStatusAndHeaders(_:)` method:
+
+```swift
+try await responseWriter.writeStatusAndHeaders(
+    StreamingLambdaStatusAndHeadersResponse(
+        statusCode: 200,
+        headers: [
+            "Content-Type": "text/plain",
+            "x-my-custom-header": "streaming-example"
+        ]
+    )
+)
+```
+
+The `StreamingLambdaStatusAndHeadersResponse` structure allows you to specify:
+- **statusCode**: HTTP status code (e.g., 200, 404, 500)
+- **headers**: Dictionary of single-value HTTP headers (optional)
+
+### Streaming the Response Body
+
+After setting headers, you can stream the response body by calling the `write(_:)` function of the `LambdaResponseStreamWriter` with partial data repeatedly before finally closing the response stream by calling `finish()`. Developers can also choose to return the entire output and not stream the response by calling `writeAndFinish(_:)`.
+
+```swift
+// Stream data in chunks
+for i in 1...3 {
+    try await responseWriter.write(ByteBuffer(string: "Number: \(i)\n"))
+    try await Task.sleep(for: .milliseconds(1000))
+}
+
+// Close the response stream
+try await responseWriter.finish()
+```
 
 An error is thrown if `finish()` is called multiple times or if it is called after having called `writeAndFinish(_:)`.
 
+### Example Usage Patterns
+
+The example includes two handler implementations:
+
+1. **SendNumbersWithPause**: Demonstrates basic streaming with headers, sending numbers with delays
+2. **ConditionalStreamingHandler**: Shows how to handle different response scenarios, including error responses with appropriate status codes
+
 The `handle(...)` method is marked as `mutating` to allow handlers to be implemented with a `struct`.
 
-Once the struct is created and the `handle(...)` method is defined, the sample code creates a `LambdaRuntime` struct and initializes it with the handler just created.  Then, the code calls `run()` to start the interaction with the AWS Lambda control plane.
+Once the struct is created and the `handle(...)` method is defined, the sample code creates a `LambdaRuntime` struct and initializes it with the handler just created. Then, the code calls `run()` to start the interaction with the AWS Lambda control plane.
 
 ## Build & Package 
 
@@ -68,7 +108,7 @@ aws lambda create-function \
 ```
 
 > [!IMPORTANT] 
-> The timeout value must be bigger than the time it takes for your function to stream its output. Otherwise, the Lambda control plane will terminate the execution environment before your code has a chance to finish writing the stream. Here, the sample function stream responses during 10 seconds and we set the timeout for 15 seconds.
+> The timeout value must be bigger than the time it takes for your function to stream its output. Otherwise, the Lambda control plane will terminate the execution environment before your code has a chance to finish writing the stream. Here, the sample function stream responses during 3 seconds and we set the timeout for 5 seconds.
 
 The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
 
@@ -139,13 +179,7 @@ This should output the following result, with a one-second delay between each nu
 1
 2
 3
-4
-5
-6
-7
-8
-9
-10
+Streaming complete!
 ```
 
 ### Undeploy

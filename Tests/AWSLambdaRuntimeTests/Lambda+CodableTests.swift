@@ -89,7 +89,7 @@ struct JSONTests {
             self._buffer = buffer
         }
 
-        func write(_ buffer: ByteBuffer) async throws {
+        func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
             fatalError("Unexpected call")
         }
 
