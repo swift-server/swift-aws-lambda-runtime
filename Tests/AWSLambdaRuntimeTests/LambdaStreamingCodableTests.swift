@@ -47,7 +47,7 @@ struct LambdaStreamingFromEventTests {
         private var isFinished = false
         private var writeAndFinishCalled = false
 
-        func write(_ buffer: ByteBuffer) async throws {
+        func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
             guard !isFinished else {
                 throw MockError.writeAfterFinish
             }
