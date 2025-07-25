@@ -224,7 +224,10 @@ internal struct LambdaHTTPServer {
         }
 
         logger.info("Server shutting down")
-        return result  // ignore errors here, we are shutting down anyway
+        if case .failure(let error) = result {
+            logger.error("Error during server shutdown: \(error)")
+        }        
+        return result 
     }
 
     /// This method handles individual TCP connections
