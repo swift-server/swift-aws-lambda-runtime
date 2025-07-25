@@ -51,7 +51,7 @@ extension Lambda {
         logger: Logger,
         _ body: sending @escaping () async throws -> Void
     ) async throws {
-        try await LambdaHTTPServer.withLocalServer(
+        _ = try await LambdaHTTPServer.withLocalServer(
             invocationEndpoint: invocationEndpoint,
             logger: logger
         ) {
@@ -106,7 +106,7 @@ internal struct LambdaHTTPServer {
         eventLoopGroup: MultiThreadedEventLoopGroup = .singleton,
         logger: Logger,
         _ closure: sending @escaping () async throws -> Result
-    ) async throws -> Result {
+    ) async throws -> Swift.Result<Result, any Error> {
         let channel = try await ServerBootstrap(group: eventLoopGroup)
             .serverChannelOption(.backlog, value: 256)
             .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
@@ -224,7 +224,10 @@ internal struct LambdaHTTPServer {
         }
 
         logger.info("Server shutting down")
-        return try result.get()
+        if case .failure(let error) = result {
+            logger.error("Error during server shutdown: \(error)")
+        }
+        return result
     }
 
     /// This method handles individual TCP connections
