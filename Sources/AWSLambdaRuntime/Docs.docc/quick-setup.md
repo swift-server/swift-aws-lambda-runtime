@@ -10,7 +10,7 @@ For a detailed step-by-step instruction, follow the tutorial instead.
 
 For the impatient, keep reading.
 
-## High-level instructions
+### High-level instructions
 
 Follow these 6 steps to write, test, and deploy a Lambda function in Swift.
 
