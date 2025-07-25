@@ -1,18 +1,18 @@
-# ServiceLifecycle Lambda with PostgreSQL
+# A swift Service Lifecycle Lambda function with a managed PostgreSQL database
 
-This example demonstrates a Swift Lambda function that uses ServiceLifecycle to manage a PostgreSQL connection. The function connects to an RDS PostgreSQL database in private subnets and queries user data.
+This example demonstrates a Swift Lambda function that uses Swift Service Lifecycle to manage a PostgreSQL connection. The function connects to an RDS PostgreSQL database in private subnets and queries user data.
 
 ## Architecture
 
-- **Swift Lambda Function**: Uses ServiceLifecycle to manage PostgreSQL client lifecycle, deployed in public subnets
-- **PostgreSQL RDS**: Database instance in private subnets with SSL/TLS encryption
+- **Swift Lambda Function**: A network isolated Lambda function that Uses Swift ServiceLifecycle to manage PostgreSQL client lifecycle
+- **PostgreSQL on Amazon RDS**: Database instance in private subnets with SSL/TLS encryption
 - **HTTP API Gateway**: HTTP endpoint to invoke the Lambda function
-- **VPC**: Custom VPC with public subnets for Lambda/NAT Gateway and private subnets for RDS
+- **VPC**: Custom VPC with private subnets only for complete network isolation
 - **Security**: SSL/TLS connections with RDS root certificate verification, secure networking with security groups
 - **Timeout Handling**: 3-second timeout mechanism to prevent database connection freeze
 - **Secrets Manager**: Secure credential storage and management
 
-For detailed infrastructure information, see `INFRASTRUCTURE.md`.
+For detailed infrastructure and cost information, see `INFRASTRUCTURE.md`.
 
 ## Implementation Details
 
@@ -110,7 +110,7 @@ The output will include:
 
 The database is deployed in **private subnets** and is **not directly accessible** from the internet. This follows AWS security best practices.
 
-You may create an Amazon EC2 instance (virtual machine) in the public subnet of the VPC and use it as a jump host to connect to the database.  The SAM template doesn't create this for you. [This is left as an exercise to the reader](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/LaunchingAndUsingInstances.html).
+To connect to the database, you would need to create an Amazon EC2 instance in a public subnet (which you'd need to add to the VPC) or use AWS Systems Manager Session Manager for secure access to an EC2 instance in a private subnet. The current template uses a private-only architecture for maximum security.
 
 You can access the database connection details in the output of the SAM template:
 
@@ -171,23 +171,27 @@ sam logs -n ServiceLifecycleLambda --stack-name servicelifecycle-stack --tail
 This example follows AWS security best practices:
 
 1. **Private Database**: Database is deployed in private subnets with no internet access
-2. **Network Segmentation**: Separate public and private subnets with proper routing
+2. **Complete Network Isolation**: Private subnets only with no internet connectivity
 3. **Security Groups**: Restrictive security groups following least privilege principle
 4. **Secrets Management**: Database credentials stored in AWS Secrets Manager
 5. **Encryption**: SSL/TLS for database connections with certificate verification
-6. **VPC Endpoints**: Administrative access through SSM VPC endpoints
+6. **Minimal Attack Surface**: No public subnets or internet gateways
 
 The infrastructure implements secure networking patterns suitable for production workloads.
 
 ## Cost Optimization
 
-The template uses:
+The template is optimized for cost:
 - `db.t3.micro` instance (eligible for free tier)
 - Minimal storage allocation (20GB)
 - No Multi-AZ deployment
 - No automated backups
+- No NAT Gateway or Internet Gateway
+- Private-only architecture
 
-For production workloads, adjust these settings based on your requirements.
+**Estimated cost: ~$16.62/month (or ~$0.45/month with RDS Free Tier)**
+
+For detailed cost breakdown, see `INFRASTRUCTURE.md`.
 
 ## Cleanup
 
@@ -215,10 +219,9 @@ when deploying with SAM and the `template.yaml` file included in this example, t
 ### Lambda can't connect to database
 
 1. Check security groups allow traffic on port 5432 between Lambda and RDS security groups
-2. Verify the Lambda function is deployed in subnets with proper routing to private subnets
-3. Check VPC configuration and routing tables
-4. Verify database credentials are correctly retrieved from Secrets Manager and that the Lambda execution policies have permissions to read the secret.
-5. Ensure the RDS instance is running and healthy
+2. Verify both Lambda and RDS are deployed in the same private subnets
+3. Verify database credentials are correctly retrieved from Secrets Manager and that the Lambda execution policies have permissions to read the secret
+4. Ensure the RDS instance is running and healthy
 
 ### Database connection timeout
 

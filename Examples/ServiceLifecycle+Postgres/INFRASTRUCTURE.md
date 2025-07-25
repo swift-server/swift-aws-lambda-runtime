@@ -4,7 +4,7 @@ This document describes the AWS infrastructure deployed by the ServiceLifecycle 
 
 ## Overview
 
-The infrastructure consists of a secure VPC setup with public and private subnets, a PostgreSQL RDS instance in private subnets, and a Lambda function with VPC access. The architecture follows AWS best practices for security and network isolation.
+The infrastructure consists of a secure VPC setup with private subnets only, containing both the PostgreSQL RDS instance and Lambda function. The architecture is optimized for cost and security with complete network isolation.
 
 ## Network Architecture
 
@@ -13,31 +13,22 @@ The infrastructure consists of a secure VPC setup with public and private subnet
 - **DNS Support**: DNS hostnames and DNS resolution enabled
 
 ### Subnet Layout
-- **Public Subnets**:
-  - Public Subnet 1: `10.0.1.0/24` (AZ 1)
-  - Public Subnet 2: `10.0.2.0/24` (AZ 2)
-  - Used for Lambda functions and NAT Gateway
-  - Auto-assign public IP addresses enabled
-
 - **Private Subnets**:
   - Private Subnet 1: `10.0.3.0/24` (AZ 1)
   - Private Subnet 2: `10.0.4.0/24` (AZ 2)
-  - Used for RDS PostgreSQL database
+  - Used for RDS PostgreSQL database and Lambda function
   - No public IP addresses assigned
+  - Complete isolation from internet
 
 ### Network Components
-- **Internet Gateway**: Provides internet access for public subnets
-- **NAT Gateway**: Deployed in Public Subnet 1, allows private subnets to access the internet
-- **Route Tables**:
-  - Public Route Table: Routes traffic to the Internet Gateway
-  - Private Route Table: Routes traffic through the NAT Gateway
+- **VPC-only architecture**: No internet connectivity required
+- **Route Tables**: Default VPC routing for internal communication
 
 ## Security Groups
 
 ### Lambda Security Group
 - **Outbound Rules**:
   - PostgreSQL (5432): Restricted to VPC CIDR `10.0.0.0/16`
-  - HTTPS (443): Open to `0.0.0.0/0` for AWS service access
 
 ### Database Security Group
 - **Inbound Rules**:
@@ -67,7 +58,7 @@ The infrastructure consists of a secure VPC setup with public and private subnet
 - **Architecture**: ARM64
 - **Memory**: 512MB
 - **Timeout**: 60 seconds
-- **Network**: Deployed in public subnets with access to both internet and private resources
+- **Network**: Deployed in private subnets with access to database within VPC
 - **Environment Variables**:
   - `LOG_LEVEL`: trace
   - `DB_HOST`: RDS endpoint address
@@ -107,19 +98,64 @@ The template provides several outputs to facilitate working with the deployed re
 
 This infrastructure implements several security best practices:
 
-1. **Network Isolation**: Database is placed in private subnets with no direct internet access
+1. **Complete Network Isolation**: Both database and Lambda are in private subnets with no direct acces to or from the internet
 2. **Least Privilege**: Security groups restrict traffic to only necessary ports and sources
 3. **Encryption**: Database storage is encrypted at rest
 4. **Secure Credentials**: Database credentials are managed through AWS Secrets Manager
 5. **Secure Communication**: Lambda function connects to database over encrypted connections
 
-## Cost Optimization
+## Cost Analysis
 
-The template uses cost-effective resources suitable for development:
+### Monthly Cost Breakdown (US East 1 Region)
 
-- `db.t3.micro` instance (eligible for free tier)
-- Minimal storage allocation (20GB)
-- No Multi-AZ deployment
-- No automated backups
+#### Billable AWS Resources:
 
-For production workloads, consider adjusting these settings based on your requirements.
+**1. RDS PostgreSQL Database**
+- Instance (db.t3.micro): $13.87/month (730 hours × $0.019/hour)
+- Storage (20GB GP2): $2.30/month (20GB × $0.115/GB/month)
+- Backup Storage: $0 (BackupRetentionPeriod: 0)
+- Multi-AZ: $0 (disabled)
+- **RDS Subtotal: $16.17/month**
+
+**2. AWS Secrets Manager**
+- Secret Storage: $0.40/month per secret
+- API Calls: ~$0.05 per 10,000 calls (minimal for Lambda access)
+- **Secrets Manager Subtotal: ~$0.45/month**
+
+**3. AWS Lambda**
+- Memory: 512MB ARM64
+- Free Tier: 1M requests + 400,000 GB-seconds/month
+- Development Usage: $0 (within free tier)
+- **Lambda Subtotal: $0/month**
+
+**4. API Gateway (HTTP API)**
+- Free Tier: 1M requests/month
+- Development Usage: $0 (within free tier)
+- **API Gateway Subtotal: $0/month**
+
+#### Free AWS Resources:
+- VPC, Private Subnets, Security Groups, DB Subnet Group: $0
+
+### Total Monthly Cost:
+
+| Service | Cost | Notes |
+|---------|------|---------|
+| RDS PostgreSQL | $16.17 | db.t3.micro + 20GB storage |
+| Secrets Manager | $0.45 | 1 secret + minimal API calls |
+| Lambda | $0.00 | Within free tier |
+| API Gateway | $0.00 | Within free tier |
+| VPC Components | $0.00 | No charges |
+| **TOTAL** | **$16.62/month** | |
+
+### With RDS Free Tier (First 12 Months):
+- RDS Instance: $0 (750 hours/month free)
+- RDS Storage: $0 (20GB free)
+- **Total with Free Tier: ~$0.45/month**
+
+### Production Scaling Estimates:
+- Higher Lambda usage: +$0.20 per million requests
+- More RDS storage: +$0.115 per additional GB/month
+- Multi-AZ RDS: ~2x RDS instance cost
+- Backup storage: $0.095/GB/month
+
+This architecture provides maximum cost efficiency while maintaining security and functionality for development workloads.
