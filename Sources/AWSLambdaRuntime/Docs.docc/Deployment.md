@@ -2,6 +2,8 @@
 
 Learn how to deploy your Swift Lambda functions to AWS.
 
+### Overview
+
 There are multiple ways to deploy your Swift code to AWS Lambda. The very first time, you'll probably use the AWS Console to create a new Lambda function and upload your code as a zip file. However, as you iterate on your code, you'll want to automate the deployment process.
 
 To take full advantage of the cloud, we recommend using Infrastructure as Code (IaC) tools like the [AWS Serverless Application Model (SAM)](https://aws.amazon.com/serverless/sam/) or [AWS Cloud Development Kit (CDK)](https://aws.amazon.com/cdk/). These tools allow you to define your infrastructure and deployment process as code, which can be version-controlled and automated.
@@ -19,7 +21,7 @@ Here is the content of this guide:
   * [Deploy your Lambda function with AWS Cloud Development Kit (CDK)](#deploy-your-lambda-function-with-aws-cloud-development-kit-cdk)
   * [Third-party tools](#third-party-tools)
 
-## Prerequisites
+### Prerequisites
 
 1. Your AWS Account
 
@@ -71,7 +73,7 @@ Here is the content of this guide:
    >[!NOTE]
    > When building on Linux, your current user must have permission to use docker. On most Linux distributions, you can do so by adding your user to the `docker` group with the following command: `sudo usermod -aG docker $USER`. You must log out and log back in for the changes to take effect.
 
-## Choosing the AWS Region where to deploy
+### Choosing the AWS Region where to deploy
 
 [AWS Global infrastructure](https://aws.amazon.com/about-aws/global-infrastructure/) spans over 34 geographic Regions (and continuously expanding). When you create a resource on AWS, such as a Lambda function, you have to select a geographic region where the resource will be created. The two main factors to consider to select a Region are the physical proximity with your users and geographical compliance. 
 
@@ -79,13 +81,13 @@ Physical proximity helps you reduce the network latency between the Lambda funct
 
 Geographical compliance, also known as data residency compliance, involves following location-specific regulations about how and where data can be stored and processed.
 
-## The Lambda execution IAM role
+### The Lambda execution IAM role
 
 A Lambda execution role is an AWS Identity and Access Management (IAM) role that grants your Lambda function the necessary permissions to interact with other AWS services and resources. Think of it as a security passport that determines what your function is allowed to do within AWS. For example, if your Lambda function needs to read files from Amazon S3, write logs to Amazon CloudWatch, or access an Amazon DynamoDB table, the execution role must include the appropriate permissions for these actions.
 
 When you create a Lambda function, you must specify an execution role. This role contains two main components: a trust policy that allows the Lambda service itself to assume the role, and permission policies that determine what AWS resources the function can access. By default, Lambda functions get basic permissions to write logs to CloudWatch Logs, but any additional permissions (like accessing S3 buckets or sending messages to SQS queues) must be explicitly added to the role's policies. Following the principle of least privilege, it's recommended to grant only the minimum permissions necessary for your function to operate, helping maintain the security of your serverless applications.
 
-## Deploy your Lambda function with the AWS Console
+### Deploy your Lambda function with the AWS Console
 
 In this section, we deploy the HelloWorld example function using the AWS Console. The HelloWorld function is a simple function that takes a `String` as input and returns a `String`.
 
@@ -93,7 +95,7 @@ Authenticate on the AWS console using your IAM username and password. On the top
 
 ![Console - Select AWS Region](console-10-regions)
 
-### Create the function 
+#### Create the function 
 
 Select **Create a function** to create a function.
 
@@ -118,7 +120,7 @@ Select **Save**
 
 You're now ready to test your function.
 
-### Invoke the function 
+#### Invoke the function 
 
 Select the **Test** tab in the console and prepare a payload to send to your Lambda function. In this example, you've deployed the [HelloWorld](Exmaples.HelloWorld/README.md) example function. As explained, the function takes a `String` as input and returns a `String`. we will therefore create a test event with a JSON payload that contains a `String`.
 
@@ -150,7 +152,7 @@ REPORT RequestId: f789fbb6-10d9-4ba3-8a84-27aa283369a2	Duration: 1.12 ms	Billed 
 
 AWS lambda charges usage per number of invocations and the CPU time, rounded to the next millisecond. AWS Lambda offers a generous free-tier of 1 million invocation each month and 400,000 GB-seconds of compute time per month. See [Lambda pricing](https://aws.amazon.com/lambda/pricing/) for the details.
 
-### Delete the function
+#### Delete the function
 
 When you're finished with testing, you can delete the Lambda function and the IAM execution role that the console created automatically.
 
@@ -164,13 +166,13 @@ Select the `HelloWorld-role-xxxx` role and select **Delete**. Confirm the deleti
 
 ![Console - delete IAM role](console-80-delete-role)
 
-## Deploy your Lambda function with the AWS Command Line Interface (CLI)
+### Deploy your Lambda function with the AWS Command Line Interface (CLI)
 
 You can deploy your Lambda function using the AWS Command Line Interface (CLI). The CLI is a unified tool to manage your AWS services from the command line and automate your operations through scripts. The CLI is available for Windows, macOS, and Linux. Follow the [installation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html) instructions in the AWS CLI User Guide.
 
 In this example, we're building the HelloWorld example from the [Examples](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples) directory.
 
-### Create the function 
+#### Create the function 
 
 To create a function, you must first create the function execution role and define the permission. Then, you create the function with the `create-function` command.
 
@@ -245,7 +247,7 @@ aws lambda update-function-code \
 --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip
 ```
 
-### Invoke the function 
+#### Invoke the function 
 
 Use the `invoke-function` command to invoke the function. You can pass a well-formed JSON payload as input to the function. The payload must be encoded in base64. The CLI returns the status code and stores the response in a file.
 
@@ -263,7 +265,7 @@ cat out.txt
 rm out.txt
 ```
 
-### Delete the function
+#### Delete the function
 
 To cleanup, first delete the Lambda funtion, then delete the IAM role.
 
@@ -278,7 +280,7 @@ aws iam delete-role-policy --role-name lambda_basic_execution --policy-name lamb
 aws iam delete-role --role-name lambda_basic_execution
 ```
 
-## Deploy your Lambda function with AWS Serverless Application Model (SAM)
+### Deploy your Lambda function with AWS Serverless Application Model (SAM)
 
 AWS Serverless Application Model (SAM) is an open-source framework for building serverless applications. It provides a simplified way to define the Amazon API Gateway APIs, AWS Lambda functions, and Amazon DynamoDB tables needed by your serverless application. You can define your serverless application in a single file, and SAM will use it to deploy your function and all its dependencies.
 
@@ -286,7 +288,7 @@ To use SAM, you need to [install the SAM CLI](https://docs.aws.amazon.com/server
 
 Use SAM when you want to deploy more than a Lambda function. SAM helps you to create additional resources like an API Gateway, an S3 bucket, or a DynamoDB table, and manage the permissions between them.
 
-### Create the function
+#### Create the function
 
 We assume your Swift function is compiled and packaged, as described in the [Prerequisites](#prerequisites) section.
 
@@ -375,7 +377,7 @@ Successfully created/updated stack - APIGAtewayLambda in us-east-1
 
 To update your function or any other AWS service defined in your YAML file, you can use the `sam deploy` command without the `--guided` flag.
 
-### Invoke the function
+#### Invoke the function
 
 SAM allows you to invoke the function locally and remotely. 
 
@@ -427,7 +429,7 @@ Access logging is disabled for HTTP API ID (g9m53sn7xa)
 
 You can also tail the logs with the `-t, --tail` flag.
 
-### Delete the function
+#### Delete the function
 
 SAM allows you to delete your function and all infrastructure that is defined in the YAML template with just one command.
 
@@ -443,7 +445,7 @@ Are you sure you want to delete the folder APIGatewayLambda in S3 which contains
 Deleted successfully
 ```
 
-## Deploy your Lambda function with the AWS Cloud Development Kit (CDK)
+### Deploy your Lambda function with the AWS Cloud Development Kit (CDK)
 
 The AWS Cloud Development Kit is an open-source software development framework to define cloud infrastructure in code and provision it through AWS CloudFormation. The CDK provides high-level constructs that preconfigure AWS resources with best practices, and you can use familiar programming languages like TypeScript, Javascript, Python, Java, C#, and Go to define your infrastructure.
 
@@ -453,7 +455,7 @@ Use the CDK when you want to define your infrastructure in code and manage the d
 
 This example deploys the [APIGateway]((https://github.com/swift-server/swift-aws-lambda-runtime/blob/main/Examples/APIGateway/) example code.  It comprises a Lambda function that implements a REST API and an API Gateway to expose the function over HTTPS.
 
-### Create a CDK project
+#### Create a CDK project
 
 To create a new CDK project, use the `cdk init` command. The command creates a new directory with the project structure and the necessary files to define your infrastructure.
 
@@ -523,7 +525,7 @@ import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations
 // ...    
 ```
 
-### Deploy the infrastructure 
+#### Deploy the infrastructure 
 
 To deploy the infrastructure, type the following commands.
 
@@ -553,7 +555,7 @@ arn:aws:cloudformation:eu-central-1:012345678901:stack/LambdaApiStack/e0054390-b
 ✨  Total time: 45.84s
 ```
 
-### Invoke your Lambda function
+#### Invoke your Lambda function
 
 To invoke the Lambda function, use this `curl` command line.
 
@@ -609,7 +611,7 @@ curl -s  https://tyqnjcawh0.execute-api.eu-central-1.amazonaws.com | jq
 }
 ```
 
-### Delete the infrastructure
+#### Delete the infrastructure
 
 When done testing, you can delete the infrastructure with this command.
 
@@ -622,6 +624,6 @@ LambdaApiStack: destroying... [1/1]
  ✅  LambdaApiStack: destroyed
 ```
 
-## Third-party tools
+### Third-party tools
 
 We welcome contributions to this section. If you have experience deploying Swift Lambda functions with third-party tools like Serverless Framework, Terraform, or Pulumi, please share your knowledge with the community.
