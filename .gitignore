@@ -13,3 +13,5 @@ Package.resolved
 Makefile
 .devcontainer
 .amazonq
+.kiro
+nodejs
