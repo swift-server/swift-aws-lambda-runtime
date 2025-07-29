@@ -59,7 +59,7 @@ extension Lambda {
                 try await body()
             }
         } catch let error as ChannelError {
-            // when this server is part of a ServiceLifeCycle group 
+            // when this server is part of a ServiceLifeCycle group
             // and user presses CTRL-C, this error is thrown
             // The error description is "I/O on closed channel"
             // TODO: investigate and solve the root cause
