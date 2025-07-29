@@ -47,12 +47,21 @@ struct LambdaFunction {
     private func main() async throws {
 
         // Instantiate LambdaRuntime with a handler implementing the business logic of the Lambda function
-        let runtime = LambdaRuntime(logger: self.logger, body: self.handler)
+        let lambdaRuntime = LambdaRuntime(logger: self.logger, body: self.handler)
+
+        // Use a prelude service to execute PG code before setting up the Lambda service
+        // the PG code will run only once and will create the database schema and populate it with initial data
+        let preludeService = PreludeService(
+            service: lambdaRuntime,
+            prelude: {
+                try await prepareDatabase()
+            }
+        )
 
         /// Use ServiceLifecycle to manage the initialization and termination
         /// of the PGClient together with the LambdaRuntime
         let serviceGroup = ServiceGroup(
-            services: [self.pgClient, runtime],
+            services: [self.pgClient, preludeService],
             gracefulShutdownSignals: [.sigterm],
             cancellationSignals: [.sigint],
             logger: self.logger
@@ -76,12 +85,6 @@ struct LambdaFunction {
             // This is why there is a timeout, as suggested Fabian
             // See: https://github.com/vapor/postgres-nio/issues/489#issuecomment-2186509773
             result = try await timeout(deadline: .seconds(3)) {
-                // check if table exists
-                // TODO: ideally, I want to do this once, after serviceGroup.run() is done
-                // but before the handler is called
-                logger.trace("Checking database")
-                try await prepareDatabase()
-
                 // query users
                 logger.trace("Querying database")
                 return try await self.queryUsers()
