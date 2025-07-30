@@ -136,6 +136,11 @@ let package = Package(
                 .byName(name: "AWSLambdaRuntime"),
                 .product(name: "NIOTestUtils", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
+            ],
+            swiftSettings: [
+                .define("FoundationJSONSupport"),
+                .define("ServiceLifecycleSupport"),
+                .define("LocalServerSupport"),
             ]
         ),
         // for perf testing

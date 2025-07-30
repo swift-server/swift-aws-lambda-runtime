@@ -22,15 +22,15 @@ import FoundationEssentials
 import Foundation
 #endif
 
-struct LambdaMockWriter: LambdaRuntimeClientResponseStreamWriter {
-    var underlying: LambdaMockClient
+struct MockLambdaWriter: LambdaRuntimeClientResponseStreamWriter {
+    var underlying: MockLambdaClient
 
-    init(underlying: LambdaMockClient) {
+    init(underlying: MockLambdaClient) {
         self.underlying = underlying
     }
 
-    func write(_ buffer: ByteBuffer) async throws {
-        try await self.underlying.write(buffer)
+    func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
+        try await self.underlying.write(buffer, hasCustomHeaders: hasCustomHeaders)
     }
 
     func finish() async throws {
@@ -55,8 +55,8 @@ enum LambdaError: Error, Equatable {
     case handlerError
 }
 
-final actor LambdaMockClient: LambdaRuntimeClientProtocol {
-    typealias Writer = LambdaMockWriter
+final actor MockLambdaClient: LambdaRuntimeClientProtocol {
+    typealias Writer = MockLambdaWriter
 
     private struct StateMachine {
         private enum State {
@@ -155,7 +155,7 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
             }
         }
 
-        mutating func writeResult(buffer: ByteBuffer) -> ResultAction {
+        mutating func writeResult(buffer: ByteBuffer, hasCustomHeaders: Bool = false) -> ResultAction {
             switch self.state {
             case .handlerIsProcessing(var accumulatedResponse, let eventProcessedHandler):
                 accumulatedResponse.append(buffer)
@@ -276,8 +276,8 @@ final actor LambdaMockClient: LambdaRuntimeClientProtocol {
         }
     }
 
-    func write(_ buffer: ByteBuffer) async throws {
-        switch self.stateMachine.writeResult(buffer: buffer) {
+    func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
+        switch self.stateMachine.writeResult(buffer: buffer, hasCustomHeaders: hasCustomHeaders) {
         case .readyForMore:
             break
         case .fail(let error):

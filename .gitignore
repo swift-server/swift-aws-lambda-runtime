@@ -12,3 +12,6 @@ Package.resolved
 .vscode
 Makefile
 .devcontainer
+.amazonq
+.kiro
+nodejs

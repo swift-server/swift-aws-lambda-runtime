@@ -15,10 +15,7 @@ let package = Package(
         // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
         .package(
             url: "https://github.com/swift-server/swift-aws-lambda-runtime.git",
-            branch: "ff-package-traits",
-            traits: [
-                .trait(name: "FoundationJSONSupport")
-            ]
+            from: "2.0.0-beta.1"
         )
     ],
     targets: [

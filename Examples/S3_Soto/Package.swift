@@ -15,7 +15,7 @@ let package = Package(
         .package(url: "https://github.com/soto-project/soto.git", from: "7.0.0"),
 
         // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.1"),
         .package(url: "https://github.com/swift-server/swift-aws-lambda-events", from: "1.0.0"),
     ],
     targets: [

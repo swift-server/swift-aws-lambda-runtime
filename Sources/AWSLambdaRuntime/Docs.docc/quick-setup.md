@@ -10,7 +10,7 @@ For a detailed step-by-step instruction, follow the tutorial instead.
 
 For the impatient, keep reading.
 
-## High-level instructions
+### High-level instructions
 
 Follow these 6 steps to write, test, and deploy a Lambda function in Swift.
 
@@ -37,7 +37,7 @@ let package = Package(
         .executable(name: "MyFirstLambdaFunction", targets: ["MyFirstLambdaFunction"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "main"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.1"),
     ],
     targets: [
         .executableTarget(

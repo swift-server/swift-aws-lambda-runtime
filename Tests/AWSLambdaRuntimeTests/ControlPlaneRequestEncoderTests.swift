@@ -15,148 +15,184 @@
 import NIOCore
 import NIOEmbedded
 import NIOHTTP1
-import XCTest
+import Testing
 
 @testable import AWSLambdaRuntime
 
-final class ControlPlaneRequestEncoderTests: XCTestCase {
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
+struct ControlPlaneRequestEncoderTests {
     let host = "192.168.0.1"
 
-    var client: EmbeddedChannel!
-    var server: EmbeddedChannel!
-
-    override func setUp() {
-        self.client = EmbeddedChannel(handler: ControlPlaneRequestEncoderHandler(host: self.host))
-        self.server = EmbeddedChannel(handlers: [
+    func createChannels() -> (client: EmbeddedChannel, server: EmbeddedChannel) {
+        let client = EmbeddedChannel(handler: ControlPlaneRequestEncoderHandler(host: self.host))
+        let server = EmbeddedChannel(handlers: [
             ByteToMessageHandler(HTTPRequestDecoder(leftOverBytesStrategy: .dropBytes)),
             NIOHTTPServerRequestAggregator(maxContentLength: 1024 * 1024),
         ])
+        return (client, server)
     }
 
-    override func tearDown() {
-        XCTAssertNoThrow(try self.client.finish(acceptAlreadyClosed: false))
-        XCTAssertNoThrow(try self.server.finish(acceptAlreadyClosed: false))
-        self.client = nil
-        self.server = nil
+    @Test
+    func testNextRequest() throws {
+        let (client, server) = createChannels()
+        defer {
+            _ = try? client.finish(acceptAlreadyClosed: false)
+            _ = try? server.finish(acceptAlreadyClosed: false)
+        }
+
+        let request = try sendRequest(.next, client: client, server: server)
+
+        #expect(request?.head.isKeepAlive == true)
+        #expect(request?.head.method == .GET)
+        #expect(request?.head.uri == "/2018-06-01/runtime/invocation/next")
+        #expect(request?.head.version == .http1_1)
+        #expect(request?.head.headers["host"] == [self.host])
+        #expect(request?.head.headers["user-agent"] == [.userAgent])
+
+        #expect(try server.readInbound(as: NIOHTTPServerRequestFull.self) == nil)
     }
 
-    func testNextRequest() {
-        var request: NIOHTTPServerRequestFull?
-        XCTAssertNoThrow(request = try self.sendRequest(.next))
+    @Test
+    func testPostInvocationSuccessWithoutBody() throws {
+        let (client, server) = createChannels()
+        defer {
+            _ = try? client.finish(acceptAlreadyClosed: false)
+            _ = try? server.finish(acceptAlreadyClosed: false)
+        }
 
-        XCTAssertEqual(request?.head.isKeepAlive, true)
-        XCTAssertEqual(request?.head.method, .GET)
-        XCTAssertEqual(request?.head.uri, "/2018-06-01/runtime/invocation/next")
-        XCTAssertEqual(request?.head.version, .http1_1)
-        XCTAssertEqual(request?.head.headers["host"], [self.host])
-        XCTAssertEqual(request?.head.headers["user-agent"], [.userAgent])
-
-        XCTAssertNil(try self.server.readInbound(as: NIOHTTPServerRequestFull.self))
-    }
-
-    func testPostInvocationSuccessWithoutBody() {
         let requestID = UUID().uuidString
-        var request: NIOHTTPServerRequestFull?
-        XCTAssertNoThrow(request = try self.sendRequest(.invocationResponse(requestID, nil)))
+        let request = try sendRequest(.invocationResponse(requestID, nil), client: client, server: server)
 
-        XCTAssertEqual(request?.head.isKeepAlive, true)
-        XCTAssertEqual(request?.head.method, .POST)
-        XCTAssertEqual(request?.head.uri, "/2018-06-01/runtime/invocation/\(requestID)/response")
-        XCTAssertEqual(request?.head.version, .http1_1)
-        XCTAssertEqual(request?.head.headers["host"], [self.host])
-        XCTAssertEqual(request?.head.headers["user-agent"], [.userAgent])
-        XCTAssertEqual(request?.head.headers["content-length"], ["0"])
+        #expect(request?.head.isKeepAlive == true)
+        #expect(request?.head.method == .POST)
+        #expect(request?.head.uri == "/2018-06-01/runtime/invocation/\(requestID)/response")
+        #expect(request?.head.version == .http1_1)
+        #expect(request?.head.headers["host"] == [self.host])
+        #expect(request?.head.headers["user-agent"] == [.userAgent])
+        #expect(request?.head.headers["content-length"] == ["0"])
 
-        XCTAssertNil(try self.server.readInbound(as: NIOHTTPServerRequestFull.self))
+        #expect(try server.readInbound(as: NIOHTTPServerRequestFull.self) == nil)
     }
 
-    func testPostInvocationSuccessWithBody() {
+    @Test
+    func testPostInvocationSuccessWithBody() throws {
+        let (client, server) = createChannels()
+        defer {
+            _ = try? client.finish(acceptAlreadyClosed: false)
+            _ = try? server.finish(acceptAlreadyClosed: false)
+        }
+
         let requestID = UUID().uuidString
         let payload = ByteBuffer(string: "hello swift lambda!")
 
-        var request: NIOHTTPServerRequestFull?
-        XCTAssertNoThrow(request = try self.sendRequest(.invocationResponse(requestID, payload)))
+        let request = try sendRequest(.invocationResponse(requestID, payload), client: client, server: server)
 
-        XCTAssertEqual(request?.head.isKeepAlive, true)
-        XCTAssertEqual(request?.head.method, .POST)
-        XCTAssertEqual(request?.head.uri, "/2018-06-01/runtime/invocation/\(requestID)/response")
-        XCTAssertEqual(request?.head.version, .http1_1)
-        XCTAssertEqual(request?.head.headers["host"], [self.host])
-        XCTAssertEqual(request?.head.headers["user-agent"], [.userAgent])
-        XCTAssertEqual(request?.head.headers["content-length"], ["\(payload.readableBytes)"])
-        XCTAssertEqual(request?.body, payload)
+        #expect(request?.head.isKeepAlive == true)
+        #expect(request?.head.method == .POST)
+        #expect(request?.head.uri == "/2018-06-01/runtime/invocation/\(requestID)/response")
+        #expect(request?.head.version == .http1_1)
+        #expect(request?.head.headers["host"] == [self.host])
+        #expect(request?.head.headers["user-agent"] == [.userAgent])
+        #expect(request?.head.headers["content-length"] == ["\(payload.readableBytes)"])
+        #expect(request?.body == payload)
 
-        XCTAssertNil(try self.server.readInbound(as: NIOHTTPServerRequestFull.self))
+        #expect(try server.readInbound(as: NIOHTTPServerRequestFull.self) == nil)
     }
 
-    func testPostInvocationErrorWithBody() {
+    @Test
+    func testPostInvocationErrorWithBody() throws {
+        let (client, server) = createChannels()
+        defer {
+            _ = try? client.finish(acceptAlreadyClosed: false)
+            _ = try? server.finish(acceptAlreadyClosed: false)
+        }
+
         let requestID = UUID().uuidString
         let error = ErrorResponse(errorType: "SomeError", errorMessage: "An error happened")
-        var request: NIOHTTPServerRequestFull?
-        XCTAssertNoThrow(request = try self.sendRequest(.invocationError(requestID, error)))
+        let request = try sendRequest(.invocationError(requestID, error), client: client, server: server)
 
-        XCTAssertEqual(request?.head.isKeepAlive, true)
-        XCTAssertEqual(request?.head.method, .POST)
-        XCTAssertEqual(request?.head.uri, "/2018-06-01/runtime/invocation/\(requestID)/error")
-        XCTAssertEqual(request?.head.version, .http1_1)
-        XCTAssertEqual(request?.head.headers["host"], [self.host])
-        XCTAssertEqual(request?.head.headers["user-agent"], [.userAgent])
-        XCTAssertEqual(request?.head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
+        #expect(request?.head.isKeepAlive == true)
+        #expect(request?.head.method == .POST)
+        #expect(request?.head.uri == "/2018-06-01/runtime/invocation/\(requestID)/error")
+        #expect(request?.head.version == .http1_1)
+        #expect(request?.head.headers["host"] == [self.host])
+        #expect(request?.head.headers["user-agent"] == [.userAgent])
+        #expect(request?.head.headers["lambda-runtime-function-error-type"] == ["Unhandled"])
         let expectedBody = #"{"errorType":"SomeError","errorMessage":"An error happened"}"#
 
-        XCTAssertEqual(request?.head.headers["content-length"], ["\(expectedBody.utf8.count)"])
-        XCTAssertEqual(
-            try request?.body?.getString(at: 0, length: XCTUnwrap(request?.body?.readableBytes)),
-            expectedBody
-        )
+        #expect(request?.head.headers["content-length"] == ["\(expectedBody.utf8.count)"])
+        let bodyString = request?.body?.getString(at: 0, length: request?.body?.readableBytes ?? 0)
+        #expect(bodyString == expectedBody)
 
-        XCTAssertNil(try self.server.readInbound(as: NIOHTTPServerRequestFull.self))
+        #expect(try server.readInbound(as: NIOHTTPServerRequestFull.self) == nil)
     }
 
-    func testPostStartupError() {
+    @Test
+    func testPostStartupError() throws {
+        let (client, server) = createChannels()
+        defer {
+            _ = try? client.finish(acceptAlreadyClosed: false)
+            _ = try? server.finish(acceptAlreadyClosed: false)
+        }
+
         let error = ErrorResponse(errorType: "StartupError", errorMessage: "Urgh! Startup failed. 😨")
-        var request: NIOHTTPServerRequestFull?
-        XCTAssertNoThrow(request = try self.sendRequest(.initializationError(error)))
+        let request = try sendRequest(.initializationError(error), client: client, server: server)
 
-        XCTAssertEqual(request?.head.isKeepAlive, true)
-        XCTAssertEqual(request?.head.method, .POST)
-        XCTAssertEqual(request?.head.uri, "/2018-06-01/runtime/init/error")
-        XCTAssertEqual(request?.head.version, .http1_1)
-        XCTAssertEqual(request?.head.headers["host"], [self.host])
-        XCTAssertEqual(request?.head.headers["user-agent"], [.userAgent])
-        XCTAssertEqual(request?.head.headers["lambda-runtime-function-error-type"], ["Unhandled"])
+        #expect(request?.head.isKeepAlive == true)
+        #expect(request?.head.method == .POST)
+        #expect(request?.head.uri == "/2018-06-01/runtime/init/error")
+        #expect(request?.head.version == .http1_1)
+        #expect(request?.head.headers["host"] == [self.host])
+        #expect(request?.head.headers["user-agent"] == [.userAgent])
+        #expect(request?.head.headers["lambda-runtime-function-error-type"] == ["Unhandled"])
         let expectedBody = #"{"errorType":"StartupError","errorMessage":"Urgh! Startup failed. 😨"}"#
-        XCTAssertEqual(request?.head.headers["content-length"], ["\(expectedBody.utf8.count)"])
-        XCTAssertEqual(
-            try request?.body?.getString(at: 0, length: XCTUnwrap(request?.body?.readableBytes)),
-            expectedBody
-        )
+        #expect(request?.head.headers["content-length"] == ["\(expectedBody.utf8.count)"])
+        let bodyString = request?.body?.getString(at: 0, length: request?.body?.readableBytes ?? 0)
+        #expect(bodyString == expectedBody)
 
-        XCTAssertNil(try self.server.readInbound(as: NIOHTTPServerRequestFull.self))
+        #expect(try server.readInbound(as: NIOHTTPServerRequestFull.self) == nil)
     }
 
-    func testMultipleNextAndResponseSuccessRequests() {
+    @Test
+    func testMultipleNextAndResponseSuccessRequests() throws {
+        let (client, server) = createChannels()
+        defer {
+            _ = try? client.finish(acceptAlreadyClosed: false)
+            _ = try? server.finish(acceptAlreadyClosed: false)
+        }
+
         for _ in 0..<1000 {
-            var nextRequest: NIOHTTPServerRequestFull?
-            XCTAssertNoThrow(nextRequest = try self.sendRequest(.next))
-            XCTAssertEqual(nextRequest?.head.method, .GET)
-            XCTAssertEqual(nextRequest?.head.uri, "/2018-06-01/runtime/invocation/next")
+            let nextRequest = try sendRequest(.next, client: client, server: server)
+            #expect(nextRequest?.head.method == .GET)
+            #expect(nextRequest?.head.uri == "/2018-06-01/runtime/invocation/next")
 
             let requestID = UUID().uuidString
             let payload = ByteBuffer(string: "hello swift lambda!")
-            var successRequest: NIOHTTPServerRequestFull?
-            XCTAssertNoThrow(successRequest = try self.sendRequest(.invocationResponse(requestID, payload)))
-            XCTAssertEqual(successRequest?.head.method, .POST)
-            XCTAssertEqual(successRequest?.head.uri, "/2018-06-01/runtime/invocation/\(requestID)/response")
+            let successRequest = try sendRequest(
+                .invocationResponse(requestID, payload),
+                client: client,
+                server: server
+            )
+            #expect(successRequest?.head.method == .POST)
+            #expect(successRequest?.head.uri == "/2018-06-01/runtime/invocation/\(requestID)/response")
         }
     }
 
-    func sendRequest(_ request: ControlPlaneRequest) throws -> NIOHTTPServerRequestFull? {
-        try self.client.writeOutbound(request)
-        while let part = try self.client.readOutbound(as: ByteBuffer.self) {
-            XCTAssertNoThrow(try self.server.writeInbound(part))
+    func sendRequest(
+        _ request: ControlPlaneRequest,
+        client: EmbeddedChannel,
+        server: EmbeddedChannel
+    ) throws -> NIOHTTPServerRequestFull? {
+        try client.writeOutbound(request)
+        while let part = try client.readOutbound(as: ByteBuffer.self) {
+            try server.writeInbound(part)
         }
-        return try self.server.readInbound(as: NIOHTTPServerRequestFull.self)
+        return try server.readInbound(as: NIOHTTPServerRequestFull.self)
     }
 }
 

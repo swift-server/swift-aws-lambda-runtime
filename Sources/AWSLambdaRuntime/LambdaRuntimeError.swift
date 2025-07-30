@@ -12,8 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+@usableFromInline
 package struct LambdaRuntimeError: Error {
-    package enum Code {
+    @usableFromInline
+    package enum Code: Sendable {
+        /// internal error codes for LambdaRuntimeClient
         case closingRuntimeClient
 
         case connectionToControlPlaneLost
@@ -31,15 +34,19 @@ package struct LambdaRuntimeError: Error {
 
         case missingLambdaRuntimeAPIEnvironmentVariable
         case runtimeCanOnlyBeStartedOnce
+        case handlerCanOnlyBeGetOnce
         case invalidPort
     }
 
+    @usableFromInline
     package init(code: Code, underlying: (any Error)? = nil) {
         self.code = code
         self.underlying = underlying
     }
 
+    @usableFromInline
     package var code: Code
+    @usableFromInline
     package var underlying: (any Error)?
 
 }

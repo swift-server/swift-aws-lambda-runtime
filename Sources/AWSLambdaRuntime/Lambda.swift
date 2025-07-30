@@ -30,6 +30,7 @@ import ucrt
 #endif
 
 public enum Lambda {
+    @inlinable
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
         runtimeClient: RuntimeClient,
         handler: Handler,
@@ -42,6 +43,24 @@ public enum Lambda {
             while !Task.isCancelled {
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
                 logger[metadataKey: "aws-request-id"] = "\(invocation.metadata.requestID)"
+
+                // when log level is trace or lower, print the first Kb of the payload
+                let bytes = invocation.event
+                let maxPayloadPreviewSize = 1024
+                var metadata: Logger.Metadata? = nil
+                if logger.logLevel <= .trace,
+                    let buffer = bytes.getSlice(at: 0, length: min(bytes.readableBytes, maxPayloadPreviewSize))
+                {
+                    metadata = [
+                        "Event's first bytes": .string(
+                            String(buffer: buffer) + (bytes.readableBytes > maxPayloadPreviewSize ? "..." : "")
+                        )
+                    ]
+                }
+                logger.trace(
+                    "Sending invocation event to lambda handler",
+                    metadata: metadata
+                )
 
                 do {
                     try await handler.handle(

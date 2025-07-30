@@ -77,24 +77,24 @@ struct JSONTests {
         let result = await writer.output
         #expect(result == ByteBuffer(string: #"{"bar":"baz"}"#))
     }
-}
 
-final actor MockLambdaWriter: LambdaResponseStreamWriter {
-    private var _buffer: ByteBuffer?
+    final actor MockLambdaWriter: LambdaResponseStreamWriter {
+        private var _buffer: ByteBuffer?
 
-    var output: ByteBuffer? {
-        self._buffer
-    }
+        var output: ByteBuffer? {
+            self._buffer
+        }
 
-    func writeAndFinish(_ buffer: ByteBuffer) async throws {
-        self._buffer = buffer
-    }
+        func writeAndFinish(_ buffer: ByteBuffer) async throws {
+            self._buffer = buffer
+        }
 
-    func write(_ buffer: ByteBuffer) async throws {
-        fatalError("Unexpected call")
-    }
+        func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
+            fatalError("Unexpected call")
+        }
 
-    func finish() async throws {
-        fatalError("Unexpected call")
+        func finish() async throws {
+            fatalError("Unexpected call")
+        }
     }
 }

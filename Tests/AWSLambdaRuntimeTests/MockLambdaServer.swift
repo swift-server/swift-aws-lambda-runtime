@@ -100,16 +100,16 @@ final class MockLambdaServer<Behavior: LambdaServerBehavior> {
         guard let localAddress = channel.localAddress else {
             throw ServerError.cantBind
         }
-        self.logger.info("\(self) started and listening on \(localAddress)")
+        self.logger.trace("\(self) started and listening on \(localAddress)")
         return localAddress.port!
     }
 
     fileprivate func stop() async throws {
-        self.logger.info("stopping \(self)")
+        self.logger.trace("stopping \(self)")
         let channel = self.channel!
         try? await channel.close().get()
         self.shutdown = true
-        self.logger.info("\(self) stopped")
+        self.logger.trace("\(self) stopped")
     }
 }
 
@@ -150,7 +150,7 @@ final class HTTPHandler: ChannelInboundHandler {
     }
 
     func processRequest(context: ChannelHandlerContext, request: (head: HTTPRequestHead, body: ByteBuffer?)) {
-        self.logger.info("\(self) processing \(request.head.uri)")
+        self.logger.trace("\(self) processing \(request.head.uri)")
 
         let requestBody = request.body.flatMap { (buffer: ByteBuffer) -> String? in
             var buffer = buffer
@@ -196,7 +196,12 @@ final class HTTPHandler: ChannelInboundHandler {
             guard let requestId = request.head.uri.split(separator: "/").dropFirst(3).first else {
                 return self.writeResponse(context: context, status: .badRequest)
             }
-            switch self.behavior.processResponse(requestId: String(requestId), response: requestBody) {
+
+            // Capture headers for testing
+            var behavior = self.behavior
+            behavior.captureHeaders(request.head.headers)
+
+            switch behavior.processResponse(requestId: String(requestId), response: requestBody) {
             case .success:
                 responseStatus = .accepted
             case .failure(let error):
@@ -269,6 +274,16 @@ protocol LambdaServerBehavior: Sendable {
     func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError>
     func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError>
     func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError>
+
+    // Optional method to capture headers for testing
+    mutating func captureHeaders(_ headers: HTTPHeaders)
+}
+
+// Default implementation for backward compatibility
+extension LambdaServerBehavior {
+    mutating func captureHeaders(_ headers: HTTPHeaders) {
+        // Default implementation does nothing
+    }
 }
 
 typealias GetInvocationResult = Result<(String, String), GetWorkError>

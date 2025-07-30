@@ -13,15 +13,55 @@ The sample code creates a `SendNumbersWithPause` struct that conforms to the `St
 
 The `handle(...)` method of this protocol receives incoming events as a Swift NIO `ByteBuffer` and returns the output as a `ByteBuffer`.
 
-The response is streamed through the `LambdaResponseStreamWriter`, which is passed as an argument in the `handle` function.  The code calls the `write(_:)` function of the `LambdaResponseStreamWriter` with partial data repeatedly written before
-finally closing the response stream by calling `finish()`. Developers can also choose to return the entire output and not
-stream the response by calling `writeAndFinish(_:)`.
+The response is streamed through the `LambdaResponseStreamWriter`, which is passed as an argument in the `handle` function. 
+
+### Setting HTTP Status Code and Headers
+
+Before streaming the response body, you can set the HTTP status code and headers using the `writeStatusAndHeaders(_:)` method:
+
+```swift
+try await responseWriter.writeStatusAndHeaders(
+    StreamingLambdaStatusAndHeadersResponse(
+        statusCode: 200,
+        headers: [
+            "Content-Type": "text/plain",
+            "x-my-custom-header": "streaming-example"
+        ]
+    )
+)
+```
+
+The `StreamingLambdaStatusAndHeadersResponse` structure allows you to specify:
+- **statusCode**: HTTP status code (e.g., 200, 404, 500)
+- **headers**: Dictionary of single-value HTTP headers (optional)
+
+### Streaming the Response Body
+
+After setting headers, you can stream the response body by calling the `write(_:)` function of the `LambdaResponseStreamWriter` with partial data repeatedly before finally closing the response stream by calling `finish()`. Developers can also choose to return the entire output and not stream the response by calling `writeAndFinish(_:)`.
+
+```swift
+// Stream data in chunks
+for i in 1...3 {
+    try await responseWriter.write(ByteBuffer(string: "Number: \(i)\n"))
+    try await Task.sleep(for: .milliseconds(1000))
+}
+
+// Close the response stream
+try await responseWriter.finish()
+```
 
 An error is thrown if `finish()` is called multiple times or if it is called after having called `writeAndFinish(_:)`.
 
+### Example Usage Patterns
+
+The example includes two handler implementations:
+
+1. **SendNumbersWithPause**: Demonstrates basic streaming with headers, sending numbers with delays
+2. **ConditionalStreamingHandler**: Shows how to handle different response scenarios, including error responses with appropriate status codes
+
 The `handle(...)` method is marked as `mutating` to allow handlers to be implemented with a `struct`.
 
-Once the struct is created and the `handle(...)` method is defined, the sample code creates a `LambdaRuntime` struct and initializes it with the handler just created.  Then, the code calls `run()` to start the interaction with the AWS Lambda control plane.
+Once the struct is created and the `handle(...)` method is defined, the sample code creates a `LambdaRuntime` struct and initializes it with the handler just created. Then, the code calls `run()` to start the interaction with the AWS Lambda control plane.
 
 ## Build & Package 
 
@@ -33,6 +73,20 @@ swift package archive --allow-network-connections docker
 
 If there is no error, there is a ZIP file ready to deploy. 
 The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/StreamingNumbers/StreamingNumbers.zip`
+
+## Test locally
+
+You can test the function locally before deploying:
+
+```bash
+swift run 
+
+# In another terminal, test with curl:
+curl -v \
+  --header "Content-Type: application/json" \
+  --data '"this is not used"' \
+  http://127.0.0.1:7000/invoke
+```
 
 ## Deploy with the AWS CLI
 
@@ -54,7 +108,7 @@ aws lambda create-function \
 ```
 
 > [!IMPORTANT] 
-> The timeout value must be bigger than the time it takes for your function to stream its output. Otherwise, the Lambda control plane will terminate the execution environment before your code has a chance to finish writing the stream. Here, the sample function stream responses during 10 seconds and we set the timeout for 15 seconds.
+> The timeout value must be bigger than the time it takes for your function to stream its output. Otherwise, the Lambda control plane will terminate the execution environment before your code has a chance to finish writing the stream. Here, the sample function stream responses during 3 seconds and we set the timeout for 5 seconds.
 
 The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
 
@@ -125,13 +179,7 @@ This should output the following result, with a one-second delay between each nu
 1
 2
 3
-4
-5
-6
-7
-8
-9
-10
+Streaming complete!
 ```
 
 ### Undeploy
@@ -219,4 +267,64 @@ When done testing, you can delete the infrastructure with this command.
 
 ```bash
 sam delete 
+```
+
+## Payload decoding
+
+The content of the input `ByteBuffer` depends on how you invoke the function:
+
+- when you use [`InvokeWithResponseStream` API](https://docs.aws.amazon.com/lambda/latest/api/API_InvokeWithResponseStream.html) to invoke the function, the function incoming payload is what you pass to the API. You can decode the `ByteBuffer` with a [`JSONDecoder.decode()`](https://developer.apple.com/documentation/foundation/jsondecoder) function call.
+- when you invoke the function through a [Lambda function URL](https://docs.aws.amazon.com/lambda/latest/dg/urls-configuration.html), the incoming `ByteBuffer` contains a payload that gives developer access to the underlying HTTP call. The payload contains information about the HTTP verb used, the headers received, the authentication method and so on. The [AWS documentation contains the details](https://docs.aws.amazon.com/lambda/latest/dg/urls-invocation.html) of the payload. The [Swift Lambda Event library](https://github.com/swift-server/swift-aws-lambda-events) contains a [`FunctionURL` type](https://github.com/swift-server/swift-aws-lambda-events/blob/main/Sources/AWSLambdaEvents/FunctionURL.swift) ready to use in your projects.
+
+Here is an example of Lambda function URL payload:
+
+```json
+{
+    "version": "2.0",
+    "routeKey": "$default",
+    "rawPath": "/",
+    "rawQueryString": "",
+    "headers": {
+        "x-amzn-tls-cipher-suite": "TLS_AES_128_GCM_SHA256",
+        "x-amzn-tls-version": "TLSv1.3",
+        "x-amzn-trace-id": "Root=1-68762f44-4f6a87d1639e7fc356aa6f96",
+        "x-amz-date": "20250715T103651Z",
+        "x-forwarded-proto": "https",
+        "host": "zvnsvhpx7u5gn3l3euimg4jjou0jvbfe.lambda-url.us-east-1.on.aws",
+        "x-forwarded-port": "443",
+        "x-forwarded-for": "2a01:cb0c:6de:8300:a1be:8004:e31a:b9f",
+        "accept": "*/*",
+        "user-agent": "curl/8.7.1"
+    },
+    "requestContext": {
+        "accountId": "0123456789",
+        "apiId": "zvnsvhpx7u5gn3l3euimg4jjou0jvbfe",
+        "authorizer": {
+            "iam": {
+                "accessKey": "AKIA....",
+                "accountId": "0123456789",
+                "callerId": "AIDA...",
+                "cognitoIdentity": null,
+                "principalOrgId": "o-rlrup7z3ao",
+                "userArn": "arn:aws:iam::0123456789:user/sst",
+                "userId": "AIDA..."
+            }
+        },
+        "domainName": "zvnsvhpx7u5gn3l3euimg4jjou0jvbfe.lambda-url.us-east-1.on.aws",
+        "domainPrefix": "zvnsvhpx7u5gn3l3euimg4jjou0jvbfe",
+        "http": {
+            "method": "GET",
+            "path": "/",
+            "protocol": "HTTP/1.1",
+            "sourceIp": "2a01:...:b9f",
+            "userAgent": "curl/8.7.1"
+        },
+        "requestId": "f942509a-283f-4c4f-94f8-0d4ccc4a00f8",
+        "routeKey": "$default",
+        "stage": "$default",
+        "time": "15/Jul/2025:10:36:52 +0000",
+        "timeEpoch": 1752575812081
+    },
+    "isBase64Encoded": false
+}
 ```

@@ -202,11 +202,11 @@ struct Builder {
                 let relocatedResourcesDirectory = workingDirectory.appending(path: resourcesDirectoryName)
                 if FileManager.default.fileExists(atPath: artifactURL.path()) {
                     do {
+                        arguments.append(resourcesDirectoryName)
                         try FileManager.default.copyItem(
                             atPath: artifactURL.path(),
                             toPath: relocatedResourcesDirectory.path()
                         )
-                        arguments.append(resourcesDirectoryName)
                     } catch let error as CocoaError {
 
                         // On Linux, when the build has been done with Docker,
