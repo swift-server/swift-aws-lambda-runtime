@@ -9,7 +9,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     dependencies: [
         .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.1"),
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-events", from: "2.0.0-beta.1"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-events", from: "1.0.0"),
     ],
     targets: [
         .executableTarget(
