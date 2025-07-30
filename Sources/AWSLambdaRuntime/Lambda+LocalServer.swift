@@ -51,11 +51,21 @@ extension Lambda {
         logger: Logger,
         _ body: sending @escaping () async throws -> Void
     ) async throws {
-        try await LambdaHTTPServer.withLocalServer(
-            invocationEndpoint: invocationEndpoint,
-            logger: logger
-        ) {
-            try await body()
+        do {
+            try await LambdaHTTPServer.withLocalServer(
+                invocationEndpoint: invocationEndpoint,
+                logger: logger
+            ) {
+                try await body()
+            }
+        } catch let error as ChannelError {
+            // when this server is part of a ServiceLifeCycle group
+            // and user presses CTRL-C, this error is thrown
+            // The error description is "I/O on closed channel"
+            // TODO: investigate and solve the root cause
+            // because this server is used only for local tests
+            // and the error happens when we shutdown the server, I decided to ignore it at the moment.
+            logger.trace("Ignoring ChannelError during local server shutdown: \(error)")
         }
     }
 }
@@ -224,6 +234,9 @@ internal struct LambdaHTTPServer {
         }
 
         logger.info("Server shutting down")
+        if case .failure(let error) = result {
+            logger.error("Error during server shutdown: \(error)")
+        }
         return try result.get()
     }
 
