@@ -247,7 +247,7 @@ struct Builder {
 
             REQUIREMENTS: To use this plugin, you must have docker installed and started.
 
-            USAGE: swift package --allow-network-connections docker archive
+            USAGE: swift package --allow-network-connections docker lambda-build
                                                        [--help] [--verbose]
                                                        [--output-path <path>]
                                                        [--products <list of products>]

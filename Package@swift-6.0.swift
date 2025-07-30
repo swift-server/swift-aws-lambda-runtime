@@ -90,12 +90,12 @@ let package = Package(
                 intent: .custom(
                     verb: "lambda-build",
                     description:
-                        "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS or non Amazonlinux 2 distributions."
+                        "Compile and archive (zip) the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS or non Amazonlinux 2 distributions."
                 ),
                 permissions: [
                     .allowNetworkConnections(
                         scope: .docker,
-                        reason: "This plugin uses Docker to create the AWS Lambda ZIP package."
+                        reason: "This plugin uses Docker to compile code for Amazon Linux."
                     )
                 ]
             ),
@@ -109,7 +109,7 @@ let package = Package(
                 intent: .custom(
                     verb: "lambda-deploy",
                     description:
-                        "Deploy the Lambda function. You must have an AWS account and know an access key and secret access key."
+                        "Deploy the Lambda function. You must have an AWS account and an access key and secret access key."
                 ),
                 permissions: [
                     .allowNetworkConnections(
@@ -127,8 +127,7 @@ let package = Package(
             dependencies: [
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOCore", package: "swift-nio"),
-            ],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            ]
         ),
         .testTarget(
             name: "AWSLambdaRuntimeTests",
