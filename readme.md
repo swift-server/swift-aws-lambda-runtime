@@ -1,5 +1,5 @@
 > [!IMPORTANT]
-> The documentation included here refers to the Swift AWS Lambda Runtime v2 (code from the main branch). If you're developing for the runtime v1.x, check this [readme](https://github.com/swift-server/swift-aws-lambda-runtime/blob/v1/readme.md) instead.
+> The documentation included here refers to the Swift AWS Lambda Runtime v2 (code from the v2.x tags and the main branch). If you're developing for the runtime v1.x, check this [readme](https://github.com/swift-server/swift-aws-lambda-runtime/blob/v1/readme.md) instead.
 
 This guide contains the following sections:
 
@@ -66,8 +66,8 @@ swift package init --type executable
     2.1 Add the Swift AWS Lambda Runtime as a dependency
 
     ```bash
-    swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --branch main
-    swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime
+    swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --from 2.0.0-beta.1
+    swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime --from 1.0.0
     ```
 
     2.2 (Optional - only on macOS) Add `platforms` after `name`
@@ -87,7 +87,7 @@ swift package init --type executable
         name: "MyLambda",
         platforms: [.macOS(.v15)],
         dependencies: [
-            .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
+            .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.1"),
         ],
         targets: [
             .executableTarget(
@@ -355,6 +355,9 @@ You can learn how to deploy and invoke this function in [the streaming codable e
  Most Lambda functions are triggered by events originating in other AWS services such as `Amazon SNS`, `Amazon SQS` or `AWS APIGateway`.
 
  The [Swift AWS Lambda Events](http://github.com/swift-server/swift-aws-lambda-events) package includes an `AWSLambdaEvents` module that provides implementations for most common AWS event types further simplifying writing Lambda functions.
+
+> [!IMPORTANT]
+> This library has no dependencies on the AWS Lambda Events library. It is safe to use AWS Lambda v1.x with this Lambda Runtime v2.
 
  Here is an example Lambda function invoked when the AWS APIGateway receives an HTTP request.
 

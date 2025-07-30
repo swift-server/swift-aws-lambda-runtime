@@ -13,7 +13,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/vapor/postgres-nio.git", from: "1.26.0"),
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", branch: "main"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.1"),
         .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", from: "1.0.0"),
         .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.6.3"),
     ],
