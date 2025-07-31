@@ -39,17 +39,36 @@ enum AmazonHeaders {
     static let invokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
 }
 
-extension DispatchWallTime {
+/// A simple set of additions to Duration helping to work with Unix epoch that does not require Foundation.
+/// It provides a distant future value and a way to get the current time in milliseconds since the epoch.
+/// The Lambda execution environment uses UTC as a timezone, this struct must not manage timezones.
+/// see: TZ in https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
+extension Duration {
+    /// Returns the time in milliseconds since the Unix epoch.
     @usableFromInline
-    init(millisSinceEpoch: Int64) {
-        let nanoSinceEpoch = UInt64(millisSinceEpoch) * 1_000_000
-        let seconds = UInt64(nanoSinceEpoch / 1_000_000_000)
-        let nanoseconds = nanoSinceEpoch - (seconds * 1_000_000_000)
-        self.init(timespec: timespec(tv_sec: Int(seconds), tv_nsec: Int(nanoseconds)))
+    static var millisSinceEpoch: Duration {
+        var ts = timespec()
+        clock_gettime(CLOCK_REALTIME, &ts)
+        return .milliseconds(Int64(ts.tv_sec) * 1000 + Int64(ts.tv_nsec) / 1_000_000)
     }
 
-    var millisSinceEpoch: Int64 {
-        Int64(bitPattern: self.rawValue) / -1_000_000
+    /// Returns a Duration between Unix epoch and the distant future
+    @usableFromInline
+    static var distantFuture: Duration {
+        // Use a very large value to represent the distant future
+        millisSinceEpoch + Duration.seconds(.greatestFiniteMagnitude)
+    }
+
+    /// Returns the Duration in milliseconds
+    @usableFromInline
+    func milliseconds() -> Int64 {
+        Int64(self / .milliseconds(1))
+    }
+
+    /// Create a Duration from milliseconds since Unix Epoch
+    @usableFromInline
+    init(millisSinceEpoch: Int64) {
+        self = .milliseconds(millisSinceEpoch)
     }
 }
 
@@ -103,7 +122,7 @@ extension AmazonHeaders {
         // The version number, that is, 1.
         let version: UInt = 1
         // The time of the original request, in Unix epoch time, in 8 hexadecimal digits.
-        let now = UInt32(DispatchWallTime.now().millisSinceEpoch / 1000)
+        let now = UInt32(Duration.millisSinceEpoch.milliseconds() / 1000)
         let dateValue = String(now, radix: 16, uppercase: false)
         let datePadding = String(repeating: "0", count: max(0, 8 - dateValue.count))
         // A 96-bit identifier for the trace, globally unique, in 24 hexadecimal digits.

@@ -25,7 +25,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         let requestID: String
         let traceID: String
         let invokedFunctionARN: String
-        let deadline: DispatchWallTime
+        let deadline: Duration
         let cognitoIdentity: String?
         let clientContext: String?
         let logger: Logger
@@ -34,7 +34,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             requestID: String,
             traceID: String,
             invokedFunctionARN: String,
-            deadline: DispatchWallTime,
+            deadline: Duration,
             cognitoIdentity: String?,
             clientContext: String?,
             logger: Logger
@@ -67,7 +67,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     }
 
     /// The timestamp that the function times out.
-    public var deadline: DispatchWallTime {
+    public var deadline: Duration {
         self.storage.deadline
     }
 
@@ -92,7 +92,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         requestID: String,
         traceID: String,
         invokedFunctionARN: String,
-        deadline: DispatchWallTime,
+        deadline: Duration,
         cognitoIdentity: String? = nil,
         clientContext: String? = nil,
         logger: Logger
@@ -109,11 +109,10 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     }
 
     public func getRemainingTime() -> Duration {
-        let deadline = self.deadline.millisSinceEpoch
-        let now = DispatchWallTime.now().millisSinceEpoch
+        let deadline = self.deadline
+        let now = Duration.millisSinceEpoch
 
-        let remaining = deadline - now
-        return .milliseconds(remaining)
+        return deadline - now
     }
 
     public var debugDescription: String {
@@ -121,18 +120,19 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     }
 
     /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
+    /// The timeout is expressed relative to now
     package static func __forTestsOnly(
         requestID: String,
         traceID: String,
         invokedFunctionARN: String,
-        timeout: DispatchTimeInterval,
+        timeout: Duration,
         logger: Logger
     ) -> LambdaContext {
         LambdaContext(
             requestID: requestID,
             traceID: traceID,
             invokedFunctionARN: invokedFunctionARN,
-            deadline: .now() + timeout,
+            deadline: Duration.millisSinceEpoch + timeout,
             logger: logger
         )
     }

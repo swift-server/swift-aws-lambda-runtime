@@ -70,9 +70,7 @@ public enum Lambda {
                             requestID: invocation.metadata.requestID,
                             traceID: invocation.metadata.traceID,
                             invokedFunctionARN: invocation.metadata.invokedFunctionARN,
-                            deadline: DispatchWallTime(
-                                millisSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
-                            ),
+                            deadline: Duration(millisSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch),
                             logger: logger
                         )
                     )
