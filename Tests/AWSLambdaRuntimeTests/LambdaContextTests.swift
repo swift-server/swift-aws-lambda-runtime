@@ -12,13 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Testing
-@testable import AWSLambdaRuntime
 import Foundation
+import Testing
+
+@testable import AWSLambdaRuntime
 
 @Suite("LambdaContext ClientContext Tests")
 struct LambdaContextTests {
-    
+
     @Test("ClientContext with full data resolves correctly")
     func clientContextWithFullDataResolves() throws {
         let custom = ["key": "value"]
@@ -34,17 +35,17 @@ struct LambdaContextTests {
             custom: custom,
             environment: environment
         )
-        
+
         let encoder = JSONEncoder()
         let clientContextData = try encoder.encode(clientContext)
-        
+
         // Verify JSON encoding/decoding works correctly
         let decoder = JSONDecoder()
         let decodedClientContext = try decoder.decode(ClientContext.self, from: clientContextData)
-        
+
         let decodedClient = try #require(decodedClientContext.client)
         let originalClient = try #require(clientContext.client)
-        
+
         #expect(decodedClient.installationId == originalClient.installationId)
         #expect(decodedClient.appTitle == originalClient.appTitle)
         #expect(decodedClient.appVersionName == originalClient.appVersionName)
@@ -53,46 +54,46 @@ struct LambdaContextTests {
         #expect(decodedClientContext.custom == clientContext.custom)
         #expect(decodedClientContext.environment == clientContext.environment)
     }
-    
+
     @Test("ClientContext with empty data resolves correctly")
     func clientContextWithEmptyDataResolves() throws {
         let emptyClientContextJSON = "{}"
         let emptyClientContextData = emptyClientContextJSON.data(using: .utf8)!
-        
+
         let decoder = JSONDecoder()
         let decodedClientContext = try decoder.decode(ClientContext.self, from: emptyClientContextData)
-        
+
         // With empty JSON, we expect nil values for optional fields
         #expect(decodedClientContext.client == nil)
         #expect(decodedClientContext.custom == nil)
         #expect(decodedClientContext.environment == nil)
     }
-    
+
     @Test("ClientContext with AWS Lambda JSON payload decodes correctly")
     func clientContextWithAWSLambdaJSONPayload() throws {
         let jsonPayload = """
-        {
-          "client": {
-            "installation_id": "example-id",
-            "app_title": "Example App",
-            "app_version_name": "1.0",
-            "app_version_code": "1",
-            "app_package_name": "com.example.app"
-          },
-          "custom": {
-            "customKey": "customValue"
-          },
-          "env": {
-            "platform": "Android",
-            "platform_version": "10"
-          }
-        }
-        """
-        
+            {
+              "client": {
+                "installation_id": "example-id",
+                "app_title": "Example App",
+                "app_version_name": "1.0",
+                "app_version_code": "1",
+                "app_package_name": "com.example.app"
+              },
+              "custom": {
+                "customKey": "customValue"
+              },
+              "env": {
+                "platform": "Android",
+                "platform_version": "10"
+              }
+            }
+            """
+
         let jsonData = jsonPayload.data(using: .utf8)!
         let decoder = JSONDecoder()
         let decodedClientContext = try decoder.decode(ClientContext.self, from: jsonData)
-        
+
         // Verify client application data
         let client = try #require(decodedClientContext.client)
         #expect(client.installationId == "example-id")
@@ -100,11 +101,11 @@ struct LambdaContextTests {
         #expect(client.appVersionName == "1.0")
         #expect(client.appVersionCode == "1")
         #expect(client.appPackageName == "com.example.app")
-        
+
         // Verify custom properties
         let custom = try #require(decodedClientContext.custom)
         #expect(custom["customKey"] == "customValue")
-        
+
         // Verify environment settings
         let environment = try #require(decodedClientContext.environment)
         #expect(environment["platform"] == "Android")

@@ -30,7 +30,7 @@ public struct ClientApplication: Codable, Sendable {
     public let appVersionCode: String?
     /// The package name for the mobile application invoking the function
     public let appPackageName: String?
-    
+
     private enum CodingKeys: String, CodingKey {
         case installationId = "installation_id"
         case appTitle = "app_title"
@@ -38,7 +38,7 @@ public struct ClientApplication: Codable, Sendable {
         case appVersionCode = "app_version_code"
         case appPackageName = "app_package_name"
     }
-    
+
     public init(
         installationId: String? = nil,
         appTitle: String? = nil,
@@ -62,13 +62,13 @@ public struct ClientContext: Codable, Sendable {
     public let custom: [String: String]?
     /// Environment settings from the mobile client.
     public let environment: [String: String]?
-    
+
     private enum CodingKeys: String, CodingKey {
         case client
         case custom
         case environment = "env"
     }
-    
+
     public init(
         client: ClientApplication? = nil,
         custom: [String: String]? = nil,
