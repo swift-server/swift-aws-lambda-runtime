@@ -104,7 +104,7 @@ results+=( "$MODE, warm: $avg_warm (ns)" )
 export MODE=json
 
 # Start mock server
-start_mockserver $MODE $cold_iterations
+start_mockserver "$MODE" "$cold_iterations"
 
 # cold start
 echo "🚀❄️ running $MODE mode cold test"
@@ -120,7 +120,7 @@ avg_cold=$((sum_cold/cold_iterations))
 results+=( "$MODE, cold: $avg_cold (ns)" )
 
 # reset mock server 
-start_mockserver $MODE $warm_iterations
+start_mockserver "$MODE" "$warm_iterations"
 
 # normal calls
 echo "🚀🌤️ running $MODE mode warm test"
