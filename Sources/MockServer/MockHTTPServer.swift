@@ -103,7 +103,7 @@ struct HttpServer {
 
                     group.addTask {
                         await self.handleConnection(channel: connectionChannel, maxInvocations: self.maxInvocations)
-                        logger.trace("Done handling connection") //, metadata: ["connectionNumber": "\(counter)"])
+                        logger.trace("Done handling connection")
                     }
 
                     // This mock server only accepts one connection
