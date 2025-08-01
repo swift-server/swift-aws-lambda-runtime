@@ -330,6 +330,8 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                     try channel.pipeline.syncOperations.addHTTPClientHandlers()
                     // Lambda quotas... An invocation payload is maximal 6MB in size:
                     //   https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
+                    // TODO: should we enforce this here ?  What about streaming functions that
+                    //       support up to 20Mb responses ?
                     try channel.pipeline.syncOperations.addHandler(
                         NIOHTTPClientResponseAggregator(maxContentLength: 6 * 1024 * 1024)
                     )
@@ -364,6 +366,14 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             channel.closeFuture.whenComplete { result in
                 self.assumeIsolated { runtimeClient in
                     runtimeClient.channelClosed(channel)
+
+                    // at this stage, we lost the connection to the Lambda Service,
+                    // this is very unlikely to happen when running in a lambda function deployed in the cloud
+                    // however, this happens when performance testing against the MockServer
+                    // shutdown this runtime.
+                    // The Lambda service will create a new runtime environment anyway
+                    runtimeClient.logger.trace("Connection to Lambda API lost, exiting")
+                    exit(-1)
                 }
             }
 
