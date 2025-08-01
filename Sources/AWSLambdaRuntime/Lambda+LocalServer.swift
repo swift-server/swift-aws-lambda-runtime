@@ -452,7 +452,7 @@ internal struct LambdaHTTPServer {
             await self.responsePool.push(
                 LocalServerResponse(
                     id: requestId,
-                    status: .ok,
+                    status: .accepted,
                     // the local server has no mecanism to collect headers set by the lambda function
                     headers: HTTPHeaders(),
                     body: body,
