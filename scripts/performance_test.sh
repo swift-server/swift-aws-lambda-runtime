@@ -13,9 +13,6 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-# set -eu
-# set -euo pipefail
-
 log() { printf -- "** %s\n" "$*" >&2; }
 error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
@@ -27,9 +24,12 @@ export LOG_LEVEL=error # important, otherwise log becomes a bottleneck
 
 DATE_CMD="date"
 # using gdate on darwin for nanoseconds
+# gdate is installed by coreutils on macOS
 if [[ $(uname -s) == "Darwin" ]]; then
-  # DATE_CMD="gdate"
-  DATE_CMD="date" #temp for testing
+  if ! command -v gdate &> /dev/null; then
+    fatal "gdate could not be found. Please `brew install coreutils` to proceed."
+  fi
+  DATE_CMD="gdate"
 fi
 echo "⏱️ using $DATE_CMD to count time"
 
@@ -48,7 +48,9 @@ cleanup() {
 
 # start a mock server
 start_mockserver() {
-    # TODO: check if we have two parameters
+    if [ $# -ne 2 ]; then
+        fatal "Usage: $0 <mode> <invocations>"
+    fi
     MODE=$1
     INVOCATIONS=$2
     pkill -9 MockServer && echo "killed previous mock server" && sleep 1 # ignore-unacceptable-language
