@@ -52,11 +52,20 @@ extension Duration {
         return .milliseconds(Int64(ts.tv_sec) * 1000 + Int64(ts.tv_nsec) / 1_000_000)
     }
 
-    /// Returns a Duration between Unix epoch and the distant future
+    /// Hardcoded maximum execution time for a Lambda function.
     @usableFromInline
-    static var distantFuture: Duration {
-        // Use a very large value to represent the distant future
-        millisSinceEpoch + Duration.seconds(.greatestFiniteMagnitude)
+    static var maxLambdaExecutionTime: Duration {
+        // 15 minutes in milliseconds
+        // see https://docs.aws.amazon.com/lambda/latest/dg/configuration-timeout.html
+        .milliseconds(15 * 60 * 1000)
+    }
+
+    /// Returns the maximum deadline for a Lambda function execution.
+    /// This is the current time plus the maximum execution time.
+    /// This function is onwly used by the local server for testing purposes.
+    @usableFromInline
+    static var maxLambdaDeadline: Duration {
+        millisSinceEpoch + maxLambdaExecutionTime
     }
 
     /// Returns the Duration in milliseconds
