@@ -27,7 +27,8 @@ DATE_CMD="date"
 # gdate is installed by coreutils on macOS
 if [[ $(uname -s) == "Darwin" ]]; then
   if ! command -v gdate &> /dev/null; then
-    fatal "gdate could not be found. Please `brew install coreutils` to proceed."
+    # shellcheck disable=SC2006 # we explicitly want to use backticks here
+    fatal "gdate could not be found. Please \`brew install coreutils\` to proceed."
   fi
   DATE_CMD="gdate"
 fi
