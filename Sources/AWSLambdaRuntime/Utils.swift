@@ -40,7 +40,6 @@ enum AmazonHeaders {
 }
 
 /// A simple set of additions to Duration helping to work with Unix epoch that does not require Foundation.
-/// It provides a distant future value and a way to get the current time in milliseconds since the epoch.
 /// The Lambda execution environment uses UTC as a timezone, this struct must not manage timezones.
 /// see: TZ in https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
 extension Duration {
