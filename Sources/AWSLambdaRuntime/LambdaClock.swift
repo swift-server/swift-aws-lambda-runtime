@@ -113,7 +113,6 @@ public struct LambdaClock: Clock {
 
         /// Creates an instant from milliseconds since the Unix epoch.
         /// - Parameter milliseconds: The number of milliseconds since the Unix epoch.
-        /// - Returns: A new `Instant` representing the specified time.
         public init(millisecondsSinceEpoch milliseconds: Int64) {
             self.instant = milliseconds
         }
