@@ -24,7 +24,8 @@ extension LambdaContext {
     /// I'm not sure how usefull it is to have this as a Date, with only seconds precision,
     /// but I leave it here for compatibility with the FoundationJSONSupport trait.
     var deadlineDate: Date {
-        Date(timeIntervalSince1970: Double(self.deadline.milliseconds()) / 1000)
+        // Date(timeIntervalSince1970:) expects seconds, so we convert milliseconds to seconds.
+        Date(timeIntervalSince1970: Double(self.deadline.millisecondsSinceEpoch()) / 1000)
     }
 }
 #endif  // trait: FoundationJSONSupport

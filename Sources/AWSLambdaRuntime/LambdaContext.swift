@@ -25,7 +25,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         let requestID: String
         let traceID: String
         let invokedFunctionARN: String
-        let deadline: Duration
+        let deadline: LambdaClock.Instant
         let cognitoIdentity: String?
         let clientContext: String?
         let logger: Logger
@@ -34,7 +34,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             requestID: String,
             traceID: String,
             invokedFunctionARN: String,
-            deadline: Duration,
+            deadline: LambdaClock.Instant,
             cognitoIdentity: String?,
             clientContext: String?,
             logger: Logger
@@ -67,7 +67,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     }
 
     /// The timestamp that the function times out.
-    public var deadline: Duration {
+    public var deadline: LambdaClock.Instant {
         self.storage.deadline
     }
 
@@ -92,7 +92,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         requestID: String,
         traceID: String,
         invokedFunctionARN: String,
-        deadline: Duration,
+        deadline: LambdaClock.Instant,
         cognitoIdentity: String? = nil,
         clientContext: String? = nil,
         logger: Logger
@@ -110,9 +110,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
 
     public func getRemainingTime() -> Duration {
         let deadline = self.deadline
-        let now = Duration.millisSinceEpoch
-
-        return deadline - now
+        return deadline.duration(to: LambdaClock().now)
     }
 
     public var debugDescription: String {
@@ -132,7 +130,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             requestID: requestID,
             traceID: traceID,
             invokedFunctionARN: invokedFunctionARN,
-            deadline: Duration.millisSinceEpoch + timeout,
+            deadline: LambdaClock().now.advanced(by: timeout),
             logger: logger
         )
     }

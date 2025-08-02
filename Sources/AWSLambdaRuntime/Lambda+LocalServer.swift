@@ -650,7 +650,7 @@ internal struct LambdaHTTPServer {
                     "arn:aws:lambda:us-east-1:\(Int16.random(in: Int16.min ... Int16.max)):function:custom-runtime"
                 ),
                 (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
-                (AmazonHeaders.deadline, "\(Duration.maxLambdaExecutionTime.milliseconds())"),
+                (AmazonHeaders.deadline, "\(LambdaClock.maxLambdaDeadline)"),
             ])
 
             return LocalServerResponse(
