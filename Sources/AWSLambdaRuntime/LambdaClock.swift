@@ -12,10 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(Linux)
+#if os(macOS)
+import Darwin.C
+#elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(Windows)
+import ucrt
 #else
-import Darwin
+#error("Unsupported platform")
 #endif
 
 /// A clock implementation based on Unix epoch time for AWS Lambda runtime operations.
