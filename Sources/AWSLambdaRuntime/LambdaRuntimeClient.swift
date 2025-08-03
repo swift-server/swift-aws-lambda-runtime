@@ -121,10 +121,8 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         } catch {
             result = .failure(error)
         }
-
         await runtime.close()
 
-        //try? await runtime.close()
         return try result.get()
     }
 
@@ -375,7 +373,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                     // however, this happens when performance testing against the MockServer
                     // shutdown this runtime.
                     // The Lambda service will create a new runtime environment anyway
-                    runtimeClient.logger.trace("Connection to Lambda API. lost, exiting")
+                    runtimeClient.logger.trace("Connection to Lambda Service HTTP Server lost, exiting")
                     runtimeClient.futureConnectionClosed = runtimeClient.eventLoop.makeFailedFuture(
                         LambdaRuntimeError(code: .connectionToControlPlaneLost)
                     )

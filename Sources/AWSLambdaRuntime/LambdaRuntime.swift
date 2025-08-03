@@ -65,6 +65,13 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
             // catch top level errors that have not been handled until now
             // this avoids the runtime to crash and generate a backtrace
             self.logger.error("LambdaRuntime.run() failed with error", metadata: ["error": "\(error)"])
+            if let error = error as? LambdaRuntimeError,
+                error.code != .connectionToControlPlaneLost
+            {
+                // if the error is a LambdaRuntimeError but not a connection error,
+                // we rethrow it to preserve existing behaviour
+                throw error
+            }
         }
     }
     #endif
