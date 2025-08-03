@@ -538,7 +538,7 @@ The v2 API prioritizes the following principles:
 
 The v2 API introduces two new features:
 
-[Response Streaming](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/]): This functionality is ideal for handling large responses that need to be sent incrementally.  
+[Response Streaming](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/): This functionality is ideal for handling large responses that need to be sent incrementally.  
 
 [Background Work](https://aws.amazon.com/blogs/compute/running-code-after-returning-a-response-from-an-aws-lambda-function/): Schedule tasks to run after returning a response to the AWS Lambda control plane.
 
