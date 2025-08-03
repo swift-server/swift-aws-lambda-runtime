@@ -41,6 +41,17 @@ public enum Lambda {
         var logger = logger
         do {
             while !Task.isCancelled {
+
+                if let runtimeClient = runtimeClient as? LambdaRuntimeClient,
+                    let futureConnectionClosed = await runtimeClient.futureConnectionClosed
+                {
+                    // Wait for the futureConnectionClosed to complete,
+                    // which will happen when the Lambda HTTP Server (or MockServer) closes the connection
+                    // This allows us to exit the run loop gracefully.
+                    // The futureConnectionClosed is always an error, let it throw to finish the run loop.
+                    let _ = try await futureConnectionClosed.get()
+                }
+
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
                 logger[metadataKey: "aws-request-id"] = "\(invocation.metadata.requestID)"
 
@@ -84,6 +95,7 @@ public enum Lambda {
         } catch is CancellationError {
             // don't allow cancellation error to propagate further
         }
+
     }
 
     /// The default EventLoop the Lambda is scheduled on.

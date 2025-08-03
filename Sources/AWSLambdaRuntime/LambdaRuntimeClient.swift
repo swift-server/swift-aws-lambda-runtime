@@ -92,6 +92,9 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         case closed
     }
 
+    @usableFromInline
+    var futureConnectionClosed: EventLoopFuture<LambdaRuntimeError>? = nil
+
     private let eventLoop: any EventLoop
     private let logger: Logger
     private let configuration: Configuration
@@ -372,8 +375,10 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                     // however, this happens when performance testing against the MockServer
                     // shutdown this runtime.
                     // The Lambda service will create a new runtime environment anyway
-                    runtimeClient.logger.trace("Connection to Lambda API lost, exiting")
-                    exit(-1)
+                    runtimeClient.logger.trace("Connection to Lambda API. lost, exiting")
+                    runtimeClient.futureConnectionClosed = runtimeClient.eventLoop.makeFailedFuture(
+                        LambdaRuntimeError(code: .connectionToControlPlaneLost)
+                    )
                 }
             }
 
@@ -392,6 +397,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                 return handler
             }
         } catch {
+
             switch self.connectionState {
             case .disconnected, .connected:
                 fatalError("Unexpected state: \(self.connectionState)")

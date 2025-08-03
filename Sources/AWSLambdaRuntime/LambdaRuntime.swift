@@ -59,7 +59,13 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
     #if !ServiceLifecycleSupport
     @inlinable
     internal func run() async throws {
-        try await _run()
+        do {
+            try await _run()
+        } catch {
+            // catch top level error that have not been handled before
+            // this avoids the runtime to crash and generate a backtrace
+            self.logger.error("LambdaRuntime.run() failed with error", metadata: ["error": "\(error)"])
+        }
     }
     #endif
 
