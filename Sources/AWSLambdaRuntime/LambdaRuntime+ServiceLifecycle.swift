@@ -21,7 +21,7 @@ extension LambdaRuntime: Service {
             do {
                 try await self._run()
             } catch {
-                // catch top level error that have not been handled before
+                // catch top level errors that have not been handled until now
                 // this avoids the runtime to crash and generate a backtrace
                 self.logger.error("LambdaRuntime.run() failed with error", metadata: ["error": "\(error)"])
             }

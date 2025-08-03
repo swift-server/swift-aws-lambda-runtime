@@ -48,7 +48,7 @@ public enum Lambda {
                     // Wait for the futureConnectionClosed to complete,
                     // which will happen when the Lambda HTTP Server (or MockServer) closes the connection
                     // This allows us to exit the run loop gracefully.
-                    // The futureConnectionClosed is always an error, let it throw to finish the run loop.
+                    // The futureConnectionClosed is always an error, let it throw to terminate the Lambda run loop.
                     let _ = try await futureConnectionClosed.get()
                 }
 
