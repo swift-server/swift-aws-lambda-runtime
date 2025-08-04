@@ -21,7 +21,7 @@ import NIOCore
 /// AWS Mobile SDK client fields.
 public struct ClientApplication: Codable, Sendable {
     /// The mobile app installation id
-    public let installationId: String?
+    public let installationID: String?
     /// The app title for the mobile app as registered with AWS' mobile services.
     public let appTitle: String?
     /// The version name of the application as registered with AWS' mobile services.
