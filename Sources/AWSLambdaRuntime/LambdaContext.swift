@@ -173,7 +173,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
 
     public func getRemainingTime() -> Duration {
         let deadline = self.deadline
-        return deadline.duration(to: LambdaClock().now)
+        return LambdaClock().now.duration(to: deadline)
     }
 
     public var debugDescription: String {
