@@ -26,7 +26,7 @@ struct LambdaContextTests {
         let environment = ["key": "value"]
         let clientContext = ClientContext(
             client: ClientApplication(
-                installationId: "test-id",
+                installationID: "test-id",
                 appTitle: "test-app",
                 appVersionName: "1.0",
                 appVersionCode: "100",
@@ -44,9 +44,9 @@ struct LambdaContextTests {
         let decodedClientContext = try decoder.decode(ClientContext.self, from: clientContextData)
 
         let decodedClient = try #require(decodedClientContext.client)
-        let originalClient = try #require(clientContext.client)
+        let originalClient = try #require(clientContext.client) 
 
-        #expect(decodedClient.installationId == originalClient.installationId)
+        #expect(decodedClient.installationID == originalClient.installationID)
         #expect(decodedClient.appTitle == originalClient.appTitle)
         #expect(decodedClient.appVersionName == originalClient.appVersionName)
         #expect(decodedClient.appVersionCode == originalClient.appVersionCode)
@@ -96,7 +96,7 @@ struct LambdaContextTests {
 
         // Verify client application data
         let client = try #require(decodedClientContext.client)
-        #expect(client.installationId == "example-id")
+        #expect(client.installationID == "example-id")
         #expect(client.appTitle == "Example App")
         #expect(client.appVersionName == "1.0")
         #expect(client.appVersionCode == "1")

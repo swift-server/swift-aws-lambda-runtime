@@ -32,7 +32,7 @@ public struct ClientApplication: Codable, Sendable {
     public let appPackageName: String?
 
     private enum CodingKeys: String, CodingKey {
-        case installationId = "installation_id"
+        case installationID = "installation_id"
         case appTitle = "app_title"
         case appVersionName = "app_version_name"
         case appVersionCode = "app_version_code"
@@ -40,13 +40,13 @@ public struct ClientApplication: Codable, Sendable {
     }
 
     public init(
-        installationId: String? = nil,
+        installationID: String? = nil,
         appTitle: String? = nil,
         appVersionName: String? = nil,
         appVersionCode: String? = nil,
         appPackageName: String? = nil
     ) {
-        self.installationId = installationId
+        self.installationID = installationID
         self.appTitle = appTitle
         self.appVersionName = appVersionName
         self.appVersionCode = appVersionCode
