@@ -44,7 +44,7 @@ struct LambdaContextTests {
         let decodedClientContext = try decoder.decode(ClientContext.self, from: clientContextData)
 
         let decodedClient = try #require(decodedClientContext.client)
-        let originalClient = try #require(clientContext.client) 
+        let originalClient = try #require(clientContext.client)
 
         #expect(decodedClient.installationID == originalClient.installationID)
         #expect(decodedClient.appTitle == originalClient.appTitle)
