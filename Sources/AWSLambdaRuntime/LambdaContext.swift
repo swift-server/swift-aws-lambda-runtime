@@ -16,6 +16,70 @@ import Dispatch
 import Logging
 import NIOCore
 
+// MARK: - Client Context
+
+/// AWS Mobile SDK client fields.
+public struct ClientApplication: Codable, Sendable {
+    /// The mobile app installation id
+    public let installationID: String?
+    /// The app title for the mobile app as registered with AWS' mobile services.
+    public let appTitle: String?
+    /// The version name of the application as registered with AWS' mobile services.
+    public let appVersionName: String?
+    /// The app version code.
+    public let appVersionCode: String?
+    /// The package name for the mobile application invoking the function
+    public let appPackageName: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case installationID = "installation_id"
+        case appTitle = "app_title"
+        case appVersionName = "app_version_name"
+        case appVersionCode = "app_version_code"
+        case appPackageName = "app_package_name"
+    }
+
+    public init(
+        installationID: String? = nil,
+        appTitle: String? = nil,
+        appVersionName: String? = nil,
+        appVersionCode: String? = nil,
+        appPackageName: String? = nil
+    ) {
+        self.installationID = installationID
+        self.appTitle = appTitle
+        self.appVersionName = appVersionName
+        self.appVersionCode = appVersionCode
+        self.appPackageName = appPackageName
+    }
+}
+
+/// For invocations from the AWS Mobile SDK, data about the client application and device.
+public struct ClientContext: Codable, Sendable {
+    /// Information about the mobile application invoking the function.
+    public let client: ClientApplication?
+    /// Custom properties attached to the mobile event context.
+    public let custom: [String: String]?
+    /// Environment settings from the mobile client.
+    public let environment: [String: String]?
+
+    private enum CodingKeys: String, CodingKey {
+        case client
+        case custom
+        case environment = "env"
+    }
+
+    public init(
+        client: ClientApplication? = nil,
+        custom: [String: String]? = nil,
+        environment: [String: String]? = nil
+    ) {
+        self.client = client
+        self.custom = custom
+        self.environment = environment
+    }
+}
+
 // MARK: - Context
 
 /// Lambda runtime context.
@@ -27,7 +91,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         let invokedFunctionARN: String
         let deadline: DispatchWallTime
         let cognitoIdentity: String?
-        let clientContext: String?
+        let clientContext: ClientContext?
         let logger: Logger
 
         init(
@@ -36,7 +100,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             invokedFunctionARN: String,
             deadline: DispatchWallTime,
             cognitoIdentity: String?,
-            clientContext: String?,
+            clientContext: ClientContext?,
             logger: Logger
         ) {
             self.requestID = requestID
@@ -77,7 +141,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     }
 
     /// For invocations from the AWS Mobile SDK, data about the client application and device.
-    public var clientContext: String? {
+    public var clientContext: ClientContext? {
         self.storage.clientContext
     }
 
@@ -94,7 +158,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         invokedFunctionARN: String,
         deadline: DispatchWallTime,
         cognitoIdentity: String? = nil,
-        clientContext: String? = nil,
+        clientContext: ClientContext? = nil,
         logger: Logger
     ) {
         self.storage = _Storage(
@@ -117,7 +181,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     }
 
     public var debugDescription: String {
-        "\(Self.self)(requestID: \(self.requestID), traceID: \(self.traceID), invokedFunctionARN: \(self.invokedFunctionARN), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(self.clientContext ?? "nil"), deadline: \(self.deadline))"
+        "\(Self.self)(requestID: \(self.requestID), traceID: \(self.traceID), invokedFunctionARN: \(self.invokedFunctionARN), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(String(describing: self.clientContext)), deadline: \(self.deadline))"
     }
 
     /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
