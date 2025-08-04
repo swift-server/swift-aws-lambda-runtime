@@ -16,6 +16,12 @@ import Testing
 
 @testable import AWSLambdaRuntime
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
 @Suite("LambdaClock Tests")
 struct LambdaClockTests {
 
@@ -107,5 +113,27 @@ struct LambdaClockTests {
         // Should be negative since we're going from future to present
         #expect(remainingTime < .zero)
         #expect(remainingTime <= .seconds(-29))  // Allow some timing tolerance
+    }
+
+    @Test("LambdaClock now matches Foundation Date within tolerance")
+    func lambdaClockNowMatchesFoundationDate() {
+
+        let clock = LambdaClock()
+
+        // Get timestamps as close together as possible
+        let lambdaClockNow = clock.now
+        let foundationDate = Date()
+
+        // Convert Foundation Date to milliseconds since epoch
+        let foundationMillis = Int64(foundationDate.timeIntervalSince1970 * 1000)
+        let lambdaClockMillis = lambdaClockNow.millisecondsSinceEpoch()
+
+        // Allow small tolerance for timing differences between calls
+        let difference = abs(foundationMillis - lambdaClockMillis)
+
+        #expect(
+            difference <= 10,
+            "LambdaClock and Foundation Date should be within 10ms of each other, difference was \(difference)ms"
+        )
     }
 }
