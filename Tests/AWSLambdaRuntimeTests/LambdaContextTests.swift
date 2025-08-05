@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import Logging
 import Testing
 
 @testable import AWSLambdaRuntime
@@ -110,5 +111,26 @@ struct LambdaContextTests {
         let environment = try #require(decodedClientContext.environment)
         #expect(environment["platform"] == "Android")
         #expect(environment["platform_version"] == "10")
+    }
+
+    @Test("getRemainingTime returns positive duration for future deadline")
+    func getRemainingTimeReturnsPositiveDurationForFutureDeadline() {
+
+        // Create context with deadline 30 seconds in the future
+        let context = LambdaContext.__forTestsOnly(
+            requestID: "test-request",
+            traceID: "test-trace",
+            invokedFunctionARN: "test-arn",
+            timeout: .seconds(30),
+            logger: Logger(label: "test")
+        )
+
+        // Get remaining time - should be positive since deadline is in future
+        let remainingTime = context.getRemainingTime()
+
+        // Verify Duration can be negative (not absolute value)
+        #expect(remainingTime > .zero, "getRemainingTime() should return positive duration when deadline is in future")
+        #expect(remainingTime <= Duration.seconds(31), "Remaining time should be approximately 30 seconds")
+        #expect(remainingTime >= Duration.seconds(-29), "Remaining time should be approximately -30 seconds")
     }
 }
