@@ -18,6 +18,7 @@ import Synchronization
 import Testing
 
 @testable import AWSLambdaRuntime
+@testable import StreamingFromEvent
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials

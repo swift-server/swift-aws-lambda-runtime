@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import AWSLambdaEvents
+import AWSLambdaRuntime
 import Logging
 import NIOCore
 
@@ -149,8 +151,6 @@ public struct StreamingFromEventClosureHandler<Event: Decodable>: StreamingLambd
     }
 }
 
-#if FoundationJSONSupport
-
 extension StreamingLambdaCodableAdapter {
     /// Initialize with a JSON decoder and handler.
     /// - Parameters:
@@ -203,4 +203,3 @@ extension LambdaRuntime {
         self.init(handler: adapter, logger: logger)
     }
 }
-#endif  // FoundationJSONSupport

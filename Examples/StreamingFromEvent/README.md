@@ -1,12 +1,33 @@
 # Streaming Codable Lambda function
 
-This example demonstrates how to use the `StreamingLambdaHandlerWithEvent` protocol to create Lambda functions that:
+This example demonstrates how to use a `StreamingLambdaHandlerWithEvent` protocol to create Lambda functions, exposed through a FunctionUrl, that:
 
 1. **Receive JSON input**: Automatically decode JSON events into Swift structs
 2. **Stream responses**: Send data incrementally as it becomes available
 3. **Execute background work**: Perform additional processing after the response is sent
 
-The example uses the streaming codable interface that combines the benefits of:
+## When to Use This Approach
+
+**⚠️ Important Limitations:**
+
+1. **Function URL Only**: This streaming codable approach only works with Lambda functions exposed through [Lambda Function URLs](https://docs.aws.amazon.com/lambda/latest/dg/urls-configuration.html)
+2. **Limited Request Access**: This approach hides the details of the `FunctionURLRequest` (like HTTP headers, query parameters, etc.) from developers
+
+**Decision Rule:**
+
+- **Use this streaming codable approach when:**
+  - Your function is exposed through a Lambda Function URL
+  - You have a JSON payload that you want automatically decoded
+  - You don't need to inspect HTTP headers, query parameters, or other request details
+  - You prioritize convenience over flexibility
+
+- **Use the ByteBuffer `StreamingLambdaHandler` approach when:**
+  - You need full control over the `FunctionURLRequest` details
+  - You're invoking the Lambda through other means (API Gateway, direct invocation, etc.)
+  - You need access to HTTP headers, query parameters, or request metadata
+  - You require maximum flexibility (requires writing more code)
+
+This example balances convenience and flexibility. The streaming codable interface combines the benefits of:
 - Type-safe JSON input decoding (like regular `LambdaHandler`)
 - Response streaming capabilities (like `StreamingLambdaHandler`)
 - Background work execution after response completion

@@ -10,15 +10,24 @@ let package = Package(
     platforms: [.macOS(.v15)],
     dependencies: [
         // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.1")
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.1"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", from: "1.0.0"),
     ],
     targets: [
         .executableTarget(
             name: "StreamingFromEvent",
             dependencies: [
-                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime")
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+                .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
             ]
-        )
+        ),
+        .testTarget(
+            name: "StreamingFromEventTests",
+            dependencies: [
+                "StreamingFromEvent",
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+            ]
+        ),
     ]
 )
 
