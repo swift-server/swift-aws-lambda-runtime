@@ -36,7 +36,7 @@ jobs:
       # We pass the list of examples here, but we can't pass an array as argument
       # Instead, we pass a String with a valid JSON array.
       # The workaround is mentioned here https://github.com/orgs/community/discussions/11692
-      examples: "[ 'APIGateway', 'APIGateway+LambdaAuthorizer', 'BackgroundTasks', 'HelloJSON', 'HelloWorld', 'ResourcesPackaging', 'S3EventNotifier', 'S3_AWSSDK', 'S3_Soto', 'Streaming', 'StreamingFromEvent', 'ServiceLifecycle+Postgres', 'Testing', 'Tutorial' ]"
+      examples: "[ 'APIGateway', 'APIGateway+LambdaAuthorizer', 'BackgroundTasks', 'HelloJSON', 'HelloWorld', 'HummingbirdLambda', 'ResourcesPackaging', 'S3EventNotifier', 'S3_AWSSDK', 'S3_Soto', 'Streaming', 'StreamingFromEvent', 'ServiceLifecycle+Postgres', 'Testing', 'Tutorial' ]"
       archive_plugin_examples: "[ 'HelloWorld', 'ResourcesPackaging' ]"
       archive_plugin_enabled: true
 

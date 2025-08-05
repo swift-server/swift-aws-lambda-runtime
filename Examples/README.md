@@ -28,6 +28,8 @@ This directory contains example code for Lambda functions.
 
 - **[HelloWorld](HelloWorld/README.md)**: a simple Lambda function (requires [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
 
+- **[Hummingbird](Hummingbird/README.md)**: a Lambda function using the Hummingbird web framework with API Gateway integration (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
+
 - **[S3EventNotifier](S3EventNotifier/README.md)**: a Lambda function that receives object-upload notifications from an [Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html) bucket.
 
 - **[S3_AWSSDK](S3_AWSSDK/README.md)**: a Lambda function that uses the [AWS SDK for Swift](https://docs.aws.amazon.com/sdk-for-swift/latest/developer-guide/getting-started.html) to invoke an [Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html) API (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
