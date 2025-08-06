@@ -38,7 +38,7 @@ This directory contains example code for Lambda functions.
 
 - **[Streaming](Streaming/README.md)**: create a Lambda function exposed as an URL. The Lambda function streams its response over time. (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
 
-- **[StreamingFromEvent](StreamingFromEvent/README.md)**: a Lambda function that combines JSON input decoding with response streaming capabilities, demonstrating the new streaming codable interface (requires [AWS SAM](https://aws.amazon.com/serverless/sam/) or the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
+- **[Streaming+Codable](Streaming+Codable/README.md)**: a Lambda function that combines JSON input decoding with response streaming capabilities, demonstrating a streaming codable interface (requires [AWS SAM](https://aws.amazon.com/serverless/sam/) or the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
 
 - **[Testing](Testing/README.md)**: a test suite for Lambda functions.
 
