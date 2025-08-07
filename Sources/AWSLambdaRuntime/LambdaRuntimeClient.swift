@@ -937,6 +937,7 @@ extension LambdaChannelHandler: ChannelInboundHandler {
         // fail any pending responses with last error or assume peer disconnected
         switch self.state {
         case .connected(_, .waitingForNextInvocation(let continuation)):
+            self.state = .disconnected
             continuation.resume(throwing: self.lastError ?? ChannelError.ioOnClosedChannel)
         default:
             break
