@@ -399,6 +399,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             channel.closeFuture.whenComplete { result in
                 self.assumeIsolated { runtimeClient in
                     runtimeClient.channelClosed(channel)
+                    runtimeClient.connectionState = .lostConnection
                 }
             }
 
