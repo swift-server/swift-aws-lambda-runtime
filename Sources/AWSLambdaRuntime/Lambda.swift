@@ -41,17 +41,13 @@ public enum Lambda {
         var logger = logger
         do {
             while !Task.isCancelled {
-
-                if let runtimeClient = runtimeClient as? LambdaRuntimeClient,
-                    let futureConnectionClosed = await runtimeClient.futureConnectionClosed
-                {
-                    // Wait for the futureConnectionClosed to complete,
-                    // which will happen when the Lambda HTTP Server (or MockServer) closes the connection
-                    // This allows us to exit the run loop gracefully.
-                    // The futureConnectionClosed is always an error, let it throw to terminate the Lambda run loop.
-                    let _ = try await futureConnectionClosed.get()
+                
+                guard let runtimeClient = runtimeClient as? LambdaRuntimeClient,
+                      await !runtimeClient.isConnectionStateDisconnected else {
+                    logger.trace("Runtime client not connected, exiting run loop")
+                    throw LambdaRuntimeError.init(code: .connectionToControlPlaneLost)
                 }
-
+                
                 logger.trace("Waiting for next invocation")
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
                 logger[metadataKey: "aws-request-id"] = "\(invocation.metadata.requestID)"

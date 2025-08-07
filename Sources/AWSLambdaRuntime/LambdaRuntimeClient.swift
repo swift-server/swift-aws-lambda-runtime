@@ -67,10 +67,23 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         NIOLoopBound<LambdaChannelHandler<LambdaRuntimeClient>>, any Error
     >
 
-    private enum ConnectionState {
+    private enum ConnectionState: Equatable {
         case disconnected
         case connecting([ConnectionContinuation])
         case connected(Channel, LambdaChannelHandler<LambdaRuntimeClient>)
+        
+        static func == (lhs: ConnectionState, rhs: ConnectionState) -> Bool {
+            switch (lhs, rhs) {
+            case (.disconnected, .disconnected):
+                return true
+            case (.connecting, .connecting):
+                return true
+            case (.connected, .connected):
+                return true
+            default:
+                return false
+            }
+        }
     }
 
     enum LambdaState {
@@ -92,14 +105,22 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         case closed
     }
 
-    @usableFromInline
-    var futureConnectionClosed: EventLoopFuture<LambdaRuntimeError>? = nil
-
     private let eventLoop: any EventLoop
     private let logger: Logger
     private let configuration: Configuration
 
     private var connectionState: ConnectionState = .disconnected
+
+    // adding this dynamic property because I can not give access to `connectionState` directly
+    // because it is private, depending on multiple private and non-Sendable types
+    // the only thing we need to know outside of this class is if the connection state is disconnected
+    @usableFromInline
+    var isConnectionStateDisconnected: Bool {
+        get {
+            self.connectionState == .disconnected
+        }
+    }
+
     private var lambdaState: LambdaState = .idle(previousRequestID: nil)
     private var closingState: ClosingState = .notClosing
 
@@ -367,16 +388,6 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             channel.closeFuture.whenComplete { result in
                 self.assumeIsolated { runtimeClient in
                     runtimeClient.channelClosed(channel)
-
-                    // at this stage, we lost the connection to the Lambda Service,
-                    // this is very unlikely to happen when running in a lambda function deployed in the cloud
-                    // however, this happens when performance testing against the MockServer
-                    // shutdown this runtime.
-                    // The Lambda service will create a new runtime environment anyway
-                    runtimeClient.logger.trace("Connection to Lambda Service HTTP Server lost, exiting")
-                    runtimeClient.futureConnectionClosed = runtimeClient.eventLoop.makeFailedFuture(
-                        LambdaRuntimeError(code: .connectionToControlPlaneLost)
-                    )
                 }
             }
 
