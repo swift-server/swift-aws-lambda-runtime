@@ -43,8 +43,8 @@ public enum Lambda {
             while !Task.isCancelled {
                 
                 guard let runtimeClient = runtimeClient as? LambdaRuntimeClient,
-                      await !runtimeClient.isConnectionStateDisconnected else {
-                    logger.trace("Runtime client not connected, exiting run loop")
+                      await !runtimeClient.didLooseConnection else {
+                    logger.trace("Runtime client disconnected, exiting run loop")
                     throw LambdaRuntimeError.init(code: .connectionToControlPlaneLost)
                 }
                 

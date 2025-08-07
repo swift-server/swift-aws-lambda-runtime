@@ -69,6 +69,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
 
     private enum ConnectionState: Equatable {
         case disconnected
+        case lostConnection
         case connecting([ConnectionContinuation])
         case connected(Channel, LambdaChannelHandler<LambdaRuntimeClient>)
         
@@ -79,6 +80,8 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             case (.connecting, .connecting):
                 return true
             case (.connected, .connected):
+                return true
+            case (.lostConnection, .lostConnection):
                 return true
             default:
                 return false
@@ -115,9 +118,9 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
     // because it is private, depending on multiple private and non-Sendable types
     // the only thing we need to know outside of this class is if the connection state is disconnected
     @usableFromInline
-    var isConnectionStateDisconnected: Bool {
+    var didLooseConnection: Bool {
         get {
-            self.connectionState == .disconnected
+            self.connectionState == .lostConnection
         }
     }
 
@@ -179,12 +182,16 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
 
             case .connected(let channel, _):
                 channel.close(mode: .all, promise: nil)
+            case .lostConnection:
+                // this should never happen.
+                fatalError("Lost connection to Lambda service while closing the runtime client")
             }
         }
     }
 
     @usableFromInline
     func nextInvocation() async throws -> (Invocation, Writer) {
+
         try await withTaskCancellationHandler {
             switch self.lambdaState {
             case .idle:
@@ -284,7 +291,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
 
     private func channelClosed(_ channel: any Channel) {
         switch (self.connectionState, self.closingState) {
-        case (_, .closed):
+        case (_, .closed), (.lostConnection, _):
             fatalError("Invalid state: \(self.connectionState), \(self.closingState)")
 
         case (.disconnected, .notClosing):
@@ -344,6 +351,10 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             return loopBound.value
         case .connected(_, let handler):
             return handler
+
+        case .lostConnection:
+            // this should never happen
+            fatalError("Lost connection to Lambda service")
         }
 
         let bootstrap = ClientBootstrap(group: self.eventLoop)
@@ -392,7 +403,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             }
 
             switch self.connectionState {
-            case .disconnected, .connected:
+            case .disconnected, .connected, .lostConnection:
                 fatalError("Unexpected state: \(self.connectionState)")
 
             case .connecting(let array):
@@ -408,7 +419,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         } catch {
 
             switch self.connectionState {
-            case .disconnected, .connected:
+            case .disconnected, .connected, .lostConnection:
                 fatalError("Unexpected state: \(self.connectionState)")
 
             case .connecting(let array):
@@ -456,6 +467,9 @@ extension LambdaRuntimeClient: LambdaChannelHandlerDelegate {
 
                 isolated.connectionState = .disconnected
 
+            case .lostConnection:
+                // this should never happen
+                fatalError("Lost connection to Lambda service")
             }
         }
     }
