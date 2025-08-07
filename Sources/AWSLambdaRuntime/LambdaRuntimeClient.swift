@@ -515,7 +515,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
         }
     }
 
-    private var state: State = .disconnected
+    var state: State = .disconnected
     private var lastError: Error?
     private var reusableErrorBuffer: ByteBuffer?
     private let logger: Logger
