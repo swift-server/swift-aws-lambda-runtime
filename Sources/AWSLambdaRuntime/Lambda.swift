@@ -42,12 +42,6 @@ public enum Lambda {
         do {
             while !Task.isCancelled {
                 
-                guard let runtimeClient = runtimeClient as? LambdaRuntimeClient,
-                      await !runtimeClient.didLooseConnection else {
-                    logger.trace("Runtime client disconnected, exiting run loop")
-                    throw LambdaRuntimeError.init(code: .connectionToControlPlaneLost)
-                }
-                
                 logger.trace("Waiting for next invocation")
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
                 logger[metadataKey: "aws-request-id"] = "\(invocation.metadata.requestID)"
