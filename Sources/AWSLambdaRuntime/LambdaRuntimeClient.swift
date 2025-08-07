@@ -72,7 +72,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         case lostConnection
         case connecting([ConnectionContinuation])
         case connected(Channel, LambdaChannelHandler<LambdaRuntimeClient>)
-        
+
         static func == (lhs: ConnectionState, rhs: ConnectionState) -> Bool {
             switch (lhs, rhs) {
             case (.disconnected, .disconnected):
@@ -171,7 +171,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
 
             case .connected(let channel, _):
                 channel.close(mode: .all, promise: nil)
-            
+
             case .lostConnection:
                 continuation.resume()
             }
@@ -191,7 +191,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                 self.lambdaState = .waitingForNextInvocation
                 let handler = try await self.makeOrGetConnection()
                 let invocation = try await handler.nextInvocation()
-                                
+
                 guard case .waitingForNextInvocation = self.lambdaState else {
                     fatalError("Invalid state: \(self.lambdaState)")
                 }
@@ -320,7 +320,6 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         case (.connected, .notClosing):
             self.connectionState = .disconnected
 
-
         case (.connected, .closing(let continuation)):
             self.connectionState = .disconnected
 
@@ -394,8 +393,8 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                 self.assumeIsolated { runtimeClient in
 
                     // resume any pending continuation on the handler
-                    if case .connected(_ , let handler) = runtimeClient.connectionState {
-                        if case .connected(_ , let lambdaState) = handler.state {
+                    if case .connected(_, let handler) = runtimeClient.connectionState {
+                        if case .connected(_, let lambdaState) = handler.state {
                             if case .waitingForNextInvocation(let continuation) = lambdaState {
                                 continuation.resume(throwing: LambdaRuntimeError(code: .connectionToControlPlaneLost))
                             }

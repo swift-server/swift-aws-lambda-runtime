@@ -41,7 +41,7 @@ public enum Lambda {
         var logger = logger
         do {
             while !Task.isCancelled {
-                
+
                 logger.trace("Waiting for next invocation")
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
                 logger[metadataKey: "aws-request-id"] = "\(invocation.metadata.requestID)"
