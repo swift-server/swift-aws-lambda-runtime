@@ -25,7 +25,6 @@ package struct LambdaRuntimeError: Error {
 
         case writeAfterFinishHasBeenSent
         case finishAfterFinishHasBeenSent
-        case lostConnectionToControlPlane
         case unexpectedStatusCodeForRequest
 
         case nextInvocationMissingHeaderRequestID

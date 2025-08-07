@@ -216,7 +216,7 @@ struct HttpServer {
         } else if requestHead.uri.hasSuffix("/response") {
             responseStatus = .accepted
         } else if requestHead.uri.hasSuffix("/error") {
-            responseStatus = .ok
+            responseStatus = .accepted
         } else {
             responseStatus = .notFound
         }

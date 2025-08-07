@@ -41,6 +41,8 @@ public enum Lambda {
         var logger = logger
         do {
             while !Task.isCancelled {
+
+                logger.trace("Waiting for next invocation")
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
                 logger[metadataKey: "aws-request-id"] = "\(invocation.metadata.requestID)"
 
@@ -76,14 +78,18 @@ public enum Lambda {
                             logger: logger
                         )
                     )
+                    logger.trace("Handler finished processing invocation")
                 } catch {
+                    logger.trace("Handler failed processing invocation", metadata: ["Handler error": "\(error)"])
                     try await writer.reportError(error)
                     continue
                 }
+                logger.handler.metadata.removeValue(forKey: "aws-request-id")
             }
         } catch is CancellationError {
             // don't allow cancellation error to propagate further
         }
+
     }
 
     /// The default EventLoop the Lambda is scheduled on.
