@@ -356,8 +356,6 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                     try channel.pipeline.syncOperations.addHTTPClientHandlers()
                     // Lambda quotas... An invocation payload is maximal 6MB in size:
                     //   https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
-                    // TODO: should we enforce this here ?  What about streaming functions that
-                    //       support up to 20Mb responses ?
                     try channel.pipeline.syncOperations.addHandler(
                         NIOHTTPClientResponseAggregator(maxContentLength: 6 * 1024 * 1024)
                     )
