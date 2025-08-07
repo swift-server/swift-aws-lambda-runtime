@@ -348,8 +348,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             return handler
 
         case .lostConnection:
-            // this should never happen
-            fatalError("Lost connection to Lambda service")
+            throw LambdaRuntimeError(code: .connectionToControlPlaneLost)
         }
 
         let bootstrap = ClientBootstrap(group: self.eventLoop)
