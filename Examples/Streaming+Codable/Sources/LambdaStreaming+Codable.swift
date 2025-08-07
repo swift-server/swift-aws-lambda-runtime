@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import AWSLambdaEvents
+import AWSLambdaRuntime
 import Logging
 import NIOCore
 
@@ -71,6 +73,9 @@ public struct StreamingLambdaCodableAdapter<
     }
 
     /// Handles the raw ByteBuffer by decoding it and passing to the underlying handler.
+    /// This function attempts to decode the event as a `FunctionURLRequest` first, which allows for
+    /// handling Function URL requests that may have a base64-encoded body.
+    /// If the decoding fails, it falls back to decoding the event "as-is" with the provided JSON type.
     /// - Parameters:
     ///   - event: The raw ByteBuffer event to decode.
     ///   - responseWriter: The response writer to pass to the underlying handler.
@@ -82,43 +87,20 @@ public struct StreamingLambdaCodableAdapter<
         context: LambdaContext
     ) async throws {
 
-        // try to decode the event as a FunctionURLRequest and extract its body
-        let urlRequestBody = bodyFromFunctionURLRequest(event)
+        var decodedBody: Handler.Event!
 
-        // decode the body or the event as user-provided JSON
-        let decodedEvent = try self.decoder.decode(Handler.Event.self, from: urlRequestBody ?? event)
+        // try to decode the event as a FunctionURLRequest, then fetch its body attribute
+        if let request = try? self.decoder.decode(FunctionURLRequest.self, from: event) {
+            // decode the body as user-provided JSON type
+            // this function handles the base64 decoding when needed
+            decodedBody = try request.decodeBody(Handler.Event.self)
+        } else {
+            // try to decode the event "as-is" with the provided JSON type
+            decodedBody = try self.decoder.decode(Handler.Event.self, from: event)
+        }
 
         // and pass it to the handler
-        try await self.handler.handle(decodedEvent, responseWriter: responseWriter, context: context)
-    }
-
-    /// Extract the body payload from a FunctionURLRequest event.
-    /// This function checks if the event is a valid `FunctionURLRequest` and decodes the body if it is base64 encoded.
-    /// If the event is not a valid `FunctionURLRequest`, it returns nil.
-    /// - Parameter event: The raw ByteBuffer event to check.
-    /// - Returns: The base64 decoded body of the FunctionURLRequest if it is a valid FunctionURLRequest, otherwise nil.
-    @inlinable
-    package func bodyFromFunctionURLRequest(_ event: ByteBuffer) -> ByteBuffer? {
-        do {
-            // try to decode as a FunctionURLRequest
-            let request = try self.decoder.decode(FunctionURLRequest.self, from: event)
-
-            // if the body is encoded in base64, decode it
-            if request.isBase64Encoded,
-                let base64EncodedString = request.body,
-                // this is the minimal way to base64 decode without importing new dependencies
-                let decodedData = Data(base64Encoded: base64EncodedString),
-                let decodedString = String(data: decodedData, encoding: .utf8)
-            {
-
-                return ByteBuffer(string: decodedString)
-            } else {
-                return ByteBuffer(string: request.body ?? "")
-            }
-        } catch {
-            // not a FunctionURLRequest, return nil
-            return nil
-        }
+        try await self.handler.handle(decodedBody, responseWriter: responseWriter, context: context)
     }
 }
 
@@ -148,8 +130,6 @@ public struct StreamingFromEventClosureHandler<Event: Decodable>: StreamingLambd
         try await self.body(event, responseWriter, context)
     }
 }
-
-#if FoundationJSONSupport
 
 extension StreamingLambdaCodableAdapter {
     /// Initialize with a JSON decoder and handler.
@@ -203,4 +183,3 @@ extension LambdaRuntime {
         self.init(handler: adapter, logger: logger)
     }
 }
-#endif  // FoundationJSONSupport
