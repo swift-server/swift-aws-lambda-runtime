@@ -62,7 +62,7 @@ public struct LambdaClock: Clock {
     /// ## Thread Safety
     ///
     /// `Instant` is a value type and is inherently thread-safe.
-    public struct Instant: InstantProtocol {
+    public struct Instant: InstantProtocol, CustomStringConvertible {
         /// The number of milliseconds since the Unix epoch.
         let instant: Int64
 
@@ -121,6 +121,11 @@ public struct LambdaClock: Clock {
         /// - Parameter milliseconds: The number of milliseconds since the Unix epoch.
         public init(millisecondsSinceEpoch milliseconds: Int64) {
             self.instant = milliseconds
+        }
+
+        /// Renders an Instant as an EPOCH value
+        public var description: String {
+            "\(self.instant)"
         }
     }
 
