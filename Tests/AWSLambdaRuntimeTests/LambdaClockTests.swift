@@ -143,5 +143,12 @@ struct LambdaClockTests {
 
         let expectedString = "\(instant)"
         #expect(expectedString.allSatisfy { $0.isNumber }, "String should only contain numbers")
+
+        if let expectedNumber = Int64(expectedString) {
+            let newInstant = LambdaClock.Instant(millisecondsSinceEpoch: expectedNumber)
+            #expect(instant == newInstant, "Instant should match the expected number")
+        } else {
+            Issue.record("expectedString is not a number")
+        }
     }
 }
