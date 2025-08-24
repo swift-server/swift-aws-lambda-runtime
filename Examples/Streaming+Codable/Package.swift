@@ -6,19 +6,28 @@ import PackageDescription
 import struct Foundation.URL
 
 let package = Package(
-    name: "StreamingFromEvent",
+    name: "StreamingCodable",
     platforms: [.macOS(.v15)],
     dependencies: [
         // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.1")
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.1"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", from: "1.2.0"),
     ],
     targets: [
         .executableTarget(
-            name: "StreamingFromEvent",
+            name: "StreamingCodable",
             dependencies: [
-                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime")
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+                .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
             ]
-        )
+        ),
+        .testTarget(
+            name: "Streaming+CodableTests",
+            dependencies: [
+                "StreamingCodable",
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+            ]
+        ),
     ]
 )
 

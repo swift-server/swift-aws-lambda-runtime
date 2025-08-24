@@ -136,4 +136,19 @@ struct LambdaClockTests {
             "LambdaClock and Foundation Date should be within 10ms of each other, difference was \(difference)ms"
         )
     }
+    @Test("Instant renders as string with an epoch number")
+    func instantRendersAsStringWithEpochNumber() {
+        let clock = LambdaClock()
+        let instant = clock.now
+
+        let expectedString = "\(instant)"
+        #expect(expectedString.allSatisfy { $0.isNumber }, "String should only contain numbers")
+
+        if let expectedNumber = Int64(expectedString) {
+            let newInstant = LambdaClock.Instant(millisecondsSinceEpoch: expectedNumber)
+            #expect(instant == newInstant, "Instant should match the expected number")
+        } else {
+            Issue.record("expectedString is not a number")
+        }
+    }
 }
