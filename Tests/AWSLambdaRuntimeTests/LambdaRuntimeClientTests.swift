@@ -261,7 +261,7 @@ struct LambdaRuntimeClientTests {
         }
     }
 
-    struct DisconnectBehavior: LambdaServerBehavior {        
+    struct DisconnectBehavior: LambdaServerBehavior {
         func getInvocation() -> GetInvocationResult {
             .success(("disconnect", "0"))
         }
