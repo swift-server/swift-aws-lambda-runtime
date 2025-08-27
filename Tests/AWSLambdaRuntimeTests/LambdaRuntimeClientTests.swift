@@ -307,11 +307,11 @@ struct LambdaRuntimeClientTests {
                     Issue.record("Expected connection error but got successful invocation")
 
                 } catch let error as LambdaRuntimeError {
-                    // Verify we get an error when the connection is closed.
                     #expect(error.code == .connectionToControlPlaneLost)
                 } catch let error as ChannelError {
-                    // the error is either a ChannelError or a LambdaRuntimeError
                     #expect(error == .ioOnClosedChannel)
+                } catch let error as IOError {
+                    #expect(error.errnoCode == ECONNRESET || error.errnoCode == EPIPE)
                 } catch {
                     Issue.record("Unexpected error type: \(error)")
                 }
