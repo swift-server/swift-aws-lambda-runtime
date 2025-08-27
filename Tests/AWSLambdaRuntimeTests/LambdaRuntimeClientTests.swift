@@ -299,7 +299,7 @@ struct LambdaRuntimeClientTests {
                     try await writer.writeAndFinish(ByteBuffer(string: "hello"))
 
                     // continue to simulate traffic until the server reports it has closed the connection
-                    for i in 1...100 {
+                    for _ in 1...1000 {
                         let (_, writer2) = try await runtimeClient.nextInvocation()
                         try await writer2.writeAndFinish(ByteBuffer(string: "hello"))
                     }
