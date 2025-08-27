@@ -238,4 +238,54 @@ struct LambdaRuntimeClientTests {
             }
         }
     }
+
+    @Test("Server closing the connection when waiting for next invocation throws an error")
+    func testChannelCloseFutureWithWaitingForNextInvocation() async throws {
+        struct DisconnectBehavior: LambdaServerBehavior {
+            func getInvocation() -> GetInvocationResult {
+                // Return "disconnect" to trigger server closing the connection
+                .success(("disconnect", "0"))
+            }
+
+            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+                Issue.record("should not process response")
+                return .failure(.internalServerError)
+            }
+
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                Issue.record("should not report error")
+                return .failure(.internalServerError)
+            }
+
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                Issue.record("should not report init error")
+                return .failure(.internalServerError)
+            }
+        }
+
+        try await withMockServer(behaviour: DisconnectBehavior()) { port in
+            let configuration = LambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: port)
+
+            try await LambdaRuntimeClient.withRuntimeClient(
+                configuration: configuration,
+                eventLoop: NIOSingletons.posixEventLoopGroup.next(),
+                logger: self.logger
+            ) { runtimeClient in
+                do {
+                    // This should fail when server closes connection
+                    let _ = try await runtimeClient.nextInvocation()
+                    Issue.record("Expected connection error but got successful invocation")
+
+                // Verify we get an error when the connection is closed.
+                // the error is either a ChannelError or a LambdaRuntimeError
+                } catch let error as LambdaRuntimeError {
+                    #expect(error.code == .connectionToControlPlaneLost)
+                } catch let error as ChannelError {
+                    #expect(error == .ioOnClosedChannel)
+                } catch {
+                    Issue.record("Unexpected error type: \(error)")
+                }
+            }
+        }
+    }
 }
