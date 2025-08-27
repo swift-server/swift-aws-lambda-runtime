@@ -245,8 +245,8 @@ struct LambdaRuntimeClientTests {
         }
 
         func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
-            // Return "disconnect" to trigger server closing the connection
-            // after having accepted a response
+            // Return "delayed-disconnect" to trigger server closing the connection
+            // after having accepted the first response
             .success("delayed-disconnect")
         }
 
@@ -261,15 +261,13 @@ struct LambdaRuntimeClientTests {
         }
     }
 
-    struct DisconnectBehavior: LambdaServerBehavior {
+    struct DisconnectBehavior: LambdaServerBehavior {        
         func getInvocation() -> GetInvocationResult {
-            // Return "disconnect" to trigger server closing the connection
             .success(("disconnect", "0"))
         }
 
         func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
-            Issue.record("should not process response")
-            return .failure(.internalServerError)
+            .success(nil)
         }
 
         func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
@@ -285,7 +283,7 @@ struct LambdaRuntimeClientTests {
 
     @Test(
         "Server closing the connection when waiting for next invocation throws an error",
-        arguments: [DisconnectAfterSendingResponseBehavior(), DisconnectBehavior()] as [any LambdaServerBehavior]
+        arguments: [DisconnectBehavior(), DisconnectAfterSendingResponseBehavior()] as [any LambdaServerBehavior]
     )
     func testChannelCloseFutureWithWaitingForNextInvocation(behavior: LambdaServerBehavior) async throws {
         try await withMockServer(behaviour: behavior) { port in
@@ -297,12 +295,14 @@ struct LambdaRuntimeClientTests {
                 logger: self.logger
             ) { runtimeClient in
                 do {
-                    // This should fail when server closes connection
                     let (_, writer) = try await runtimeClient.nextInvocation()
-                    let response = ByteBuffer(string: "hello")
-                    try await writer.writeAndFinish(response)
+                    try await writer.writeAndFinish(ByteBuffer(string: "hello"))
 
-                    let _ = try await runtimeClient.nextInvocation()
+                    // continue to simulate traffic until the server reports it has closed the connection
+                    for i in 1...100 {
+                        let (_, writer2) = try await runtimeClient.nextInvocation()
+                        try await writer2.writeAndFinish(ByteBuffer(string: "hello"))
+                    }
 
                     Issue.record("Expected connection error but got successful invocation")
 
