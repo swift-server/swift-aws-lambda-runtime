@@ -42,10 +42,10 @@ struct LambdaRuntimeClientTests {
                 .success((self.requestId, self.event))
             }
 
-            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+            func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
                 #expect(self.requestId == requestId)
                 #expect(self.event == response)
-                return .success(())
+                return .success(nil)
             }
 
             func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
@@ -102,9 +102,9 @@ struct LambdaRuntimeClientTests {
             .success((self.requestId, self.event))
         }
 
-        func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+        func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
             #expect(self.requestId == requestId)
-            return .success(())
+            return .success(nil)
         }
 
         mutating func captureHeaders(_ headers: HTTPHeaders) {
@@ -197,10 +197,10 @@ struct LambdaRuntimeClientTests {
                 .success((self.requestId, self.event))
             }
 
-            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+            func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
                 #expect(self.requestId == requestId)
                 #expect(self.event == response)
-                return .success(())
+                return .success(nil)
             }
 
             func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
@@ -239,31 +239,56 @@ struct LambdaRuntimeClientTests {
         }
     }
 
-    @Test("Server closing the connection when waiting for next invocation throws an error")
-    func testChannelCloseFutureWithWaitingForNextInvocation() async throws {
-        struct DisconnectBehavior: LambdaServerBehavior {
-            func getInvocation() -> GetInvocationResult {
-                // Return "disconnect" to trigger server closing the connection
-                .success(("disconnect", "0"))
-            }
-
-            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
-                Issue.record("should not process response")
-                return .failure(.internalServerError)
-            }
-
-            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
-                Issue.record("should not report error")
-                return .failure(.internalServerError)
-            }
-
-            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
-                Issue.record("should not report init error")
-                return .failure(.internalServerError)
-            }
+    struct DisconnectAfterSendingResponseBehavior: LambdaServerBehavior {
+        func getInvocation() -> GetInvocationResult {
+            .success((UUID().uuidString, "hello"))
         }
 
-        try await withMockServer(behaviour: DisconnectBehavior()) { port in
+        func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
+            // Return "disconnect" to trigger server closing the connection
+            // after having accepted a response
+            .success("delayed-disconnect")
+        }
+
+        func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+            Issue.record("should not report error")
+            return .failure(.internalServerError)
+        }
+
+        func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+            Issue.record("should not report init error")
+            return .failure(.internalServerError)
+        }
+    }
+
+    struct DisconnectBehavior: LambdaServerBehavior {
+        func getInvocation() -> GetInvocationResult {
+            // Return "disconnect" to trigger server closing the connection
+            .success(("disconnect", "0"))
+        }
+
+        func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
+            Issue.record("should not process response")
+            return .failure(.internalServerError)
+        }
+
+        func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+            Issue.record("should not report error")
+            return .failure(.internalServerError)
+        }
+
+        func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+            Issue.record("should not report init error")
+            return .failure(.internalServerError)
+        }
+    }
+
+    @Test(
+        "Server closing the connection when waiting for next invocation throws an error",
+        arguments: [DisconnectAfterSendingResponseBehavior(), DisconnectBehavior()] as [any LambdaServerBehavior]
+    )
+    func testChannelCloseFutureWithWaitingForNextInvocation(behavior: LambdaServerBehavior) async throws {
+        try await withMockServer(behaviour: behavior) { port in
             let configuration = LambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: port)
 
             try await LambdaRuntimeClient.withRuntimeClient(
@@ -273,7 +298,12 @@ struct LambdaRuntimeClientTests {
             ) { runtimeClient in
                 do {
                     // This should fail when server closes connection
+                    let (_, writer) = try await runtimeClient.nextInvocation()
+                    let response = ByteBuffer(string: "hello")
+                    try await writer.writeAndFinish(response)
+
                     let _ = try await runtimeClient.nextInvocation()
+
                     Issue.record("Expected connection error but got successful invocation")
 
                 } catch let error as LambdaRuntimeError {
