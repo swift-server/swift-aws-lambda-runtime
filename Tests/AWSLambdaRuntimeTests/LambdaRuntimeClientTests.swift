@@ -276,11 +276,11 @@ struct LambdaRuntimeClientTests {
                     let _ = try await runtimeClient.nextInvocation()
                     Issue.record("Expected connection error but got successful invocation")
 
-                // Verify we get an error when the connection is closed.
-                // the error is either a ChannelError or a LambdaRuntimeError
                 } catch let error as LambdaRuntimeError {
+                    // Verify we get an error when the connection is closed.
                     #expect(error.code == .connectionToControlPlaneLost)
                 } catch let error as ChannelError {
+                    // the error is either a ChannelError or a LambdaRuntimeError
                     #expect(error == .ioOnClosedChannel)
                 } catch {
                     Issue.record("Unexpected error type: \(error)")
