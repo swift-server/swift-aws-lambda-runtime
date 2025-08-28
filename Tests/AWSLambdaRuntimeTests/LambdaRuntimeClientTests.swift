@@ -295,22 +295,30 @@ struct LambdaRuntimeClientTests {
                 logger: self.logger
             ) { runtimeClient in
                 do {
-                    let (_, writer) = try await runtimeClient.nextInvocation()
-                    try await writer.writeAndFinish(ByteBuffer(string: "hello"))
 
-                    // continue to simulate traffic until the server reports it has closed the connection
-                    for _ in 1...1000 {
-                        let (_, writer2) = try await runtimeClient.nextInvocation()
-                        try await writer2.writeAndFinish(ByteBuffer(string: "hello"))
+                    // simulate traffic until the server reports it has closed the connection
+                    // or a timeout, whichever comes first
+                    // result is ignored here, either there is a connection error or a timeout
+                    let _ = try await timeout(deadline: .seconds(1)) {
+                        while true {
+                            let (_, writer) = try await runtimeClient.nextInvocation()
+                            try await writer.writeAndFinish(ByteBuffer(string: "hello"))
+                        }
                     }
+                    // result is ignored here, we should never reach this line
+                    Issue.record("Connection reset test did not throw an error")
 
-                    Issue.record("Expected connection error but got successful invocation")
-
+                } catch is CancellationError {
+                    print("++CancellationError")
+                    Issue.record("Runtime client did not send connection closed error")
                 } catch let error as LambdaRuntimeError {
+                    print("++LambdaRuntimeError")
                     #expect(error.code == .connectionToControlPlaneLost)
                 } catch let error as ChannelError {
+                    print("++ChannelError")
                     #expect(error == .ioOnClosedChannel)
                 } catch let error as IOError {
+                    print("++IOError")
                     #expect(error.errnoCode == ECONNRESET || error.errnoCode == EPIPE)
                 } catch {
                     Issue.record("Unexpected error type: \(error)")

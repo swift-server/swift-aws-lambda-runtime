@@ -162,7 +162,9 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
     @usableFromInline
     func nextInvocation() async throws -> (Invocation, Writer) {
 
-        try await withTaskCancellationHandler {
+        try Task.checkCancellation()
+
+        return try await withTaskCancellationHandler {
             switch self.lambdaState {
             case .idle:
                 self.lambdaState = .waitingForNextInvocation
