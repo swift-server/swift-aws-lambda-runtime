@@ -311,10 +311,13 @@ struct LambdaRuntimeClientTests {
                 } catch is CancellationError {
                     Issue.record("Runtime client did not send connection closed error")
                 } catch let error as LambdaRuntimeError {
+                    logger.trace("LambdaRuntimeError - expected")
                     #expect(error.code == .connectionToControlPlaneLost)
                 } catch let error as ChannelError {
+                    logger.trace("ChannelError - expected")
                     #expect(error == .ioOnClosedChannel)
                 } catch let error as IOError {
+                    logger.trace("IOError - expected")
                     #expect(error.errnoCode == ECONNRESET || error.errnoCode == EPIPE)
                 } catch {
                     Issue.record("Unexpected error type: \(error)")
