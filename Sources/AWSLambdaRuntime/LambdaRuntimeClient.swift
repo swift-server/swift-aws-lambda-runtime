@@ -365,16 +365,6 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             )
             channel.closeFuture.whenComplete { result in
                 self.assumeIsolated { runtimeClient in
-
-                    // resume any pending continuation on the handler
-                    if case .connected(_, let handler) = runtimeClient.connectionState {
-                        if case .connected(_, let lambdaState) = handler.state {
-                            if case .waitingForNextInvocation(let continuation) = lambdaState {
-                                continuation.resume(throwing: LambdaRuntimeError(code: .connectionToControlPlaneLost))
-                            }
-                        }
-                    }
-
                     // close the channel
                     runtimeClient.channelClosed(channel)
                     runtimeClient.connectionState = .disconnected
@@ -898,9 +888,16 @@ extension LambdaChannelHandler: ChannelInboundHandler {
     func channelInactive(context: ChannelHandlerContext) {
         // fail any pending responses with last error or assume peer disconnected
         switch self.state {
-        case .connected(_, .waitingForNextInvocation(let continuation)):
+        case .connected(_, let lambdaState):
+            switch lambdaState {
+            case .waitingForNextInvocation(let continuation):
+                continuation.resume(throwing: self.lastError ?? ChannelError.ioOnClosedChannel)
+            case .sentResponse(let continuation):
+                continuation.resume(throwing: self.lastError ?? ChannelError.ioOnClosedChannel)
+            case .idle, .sendingResponse, .waitingForResponse:
+                break
+            }
             self.state = .disconnected
-            continuation.resume(throwing: self.lastError ?? ChannelError.ioOnClosedChannel)
         default:
             break
         }
