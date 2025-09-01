@@ -17,12 +17,12 @@ import NIOCore
 import NIOHTTP1
 import NIOPosix
 
-protocol LambdaChannelHandlerDelegate {
+internal protocol LambdaChannelHandlerDelegate {
     func connectionWillClose(channel: any Channel)
     func connectionErrorHappened(_ error: any Error, channel: any Channel)
 }
 
-final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate> {
+internal final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate> {
     let nextInvocationPath = Consts.invocationURLPrefix + Consts.getNextInvocationURLSuffix
 
     enum State {
