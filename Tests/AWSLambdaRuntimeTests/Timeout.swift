@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 // as suggested by https://github.com/vapor/postgres-nio/issues/489#issuecomment-2186509773
-func timeout<Success: Sendable>(
+func withTimeout<Success: Sendable>(
     deadline: Duration,
     _ closure: @escaping @Sendable () async throws -> Success
 ) async throws -> Success {
