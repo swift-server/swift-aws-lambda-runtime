@@ -514,7 +514,7 @@ private final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate>
             "user-agent": .userAgent,
             "Lambda-Runtime-Function-Response-Mode": "streaming",
             // these are not used by this runtime client at the moment
-            // FIXME: the eror handling should inject these headers in the streamed response to report mid-stream errors
+            // FIXME: the error handling should inject these headers in the streamed response to report mid-stream errors
             "Trailer": "Lambda-Runtime-Function-Error-Type, Lambda-Runtime-Function-Error-Body",
         ]
     }
