@@ -94,16 +94,29 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
             let ip = String(ipAndPort[0])
             guard let port = Int(ipAndPort[1]) else { throw LambdaRuntimeError(code: .invalidPort) }
 
-            try await LambdaRuntimeClient.withRuntimeClient(
-                configuration: .init(ip: ip, port: port),
-                eventLoop: self.eventLoop,
-                logger: self.logger
-            ) { runtimeClient in
-                try await Lambda.runLoop(
-                    runtimeClient: runtimeClient,
-                    handler: handler,
+            do {
+                try await LambdaRuntimeClient.withRuntimeClient(
+                    configuration: .init(ip: ip, port: port),
+                    eventLoop: self.eventLoop,
                     logger: self.logger
-                )
+                ) { runtimeClient in
+                    try await Lambda.runLoop(
+                        runtimeClient: runtimeClient,
+                        handler: handler,
+                        logger: self.logger
+                    )
+                }
+            } catch {
+                // catch top level errors that have not been handled until now
+                // this avoids the runtime to crash and generate a backtrace
+                self.logger.error("LambdaRuntime.run() failed with error", metadata: ["error": "\(error)"])
+                if let error = error as? LambdaRuntimeError,
+                    error.code != .connectionToControlPlaneLost
+                {
+                    // if the error is a LambdaRuntimeError but not a connection error,
+                    // we rethrow it to preserve existing behaviour
+                    throw error
+                }
             }
 
         } else {

@@ -97,6 +97,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
     private let configuration: Configuration
 
     private var connectionState: ConnectionState = .disconnected
+
     private var lambdaState: LambdaState = .idle(previousRequestID: nil)
     private var closingState: ClosingState = .notClosing
 
@@ -118,10 +119,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         } catch {
             result = .failure(error)
         }
-
         await runtime.close()
-
-        //try? await runtime.close()
         return try result.get()
     }
 
@@ -163,12 +161,16 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
 
     @usableFromInline
     func nextInvocation() async throws -> (Invocation, Writer) {
-        try await withTaskCancellationHandler {
+
+        try Task.checkCancellation()
+
+        return try await withTaskCancellationHandler {
             switch self.lambdaState {
             case .idle:
                 self.lambdaState = .waitingForNextInvocation
                 let handler = try await self.makeOrGetConnection()
                 let invocation = try await handler.nextInvocation()
+
                 guard case .waitingForNextInvocation = self.lambdaState else {
                     fatalError("Invalid state: \(self.lambdaState)")
                 }
@@ -283,7 +285,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         case (.connecting(let array), .notClosing):
             self.connectionState = .disconnected
             for continuation in array {
-                continuation.resume(throwing: LambdaRuntimeError(code: .lostConnectionToControlPlane))
+                continuation.resume(throwing: LambdaRuntimeError(code: .connectionToControlPlaneLost))
             }
 
         case (.connecting(let array), .closing(let continuation)):
@@ -363,7 +365,9 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             )
             channel.closeFuture.whenComplete { result in
                 self.assumeIsolated { runtimeClient in
+                    // close the channel
                     runtimeClient.channelClosed(channel)
+                    runtimeClient.connectionState = .disconnected
                 }
             }
 
@@ -382,6 +386,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                 return handler
             }
         } catch {
+
             switch self.connectionState {
             case .disconnected, .connected:
                 fatalError("Unexpected state: \(self.connectionState)")
@@ -430,7 +435,6 @@ extension LambdaRuntimeClient: LambdaChannelHandlerDelegate {
                 }
 
                 isolated.connectionState = .disconnected
-
             }
         }
     }
@@ -884,8 +888,16 @@ extension LambdaChannelHandler: ChannelInboundHandler {
     func channelInactive(context: ChannelHandlerContext) {
         // fail any pending responses with last error or assume peer disconnected
         switch self.state {
-        case .connected(_, .waitingForNextInvocation(let continuation)):
-            continuation.resume(throwing: self.lastError ?? ChannelError.ioOnClosedChannel)
+        case .connected(_, let lambdaState):
+            switch lambdaState {
+            case .waitingForNextInvocation(let continuation):
+                continuation.resume(throwing: self.lastError ?? ChannelError.ioOnClosedChannel)
+            case .sentResponse(let continuation):
+                continuation.resume(throwing: self.lastError ?? ChannelError.ioOnClosedChannel)
+            case .idle, .sendingResponse, .waitingForResponse:
+                break
+            }
+            self.state = .disconnected
         default:
             break
         }

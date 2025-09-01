@@ -160,6 +160,7 @@ final class HTTPHandler: ChannelInboundHandler {
         var responseStatus: HTTPResponseStatus
         var responseBody: String?
         var responseHeaders: [(String, String)]?
+        var disconnectAfterSend = false
 
         // Handle post-init-error first to avoid matching the less specific post-error suffix.
         if request.head.uri.hasSuffix(Consts.postInitErrorURL) {
@@ -202,8 +203,11 @@ final class HTTPHandler: ChannelInboundHandler {
             behavior.captureHeaders(request.head.headers)
 
             switch behavior.processResponse(requestId: String(requestId), response: requestBody) {
-            case .success:
+            case .success(let next):
                 responseStatus = .accepted
+                if next == "delayed-disconnect" {
+                    disconnectAfterSend = true
+                }
             case .failure(let error):
                 responseStatus = .init(statusCode: error.rawValue)
             }
@@ -223,14 +227,21 @@ final class HTTPHandler: ChannelInboundHandler {
         } else {
             responseStatus = .notFound
         }
-        self.writeResponse(context: context, status: responseStatus, headers: responseHeaders, body: responseBody)
+        self.writeResponse(
+            context: context,
+            status: responseStatus,
+            headers: responseHeaders,
+            body: responseBody,
+            closeConnection: disconnectAfterSend
+        )
     }
 
     func writeResponse(
         context: ChannelHandlerContext,
         status: HTTPResponseStatus,
         headers: [(String, String)]? = nil,
-        body: String? = nil
+        body: String? = nil,
+        closeConnection: Bool = false
     ) {
         var headers = HTTPHeaders(headers ?? [])
         headers.add(name: "Content-Length", value: "\(body?.utf8.count ?? 0)")
@@ -253,14 +264,19 @@ final class HTTPHandler: ChannelInboundHandler {
         }
 
         let loopBoundContext = NIOLoopBound(context, eventLoop: context.eventLoop)
-
         let keepAlive = self.keepAlive
         context.writeAndFlush(wrapOutboundOut(.end(nil))).whenComplete { result in
+            let context = loopBoundContext.value
+            if closeConnection {
+                context.close(promise: nil)
+                return
+            }
+
             if case .failure(let error) = result {
                 logger.error("write error \(error)")
             }
+
             if !keepAlive {
-                let context = loopBoundContext.value
                 context.close().whenFailure { error in
                     logger.error("close error \(error)")
                 }
@@ -271,7 +287,7 @@ final class HTTPHandler: ChannelInboundHandler {
 
 protocol LambdaServerBehavior: Sendable {
     func getInvocation() -> GetInvocationResult
-    func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError>
+    func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError>
     func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError>
     func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError>
 

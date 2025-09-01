@@ -42,10 +42,10 @@ struct LambdaRuntimeClientTests {
                 .success((self.requestId, self.event))
             }
 
-            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+            func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
                 #expect(self.requestId == requestId)
                 #expect(self.event == response)
-                return .success(())
+                return .success(nil)
             }
 
             func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
@@ -102,9 +102,9 @@ struct LambdaRuntimeClientTests {
             .success((self.requestId, self.event))
         }
 
-        func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+        func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
             #expect(self.requestId == requestId)
-            return .success(())
+            return .success(nil)
         }
 
         mutating func captureHeaders(_ headers: HTTPHeaders) {
@@ -197,10 +197,10 @@ struct LambdaRuntimeClientTests {
                 .success((self.requestId, self.event))
             }
 
-            func processResponse(requestId: String, response: String?) -> Result<Void, ProcessResponseError> {
+            func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
                 #expect(self.requestId == requestId)
                 #expect(self.event == response)
-                return .success(())
+                return .success(nil)
             }
 
             func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
@@ -234,6 +234,93 @@ struct LambdaRuntimeClientTests {
                     // wait a small amount to ensure we are waiting for continuation
                     try await Task.sleep(for: .milliseconds(100))
                     group.cancelAll()
+                }
+            }
+        }
+    }
+
+    struct DisconnectAfterSendingResponseBehavior: LambdaServerBehavior {
+        func getInvocation() -> GetInvocationResult {
+            .success((UUID().uuidString, "hello"))
+        }
+
+        func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
+            // Return "delayed-disconnect" to trigger server closing the connection
+            // after having accepted the first response
+            .success("delayed-disconnect")
+        }
+
+        func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+            Issue.record("should not report error")
+            return .failure(.internalServerError)
+        }
+
+        func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+            Issue.record("should not report init error")
+            return .failure(.internalServerError)
+        }
+    }
+
+    struct DisconnectBehavior: LambdaServerBehavior {
+        func getInvocation() -> GetInvocationResult {
+            .success(("disconnect", "0"))
+        }
+
+        func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
+            .success(nil)
+        }
+
+        func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+            Issue.record("should not report error")
+            return .failure(.internalServerError)
+        }
+
+        func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+            Issue.record("should not report init error")
+            return .failure(.internalServerError)
+        }
+    }
+
+    @Test(
+        "Server closing the connection when waiting for next invocation throws an error",
+        arguments: [DisconnectBehavior(), DisconnectAfterSendingResponseBehavior()] as [any LambdaServerBehavior]
+    )
+    func testChannelCloseFutureWithWaitingForNextInvocation(behavior: LambdaServerBehavior) async throws {
+        try await withMockServer(behaviour: behavior) { port in
+            let configuration = LambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: port)
+
+            try await LambdaRuntimeClient.withRuntimeClient(
+                configuration: configuration,
+                eventLoop: NIOSingletons.posixEventLoopGroup.next(),
+                logger: self.logger
+            ) { runtimeClient in
+                do {
+
+                    // simulate traffic until the server reports it has closed the connection
+                    // or a timeout, whichever comes first
+                    // result is ignored here, either there is a connection error or a timeout
+                    let _ = try await timeout(deadline: .seconds(1)) {
+                        while true {
+                            let (_, writer) = try await runtimeClient.nextInvocation()
+                            try await writer.writeAndFinish(ByteBuffer(string: "hello"))
+                        }
+                    }
+                    // result is ignored here, we should never reach this line
+                    Issue.record("Connection reset test did not throw an error")
+
+                } catch is CancellationError {
+                    Issue.record("Runtime client did not send connection closed error")
+                } catch let error as LambdaRuntimeError {
+                    logger.trace("LambdaRuntimeError - expected")
+                    #expect(error.code == .connectionToControlPlaneLost)
+                } catch let error as ChannelError {
+                    logger.trace("ChannelError - expected")
+                    #expect(error == .ioOnClosedChannel)
+                } catch let error as IOError {
+                    logger.trace("IOError - expected")
+                    #expect(error.errnoCode == ECONNRESET || error.errnoCode == EPIPE)
+                } catch {
+                    Issue.record("Unexpected error type: \(error)")
                 }
             }
         }
