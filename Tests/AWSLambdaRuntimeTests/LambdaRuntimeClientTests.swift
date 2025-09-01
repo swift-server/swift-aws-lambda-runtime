@@ -299,7 +299,7 @@ struct LambdaRuntimeClientTests {
                     // simulate traffic until the server reports it has closed the connection
                     // or a timeout, whichever comes first
                     // result is ignored here, either there is a connection error or a timeout
-                    let _ = try await timeout(deadline: .seconds(1)) {
+                    let _ = try await withTimeout(deadline: .seconds(1)) {
                         while true {
                             let (_, writer) = try await runtimeClient.nextInvocation()
                             try await writer.writeAndFinish(ByteBuffer(string: "hello"))
