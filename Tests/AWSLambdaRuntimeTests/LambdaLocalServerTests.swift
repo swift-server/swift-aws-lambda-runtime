@@ -59,7 +59,7 @@ struct LambdaLocalServerTests {
                 return false
             }
 
-            // start a client to check if tsomething responds on the custom port
+            // start a client to check if something responds on the custom port
             group.addTask {
                 // Give server time to start
                 try await Task.sleep(for: .milliseconds(100))
