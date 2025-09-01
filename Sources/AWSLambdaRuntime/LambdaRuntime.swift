@@ -122,15 +122,20 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
         } else {
 
             #if LocalServerSupport
+
             // we're not running on Lambda and we're compiled in DEBUG mode,
             // let's start a local server for testing
+
+            let port = Lambda.env("LOCAL_LAMBDA_PORT").flatMap(Int.init) ?? 7000
+
             try await Lambda.withLocalServer(
                 invocationEndpoint: Lambda.env("LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT"),
+                port: port,
                 logger: self.logger
             ) {
 
                 try await LambdaRuntimeClient.withRuntimeClient(
-                    configuration: .init(ip: "127.0.0.1", port: 7000),
+                    configuration: .init(ip: "127.0.0.1", port: port),
                     eventLoop: self.eventLoop,
                     logger: self.logger
                 ) { runtimeClient in

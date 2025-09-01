@@ -42,18 +42,21 @@ extension Lambda {
     ///
     /// - parameters:
     ///     - invocationEndpoint: The endpoint to post events to.
+    ///     - port: the TCP port to listen to
     ///     - body: Code to run within the context of the mock server. Typically this would be a Lambda.run function call.
     ///
     /// - note: This API is designed strictly for local testing and is behind a DEBUG flag
     @usableFromInline
     static func withLocalServer(
         invocationEndpoint: String? = nil,
+        port: Int,
         logger: Logger,
         _ body: sending @escaping () async throws -> Void
     ) async throws {
         do {
             try await LambdaHTTPServer.withLocalServer(
                 invocationEndpoint: invocationEndpoint,
+                port: port,
                 logger: logger
             ) {
                 try await body()
@@ -112,7 +115,7 @@ internal struct LambdaHTTPServer {
     static func withLocalServer<Result: Sendable>(
         invocationEndpoint: String?,
         host: String = "127.0.0.1",
-        port: Int = 7000,
+        port: Int,
         eventLoopGroup: MultiThreadedEventLoopGroup = .singleton,
         logger: Logger,
         _ closure: sending @escaping () async throws -> Result

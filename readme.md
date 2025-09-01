@@ -476,6 +476,18 @@ Example:
 LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT=/2015-03-31/functions/function/invocations swift run
 ```
 
+## Modifying the local port 
+
+By default, when using the local Lambda server, it listens on TCP port 7000.
+
+On macOS, this port might be used by AirPlay under some configurations. You can use the `LOCAL_LAMBDA_PORT` environment variable to configure the runtime to listen on a different TCP port.
+
+Example:
+
+```sh
+LOCAL_LAMBDA_PORT=7777 swift run
+```
+
 ## Deploying your Swift Lambda functions
 
 There is a full deployment guide available in [the documentation](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/documentation/awslambdaruntime/deployment).
