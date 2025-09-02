@@ -6,10 +6,7 @@ let defaultSwiftSettings: [SwiftSetting] =
     [
         .enableExperimentalFeature(
             "AvailabilityMacro=LambdaSwift 2.0:macOS 15.0"
-        ),
-
-        // then, in code, use
-        // @available(LambdaSwift 2.0, *)
+        )
     ]
 
 let package = Package(

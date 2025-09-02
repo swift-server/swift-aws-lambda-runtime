@@ -8,7 +8,7 @@ let defaultSwiftSettings: [SwiftSetting] = [
     .define("LocalServerSupport"),
     .enableExperimentalFeature(
         "AvailabilityMacro=LambdaSwift 2.0:macOS 15.0"
-    ),    
+    ),
 ]
 
 let package = Package(
