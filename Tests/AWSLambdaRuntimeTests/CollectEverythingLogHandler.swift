@@ -16,9 +16,7 @@ import Logging
 import Synchronization
 import Testing
 
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 struct CollectEverythingLogHandler: LogHandler {
     var metadata: Logger.Metadata = [:]
     var logLevel: Logger.Level = .info

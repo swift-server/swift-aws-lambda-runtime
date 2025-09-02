@@ -29,9 +29,7 @@ import ucrt
 #error("Unsupported platform")
 #endif
 
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 public enum Lambda {
     @inlinable
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
@@ -101,9 +99,7 @@ public enum Lambda {
 
 // MARK: - Public API
 
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 extension Lambda {
     /// Utility to access/read environment variables
     public static func env(_ name: String) -> String? {

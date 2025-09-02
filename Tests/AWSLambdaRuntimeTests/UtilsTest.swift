@@ -16,9 +16,7 @@ import Testing
 
 @testable import AWSLambdaRuntime
 
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 struct UtilsTest {
     @Test
     func testGenerateXRayTraceID() {

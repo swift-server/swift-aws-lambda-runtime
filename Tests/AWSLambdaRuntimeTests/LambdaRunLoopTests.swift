@@ -25,9 +25,7 @@ import Foundation
 #endif
 
 @Suite
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 struct LambdaRunLoopTests {
     struct MockEchoHandler: StreamingLambdaHandler {
         func handle(

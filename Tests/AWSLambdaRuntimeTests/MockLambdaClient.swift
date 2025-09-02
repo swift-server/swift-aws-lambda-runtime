@@ -22,9 +22,7 @@ import FoundationEssentials
 import Foundation
 #endif
 
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 struct MockLambdaWriter: LambdaRuntimeClientResponseStreamWriter {
     var underlying: MockLambdaClient
 
@@ -58,9 +56,7 @@ enum LambdaError: Error, Equatable {
     case handlerError
 }
 
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 final actor MockLambdaClient: LambdaRuntimeClientProtocol {
     typealias Writer = MockLambdaWriter
 

@@ -25,9 +25,7 @@ import FoundationEssentials
 import Foundation
 #endif
 
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 struct ControlPlaneRequestEncoderTests {
     let host = "192.168.0.1"
 
@@ -199,9 +197,7 @@ struct ControlPlaneRequestEncoderTests {
     }
 }
 
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 private final class ControlPlaneRequestEncoderHandler: ChannelOutboundHandler {
     typealias OutboundIn = ControlPlaneRequest
     typealias OutboundOut = ByteBuffer

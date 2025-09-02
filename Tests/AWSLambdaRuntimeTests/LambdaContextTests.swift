@@ -19,9 +19,7 @@ import Testing
 @testable import AWSLambdaRuntime
 
 @Suite("LambdaContext ClientContext Tests")
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 struct LambdaContextTests {
 
     @Test("ClientContext with full data resolves correctly")

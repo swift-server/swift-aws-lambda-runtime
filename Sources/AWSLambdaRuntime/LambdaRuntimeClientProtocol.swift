@@ -23,9 +23,7 @@ package protocol LambdaRuntimeClientResponseStreamWriter: LambdaResponseStreamWr
 }
 
 @usableFromInline
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 package protocol LambdaRuntimeClientProtocol {
     associatedtype Writer: LambdaRuntimeClientResponseStreamWriter
 
@@ -33,9 +31,7 @@ package protocol LambdaRuntimeClientProtocol {
 }
 
 @usableFromInline
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 package struct Invocation: Sendable {
     @usableFromInline
     package var metadata: InvocationMetadata

@@ -23,9 +23,7 @@ import Foundation
 #endif
 
 @Suite("LambdaClock Tests")
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 struct LambdaClockTests {
 
     @Test("Clock provides current time")

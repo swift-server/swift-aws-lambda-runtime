@@ -72,9 +72,7 @@ extension String {
     }
 }
 
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 extension AmazonHeaders {
     /// Generates (X-Ray) trace ID.
     /// # Trace ID Format

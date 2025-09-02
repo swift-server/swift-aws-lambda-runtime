@@ -24,9 +24,7 @@ import Foundation
 #endif
 
 @Suite("LambdaResponseStreamWriter+Headers Tests")
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 struct LambdaResponseStreamWriterHeadersTests {
 
     @Test("Write status and headers with minimal response (status code only)")

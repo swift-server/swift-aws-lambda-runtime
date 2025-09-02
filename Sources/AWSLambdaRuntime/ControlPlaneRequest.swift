@@ -15,9 +15,7 @@
 import NIOCore
 import NIOHTTP1
 
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 enum ControlPlaneRequest: Hashable {
     case next
     case invocationResponse(String, ByteBuffer?)
@@ -25,9 +23,7 @@ enum ControlPlaneRequest: Hashable {
     case initializationError(ErrorResponse)
 }
 
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 enum ControlPlaneResponse: Hashable {
     case next(InvocationMetadata, ByteBuffer)
     case accepted
@@ -35,9 +31,7 @@ enum ControlPlaneResponse: Hashable {
 }
 
 @usableFromInline
-#if swift(>=6.1)
 @available(LambdaSwift 2.0, *)
-#endif
 package struct InvocationMetadata: Hashable, Sendable {
     @usableFromInline
     package let requestID: String
