@@ -2,6 +2,13 @@
 
 import PackageDescription
 
+let defaultSwiftSettings: [SwiftSetting] = [
+    .define("FoundationJSONSupport"),
+    .define("ServiceLifecycleSupport"),
+    .define("LocalServerSupport"),
+    .swiftLanguageMode(.v6),
+]
+
 let package = Package(
     name: "swift-aws-lambda-runtime",
     platforms: [.macOS(.v15)],
@@ -28,11 +35,7 @@ let package = Package(
                 .product(name: "NIOPosix", package: "swift-nio"),
                 .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
             ],
-            swiftSettings: [
-                .define("FoundationJSONSupport"),
-                .define("ServiceLifecycleSupport"),
-                .define("LocalServerSupport"),
-            ]
+            swiftSettings: defaultSwiftSettings
         ),
         .plugin(
             name: "AWSLambdaPackager",
@@ -57,11 +60,7 @@ let package = Package(
                 .product(name: "NIOTestUtils", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
             ],
-            swiftSettings: [
-                .define("FoundationJSONSupport"),
-                .define("ServiceLifecycleSupport"),
-                .define("LocalServerSupport"),
-            ]
+            swiftSettings: defaultSwiftSettings
         ),
         // for perf testing
         .executableTarget(

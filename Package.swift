@@ -2,6 +2,17 @@
 
 import PackageDescription
 
+let defaultSwiftSettings: [SwiftSetting] =
+    [
+        .swiftLanguageMode(.v6),
+        // .enableExperimentalFeature(
+        //     "AvailabilityMacro=LambdaSwift 2.0:macOS 15.0"
+        // ),
+        //
+        // then, in code, use
+        // @available(LambdaSwift 2.0, *)
+    ]
+
 let package = Package(
     name: "swift-aws-lambda-runtime",
     platforms: [.macOS(.v15)],
@@ -43,7 +54,8 @@ let package = Package(
                     package: "swift-service-lifecycle",
                     condition: .when(traits: ["ServiceLifecycleSupport"])
                 ),
-            ]
+            ],
+            swiftSettings: defaultSwiftSettings
         ),
         .plugin(
             name: "AWSLambdaPackager",
@@ -67,8 +79,10 @@ let package = Package(
                 .byName(name: "AWSLambdaRuntime"),
                 .product(name: "NIOTestUtils", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
-            ]
+            ],
+            swiftSettings: defaultSwiftSettings
         ),
+
         // for perf testing
         .executableTarget(
             name: "MockServer",
@@ -77,7 +91,8 @@ let package = Package(
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
-            ]
+            ],
+            swiftSettings: defaultSwiftSettings
         ),
     ]
 )
