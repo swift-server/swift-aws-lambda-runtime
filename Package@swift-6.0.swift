@@ -6,12 +6,13 @@ let defaultSwiftSettings: [SwiftSetting] = [
     .define("FoundationJSONSupport"),
     .define("ServiceLifecycleSupport"),
     .define("LocalServerSupport"),
-    .swiftLanguageMode(.v6),
+    .enableExperimentalFeature(
+        "AvailabilityMacro=LambdaSwift 2.0:macOS 15.0"
+    ),    
 ]
 
 let package = Package(
     name: "swift-aws-lambda-runtime",
-    platforms: [.macOS(.v15)],
     products: [
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
         // plugin to package the lambda, creating an archive that can be uploaded to AWS
@@ -70,7 +71,8 @@ let package = Package(
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
-            ]
+            ],
+            swiftSettings: defaultSwiftSettings
         ),
     ]
 )

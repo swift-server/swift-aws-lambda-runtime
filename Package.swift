@@ -4,7 +4,6 @@ import PackageDescription
 
 let defaultSwiftSettings: [SwiftSetting] =
     [
-        .swiftLanguageMode(.v6),
         .enableExperimentalFeature(
             "AvailabilityMacro=LambdaSwift 2.0:macOS 15.0"
         ),
