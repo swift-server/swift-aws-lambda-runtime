@@ -24,7 +24,7 @@ import FoundationEssentials
 import Foundation
 #endif
 
-@Suite(.serialized)
+@Suite
 struct LambdaRunLoopTests {
     struct MockEchoHandler: StreamingLambdaHandler {
         func handle(
