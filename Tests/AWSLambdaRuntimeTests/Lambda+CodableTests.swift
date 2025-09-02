@@ -24,7 +24,6 @@ import Foundation
 #endif
 
 @Suite
-@available(LambdaSwift 2.0, *)
 struct JSONTests {
 
     let logger = Logger(label: "JSONTests")
@@ -47,6 +46,7 @@ struct JSONTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testJSONHandlerWithOutput() async {
         let jsonEncoder = JSONEncoder()
         let jsonDecoder = JSONDecoder()

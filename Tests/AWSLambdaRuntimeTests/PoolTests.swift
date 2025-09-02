@@ -16,10 +16,10 @@ import Testing
 
 @testable import AWSLambdaRuntime
 
-@available(LambdaSwift 2.0, *)
 struct PoolTests {
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testBasicPushAndIteration() async throws {
         let pool = LambdaHTTPServer.Pool<String>()
 
@@ -38,6 +38,7 @@ struct PoolTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testPoolCancellation() async throws {
         let pool = LambdaHTTPServer.Pool<String>()
 
@@ -56,6 +57,7 @@ struct PoolTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testConcurrentPushAndIteration() async throws {
         let pool = LambdaHTTPServer.Pool<Int>()
         let iterations = 1000
@@ -91,6 +93,7 @@ struct PoolTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testPushToWaitingConsumer() async throws {
         let pool = LambdaHTTPServer.Pool<String>()
         let expectedValue = "test value"
@@ -114,6 +117,7 @@ struct PoolTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testStressTest() async throws {
         let pool = LambdaHTTPServer.Pool<Int>()
         let producerCount = 10

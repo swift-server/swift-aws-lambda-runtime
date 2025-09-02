@@ -19,9 +19,9 @@ import Testing
 import Logging
 
 @Suite
-@available(LambdaSwift 2.0, *)
 struct LambdaRuntimeServiceLifecycleTests {
     @Test
+    @available(LambdaSwift 2.0, *)
     func testLambdaRuntimeGracefulShutdown() async throws {
         let runtime = LambdaRuntime {
             (event: String, context: LambdaContext) in

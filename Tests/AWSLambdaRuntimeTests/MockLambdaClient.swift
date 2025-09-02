@@ -60,7 +60,9 @@ enum LambdaError: Error, Equatable {
 final actor MockLambdaClient: LambdaRuntimeClientProtocol {
     typealias Writer = MockLambdaWriter
 
+    @available(LambdaSwift 2.0, *)
     private struct StateMachine {
+        @available(LambdaSwift 2.0, *)
         private enum State {
             // The Lambda has just started, or an event has finished processing and the runtime is ready to receive more events.
             // Expecting a next() call by the runtime.
@@ -81,6 +83,7 @@ final actor MockLambdaClient: LambdaRuntimeClientProtocol {
         // Queue incoming events if the runtime is busy handling an event.
         private var eventQueue = [Event]()
 
+        @available(LambdaSwift 2.0, *)
         enum InvokeAction {
             // The next endpoint is waiting for an event. Deliver this newly arrived event to it.
             case readyToProcess(_ eventArrivedHandler: CheckedContinuation<Invocation, any Error>)
@@ -89,6 +92,7 @@ final actor MockLambdaClient: LambdaRuntimeClientProtocol {
             case wait
         }
 
+        @available(LambdaSwift 2.0, *)
         enum NextAction {
             // There is an event available to be processed.
             case readyToProcess(Invocation)
@@ -99,6 +103,7 @@ final actor MockLambdaClient: LambdaRuntimeClientProtocol {
             case fail(LambdaError)
         }
 
+        @available(LambdaSwift 2.0, *)
         enum CancelNextAction {
             case none
 
@@ -211,6 +216,7 @@ final actor MockLambdaClient: LambdaRuntimeClientProtocol {
 
     private var stateMachine = StateMachine()
 
+    @available(LambdaSwift 2.0, *)
     struct Event {
         let invocation: Invocation
         let eventProcessedHandler: CheckedContinuation<ByteBuffer, any Error>

@@ -19,7 +19,6 @@ import Testing
 @testable import AWSLambdaRuntime
 
 @Suite("LambdaContext ClientContext Tests")
-@available(LambdaSwift 2.0, *)
 struct LambdaContextTests {
 
     @Test("ClientContext with full data resolves correctly")
@@ -115,6 +114,7 @@ struct LambdaContextTests {
     }
 
     @Test("getRemainingTime returns positive duration for future deadline")
+    @available(LambdaSwift 2.0, *)
     func getRemainingTimeReturnsPositiveDurationForFutureDeadline() {
 
         // Create context with deadline 30 seconds in the future

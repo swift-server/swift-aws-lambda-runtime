@@ -23,10 +23,10 @@ import Foundation
 #endif
 
 @Suite("LambdaClock Tests")
-@available(LambdaSwift 2.0, *)
 struct LambdaClockTests {
 
     @Test("Clock provides current time")
+    @available(LambdaSwift 2.0, *)
     func clockProvidesCurrentTime() {
         let clock = LambdaClock()
         let now = clock.now
@@ -37,6 +37,7 @@ struct LambdaClockTests {
     }
 
     @Test("Instant can be advanced by duration")
+    @available(LambdaSwift 2.0, *)
     func instantCanBeAdvancedByDuration() {
         let clock = LambdaClock()
         let start = clock.now
@@ -46,6 +47,7 @@ struct LambdaClockTests {
     }
 
     @Test("Duration calculation between instants")
+    @available(LambdaSwift 2.0, *)
     func durationCalculationBetweenInstants() {
         let clock = LambdaClock()
         let start = clock.now
@@ -56,6 +58,7 @@ struct LambdaClockTests {
     }
 
     @Test("Instant comparison works correctly")
+    @available(LambdaSwift 2.0, *)
     func instantComparisonWorksCorrectly() {
         let clock = LambdaClock()
         let earlier = clock.now
@@ -66,12 +69,14 @@ struct LambdaClockTests {
     }
 
     @Test("Clock minimum resolution is milliseconds")
+    @available(LambdaSwift 2.0, *)
     func clockMinimumResolutionIsMilliseconds() {
         let clock = LambdaClock()
         #expect(clock.minimumResolution == .milliseconds(1))
     }
 
     @Test("Sleep until deadline works")
+    @available(LambdaSwift 2.0, *)
     func sleepUntilDeadlineWorks() async throws {
         let clock = LambdaClock()
         let start = clock.now
@@ -88,6 +93,7 @@ struct LambdaClockTests {
     }
 
     @Test("Sleep with past deadline returns immediately")
+    @available(LambdaSwift 2.0, *)
     func sleepWithPastDeadlineReturnsImmediately() async throws {
         let clock = LambdaClock()
         let now = clock.now
@@ -103,6 +109,7 @@ struct LambdaClockTests {
     }
 
     @Test("Duration to future instant returns negative duration")
+    @available(LambdaSwift 2.0, *)
     func durationToFutureInstantReturnsNegativeDuration() {
         let clock = LambdaClock()
         let futureDeadline = clock.now.advanced(by: .seconds(30))
@@ -117,6 +124,7 @@ struct LambdaClockTests {
     }
 
     @Test("LambdaClock now matches Foundation Date within tolerance")
+    @available(LambdaSwift 2.0, *)
     func lambdaClockNowMatchesFoundationDate() {
 
         let clock = LambdaClock()
@@ -138,6 +146,7 @@ struct LambdaClockTests {
         )
     }
     @Test("Instant renders as string with an epoch number")
+    @available(LambdaSwift 2.0, *)
     func instantRendersAsStringWithEpochNumber() {
         let clock = LambdaClock()
         let instant = clock.now

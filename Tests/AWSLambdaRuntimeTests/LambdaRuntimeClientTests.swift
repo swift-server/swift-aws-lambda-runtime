@@ -23,7 +23,6 @@ import struct Foundation.UUID
 @testable import AWSLambdaRuntime
 
 @Suite
-@available(LambdaSwift 2.0, *)
 struct LambdaRuntimeClientTests {
 
     let logger = {
@@ -34,6 +33,7 @@ struct LambdaRuntimeClientTests {
     }()
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testSimpleInvocations() async throws {
         struct HappyBehavior: LambdaServerBehavior {
             let requestId = UUID().uuidString
@@ -128,6 +128,7 @@ struct LambdaRuntimeClientTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testStreamingResponseHeaders() async throws {
 
         let behavior = StreamingBehavior()
@@ -154,6 +155,7 @@ struct LambdaRuntimeClientTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testStreamingResponseHeadersWithCustomStatus() async throws {
 
         let behavior = StreamingBehavior(customHeaders: true)
@@ -189,6 +191,7 @@ struct LambdaRuntimeClientTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testRuntimeClientCancellation() async throws {
         struct HappyBehavior: LambdaServerBehavior {
             let requestId = UUID().uuidString
@@ -286,6 +289,7 @@ struct LambdaRuntimeClientTests {
         "Server closing the connection when waiting for next invocation throws an error",
         arguments: [DisconnectBehavior(), DisconnectAfterSendingResponseBehavior()] as [any LambdaServerBehavior]
     )
+    @available(LambdaSwift 2.0, *)
     func testChannelCloseFutureWithWaitingForNextInvocation(behavior: LambdaServerBehavior) async throws {
         try await withMockServer(behaviour: behavior) { port in
             let configuration = LambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: port)

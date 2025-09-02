@@ -24,10 +24,10 @@ import Foundation
 #endif
 
 @Suite("LambdaResponseStreamWriter+Headers Tests")
-@available(LambdaSwift 2.0, *)
 struct LambdaResponseStreamWriterHeadersTests {
 
     @Test("Write status and headers with minimal response (status code only)")
+    @available(LambdaSwift 2.0, *)
     func testWriteStatusAndHeadersMinimal() async throws {
         let writer = MockLambdaResponseStreamWriter()
         let response = StreamingLambdaStatusAndHeadersResponse(statusCode: 200)
@@ -44,6 +44,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     }
 
     @Test("Write status and headers with full response (all fields populated)")
+    @available(LambdaSwift 2.0, *)
     func testWriteStatusAndHeadersFull() async throws {
         let writer = MockLambdaResponseStreamWriter()
         let response = StreamingLambdaStatusAndHeadersResponse(
@@ -80,6 +81,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     }
 
     @Test("Write status and headers with custom encoder")
+    @available(LambdaSwift 2.0, *)
     func testWriteStatusAndHeadersWithCustomEncoder() async throws {
         let writer = MockLambdaResponseStreamWriter()
         let response = StreamingLambdaStatusAndHeadersResponse(
@@ -107,6 +109,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     }
 
     @Test("Write status and headers with only headers (no multiValueHeaders)")
+    @available(LambdaSwift 2.0, *)
     func testWriteStatusAndHeadersOnlyHeaders() async throws {
         let writer = MockLambdaResponseStreamWriter()
         let response = StreamingLambdaStatusAndHeadersResponse(
@@ -132,6 +135,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     }
 
     @Test("Write status and headers with only multiValueHeaders (no headers)")
+    @available(LambdaSwift 2.0, *)
     func testWriteStatusAndHeadersOnlyMultiValueHeaders() async throws {
         let writer = MockLambdaResponseStreamWriter()
         let response = StreamingLambdaStatusAndHeadersResponse(
@@ -162,6 +166,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     }
 
     @Test("Verify JSON serialization format matches expected structure")
+    @available(LambdaSwift 2.0, *)
     func testJSONSerializationFormat() async throws {
         let writer = MockLambdaResponseStreamWriter()
         let response = StreamingLambdaStatusAndHeadersResponse(
@@ -199,6 +204,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     }
 
     @Test("Verify buffer contains both JSON and null byte separator")
+    @available(LambdaSwift 2.0, *)
     func testBufferContainsJsonAndSeparator() async throws {
         let writer = MockLambdaResponseStreamWriter()
         let response = StreamingLambdaStatusAndHeadersResponse(statusCode: 200)
@@ -219,6 +225,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     // MARK: - Error Handling Tests
 
     @Test("JSON serialization error propagation")
+    @available(LambdaSwift 2.0, *)
     func testJSONSerializationErrorPropagation() async throws {
         let writer = MockLambdaResponseStreamWriter()
         let response = StreamingLambdaStatusAndHeadersResponse(statusCode: 200)
@@ -236,6 +243,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     }
 
     @Test("Write method error propagation")
+    @available(LambdaSwift 2.0, *)
     func testWriteMethodErrorPropagation() async throws {
         let writer = FailingMockLambdaResponseStreamWriter(failOnWriteCall: 1)  // Fail on first write
         let response = StreamingLambdaStatusAndHeadersResponse(statusCode: 200)
@@ -252,6 +260,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     // This test is no longer needed since we only have one write operation now
 
     @Test("Error types and messages are properly handled")
+    @available(LambdaSwift 2.0, *)
     func testErrorTypesAndMessages() async throws {
         let writer = MockLambdaResponseStreamWriter()
         let response = StreamingLambdaStatusAndHeadersResponse(statusCode: 200)
@@ -272,6 +281,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     }
 
     @Test("JSONEncoder error propagation with invalid data")
+    @available(LambdaSwift 2.0, *)
     func testJSONEncoderErrorPropagation() async throws {
         let writer = MockLambdaResponseStreamWriter()
 
@@ -293,6 +303,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     // MARK: - Integration Tests
 
     @Test("Integration: writeStatusAndHeaders with existing streaming methods")
+    @available(LambdaSwift 2.0, *)
     func testIntegrationWithExistingStreamingMethods() async throws {
         let writer = MockLambdaResponseStreamWriter()
         let response = StreamingLambdaStatusAndHeadersResponse(
@@ -337,6 +348,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     }
 
     @Test("Integration: multiple header writes work correctly")
+    @available(LambdaSwift 2.0, *)
     func testMultipleHeaderWrites() async throws {
         let writer = MockLambdaResponseStreamWriter()
 
@@ -371,6 +383,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     }
 
     @Test("Integration: header write followed by body streaming compatibility")
+    @available(LambdaSwift 2.0, *)
     func testHeaderWriteFollowedByBodyStreaming() async throws {
         let writer = MockLambdaResponseStreamWriter()
 
@@ -419,6 +432,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     }
 
     @Test("Integration: verify method works with different LambdaResponseStreamWriter implementations")
+    @available(LambdaSwift 2.0, *)
     func testWithDifferentWriterImplementations() async throws {
         // Test with basic mock implementation
         let basicWriter = MockLambdaResponseStreamWriter()
@@ -442,6 +456,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     }
 
     @Test("Integration: complex scenario with headers, streaming, and finish")
+    @available(LambdaSwift 2.0, *)
     func testComplexIntegrationScenario() async throws {
         let writer = MockLambdaResponseStreamWriter()
 
@@ -494,6 +509,7 @@ struct LambdaResponseStreamWriterHeadersTests {
     }
 
     @Test("Integration: verify compatibility with protocol requirements")
+    @available(LambdaSwift 2.0, *)
     func testProtocolCompatibility() async throws {
         let writer = MockLambdaResponseStreamWriter()
         let response = StreamingLambdaStatusAndHeadersResponse(statusCode: 200)
