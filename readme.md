@@ -464,28 +464,22 @@ curl -v --header "Content-Type:\ application/json" --data @events/create-session
 * Connection #0 to host 127.0.0.1 left intact
 {"statusCode":200,"isBase64Encoded":false,"body":"...","headers":{"Access-Control-Allow-Origin":"*","Content-Type":"application\/json; charset=utf-8","Access-Control-Allow-Headers":"*"}}
 ```
-### Modifying the local endpoint
+### Modifying the local server URI
 
-By default, when using the local Lambda server, it listens on the `/invoke` endpoint.
+By default, when using the local Lambda server during your tests, it listens on `http://127.0.0.1:7000/invoke`.
 
-Some testing tools, such as the [AWS Lambda runtime interface emulator](https://docs.aws.amazon.com/lambda/latest/dg/images-test.html), require a different endpoint. In that case, you can use the `LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT` environment variable to force the runtime to listen on a different endpoint.
+Some testing tools, such as the [AWS Lambda runtime interface emulator](https://docs.aws.amazon.com/lambda/latest/dg/images-test.html), require a different endpoint, the port might be used, or you may want to bind a specific IP address.
 
-Example:
+In these cases, you can use three environment variables to control the local server:
 
-```sh
-LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT=/2015-03-31/functions/function/invocations swift run
-```
-
-## Modifying the local port 
-
-By default, when using the local Lambda server, it listens on TCP port 7000.
-
-On macOS, this port might be used by AirPlay under some configurations. You can use the `LOCAL_LAMBDA_PORT` environment variable to configure the runtime to listen on a different TCP port.
+- Set `LOCAL_LAMBDA_HOST` to configure the local server to listen on a different TCP address.
+- Set `LOCAL_LAMBDA_PORT` to configure the local server to listen on a different TCP port.
+- Set `LOCAL_LAMBDA_INVOCATION_ENDPOINT` to force the local server to listen on a different endpoint.
 
 Example:
 
 ```sh
-LOCAL_LAMBDA_PORT=7777 swift run
+LOCAL_LAMBDA_PORT=8080 LOCAL_LAMBDA_INVOCATION_ENDPOINT=/2015-03-31/functions/function/invocations swift run
 ```
 
 ## Deploying your Swift Lambda functions

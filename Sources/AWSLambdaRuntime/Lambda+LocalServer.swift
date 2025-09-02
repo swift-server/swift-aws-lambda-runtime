@@ -21,7 +21,7 @@ import NIOHTTP1
 import NIOPosix
 import Synchronization
 
-// This functionality is designed for local testing hence being a #if DEBUG flag.
+// This functionality is designed for local testing when the LocalServerSupport trait is enabled.
 
 // For example:
 // try Lambda.withLocalServer {
@@ -41,22 +41,25 @@ extension Lambda {
     /// Execute code in the context of a mock Lambda server.
     ///
     /// - parameters:
-    ///     - invocationEndpoint: The endpoint to post events to.
+    ///     - host: the hostname or IP address to listen on
     ///     - port: the TCP port to listen to
+    ///     - invocationEndpoint: The endpoint to post events to.
     ///     - body: Code to run within the context of the mock server. Typically this would be a Lambda.run function call.
     ///
-    /// - note: This API is designed strictly for local testing and is behind a DEBUG flag
+    /// - note: This API is designed strictly for local testing when the LocalServerSupport trait is enabled.
     @usableFromInline
     static func withLocalServer(
-        invocationEndpoint: String? = nil,
+        host: String,
         port: Int,
+        invocationEndpoint: String? = nil,
         logger: Logger,
         _ body: sending @escaping () async throws -> Void
     ) async throws {
         do {
             try await LambdaHTTPServer.withLocalServer(
-                invocationEndpoint: invocationEndpoint,
+                host: host,
                 port: port,
+                invocationEndpoint: invocationEndpoint,
                 logger: logger
             ) {
                 try await body()
@@ -113,9 +116,9 @@ internal struct LambdaHTTPServer {
     }
 
     static func withLocalServer<Result: Sendable>(
-        invocationEndpoint: String?,
-        host: String = "127.0.0.1",
+        host: String,
         port: Int,
+        invocationEndpoint: String?,
         eventLoopGroup: MultiThreadedEventLoopGroup = .singleton,
         logger: Logger,
         _ closure: sending @escaping () async throws -> Result

@@ -126,16 +126,19 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
             // we're not running on Lambda and we're compiled in DEBUG mode,
             // let's start a local server for testing
 
+            let host = Lambda.env("LOCAL_LAMBDA_HOST") ?? "127.0.0.1"
             let port = Lambda.env("LOCAL_LAMBDA_PORT").flatMap(Int.init) ?? 7000
+            let endpoint = Lambda.env("LOCAL_LAMBDA_INVOCATION_ENDPOINT")
 
             try await Lambda.withLocalServer(
-                invocationEndpoint: Lambda.env("LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT"),
+                host: host,
                 port: port,
+                invocationEndpoint: endpoint,
                 logger: self.logger
             ) {
 
                 try await LambdaRuntimeClient.withRuntimeClient(
-                    configuration: .init(ip: "127.0.0.1", port: port),
+                    configuration: .init(ip: host, port: port),
                     eventLoop: self.eventLoop,
                     logger: self.logger
                 ) { runtimeClient in
@@ -147,7 +150,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                 }
             }
             #else
-            // in release mode, we can't start a local server because the local server code is not compiled.
+            // When the LocalServerSupport trait is disabled, we can't start a local server because the local server code is not compiled.
             throw LambdaRuntimeError(code: .missingLambdaRuntimeAPIEnvironmentVariable)
             #endif
         }
