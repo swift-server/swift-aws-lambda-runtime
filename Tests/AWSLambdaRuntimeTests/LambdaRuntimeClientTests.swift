@@ -22,7 +22,7 @@ import struct Foundation.UUID
 
 @testable import AWSLambdaRuntime
 
-@Suite
+@Suite(.serialized)
 struct LambdaRuntimeClientTests {
 
     let logger = {

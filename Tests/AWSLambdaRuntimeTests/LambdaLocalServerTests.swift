@@ -19,7 +19,7 @@ import Testing
 
 @testable import AWSLambdaRuntime
 
-@Suite("Lambda Local Server Tests")
+@Suite("Lambda Local Server Tests", .serialized)
 struct LambdaLocalServerTests {
 
     @Test("Local server respects LOCAL_LAMBDA_PORT environment variable")

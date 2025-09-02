@@ -18,7 +18,7 @@ import ServiceLifecycle
 import Testing
 import Logging
 
-@Suite
+@Suite(.serialized)
 struct LambdaRuntimeServiceLifecycleTests {
     @Test
     func testLambdaRuntimeGracefulShutdown() async throws {
