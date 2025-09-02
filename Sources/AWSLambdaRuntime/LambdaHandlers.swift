@@ -21,6 +21,9 @@ import NIOCore
 /// Background work can also be executed after returning the response. After closing the response stream by calling
 /// ``LambdaResponseStreamWriter/finish()`` or ``LambdaResponseStreamWriter/writeAndFinish(_:)``,
 /// the ``handle(_:responseWriter:context:)`` function is free to execute any background work.
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 public protocol StreamingLambdaHandler: _Lambda_SendableMetatype {
     /// The handler function -- implement the business logic of the Lambda function here.
     /// - Parameters:
@@ -66,6 +69,9 @@ public protocol LambdaResponseStreamWriter {
 ///
 /// - note: This handler protocol does not support response streaming because the output has to be encoded prior to it being sent, e.g. it is not possible to encode a partial/incomplete JSON string.
 /// This protocol also does not support the execution of background work after the response has been returned -- the ``LambdaWithBackgroundProcessingHandler`` protocol caters for such use-cases.
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 public protocol LambdaHandler {
     /// Generic input type.
     /// The body of the request sent to Lambda will be decoded into this type for the handler to consume.
@@ -88,6 +94,9 @@ public protocol LambdaHandler {
 /// ``LambdaResponseWriter``that is passed in as an argument, meaning that the
 /// ``LambdaWithBackgroundProcessingHandler/handle(_:outputWriter:context:)`` function is then
 /// free to implement any background work after the result has been sent to the AWS Lambda control plane.
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 public protocol LambdaWithBackgroundProcessingHandler {
     /// Generic input type.
     /// The body of the request sent to Lambda will be decoded into this type for the handler to consume.
@@ -123,6 +132,9 @@ public protocol LambdaResponseWriter<Output> {
 
 /// A ``StreamingLambdaHandler`` conforming handler object that can be constructed with a closure.
 /// Allows for a handler to be defined in a clean manner, leveraging Swift's trailing closure syntax.
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 public struct StreamingClosureHandler: StreamingLambdaHandler {
     let body: @Sendable (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
 
@@ -151,6 +163,9 @@ public struct StreamingClosureHandler: StreamingLambdaHandler {
 
 /// A ``LambdaHandler`` conforming handler object that can be constructed with a closure.
 /// Allows for a handler to be defined in a clean manner, leveraging Swift's trailing closure syntax.
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 public struct ClosureHandler<Event: Decodable, Output>: LambdaHandler {
     let body: (Event, LambdaContext) async throws -> Output
 
@@ -175,6 +190,9 @@ public struct ClosureHandler<Event: Decodable, Output>: LambdaHandler {
     }
 }
 
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 extension LambdaRuntime {
     /// Initialize an instance with a ``StreamingLambdaHandler`` in the form of a closure.
     /// - Parameter

@@ -83,6 +83,9 @@ public struct ClientContext: Codable, Sendable {
 
 /// Lambda runtime context.
 /// The Lambda runtime generates and passes the `LambdaContext` to the Lambda handler as an argument.
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     final class _Storage: Sendable {
         let requestID: String

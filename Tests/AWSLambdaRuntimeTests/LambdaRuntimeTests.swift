@@ -21,6 +21,9 @@ import Testing
 @testable import AWSLambdaRuntime
 
 @Suite("LambdaRuntimeTests")
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 struct LambdaRuntimeTests {
 
     @Test("LambdaRuntime can only be run once")
@@ -116,6 +119,9 @@ struct LambdaRuntimeTests {
     }
 }
 
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 struct MockHandler: StreamingLambdaHandler {
     mutating func handle(
         _ event: NIOCore.ByteBuffer,

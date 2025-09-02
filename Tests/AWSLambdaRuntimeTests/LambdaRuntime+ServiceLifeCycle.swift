@@ -19,6 +19,9 @@ import Testing
 import Logging
 
 @Suite
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 struct LambdaRuntimeServiceLifecycleTests {
     @Test
     func testLambdaRuntimeGracefulShutdown() async throws {

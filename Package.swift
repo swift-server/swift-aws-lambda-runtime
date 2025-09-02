@@ -4,18 +4,17 @@ import PackageDescription
 
 let defaultSwiftSettings: [SwiftSetting] =
     [
-        .swiftLanguageMode(.v6)
-        // .enableExperimentalFeature(
-        //     "AvailabilityMacro=LambdaSwift 2.0:macOS 15.0"
-        // ),
-        //
+        .swiftLanguageMode(.v6),
+        .enableExperimentalFeature(
+            "AvailabilityMacro=LambdaSwift 2.0:macOS 15.0"
+        )
+        
         // then, in code, use
         // @available(LambdaSwift 2.0, *)
     ]
 
 let package = Package(
     name: "swift-aws-lambda-runtime",
-    platforms: [.macOS(.v15)],
     products: [
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
         // plugin to package the lambda, creating an archive that can be uploaded to AWS

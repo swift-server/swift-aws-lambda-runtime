@@ -24,8 +24,14 @@ import Foundation
 
 // This is our guardian to ensure only one LambdaRuntime is running at the time
 // We use an Atomic here to ensure thread safety
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 private let _isRunning = Atomic<Bool>(false)
 
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLambdaHandler {
     @usableFromInline
     /// we protect the handler behind a Mutex to ensure that we only ever have one copy of it

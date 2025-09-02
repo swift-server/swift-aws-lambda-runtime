@@ -87,6 +87,9 @@ extension LambdaResponseStreamWriter {
     }
 }
 
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 extension LambdaResponseStreamWriter {
     /// Writes the HTTP status code and headers to the response stream.
     ///

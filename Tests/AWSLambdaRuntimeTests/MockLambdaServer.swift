@@ -25,6 +25,9 @@ import FoundationEssentials
 import Foundation
 #endif
 
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 func withMockServer<Result>(
     behaviour: some LambdaServerBehavior,
     port: Int = 0,
@@ -46,6 +49,9 @@ func withMockServer<Result>(
     return try result.get()
 }
 
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 final class MockLambdaServer<Behavior: LambdaServerBehavior> {
     private let logger = Logger(label: "MockLambdaServer")
     private let behavior: Behavior
@@ -113,6 +119,9 @@ final class MockLambdaServer<Behavior: LambdaServerBehavior> {
     }
 }
 
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 final class HTTPHandler: ChannelInboundHandler {
     typealias InboundIn = HTTPServerRequestPart
     typealias OutboundOut = HTTPServerResponsePart

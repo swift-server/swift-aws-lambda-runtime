@@ -26,6 +26,9 @@ import Foundation
 #endif
 
 @main
+#if swift(>=6.1)
+@available(LambdaSwift 2.0, *)
+#endif
 struct HttpServer {
     /// The server's host. (default: 127.0.0.1)
     private let host: String
