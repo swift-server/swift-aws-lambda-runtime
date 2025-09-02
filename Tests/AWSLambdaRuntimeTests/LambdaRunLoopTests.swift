@@ -50,7 +50,7 @@ struct LambdaRunLoopTests {
         }
     }
 
-    @Test 
+    @Test
     @available(LambdaSwift 2.0, *)
     func testRunLoop() async throws {
         let mockClient = MockLambdaClient()
@@ -79,7 +79,7 @@ struct LambdaRunLoopTests {
         }
     }
 
-    @Test 
+    @Test
     @available(LambdaSwift 2.0, *)
     func testRunLoopError() async throws {
         let mockClient = MockLambdaClient()
