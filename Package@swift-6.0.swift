@@ -2,9 +2,17 @@
 
 import PackageDescription
 
+let defaultSwiftSettings: [SwiftSetting] = [
+    .define("FoundationJSONSupport"),
+    .define("ServiceLifecycleSupport"),
+    .define("LocalServerSupport"),
+    .enableExperimentalFeature(
+        "AvailabilityMacro=LambdaSwift 2.0:macOS 15.0"
+    ),
+]
+
 let package = Package(
     name: "swift-aws-lambda-runtime",
-    platforms: [.macOS(.v15)],
     products: [
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
         // plugin to package the lambda, creating an archive that can be uploaded to AWS
@@ -28,11 +36,7 @@ let package = Package(
                 .product(name: "NIOPosix", package: "swift-nio"),
                 .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
             ],
-            swiftSettings: [
-                .define("FoundationJSONSupport"),
-                .define("ServiceLifecycleSupport"),
-                .define("LocalServerSupport"),
-            ]
+            swiftSettings: defaultSwiftSettings
         ),
         .plugin(
             name: "AWSLambdaPackager",
@@ -57,11 +61,7 @@ let package = Package(
                 .product(name: "NIOTestUtils", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
             ],
-            swiftSettings: [
-                .define("FoundationJSONSupport"),
-                .define("ServiceLifecycleSupport"),
-                .define("LocalServerSupport"),
-            ]
+            swiftSettings: defaultSwiftSettings
         ),
         // for perf testing
         .executableTarget(
@@ -71,7 +71,8 @@ let package = Package(
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
-            ]
+            ],
+            swiftSettings: defaultSwiftSettings
         ),
     ]
 )

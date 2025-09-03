@@ -59,6 +59,7 @@ public struct LambdaJSONOutputEncoder<Output: Encodable>: LambdaOutputEncoder {
     }
 }
 
+@available(LambdaSwift 2.0, *)
 extension LambdaCodableAdapter {
     /// Initializes an instance given an encoder, decoder, and a handler with a non-`Void` output.
     ///   - Parameters:
@@ -84,6 +85,7 @@ extension LambdaCodableAdapter {
     }
 }
 
+@available(LambdaSwift 2.0, *)
 extension LambdaRuntime {
     /// Initialize an instance with a `LambdaHandler` defined in the form of a closure **with a non-`Void` return type**.
     /// - Parameters:

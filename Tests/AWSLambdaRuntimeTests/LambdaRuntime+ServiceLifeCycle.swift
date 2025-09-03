@@ -20,6 +20,7 @@ import Logging
 
 extension LambdaRuntimeTests {
     @Test
+    @available(LambdaSwift 2.0, *)
     func testLambdaRuntimeGracefulShutdown() async throws {
         let runtime = LambdaRuntime {
             (event: String, context: LambdaContext) in

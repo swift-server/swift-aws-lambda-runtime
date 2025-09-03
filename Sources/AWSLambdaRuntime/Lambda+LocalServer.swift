@@ -37,6 +37,7 @@ import Synchronization
 //         )
 //     }
 // }
+@available(LambdaSwift 2.0, *)
 extension Lambda {
     /// Execute code in the context of a mock Lambda server.
     ///
@@ -90,6 +91,7 @@ extension Lambda {
 /// 1. POST /invoke - the client posts the event to the lambda function
 ///
 /// This server passes the data received from /invoke POST request to the lambda function (GET /next) and then forwards the response back to the client.
+@available(LambdaSwift 2.0, *)
 internal struct LambdaHTTPServer {
     private let invocationEndpoint: String
 

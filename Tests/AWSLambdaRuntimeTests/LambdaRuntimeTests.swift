@@ -24,6 +24,7 @@ import Testing
 struct LambdaRuntimeTests {
 
     @Test("LambdaRuntime can only be run once")
+    @available(LambdaSwift 2.0, *)
     func testLambdaRuntimerunOnce() async throws {
 
         // First runtime
@@ -68,6 +69,7 @@ struct LambdaRuntimeTests {
         }
     }
     @Test("run() must be cancellable")
+    @available(LambdaSwift 2.0, *)
     func testLambdaRuntimeCancellable() async throws {
 
         let logger = Logger(label: "LambdaRuntimeTests.RuntimeCancellable")
@@ -116,6 +118,7 @@ struct LambdaRuntimeTests {
     }
 }
 
+@available(LambdaSwift 2.0, *)
 struct MockHandler: StreamingLambdaHandler {
     mutating func handle(
         _ event: NIOCore.ByteBuffer,

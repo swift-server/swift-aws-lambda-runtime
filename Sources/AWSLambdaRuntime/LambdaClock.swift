@@ -51,6 +51,7 @@ import ucrt
 /// The Lambda execution environment uses UTC as a timezone,
 /// `LambdaClock` operates in UTC and does not account for time zones.
 /// see: TZ in https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
+@available(LambdaSwift 2.0, *)
 public struct LambdaClock: Clock {
     public typealias Duration = Swift.Duration
 

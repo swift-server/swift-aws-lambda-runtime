@@ -114,6 +114,7 @@ struct LambdaContextTests {
     }
 
     @Test("getRemainingTime returns positive duration for future deadline")
+    @available(LambdaSwift 2.0, *)
     func getRemainingTimeReturnsPositiveDurationForFutureDeadline() {
 
         // Create context with deadline 30 seconds in the future

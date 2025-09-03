@@ -22,6 +22,7 @@ internal protocol LambdaChannelHandlerDelegate {
     func connectionErrorHappened(_ error: any Error, channel: any Channel)
 }
 
+@available(LambdaSwift 2.0, *)
 internal final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate> {
     let nextInvocationPath = Consts.invocationURLPrefix + Consts.getNextInvocationURLSuffix
 
@@ -359,6 +360,7 @@ internal final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate
     }
 }
 
+@available(LambdaSwift 2.0, *)
 extension LambdaChannelHandler: ChannelInboundHandler {
     typealias OutboundIn = Never
     typealias InboundIn = NIOHTTPClientResponseFull

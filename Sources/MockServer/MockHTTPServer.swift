@@ -25,6 +25,7 @@ import FoundationEssentials
 import Foundation
 #endif
 
+@available(LambdaSwift 2.0, *)
 @main
 struct HttpServer {
     /// The server's host. (default: 127.0.0.1)
