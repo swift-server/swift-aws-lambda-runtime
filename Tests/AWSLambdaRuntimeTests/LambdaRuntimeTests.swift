@@ -20,7 +20,7 @@ import Testing
 
 @testable import AWSLambdaRuntime
 
-@Suite
+@Suite(.serialized)
 struct LambdaRuntimeTests {
 
     @Test("LambdaRuntime can only be run once")

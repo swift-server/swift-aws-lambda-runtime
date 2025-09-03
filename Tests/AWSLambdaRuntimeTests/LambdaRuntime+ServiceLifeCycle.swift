@@ -18,8 +18,7 @@ import ServiceLifecycle
 import Testing
 import Logging
 
-@Suite
-struct LambdaRuntimeServiceLifecycleTests {
+extension LambdaRuntimeTests {
     @Test
     func testLambdaRuntimeGracefulShutdown() async throws {
         let runtime = LambdaRuntime {

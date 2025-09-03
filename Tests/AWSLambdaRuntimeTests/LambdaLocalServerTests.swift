@@ -19,8 +19,7 @@ import Testing
 
 @testable import AWSLambdaRuntime
 
-@Suite("Lambda Local Server Tests", .serialized)
-struct LambdaLocalServerTests {
+extension LambdaRuntimeTests {
 
     @Test("Local server respects LOCAL_LAMBDA_PORT environment variable")
     func testLocalServerCustomPort() async throws {
