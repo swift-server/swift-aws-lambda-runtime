@@ -14,6 +14,7 @@
 
 import NIOCore
 
+@available(LambdaSwift 2.0, *)
 struct ControlPlaneRequestEncoder: _EmittingChannelHandler {
     typealias OutboundOut = ByteBuffer
 

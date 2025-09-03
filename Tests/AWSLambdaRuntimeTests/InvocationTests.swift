@@ -26,6 +26,7 @@ import Foundation
 @Suite
 struct InvocationTest {
     @Test
+    @available(LambdaSwift 2.0, *)
     func testInvocationTraceID() throws {
         let headers = HTTPHeaders([
             (AmazonHeaders.requestID, "test"),

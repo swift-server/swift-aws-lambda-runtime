@@ -19,6 +19,7 @@ import FoundationEssentials
 import struct Foundation.Date
 #endif
 
+@available(LambdaSwift 2.0, *)
 extension LambdaContext {
     /// Returns the deadline as a Date for the Lambda function execution.
     /// I'm not sure how usefull it is to have this as a Date, with only seconds precision,

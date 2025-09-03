@@ -17,6 +17,7 @@ import NIOCore
 import NIOHTTP1
 import NIOPosix
 
+@available(LambdaSwift 2.0, *)
 @usableFromInline
 final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
     @usableFromInline
@@ -404,6 +405,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
     }
 }
 
+@available(LambdaSwift 2.0, *)
 extension LambdaRuntimeClient: LambdaChannelHandlerDelegate {
     nonisolated func connectionErrorHappened(_ error: any Error, channel: any Channel) {}
 

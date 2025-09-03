@@ -16,6 +16,7 @@ import Logging
 import Synchronization
 import Testing
 
+@available(LambdaSwift 2.0, *)
 struct CollectEverythingLogHandler: LogHandler {
     var metadata: Logger.Metadata = [:]
     var logLevel: Logger.Level = .info

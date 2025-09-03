@@ -184,10 +184,16 @@ final class HTTPHandler: ChannelInboundHandler {
                 responseStatus = .ok
                 responseBody = result
                 let deadline = Date(timeIntervalSinceNow: 60).millisSinceEpoch
+                let traceID: String
+                if #available(macOS 15.0, *) {
+                    traceID = "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"
+                } else {
+                    traceID = "Root=1-00000000-000000000000000000000000;Sampled=1"
+                }
                 responseHeaders = [
                     (AmazonHeaders.requestID, requestId),
                     (AmazonHeaders.invokedFunctionARN, "arn:aws:lambda:us-east-1:123456789012:function:custom-runtime"),
-                    (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
+                    (AmazonHeaders.traceID, traceID),
                     (AmazonHeaders.deadline, String(deadline)),
                 ]
             case .failure(let error):

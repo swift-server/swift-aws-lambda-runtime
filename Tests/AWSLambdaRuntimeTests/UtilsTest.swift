@@ -18,6 +18,7 @@ import Testing
 
 struct UtilsTest {
     @Test
+    @available(LambdaSwift 2.0, *)
     func testGenerateXRayTraceID() {
         // the time and identifier should be in hexadecimal digits
         let allowedCharacters = "0123456789abcdef"

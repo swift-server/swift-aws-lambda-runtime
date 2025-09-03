@@ -15,6 +15,7 @@
 #if ServiceLifecycleSupport
 import ServiceLifecycle
 
+@available(LambdaSwift 2.0, *)
 extension LambdaRuntime: Service {
     public func run() async throws {
         try await cancelWhenGracefulShutdown {
