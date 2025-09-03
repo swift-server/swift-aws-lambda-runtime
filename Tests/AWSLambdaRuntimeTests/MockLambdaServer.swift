@@ -60,7 +60,7 @@ final class MockLambdaServer<Behavior: LambdaServerBehavior> {
     init(
         behavior: Behavior,
         host: String = "127.0.0.1",
-        port: Int = 7000,
+        port: Int = 0,
         keepAlive: Bool = true,
         eventLoopGroup: MultiThreadedEventLoopGroup
     ) {
