@@ -22,7 +22,6 @@ import Testing
 extension LambdaRuntimeTests {
 
     @Test("Local server respects LOCAL_LAMBDA_PORT environment variable")
-    @available(LambdaSwift 2.0, *)
     func testLocalServerCustomPort() async throws {
         let customPort = 8080
 
