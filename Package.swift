@@ -11,6 +11,7 @@ let defaultSwiftSettings: [SwiftSetting] =
 
 let package = Package(
     name: "swift-aws-lambda-runtime",
+    platforms: [.macOS(.v10_15)],
     products: [
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
         // plugin to package the lambda, creating an archive that can be uploaded to AWS
