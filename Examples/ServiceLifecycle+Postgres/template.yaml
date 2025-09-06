@@ -120,7 +120,7 @@ Resources:
       DBInstanceIdentifier: servicelifecycle-postgres
       DBInstanceClass: db.t3.micro
       Engine: postgres
-      EngineVersion: '15.7'
+      EngineVersion: '17.6'
       MasterUsername: !Join ['', ['{{resolve:secretsmanager:', !Ref DatabaseSecret, ':SecretString:username}}']]
       MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref DatabaseSecret, ':SecretString:password}}']]
       DBName: !Ref DBName
