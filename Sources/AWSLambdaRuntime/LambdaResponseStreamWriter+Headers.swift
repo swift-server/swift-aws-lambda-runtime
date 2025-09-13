@@ -86,23 +86,3 @@ extension LambdaResponseStreamWriter {
         try await self.write(buffer, hasCustomHeaders: false)
     }
 }
-
-@available(LambdaSwift 2.0, *)
-extension LambdaResponseStreamWriter {
-    /// Writes the HTTP status code and headers to the response stream.
-    ///
-    /// This method serializes the status and headers as JSON and writes them to the stream,
-    /// followed by eight null bytes as a separator before the response body.
-    ///
-    /// - Parameters:
-    ///   - response: The status and headers response to write
-    ///   - encoder: The encoder to use for serializing the response, use JSONEncoder by default
-    /// - Throws: An error if JSON serialization or writing fails
-    public func writeStatusAndHeaders(
-        _ response: StreamingLambdaStatusAndHeadersResponse,
-        encoder: JSONEncoder = JSONEncoder()
-    ) async throws {
-        encoder.outputFormatting = .withoutEscapingSlashes
-        try await self.writeStatusAndHeaders(response, encoder: LambdaJSONOutputEncoder(encoder))
-    }
-}
