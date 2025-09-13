@@ -15,7 +15,7 @@
 import AWSLambdaRuntime
 import NIOCore
 
-let runtime = LambdaRuntime { event , response, context in
+let runtime = LambdaRuntime { event, response, context in
     try await response.writeAndFinish(ByteBuffer(string: "Hello World!"))
 }
 
