@@ -59,14 +59,12 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
     }
 
     #if !ServiceLifecycleSupport
-    @inlinable
-    internal func run() async throws {
+    public func run() async throws {
         try await _run()
     }
     #endif
 
     /// Make sure only one run() is called at a time
-    // @inlinable
     internal func _run() async throws {
 
         // we use an atomic global variable to ensure only one LambdaRuntime is running at the time
