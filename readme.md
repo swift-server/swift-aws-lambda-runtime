@@ -66,7 +66,7 @@ swift package init --type executable
     2.1 Add the Swift AWS Lambda Runtime as a dependency
 
     ```bash
-    swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --from 2.0.0-beta.1
+    swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --from 2.0.0
     swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime --from 1.0.0
     ```
 
@@ -87,7 +87,7 @@ swift package init --type executable
         name: "MyLambda",
         platforms: [.macOS(.v15)],
         dependencies: [
-            .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.1"),
+            .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0"),
         ],
         targets: [
             .executableTarget(

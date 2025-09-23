@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 // needed for CI to test the local version of the library
@@ -8,7 +8,7 @@ let package = Package(
     name: "S3EventNotifier",
     platforms: [.macOS(.v15)],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.1"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0"),
         .package(url: "https://github.com/swift-server/swift-aws-lambda-events", from: "1.0.0"),
     ],
     targets: [
