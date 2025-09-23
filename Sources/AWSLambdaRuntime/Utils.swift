@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Dispatch
 import NIOConcurrencyHelpers
 import NIOPosix
 
@@ -37,20 +36,6 @@ enum AmazonHeaders {
     static let cognitoIdentity = "X-Amz-Cognito-Identity"
     static let deadline = "Lambda-Runtime-Deadline-Ms"
     static let invokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
-}
-
-extension DispatchWallTime {
-    @usableFromInline
-    init(millisSinceEpoch: Int64) {
-        let nanoSinceEpoch = UInt64(millisSinceEpoch) * 1_000_000
-        let seconds = UInt64(nanoSinceEpoch / 1_000_000_000)
-        let nanoseconds = nanoSinceEpoch - (seconds * 1_000_000_000)
-        self.init(timespec: timespec(tv_sec: Int(seconds), tv_nsec: Int(nanoseconds)))
-    }
-
-    var millisSinceEpoch: Int64 {
-        Int64(bitPattern: self.rawValue) / -1_000_000
-    }
 }
 
 extension String {
@@ -87,6 +72,7 @@ extension String {
     }
 }
 
+@available(LambdaSwift 2.0, *)
 extension AmazonHeaders {
     /// Generates (X-Ray) trace ID.
     /// # Trace ID Format
@@ -103,7 +89,7 @@ extension AmazonHeaders {
         // The version number, that is, 1.
         let version: UInt = 1
         // The time of the original request, in Unix epoch time, in 8 hexadecimal digits.
-        let now = UInt32(DispatchWallTime.now().millisSinceEpoch / 1000)
+        let now = UInt32(LambdaClock().now.millisecondsSinceEpoch() / 1000)
         let dateValue = String(now, radix: 16, uppercase: false)
         let datePadding = String(repeating: "0", count: max(0, 8 - dateValue.count))
         // A 96-bit identifier for the trace, globally unique, in 24 hexadecimal digits.

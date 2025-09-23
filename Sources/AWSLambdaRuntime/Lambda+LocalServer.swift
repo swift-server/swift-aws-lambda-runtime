@@ -21,7 +21,7 @@ import NIOHTTP1
 import NIOPosix
 import Synchronization
 
-// This functionality is designed for local testing hence being a #if DEBUG flag.
+// This functionality is designed for local testing when the LocalServerSupport trait is enabled.
 
 // For example:
 // try Lambda.withLocalServer {
@@ -37,22 +37,29 @@ import Synchronization
 //         )
 //     }
 // }
+@available(LambdaSwift 2.0, *)
 extension Lambda {
     /// Execute code in the context of a mock Lambda server.
     ///
     /// - parameters:
+    ///     - host: the hostname or IP address to listen on
+    ///     - port: the TCP port to listen to
     ///     - invocationEndpoint: The endpoint to post events to.
     ///     - body: Code to run within the context of the mock server. Typically this would be a Lambda.run function call.
     ///
-    /// - note: This API is designed strictly for local testing and is behind a DEBUG flag
+    /// - note: This API is designed strictly for local testing when the LocalServerSupport trait is enabled.
     @usableFromInline
     static func withLocalServer(
+        host: String,
+        port: Int,
         invocationEndpoint: String? = nil,
         logger: Logger,
         _ body: sending @escaping () async throws -> Void
     ) async throws {
         do {
             try await LambdaHTTPServer.withLocalServer(
+                host: host,
+                port: port,
                 invocationEndpoint: invocationEndpoint,
                 logger: logger
             ) {
@@ -84,6 +91,7 @@ extension Lambda {
 /// 1. POST /invoke - the client posts the event to the lambda function
 ///
 /// This server passes the data received from /invoke POST request to the lambda function (GET /next) and then forwards the response back to the client.
+@available(LambdaSwift 2.0, *)
 internal struct LambdaHTTPServer {
     private let invocationEndpoint: String
 
@@ -110,9 +118,9 @@ internal struct LambdaHTTPServer {
     }
 
     static func withLocalServer<Result: Sendable>(
+        host: String,
+        port: Int,
         invocationEndpoint: String?,
-        host: String = "127.0.0.1",
-        port: Int = 7000,
         eventLoopGroup: MultiThreadedEventLoopGroup = .singleton,
         logger: Logger,
         _ closure: sending @escaping () async throws -> Result
@@ -452,7 +460,7 @@ internal struct LambdaHTTPServer {
             await self.responsePool.push(
                 LocalServerResponse(
                     id: requestId,
-                    status: .ok,
+                    status: .accepted,
                     // the local server has no mecanism to collect headers set by the lambda function
                     headers: HTTPHeaders(),
                     body: body,
@@ -650,7 +658,7 @@ internal struct LambdaHTTPServer {
                     "arn:aws:lambda:us-east-1:\(Int16.random(in: Int16.min ... Int16.max)):function:custom-runtime"
                 ),
                 (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
-                (AmazonHeaders.deadline, "\(DispatchWallTime.distantFuture.millisSinceEpoch)"),
+                (AmazonHeaders.deadline, "\(LambdaClock.maxLambdaDeadline)"),
             ])
 
             return LocalServerResponse(

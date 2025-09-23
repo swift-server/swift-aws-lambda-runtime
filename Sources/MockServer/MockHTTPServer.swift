@@ -25,6 +25,7 @@ import FoundationEssentials
 import Foundation
 #endif
 
+@available(LambdaSwift 2.0, *)
 @main
 struct HttpServer {
     /// The server's host. (default: 127.0.0.1)
@@ -35,7 +36,7 @@ struct HttpServer {
     private let eventLoopGroup: MultiThreadedEventLoopGroup
     /// the mode. Are we mocking a server for a Lambda function that expects a String or a JSON document? (default: string)
     private let mode: Mode
-    /// the number of connections this server must accept before shutting down (default: 1)
+    /// the number of invocations this server must accept before shutting down (default: 1)
     private let maxInvocations: Int
     /// the logger (control verbosity with LOG_LEVEL environment variable)
     private let logger: Logger
@@ -91,10 +92,6 @@ struct HttpServer {
             ]
         )
 
-        // This counter is used to track the number of incoming connections.
-        // This mock servers accepts n TCP connection then shutdowns
-        let connectionCounter = SharedCounter(maxValue: self.maxInvocations)
-
         // We are handling each incoming connection in a separate child task. It is important
         // to use a discarding task group here which automatically discards finished child tasks.
         // A normal task group retains all child tasks and their outputs in memory until they are
@@ -105,21 +102,15 @@ struct HttpServer {
             try await channel.executeThenClose { inbound in
                 for try await connectionChannel in inbound {
 
-                    let counter = connectionCounter.current()
-                    logger.trace("Handling new connection", metadata: ["connectionNumber": "\(counter)"])
-
                     group.addTask {
-                        await self.handleConnection(channel: connectionChannel)
-                        logger.trace("Done handling connection", metadata: ["connectionNumber": "\(counter)"])
+                        await self.handleConnection(channel: connectionChannel, maxInvocations: self.maxInvocations)
+                        logger.trace("Done handling connection")
                     }
 
-                    if connectionCounter.increment() {
-                        logger.info(
-                            "Maximum number of connections reached, shutting down after current connection",
-                            metadata: ["maxConnections": "\(self.maxInvocations)"]
-                        )
-                        break  // this causes the server to shutdown after handling the connection
-                    }
+                    // This mock server only accepts one connection
+                    // the Lambda Function Runtime will send multiple requests on that single connection
+                    // This Mock Server closes the connection when MAX_INVOCATION is reached
+                    break
                 }
             }
         }
@@ -131,17 +122,19 @@ struct HttpServer {
     /// It handles two requests: one for the next invocation and one for the response.
     /// when the maximum number of requests is reached, it closes the connection.
     private func handleConnection(
-        channel: NIOAsyncChannel<HTTPServerRequestPart, HTTPServerResponsePart>
+        channel: NIOAsyncChannel<HTTPServerRequestPart, HTTPServerResponsePart>,
+        maxInvocations: Int
     ) async {
 
         var requestHead: HTTPRequestHead!
         var requestBody: ByteBuffer?
 
-        // each Lambda invocation results in TWO HTTP requests (next and response)
-        let requestCount = SharedCounter(maxValue: 2)
+        // each Lambda invocation results in TWO HTTP requests (GET /next and POST /response)
+        let maxRequests = maxInvocations * 2
+        let requestCount = SharedCounter(maxValue: maxRequests)
 
         // Note that this method is non-throwing and we are catching any error.
-        // We do this since we don't want to tear down the whole server when a single connection
+        // We do this since we don't want to tear down the whole server when a single request
         // encounters an error.
         do {
             try await channel.executeThenClose { inbound, outbound in
@@ -178,7 +171,7 @@ struct HttpServer {
                         if requestCount.increment() {
                             logger.info(
                                 "Maximum number of requests reached, closing this connection",
-                                metadata: ["maxRequest": "2"]
+                                metadata: ["maxRequest": "\(maxRequests)"]
                             )
                             break  // this finishes handiling request on this connection
                         }
@@ -224,7 +217,7 @@ struct HttpServer {
         } else if requestHead.uri.hasSuffix("/response") {
             responseStatus = .accepted
         } else if requestHead.uri.hasSuffix("/error") {
-            responseStatus = .ok
+            responseStatus = .accepted
         } else {
             responseStatus = .notFound
         }

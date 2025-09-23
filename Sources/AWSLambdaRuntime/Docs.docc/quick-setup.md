@@ -23,7 +23,7 @@ swift package init --type executable
 2. Add dependencies on `AWSLambdaRuntime` library 
 
 ```swift
-// swift-tools-version:6.0
+// swift-tools-version:6.2
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -37,7 +37,7 @@ let package = Package(
         .executable(name: "MyFirstLambdaFunction", targets: ["MyFirstLambdaFunction"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.1"),
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0"),
     ],
     targets: [
         .executableTarget(

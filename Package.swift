@@ -1,10 +1,16 @@
-// swift-tools-version:6.1
+// swift-tools-version:6.2
 
 import PackageDescription
 
+let defaultSwiftSettings: [SwiftSetting] =
+    [
+        .enableExperimentalFeature(
+            "AvailabilityMacro=LambdaSwift 2.0:macOS 15.0"
+        )
+    ]
+
 let package = Package(
     name: "swift-aws-lambda-runtime",
-    platforms: [.macOS(.v15)],
     products: [
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
 
@@ -42,7 +48,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.81.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.4"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.1.4"),
-        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.6.3"),
+        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.8.0"),
     ],
     targets: [
         .target(
@@ -58,7 +64,8 @@ let package = Package(
                     package: "swift-service-lifecycle",
                     condition: .when(traits: ["ServiceLifecycleSupport"])
                 ),
-            ]
+            ],
+            swiftSettings: defaultSwiftSettings
         ),
         .plugin(
             name: "AWSLambdaInitializer",
@@ -146,8 +153,10 @@ let package = Package(
                 .byName(name: "AWSLambdaRuntime"),
                 .product(name: "NIOTestUtils", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
-            ]
+            ],
+            swiftSettings: defaultSwiftSettings
         ),
+
         // for perf testing
         .executableTarget(
             name: "MockServer",
@@ -156,7 +165,8 @@ let package = Package(
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
-            ]
+            ],
+            swiftSettings: defaultSwiftSettings
         ),
         .testTarget(
             name: "AWSLambdaPluginHelperTests",

@@ -26,6 +26,7 @@ import Foundation
 
 @Suite
 struct LambdaRunLoopTests {
+    @available(LambdaSwift 2.0, *)
     struct MockEchoHandler: StreamingLambdaHandler {
         func handle(
             _ event: ByteBuffer,
@@ -37,6 +38,7 @@ struct LambdaRunLoopTests {
         }
     }
 
+    @available(LambdaSwift 2.0, *)
     struct FailingHandler: StreamingLambdaHandler {
         func handle(
             _ event: ByteBuffer,
@@ -48,19 +50,19 @@ struct LambdaRunLoopTests {
         }
     }
 
-    let mockClient = MockLambdaClient()
-    let mockEchoHandler = MockEchoHandler()
-    let failingHandler = FailingHandler()
-
-    @Test func testRunLoop() async throws {
+    @Test
+    @available(LambdaSwift 2.0, *)
+    func testRunLoop() async throws {
+        let mockClient = MockLambdaClient()
+        let mockEchoHandler = MockEchoHandler()
         let inputEvent = ByteBuffer(string: "Test Invocation Event")
 
         try await withThrowingTaskGroup(of: Void.self) { group in
             let logStore = CollectEverythingLogHandler.LogStore()
             group.addTask {
                 try await Lambda.runLoop(
-                    runtimeClient: self.mockClient,
-                    handler: self.mockEchoHandler,
+                    runtimeClient: mockClient,
+                    handler: mockEchoHandler,
                     logger: Logger(
                         label: "RunLoopTest",
                         factory: { _ in CollectEverythingLogHandler(logStore: logStore) }
@@ -69,7 +71,7 @@ struct LambdaRunLoopTests {
             }
 
             let requestID = UUID().uuidString
-            let response = try await self.mockClient.invoke(event: inputEvent, requestID: requestID)
+            let response = try await mockClient.invoke(event: inputEvent, requestID: requestID)
             #expect(response == inputEvent)
             logStore.assertContainsLog("Test", ("aws-request-id", .exactMatch(requestID)))
 
@@ -77,15 +79,19 @@ struct LambdaRunLoopTests {
         }
     }
 
-    @Test func testRunLoopError() async throws {
+    @Test
+    @available(LambdaSwift 2.0, *)
+    func testRunLoopError() async throws {
+        let mockClient = MockLambdaClient()
+        let failingHandler = FailingHandler()
         let inputEvent = ByteBuffer(string: "Test Invocation Event")
 
         await withThrowingTaskGroup(of: Void.self) { group in
             let logStore = CollectEverythingLogHandler.LogStore()
             group.addTask {
                 try await Lambda.runLoop(
-                    runtimeClient: self.mockClient,
-                    handler: self.failingHandler,
+                    runtimeClient: mockClient,
+                    handler: failingHandler,
                     logger: Logger(
                         label: "RunLoopTest",
                         factory: { _ in CollectEverythingLogHandler(logStore: logStore) }
@@ -97,7 +103,7 @@ struct LambdaRunLoopTests {
             await #expect(
                 throws: LambdaError.handlerError,
                 performing: {
-                    try await self.mockClient.invoke(event: inputEvent, requestID: requestID)
+                    try await mockClient.invoke(event: inputEvent, requestID: requestID)
                 }
             )
             logStore.assertContainsLog("Test", ("aws-request-id", .exactMatch(requestID)))

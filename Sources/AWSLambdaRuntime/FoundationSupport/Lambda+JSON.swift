@@ -59,6 +59,7 @@ public struct LambdaJSONOutputEncoder<Output: Encodable>: LambdaOutputEncoder {
     }
 }
 
+@available(LambdaSwift 2.0, *)
 extension LambdaCodableAdapter {
     /// Initializes an instance given an encoder, decoder, and a handler with a non-`Void` output.
     ///   - Parameters:
@@ -83,7 +84,26 @@ extension LambdaCodableAdapter {
         )
     }
 }
-
+@available(LambdaSwift 2.0, *)
+extension LambdaResponseStreamWriter {
+    /// Writes the HTTP status code and headers to the response stream.
+    ///
+    /// This method serializes the status and headers as JSON and writes them to the stream,
+    /// followed by eight null bytes as a separator before the response body.
+    ///
+    /// - Parameters:
+    ///   - response: The status and headers response to write
+    ///   - encoder: The encoder to use for serializing the response, use JSONEncoder by default
+    /// - Throws: An error if JSON serialization or writing fails
+    public func writeStatusAndHeaders(
+        _ response: StreamingLambdaStatusAndHeadersResponse,
+        encoder: JSONEncoder = JSONEncoder()
+    ) async throws {
+        encoder.outputFormatting = .withoutEscapingSlashes
+        try await self.writeStatusAndHeaders(response, encoder: LambdaJSONOutputEncoder(encoder))
+    }
+}
+@available(LambdaSwift 2.0, *)
 extension LambdaRuntime {
     /// Initialize an instance with a `LambdaHandler` defined in the form of a closure **with a non-`Void` return type**.
     /// - Parameters:

@@ -66,7 +66,7 @@ swift package init --type executable
     2.1 Add the Swift AWS Lambda Runtime as a dependency
 
     ```bash
-    swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --from 2.0.0-beta.1
+    swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --from 2.0.0
     swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime --from 1.0.0
     ```
 
@@ -87,7 +87,7 @@ swift package init --type executable
         name: "MyLambda",
         platforms: [.macOS(.v15)],
         dependencies: [
-            .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.1"),
+            .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0"),
         ],
         targets: [
             .executableTarget(
@@ -219,7 +219,7 @@ You can learn how to deploy and invoke this function in [the Hello JSON example 
 
 ### Lambda Streaming Response
 
-You can configure your Lambda function to stream response payloads back to clients. Response streaming can benefit latency sensitive applications by improving time to first byte (TTFB) performance. This is because you can send partial responses back to the client as they become available. Additionally, you can use response streaming to build functions that return larger payloads. Response stream payloads have a soft limit of 20 MB as compared to the 6 MB limit for buffered responses. Streaming a response also means that your function doesn’t need to fit the entire response in memory. For very large responses, this can reduce the amount of memory you need to configure for your function.
+You can configure your Lambda function to stream response payloads back to clients. Response streaming can benefit latency sensitive applications by improving time to first byte (TTFB) performance. This is because you can send partial responses back to the client as they become available. Additionally, you can use response streaming to build functions that return larger payloads. Response stream payloads have a soft limit of 200 MB as compared to the 6 MB limit for buffered responses. Streaming a response also means that your function doesn’t need to fit the entire response in memory. For very large responses, this can reduce the amount of memory you need to configure for your function.
 
 Streaming responses incurs a cost. For more information, see [AWS Lambda Pricing](https://aws.amazon.com/lambda/pricing/).
 
@@ -464,16 +464,22 @@ curl -v --header "Content-Type:\ application/json" --data @events/create-session
 * Connection #0 to host 127.0.0.1 left intact
 {"statusCode":200,"isBase64Encoded":false,"body":"...","headers":{"Access-Control-Allow-Origin":"*","Content-Type":"application\/json; charset=utf-8","Access-Control-Allow-Headers":"*"}}
 ```
-### Modifying the local endpoint
+### Modifying the local server URI
 
-By default, when using the local Lambda server, it listens on the `/invoke` endpoint.
+By default, when using the local Lambda server during your tests, it listens on `http://127.0.0.1:7000/invoke`.
 
-Some testing tools, such as the [AWS Lambda runtime interface emulator](https://docs.aws.amazon.com/lambda/latest/dg/images-test.html), require a different endpoint. In that case, you can use the `LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT` environment variable to force the runtime to listen on a different endpoint.
+Some testing tools, such as the [AWS Lambda runtime interface emulator](https://docs.aws.amazon.com/lambda/latest/dg/images-test.html), require a different endpoint, the port might be used, or you may want to bind a specific IP address.
+
+In these cases, you can use three environment variables to control the local server:
+
+- Set `LOCAL_LAMBDA_HOST` to configure the local server to listen on a different TCP address.
+- Set `LOCAL_LAMBDA_PORT` to configure the local server to listen on a different TCP port.
+- Set `LOCAL_LAMBDA_INVOCATION_ENDPOINT` to force the local server to listen on a different endpoint.
 
 Example:
 
 ```sh
-LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT=/2015-03-31/functions/function/invocations swift run
+LOCAL_LAMBDA_PORT=8080 LOCAL_LAMBDA_INVOCATION_ENDPOINT=/2015-03-31/functions/function/invocations swift run
 ```
 
 ## Deploying your Swift Lambda functions
@@ -538,7 +544,7 @@ The v2 API prioritizes the following principles:
 
 The v2 API introduces two new features:
 
-[Response Streaming](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/]): This functionality is ideal for handling large responses that need to be sent incrementally.  
+[Response Streaming](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/): This functionality is ideal for handling large responses that need to be sent incrementally.  
 
 [Background Work](https://aws.amazon.com/blogs/compute/running-code-after-returning-a-response-from-an-aws-lambda-function/): Schedule tasks to run after returning a response to the AWS Lambda control plane.
 

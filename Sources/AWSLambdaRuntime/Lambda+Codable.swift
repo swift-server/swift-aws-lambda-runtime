@@ -48,6 +48,7 @@ public struct VoidEncoder: LambdaOutputEncoder {
 }
 
 /// Adapts a ``LambdaHandler`` conforming handler to conform to ``LambdaWithBackgroundProcessingHandler``.
+@available(LambdaSwift 2.0, *)
 public struct LambdaHandlerAdapter<
     Event: Decodable,
     Output,
@@ -80,6 +81,7 @@ public struct LambdaHandlerAdapter<
 }
 
 /// Adapts a ``LambdaWithBackgroundProcessingHandler`` conforming handler to conform to ``StreamingLambdaHandler``.
+@available(LambdaSwift 2.0, *)
 public struct LambdaCodableAdapter<
     Handler: LambdaWithBackgroundProcessingHandler,
     Event: Decodable,

@@ -29,6 +29,7 @@ import ucrt
 #error("Unsupported platform")
 #endif
 
+@available(LambdaSwift 2.0, *)
 public enum Lambda {
     @inlinable
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
@@ -41,6 +42,8 @@ public enum Lambda {
         var logger = logger
         do {
             while !Task.isCancelled {
+
+                logger.trace("Waiting for next invocation")
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
                 logger[metadataKey: "aws-request-id"] = "\(invocation.metadata.requestID)"
 
@@ -70,20 +73,24 @@ public enum Lambda {
                             requestID: invocation.metadata.requestID,
                             traceID: invocation.metadata.traceID,
                             invokedFunctionARN: invocation.metadata.invokedFunctionARN,
-                            deadline: DispatchWallTime(
-                                millisSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
+                            deadline: LambdaClock.Instant(
+                                millisecondsSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
                             ),
                             logger: logger
                         )
                     )
+                    logger.trace("Handler finished processing invocation")
                 } catch {
+                    logger.trace("Handler failed processing invocation", metadata: ["Handler error": "\(error)"])
                     try await writer.reportError(error)
                     continue
                 }
+                logger.handler.metadata.removeValue(forKey: "aws-request-id")
             }
         } catch is CancellationError {
             // don't allow cancellation error to propagate further
         }
+
     }
 
     /// The default EventLoop the Lambda is scheduled on.
@@ -92,6 +99,7 @@ public enum Lambda {
 
 // MARK: - Public API
 
+@available(LambdaSwift 2.0, *)
 extension Lambda {
     /// Utility to access/read environment variables
     public static func env(_ name: String) -> String? {

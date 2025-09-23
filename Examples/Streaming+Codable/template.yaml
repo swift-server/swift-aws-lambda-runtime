@@ -4,10 +4,10 @@ Description: SAM Template for StreamingfromEvent Example
 
 Resources:
   # Lambda function
-  StreamingFromEvent:
+  StreamingCodable:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/StreamingFromEvent/StreamingFromEvent.zip
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/StreamingCodable/StreamingCodable.zip
       Timeout: 15
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2
@@ -22,4 +22,4 @@ Outputs:
   # print Lambda function URL
   LambdaURL:
     Description: Lambda URL
-    Value: !GetAtt StreamingFromEventUrl.FunctionUrl
+    Value: !GetAtt StreamingCodableUrl.FunctionUrl

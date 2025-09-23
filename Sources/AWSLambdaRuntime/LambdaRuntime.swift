@@ -24,8 +24,10 @@ import Foundation
 
 // This is our guardian to ensure only one LambdaRuntime is running at the time
 // We use an Atomic here to ensure thread safety
+@available(LambdaSwift 2.0, *)
 private let _isRunning = Atomic<Bool>(false)
 
+@available(LambdaSwift 2.0, *)
 public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLambdaHandler {
     @usableFromInline
     /// we protect the handler behind a Mutex to ensure that we only ever have one copy of it
@@ -57,14 +59,12 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
     }
 
     #if !ServiceLifecycleSupport
-    @inlinable
-    internal func run() async throws {
+    public func run() async throws {
         try await _run()
     }
     #endif
 
     /// Make sure only one run() is called at a time
-    // @inlinable
     internal func _run() async throws {
 
         // we use an atomic global variable to ensure only one LambdaRuntime is running at the time
@@ -94,30 +94,51 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
             let ip = String(ipAndPort[0])
             guard let port = Int(ipAndPort[1]) else { throw LambdaRuntimeError(code: .invalidPort) }
 
-            try await LambdaRuntimeClient.withRuntimeClient(
-                configuration: .init(ip: ip, port: port),
-                eventLoop: self.eventLoop,
-                logger: self.logger
-            ) { runtimeClient in
-                try await Lambda.runLoop(
-                    runtimeClient: runtimeClient,
-                    handler: handler,
+            do {
+                try await LambdaRuntimeClient.withRuntimeClient(
+                    configuration: .init(ip: ip, port: port),
+                    eventLoop: self.eventLoop,
                     logger: self.logger
-                )
+                ) { runtimeClient in
+                    try await Lambda.runLoop(
+                        runtimeClient: runtimeClient,
+                        handler: handler,
+                        logger: self.logger
+                    )
+                }
+            } catch {
+                // catch top level errors that have not been handled until now
+                // this avoids the runtime to crash and generate a backtrace
+                self.logger.error("LambdaRuntime.run() failed with error", metadata: ["error": "\(error)"])
+                if let error = error as? LambdaRuntimeError,
+                    error.code != .connectionToControlPlaneLost
+                {
+                    // if the error is a LambdaRuntimeError but not a connection error,
+                    // we rethrow it to preserve existing behaviour
+                    throw error
+                }
             }
 
         } else {
 
             #if LocalServerSupport
+
             // we're not running on Lambda and we're compiled in DEBUG mode,
             // let's start a local server for testing
+
+            let host = Lambda.env("LOCAL_LAMBDA_HOST") ?? "127.0.0.1"
+            let port = Lambda.env("LOCAL_LAMBDA_PORT").flatMap(Int.init) ?? 7000
+            let endpoint = Lambda.env("LOCAL_LAMBDA_INVOCATION_ENDPOINT")
+
             try await Lambda.withLocalServer(
-                invocationEndpoint: Lambda.env("LOCAL_LAMBDA_SERVER_INVOCATION_ENDPOINT"),
+                host: host,
+                port: port,
+                invocationEndpoint: endpoint,
                 logger: self.logger
             ) {
 
                 try await LambdaRuntimeClient.withRuntimeClient(
-                    configuration: .init(ip: "127.0.0.1", port: 7000),
+                    configuration: .init(ip: host, port: port),
                     eventLoop: self.eventLoop,
                     logger: self.logger
                 ) { runtimeClient in
@@ -129,7 +150,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                 }
             }
             #else
-            // in release mode, we can't start a local server because the local server code is not compiled.
+            // When the LocalServerSupport trait is disabled, we can't start a local server because the local server code is not compiled.
             throw LambdaRuntimeError(code: .missingLambdaRuntimeAPIEnvironmentVariable)
             #endif
         }

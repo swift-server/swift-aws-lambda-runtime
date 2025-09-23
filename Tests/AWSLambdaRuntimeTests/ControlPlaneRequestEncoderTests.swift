@@ -28,6 +28,7 @@ import Foundation
 struct ControlPlaneRequestEncoderTests {
     let host = "192.168.0.1"
 
+    @available(LambdaSwift 2.0, *)
     func createChannels() -> (client: EmbeddedChannel, server: EmbeddedChannel) {
         let client = EmbeddedChannel(handler: ControlPlaneRequestEncoderHandler(host: self.host))
         let server = EmbeddedChannel(handlers: [
@@ -38,6 +39,7 @@ struct ControlPlaneRequestEncoderTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testNextRequest() throws {
         let (client, server) = createChannels()
         defer {
@@ -58,6 +60,7 @@ struct ControlPlaneRequestEncoderTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testPostInvocationSuccessWithoutBody() throws {
         let (client, server) = createChannels()
         defer {
@@ -80,6 +83,7 @@ struct ControlPlaneRequestEncoderTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testPostInvocationSuccessWithBody() throws {
         let (client, server) = createChannels()
         defer {
@@ -105,6 +109,7 @@ struct ControlPlaneRequestEncoderTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testPostInvocationErrorWithBody() throws {
         let (client, server) = createChannels()
         defer {
@@ -133,6 +138,7 @@ struct ControlPlaneRequestEncoderTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testPostStartupError() throws {
         let (client, server) = createChannels()
         defer {
@@ -159,6 +165,7 @@ struct ControlPlaneRequestEncoderTests {
     }
 
     @Test
+    @available(LambdaSwift 2.0, *)
     func testMultipleNextAndResponseSuccessRequests() throws {
         let (client, server) = createChannels()
         defer {
@@ -183,6 +190,7 @@ struct ControlPlaneRequestEncoderTests {
         }
     }
 
+    @available(LambdaSwift 2.0, *)
     func sendRequest(
         _ request: ControlPlaneRequest,
         client: EmbeddedChannel,
@@ -196,6 +204,7 @@ struct ControlPlaneRequestEncoderTests {
     }
 }
 
+@available(LambdaSwift 2.0, *)
 private final class ControlPlaneRequestEncoderHandler: ChannelOutboundHandler {
     typealias OutboundIn = ControlPlaneRequest
     typealias OutboundOut = ByteBuffer

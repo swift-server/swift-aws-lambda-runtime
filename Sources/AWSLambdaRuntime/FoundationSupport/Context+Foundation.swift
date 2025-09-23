@@ -19,10 +19,14 @@ import FoundationEssentials
 import struct Foundation.Date
 #endif
 
+@available(LambdaSwift 2.0, *)
 extension LambdaContext {
+    /// Returns the deadline as a Date for the Lambda function execution.
+    /// I'm not sure how usefull it is to have this as a Date, with only seconds precision,
+    /// but I leave it here for compatibility with the FoundationJSONSupport trait.
     var deadlineDate: Date {
-        let secondsSinceEpoch = Double(Int64(bitPattern: self.deadline.rawValue)) / -1_000_000_000
-        return Date(timeIntervalSince1970: secondsSinceEpoch)
+        // Date(timeIntervalSince1970:) expects seconds, so we convert milliseconds to seconds.
+        Date(timeIntervalSince1970: Double(self.deadline.millisecondsSinceEpoch()) / 1000)
     }
 }
 #endif  // trait: FoundationJSONSupport
