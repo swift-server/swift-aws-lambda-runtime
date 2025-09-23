@@ -1,4 +1,4 @@
-// swift-tools-version:6.1
+// swift-tools-version:6.2
 
 import PackageDescription
 
@@ -13,7 +13,7 @@ let package = Package(
     ],
     dependencies: [
         // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0-beta.3", traits: [])
+        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0", traits: [])
     ],
     targets: [
         .executableTarget(

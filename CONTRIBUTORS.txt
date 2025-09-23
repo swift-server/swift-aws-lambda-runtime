@@ -8,26 +8,66 @@ needs to be listed here.
 ## COPYRIGHT HOLDERS
 
 - Apple Inc. (all contributors with '@apple.com')
+- Amazon.com, Inc. or its affiliates (all contributors with '@amazon.com')
 
 ### Contributors
 
 - Adam Fowler <adamfowler71@gmail.com>
+- Adolfo <fitomad@users.noreply.github.com>
+- Alessio Buratti <9006089+Buratti@users.noreply.github.com>
 - Andrea Scuderi <andreascuderi@ymail.com>
+- Bill <3207996+gestrich@users.noreply.github.com>
 - Brendan Kirchner <brendankirchner@me.com>
 - Bryan Bartow <bryanbartow@gmail.com>
 - Bryan Moffatt <bmoffatt@users.noreply.github.com>
+- Camden Fullmer <camdenfullmer@gmail.com>
 - Christoph Walcher <christoph-wa@gmx.de>
 - Colton Schlosser <cltnschlosser@gmail.com>
+- Cory Benfield <lukasa@apple.com>
+- Dmitry Platonov <dsplatonov@mail.ru>
+- DwayneCoussement <dwayne.coussement@gmail.com>
+- DwayneCoussement <dwayne.coussement@showpad.com>
 - Eneko Alonso <eneko.alonso@gmail.com>
-- Fabian Fett <fabianfett@mac.com>
+- Fabian Fett <fabianfett@apple.com>
+- Filipp Fediakov <julik103@mail.ru>
+- Florent Morin <florentmorin@icloud.com>
+- Franz Busch <f.busch@apple.com>
+- Franz Busch <privat@franz-busch.de>
 - George Barnett <gbarnett@apple.com>
+- Jack Rosen <jrosen081@gmail.com>
+- Joannis Orlandos <joannis@orlandos.nl>
+- Joel Saltzman <talk@joelsaltzman.com>
+- Johannes Bosecker <j.bosecker.dev@icloud.com>
 - Johannes Weiss <johannesweiss@apple.com>
+- Josh <29730338+mr-j-tree@users.noreply.github.com>
+- Juan A. Reyes <59104004+jareyesda@users.noreply.github.com>
+- Konrad `ktoso` Malawski <konrad.malawski@project13.pl>
+- ML <44809298+mufumade@users.noreply.github.com>
+- Marwane Koutar <100198937+MarwaneKoutar@users.noreply.github.com>
+- Matt Massicotte <85322+mattmassicotte@users.noreply.github.com>
 - Max Desiatov <max@desiatov.com>
+- Natan Rolnik <me@natanrolnik.me>
 - Norman Maurer <norman_maurer@apple.com>
+- Paul Toffoloni <69189821+ptoffy@users.noreply.github.com>
+- Ralph Küpper <ralph.kuepper@skelpo.com>
 - Ro-M <Ro-M@users.noreply.github.com>
+- Stefan Nienhuis <stefan@nienhuisdevelopment.com>
+- Sven A. Schmidt <sas@finestructure.co>
+- Sébastien Stormacq <stormacq@amazon.com>
+- Tim Condon <0xTim@users.noreply.github.com>
+- Tobias <t089@users.noreply.github.com>
 - Tomer Doron <tomer@apple.com>
+- YR Chen <stevapple@icloud.com>
+- Yim Lee <yim_lee@apple.com>
 - Zhibin Cai <TonyChol@users.noreply.github.com>
+- aryan-25 <aryan_shah@apple.com>
+- dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+- jsonfry <jason@jasonfry.co.uk>
+- mattcorey <mattcorey@users.noreply.github.com>
 - pmarrufo <p_marrufo94@hotmail.com>
+- pokryfka <5090827+pokryfka@users.noreply.github.com>
+- pokryfka <pokryfka@gmail.com>
+- sja26 <sja26@users.noreply.github.com>
 - tachyonics <simon@tachyonics.io>
 
 **Updating this list**

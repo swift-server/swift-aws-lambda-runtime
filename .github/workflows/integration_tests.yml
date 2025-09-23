@@ -38,8 +38,9 @@ on:
         required: true
       matrix_linux_swift_container_image:
         type: string
-        description: "Container image for the matrix job. Defaults to matching latest Swift 6.1 Amazon Linux 2 image."
-        default: "swiftlang/swift:nightly-6.1-amazonlinux2"
+        # Note: we don't use Amazon Linux 2 here because zip is not installed by default.
+        description: "Container image for the matrix test jobs. Defaults to Swift 6.2 on Amazon Linux 2."
+        default: "swift:6.2-amazonlinux2"
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -48,7 +49,7 @@ concurrency:
 
 jobs:
   test-examples:
-    name: Test Examples/${{ matrix.examples }} on ${{ matrix.swift.swift_version }}
+    name: Test Examples/${{ matrix.examples }} on ${{ matrix.swift.image }}
     if: ${{ inputs.examples_enabled }}
     runs-on: ubuntu-latest
     strategy:
@@ -105,14 +106,17 @@ jobs:
       fail-fast: false
       matrix:
         examples: ${{ fromJson(inputs.archive_plugin_examples) }}
+    # These must run on Ubuntu and not in a container, because the plugin uses docker
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+
       - name: Mark the workspace as safe
         # https://github.com/actions/checkout/issues/766
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+
       - name: Test the archive plugin
         env:
           EXAMPLE: ${{ matrix.examples }}
@@ -123,14 +127,37 @@ jobs:
     name: No dependencies on Foundation
     if: ${{ inputs.check_foundation_enabled }}
     runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.matrix_linux_swift_container_image }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+      # GitHub checkout action has a dep on NodeJS 20 which is not running on Amazonlinux2
+      # workaround is to manually checkout the repository
+      # https://github.com/actions/checkout/issues/1487
+      - name: Manually Clone repository and checkout PR
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Clone the repository
+          git clone https://github.com/${{ github.repository }}
+          cd ${{ github.event.repository.name }}
+
+          # Fetch the pull request
+          git fetch origin +refs/pull/$PR_NUMBER/merge:
+
+          # Checkout the pull request
+          git checkout -qf FETCH_HEAD
+
+      # - name: Checkout repository
+      #   uses: actions/checkout@v4
+      #   with:
+      #     persist-credentials: false
+
       - name: Mark the workspace as safe
+        working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
         # https://github.com/actions/checkout/issues/766
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+
       - name: Check for Foundation or ICU dependency
+        working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
         run: |
           .github/workflows/scripts/check-link-foundation.sh
