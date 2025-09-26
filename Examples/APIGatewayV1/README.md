@@ -71,8 +71,8 @@ Be sure to replace the URL with the API Gateway endpoint returned in the previou
 
 This should print a JSON similar to 
 
-```bash 
-{"version":"2.0","rawPath":"\/","isBase64Encoded":false,"rawQueryString":"","headers":{"user-agent":"curl\/8.7.1","accept":"*\/*","host":"a5q74es3k2.execute-api.us-east-1.amazonaws.com","content-length":"0","x-amzn-trace-id":"Root=1-66fb0388-691f744d4bd3c99c7436a78d","x-forwarded-port":"443","x-forwarded-for":"81.0.0.43","x-forwarded-proto":"https"},"requestContext":{"requestId":"e719cgNpoAMEcwA=","http":{"sourceIp":"81.0.0.43","path":"\/","protocol":"HTTP\/1.1","userAgent":"curl\/8.7.1","method":"GET"},"stage":"$default","apiId":"a5q74es3k2","time":"30\/Sep\/2024:20:01:12 +0000","timeEpoch":1727726472922,"domainPrefix":"a5q74es3k2","domainName":"a5q74es3k2.execute-api.us-east-1.amazonaws.com","accountId":"012345678901"}
+```bash
+{"httpMethod":"GET","queryStringParameters":{},"isBase64Encoded":false,"resource":"\/","path":"\/","headers":{"X-Forwarded-Port":"3000","X-Forwarded-Proto":"http","User-Agent":"curl\/8.7.1","Host":"localhost:3000","Accept":"*\/*"},"requestContext":{"resourcePath":"\/","identity":{"sourceIp":"127.0.0.1","userAgent":"Custom User Agent String"},"httpMethod":"GET","resourceId":"123456","accountId":"123456789012","apiId":"1234567890","requestId":"a9d2db08-8364-4da4-8237-8912bf8148c8","domainName":"localhost:3000","stage":"Prod","path":"\/"},"multiValueQueryStringParameters":{},"pathParameters":{},"multiValueHeaders":{"Accept":["*\/*"],"Host":["localhost:3000"],"X-Forwarded-Port":["3000"],"User-Agent":["curl\/8.7.1"],"X-Forwarded-Proto":["http"]},"stageVariables":{}}
 ```
 
 If you have `jq` installed, you can use it to pretty print the output.
@@ -80,38 +80,53 @@ If you have `jq` installed, you can use it to pretty print the output.
 ```bash
 curl -s  https://a5q74es3k2.execute-api.us-east-1.amazonaws.com | jq   
 {
-  "version": "2.0",
-  "rawPath": "/",
+  "stageVariables": {},
+  "queryStringParameters": {},
+  "multiValueHeaders": {
+    "Accept": [
+      "*/*"
+    ],
+    "User-Agent": [
+      "curl/8.7.1"
+    ],
+    "X-Forwarded-Proto": [
+      "http"
+    ],
+    "Host": [
+      "localhost:3000"
+    ],
+    "X-Forwarded-Port": [
+      "3000"
+    ]
+  },
+  "pathParameters": {},
+  "isBase64Encoded": false,
+  "path": "/",
   "requestContext": {
-    "domainPrefix": "a5q74es3k2",
-    "stage": "$default",
-    "timeEpoch": 1727726558220,
-    "http": {
-      "protocol": "HTTP/1.1",
-      "method": "GET",
-      "userAgent": "curl/8.7.1",
-      "path": "/",
-      "sourceIp": "81.0.0.43"
+    "apiId": "1234567890",
+    "stage": "Prod",
+    "httpMethod": "GET",
+    "domainName": "localhost:3000",
+    "requestId": "a9d2db08-8364-4da4-8237-8912bf8148c8",
+    "identity": {
+      "userAgent": "Custom User Agent String",
+      "sourceIp": "127.0.0.1"
     },
-    "apiId": "a5q74es3k2",
-    "accountId": "012345678901",
-    "requestId": "e72KxgsRoAMEMSA=",
-    "domainName": "a5q74es3k2.execute-api.us-east-1.amazonaws.com",
-    "time": "30/Sep/2024:20:02:38 +0000"
+    "resourceId": "123456",
+    "path": "/",
+    "resourcePath": "/",
+    "accountId": "123456789012"
   },
-  "rawQueryString": "",
-  "routeKey": "$default",
+  "multiValueQueryStringParameters": {},
+  "resource": "/",
   "headers": {
-    "x-forwarded-for": "81.0.0.43",
-    "user-agent": "curl/8.7.1",
-    "host": "a5q74es3k2.execute-api.us-east-1.amazonaws.com",
-    "accept": "*/*",
-    "x-amzn-trace-id": "Root=1-66fb03de-07533930192eaf5f540db0cb",
-    "content-length": "0",
-    "x-forwarded-proto": "https",
-    "x-forwarded-port": "443"
+    "Accept": "*/*",
+    "X-Forwarded-Proto": "http",
+    "X-Forwarded-Port": "3000",
+    "Host": "localhost:3000",
+    "User-Agent": "curl/8.7.1"
   },
-  "isBase64Encoded": false
+  "httpMethod": "GET"
 }
 ```
 

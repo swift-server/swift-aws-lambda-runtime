@@ -23,6 +23,9 @@ Resources:
       Events:
         RestApi:
           Type: Api
+          Properties:
+            Path: /
+            Method: GET
 
 Outputs:
   # print API Gateway endpoint
