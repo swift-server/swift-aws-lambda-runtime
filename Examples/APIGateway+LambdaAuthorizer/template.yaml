@@ -35,7 +35,7 @@ Resources:
       Timeout: 60
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2
-      MemorySize: 512
+      MemorySize: 128
       Architectures:
         - arm64
       Environment:
@@ -60,7 +60,7 @@ Resources:
       Timeout: 29  # max 29 seconds for Lambda authorizers
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2
-      MemorySize: 512
+      MemorySize: 128
       Architectures:
         - arm64
       Environment:
