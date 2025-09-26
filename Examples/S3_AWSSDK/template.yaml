@@ -11,7 +11,7 @@ Resources:
       Timeout: 60
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2
-      MemorySize: 512
+      MemorySize: 128
       Architectures:
         - arm64
       Environment:

@@ -312,7 +312,7 @@ Resources:
       Timeout: 60
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2
-      MemorySize: 512
+      MemorySize: 128
       Architectures:
         - arm64
       # The events that will trigger this function  
@@ -489,7 +489,7 @@ export class LambdaApiStack extends cdk.Stack {
       architecture: lambda.Architecture.ARM_64,
       handler: 'bootstrap',
       code: lambda.Code.fromAsset('../.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip'),
-      memorySize: 512,
+      memorySize: 128,
       timeout: cdk.Duration.seconds(30),
       environment: {
         LOG_LEVEL: 'debug',
