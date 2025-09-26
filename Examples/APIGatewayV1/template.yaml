@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for APIGateway Lambda Example
+
+Resources:
+  # Lambda function
+  APIGatewayLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip
+      Timeout: 60
+      Handler: swift.bootstrap  # ignored by the Swift runtime
+      Runtime: provided.al2
+      MemorySize: 512
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          # by default, AWS Lambda runtime produces no log
+          # use `LOG_LEVEL: debug` for for lifecycle and event handling information
+          # use `LOG_LEVEL: trace` for detailed input event information
+          LOG_LEVEL: debug
+      Events:
+        RestApi:
+          Type: Api
+
+Outputs:
+  # print API Gateway endpoint
+  APIGatewayEndpoint:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
