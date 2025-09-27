@@ -1,5 +1,8 @@
 name: IntegrationTests
 
+# As per Checkov CKV2_GHA_1
+permissions: read-all
+
 on:
   workflow_call:
     inputs:
