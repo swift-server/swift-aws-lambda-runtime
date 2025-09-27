@@ -1,68 +1,57 @@
-## Legal
+# Contributing Guidelines
 
-By submitting a pull request, you represent that you have the right to license
-your contribution to Apple and the community, and agree by submitting the patch
-that your contributions are licensed under the Apache 2.0 license (see
-`LICENSE.txt`).
+Thank you for your interest in contributing to our project. Whether it's a bug report, new feature, correction, or additional 
+documentation, we greatly value feedback and contributions from our community.
 
-
-## How to submit a bug report
-
-Please ensure to specify the following:
-
-* SwiftAWSLambdaRuntime commit hash
-* Contextual information (e.g. what you were trying to achieve with SwiftAWSLambdaRuntime)
-* Simplest possible steps to reproduce
-  * More complex the steps are, lower the priority will be.
-  * A pull request with failing test case is preferred, but it's just fine to paste the test case into the issue description.
-* Anything that might be relevant in your opinion, such as:
-  * Swift version or the output of `swift --version`
-  * OS version and the output of `uname -a`
-  * Network configuration
+Please read through this document before submitting any issues or pull requests to ensure we have all the necessary 
+information to effectively respond to your bug report or contribution.
 
 
-### Example
+## Reporting Bugs/Feature Requests
 
-```
-SwiftAWSLambdaRuntime commit hash: 22ec043dc9d24bb011b47ece4f9ee97ee5be2757
+We welcome you to use the GitHub issue tracker to report bugs or suggest features.
 
-Context:
-While load testing my Lambda written with SwiftAWSLambdaRuntime, I noticed
-that one file descriptor is leaked per request.
+When filing an issue, please check [existing open](https://github.com/aws-amplify/aws-sdk-swift/issues), or [recently closed](https://github.com/aws-amplify/aws-sdk-swift/issues?utf8=%E2%9C%93&q=is%3Aissue%20is%3Aclosed%20), issues to make sure somebody else hasn't already 
+reported the issue. Please try to include as much information as you can. Details like these are incredibly useful:
 
-Steps to reproduce:
-1. ...
-2. ...
-3. ...
-4. ...
+* A reproducible test case or series of steps
+* The version of our code being used
+* Any modifications you've made relevant to the bug
+* Anything unusual about your environment or deployment
 
-$ swift --version
-Swift version 4.0.2 (swift-4.0.2-RELEASE)
-Target: x86_64-unknown-linux-gnu
 
-Operating system: Ubuntu Linux 16.04 64-bit
+## Contributing via Pull Requests
+Contributions via pull requests are much appreciated. Before sending us a pull request, please ensure that:
 
-$ uname -a
-Linux beefy.machine 4.4.0-101-generic #124-Ubuntu SMP Fri Nov 10 18:29:59 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux
+1. You are working against the latest source on the *main* branch.
+2. You check existing open, and recently merged, pull requests to make sure someone else hasn't addressed the problem already.
+3. You open an issue to discuss any significant work - we would hate for your time to be wasted.
 
-My system has IPv6 disabled.
-```
+To send us a pull request, please:
 
-## Writing a Patch
+1. Fork the repository.
+2. Modify the source; please focus on the specific change you are contributing. If you also reformat all the code, it will be hard for us to focus on your change.
+3. Ensure local tests pass.
+4. Commit to your fork using clear commit messages.
+5. Send us a pull request, answering any default questions in the pull request interface.
+6. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.
 
-A good SwiftAWSLambdaRuntime patch is:
+GitHub provides additional document on [forking a repository](https://help.github.com/articles/fork-a-repo/) and 
+[creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
 
-1. Concise, and contains as few changes as needed to achieve the end result.
-2. Tested, ensuring that any tests provided failed before the patch and pass after it.
-3. Documented, adding API documentation as needed to cover new functions and properties.
-4. Accompanied by a great commit message, using our commit message template.
 
-### Commit Message Template
+## Finding contributions to work on
+Looking at the existing issues is a great way to find something to contribute on. As our projects, by default, use the default GitHub issue labels ((enhancement/bug/duplicate/help wanted/invalid/question/wontfix), looking at any ['help wanted'](https://github.com/aws-amplify/aws-sdk-swift/labels/help%20wanted) issues is a great place to start. 
 
-We require that your commit messages match our template. The easiest way to do that is to get git to help you by explicitly using the template. To do that, `cd` to the root of our repository and run:
 
-    git config commit.template dev/git.commit.template
+## Code of Conduct
+This project has adopted the [Amazon Open Source Code of Conduct](https://aws.github.io/code-of-conduct). 
+For more information see the [Code of Conduct FAQ](https://aws.github.io/code-of-conduct-faq) or contact 
+opensource-codeofconduct@amazon.com with any additional questions or comments.
 
-## How to contribute your work
 
-Please open a pull request at https://github.com/swift-server/swift-aws-lambda-runtime. Make sure the CI passes, and then wait for code review.
+## Licensing
+
+See the [LICENSE](https://github.com/aws-amplify/aws-sdk-swift/blob/main/LICENSE) file for our project's licensing. We will ask you confirm the licensing of your contribution.
+
+We may ask you to sign a [Contributor License Agreement (CLA)](http://en.wikipedia.org/wiki/Contributor_License_Agreement) for larger changes.
