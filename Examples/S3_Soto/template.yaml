@@ -2,6 +2,22 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: SAM Template for AWS SDK Example
 
+# This is an example SAM template for the purpose of this project.
+# When deploying such infrastructure in production environment,
+# we strongly encourage you to follow these best practices for improved security and resiliency
+# - Enable access loggin on API Gateway
+#   See: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-logging.html)
+# - Ensure that AWS Lambda function is configured for function-level concurrent execution limit
+#   See: https://docs.aws.amazon.com/lambda/latest/dg/lambda-concurrency.html
+#        https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html
+# - Check encryption settings for Lambda environment variable
+#   See: https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars-encryption.html
+# - Ensure that AWS Lambda function is configured for a Dead Letter Queue(DLQ)
+#   See: https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html#invocation-dlq
+# - Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources
+#   See: https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html
+#   Code Example: https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres
+
 Resources:
   # Lambda function
   SotoExample:
