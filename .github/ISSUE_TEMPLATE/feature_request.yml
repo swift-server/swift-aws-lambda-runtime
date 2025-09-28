@@ -5,8 +5,8 @@ title: "(short issue description)"
 labels: [feature-request, needs-triage]
 assignees: []
 body:
-  - type: markdown 
-    attributes: 
+  - type: markdown
+    attributes:
       value: |
         ## Community Note
         1. Please vote on this issue by adding a 👍 [reaction](https://blog.github.com/2016-03-10-add-reactions-to-pull-requests-issues-and-comments/) to the original issue to help the community and maintainers prioritize this request
@@ -26,7 +26,7 @@ body:
       description: |
         Why do you need this feature? For example: "I'm always frustrated when..."
     validations:
-        required: true
+      required: true
   - type: textarea
     id: solution
     attributes:
