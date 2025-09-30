@@ -1,5 +1,5 @@
-> [!IMPORTANT]
-> The documentation included here refers to the Swift AWS Lambda Runtime v2 (code from the v2.x tags and the main branch). If you're developing for the runtime v1.x, check this [readme](https://github.com/swift-server/swift-aws-lambda-runtime/blob/v1/readme.md) instead.
+
+You can read [the Swift AWS Lambda Runtime documentation](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/2.0.0/documentation/awslambdaruntime) on the Swift Package Index.
 
 This guide contains the following sections:
 
@@ -9,7 +9,7 @@ This guide contains the following sections:
 - [Developing your Swift Lambda functions](#developing-your-swift-lambda-functions)
 - [Testing Locally](#testing-locally)
 - [Deploying your Swift Lambda functions](#deploying-your-swift-lambda-functions)
-- [Swift AWS Lambda Runtime - Design Principles](#swift-aws-lambda-runtime---design-principles)% 
+- [Swift AWS Lambda Runtime - Design Principles](#swift-aws-lambda-runtime---design-principles)
 
 ## The Swift AWS Lambda Runtime
 
