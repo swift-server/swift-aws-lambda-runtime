@@ -160,5 +160,37 @@ extension LambdaRuntime {
 
         self.init(handler: handler, logger: logger)
     }
+
+    /// Initialize an instance directly with a `LambdaHandler`.
+    /// - Parameters:
+    ///   - decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type. `JSONDecoder()` used as default.
+    ///   - encoder: The encoder object that will be used to encode the generic `Output` into a `ByteBuffer`. `JSONEncoder()` used as default.
+    ///   - logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
+    ///   - lambdaHandler: A type that conforms to the `LambdaHandler` protocol, whose `Event` and `Output` types must be `Decodable`/`Encodable`
+    public convenience init<Event: Decodable, Output, LHandler: LambdaHandler>(
+        decoder: JSONDecoder = JSONDecoder(),
+        encoder: JSONEncoder = JSONEncoder(),
+        logger: Logger = Logger(label: "LambdaRuntime"),
+        lambdaHandler: sending LHandler
+    )
+    where
+        Handler == LambdaCodableAdapter<
+            LambdaHandlerAdapter<Event, Output, LHandler>,
+            Event,
+            Output,
+            LambdaJSONEventDecoder,
+            LambdaJSONOutputEncoder<Output>
+        >,
+        LHandler.Event == Event,
+        LHandler.Output == Output
+    {
+        let handler = LambdaCodableAdapter(
+            encoder: encoder,
+            decoder: decoder,
+            handler: LambdaHandlerAdapter(handler: lambdaHandler)
+        )
+
+        self.init(handler: handler, logger: logger)
+    }
 }
 #endif  // trait: FoundationJSONSupport
