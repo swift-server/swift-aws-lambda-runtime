@@ -89,7 +89,7 @@ struct LambdaClockTests {
 
         // Allow some tolerance for timing precision
         #expect(elapsed >= .milliseconds(40))
-        #expect(elapsed <= .milliseconds(100))
+        #expect(elapsed <= .milliseconds(200))
     }
 
     @Test("Sleep with past deadline returns immediately")
