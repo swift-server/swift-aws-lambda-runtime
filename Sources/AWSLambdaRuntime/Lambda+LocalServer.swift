@@ -397,7 +397,7 @@ internal struct LambdaHTTPServer {
                     status: .badRequest,
                     body: ByteBuffer(
                         string:
-                            "It's illegal to invoke multiple Lambda function executions in parallel. (The Lambda runtime environment on AWS will never do that)"
+                            "It is not allowed to invoke multiple Lambda function executions in parallel. (The Lambda runtime environment on AWS will never do that)"
                     )
                 )
                 try await self.sendResponse(response, outbound: outbound, logger: logger)
