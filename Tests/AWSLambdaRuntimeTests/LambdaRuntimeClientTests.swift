@@ -332,7 +332,7 @@ struct LambdaRuntimeClientTests {
     }
 
     @Test(
-        "reportError() sends the correct errorType for different Error types",
+        "reportError() sends the correct errorType for different Error types"
     )
     @available(LambdaSwift 2.0, *)
     func testReportErrorReturnsProperErrorType() async throws {
