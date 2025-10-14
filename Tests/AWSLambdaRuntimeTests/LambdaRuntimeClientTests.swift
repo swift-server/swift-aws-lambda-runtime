@@ -386,7 +386,6 @@ struct LambdaRuntimeClientTests {
                 let (_, writer) = try await runtimeClient.nextInvocation()
                 let error = MyCustomError(message: "Something went wrong")
                 try await writer.reportError(error)
-                try await writer.finish()
             }
         }
 
@@ -402,7 +401,6 @@ struct LambdaRuntimeClientTests {
                 let (_, writer) = try await runtimeClient.nextInvocation()
                 let error = MyEnumError.anotherCase("test")
                 try await writer.reportError(error)
-                try await writer.finish()
             }
         }
     }
