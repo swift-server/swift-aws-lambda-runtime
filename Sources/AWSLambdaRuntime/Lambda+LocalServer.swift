@@ -567,7 +567,7 @@ internal struct LambdaHTTPServer {
     /// (one instance to serve requests from the Lambda function and one instance to serve requests from the client invoking the lambda function).
     internal final class Pool<T>: AsyncSequence, AsyncIteratorProtocol, Sendable where T: Sendable {
         private let poolName: String
-        internal init(name: String) { self.poolName = name }
+        internal init(name: String = "Pool") { self.poolName = name }
 
         typealias Element = T
 
