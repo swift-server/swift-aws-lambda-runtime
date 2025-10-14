@@ -390,12 +390,11 @@ internal struct LambdaHTTPServer {
             logger[metadataKey: "requestId"] = "\(requestId)"
 
             logger.trace("/invoke received invocation, pushing it to the pool and wait for a lambda response")
-            // detect concurrent invocations of POST and gently decline the requests while we're processing one.
             self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body))
 
             // wait for the lambda function to process the request
-            // when POST /invoke is called multiple times before a response is process, the 
-            // `for try await ... in` loop will throw an error and we will return a 400 error to the client
+            // when POST /invoke is called multiple times before a response is processed,
+            // the `for try await ... in` loop will throw an error and we will return a 400 error to the client
             do {
                 for try await response in self.responsePool {
                     logger[metadataKey: "response requestId"] = "\(response.requestId ?? "nil")"
@@ -427,6 +426,7 @@ internal struct LambdaHTTPServer {
                 // This should not happen as the async iterator blocks until there is a response to process
                 fatalError("No more responses to process - the async for loop should not return")
             } catch is LambdaHTTPServer.Pool<LambdaHTTPServer.LocalServerResponse>.PoolError {
+                // detect concurrent invocations of POST and gently decline the requests while we're processing one.
                 let response = LocalServerResponse(
                     id: requestId,
                     status: .badRequest,
