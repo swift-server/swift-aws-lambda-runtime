@@ -95,8 +95,8 @@ extension Lambda {
 internal struct LambdaHTTPServer {
     private let invocationEndpoint: String
 
-    private let invocationPool = Pool<LocalServerInvocation>()
-    private let responsePool = Pool<LocalServerResponse>()
+    private let invocationPool = Pool<LocalServerInvocation>(name: "Invocation Pool")
+    private let responsePool = Pool<LocalServerResponse>(name: "Response Pool")
 
     private init(
         invocationEndpoint: String?
@@ -388,8 +388,21 @@ internal struct LambdaHTTPServer {
             // we always accept the /invoke request and push them to the pool
             let requestId = "\(DispatchTime.now().uptimeNanoseconds)"
             logger[metadataKey: "requestId"] = "\(requestId)"
+
             logger.trace("/invoke received invocation, pushing it to the pool and wait for a lambda response")
-            await self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body))
+            // detect concurrent invocations of POST and gently decline the requests while we're processing one.
+            if await !self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body)) {
+                let response = LocalServerResponse(
+                    id: requestId,
+                    status: .badRequest,
+                    body: ByteBuffer(
+                        string:
+                            "It's illegal to invoke multiple Lambda function executions in parallel. (The Lambda runtime environment on AWS will never do that)"
+                    )
+                )
+                try await self.sendResponse(response, outbound: outbound, logger: logger)
+                return
+            }
 
             // wait for the lambda function to process the request
             for try await response in self.responsePool {
@@ -410,7 +423,12 @@ internal struct LambdaHTTPServer {
                         "Received response for a different request id",
                         metadata: ["response requestId": "\(response.requestId ?? "")"]
                     )
-                    // should we return an error here ? Or crash as this is probably a programming error?
+                    let response = LocalServerResponse(
+                        id: requestId,
+                        status: .badRequest,
+                        body: ByteBuffer(string: "The response Id not equal to the request Id.")
+                    )
+                    try await self.sendResponse(response, outbound: outbound, logger: logger)
                 }
             }
             // What todo when there is no more responses to process?
@@ -548,6 +566,9 @@ internal struct LambdaHTTPServer {
     /// This data structure is shared between instances of the HTTPHandler
     /// (one instance to serve requests from the Lambda function and one instance to serve requests from the client invoking the lambda function).
     internal final class Pool<T>: AsyncSequence, AsyncIteratorProtocol, Sendable where T: Sendable {
+        private let poolName: String
+        internal init(name: String) { self.poolName = name }
+
         typealias Element = T
 
         enum State: ~Copyable {
@@ -558,8 +579,11 @@ internal struct LambdaHTTPServer {
         private let lock = Mutex<State>(.buffer([]))
 
         /// enqueue an element, or give it back immediately to the iterator if it is waiting for an element
-        public func push(_ invocation: T) async {
-            // if the iterator is waiting for an element, give it to it
+        /// Returns true when we receive a element and the pool was in "waiting for continuation" state, false otherwise
+        @discardableResult
+        public func push(_ invocation: T) async -> Bool {
+
+            // if the iterator is waiting for an element on `next()``, give it to it
             // otherwise, enqueue the element
             let maybeContinuation = self.lock.withLock { state -> CheckedContinuation<T, any Error>? in
                 switch consume state {
@@ -574,7 +598,12 @@ internal struct LambdaHTTPServer {
                 }
             }
 
-            maybeContinuation?.resume(returning: invocation)
+            if let maybeContinuation {
+                maybeContinuation.resume(returning: invocation)
+                return true
+            } else {
+                return false
+            }
         }
 
         func next() async throws -> T? {
@@ -596,8 +625,8 @@ internal struct LambdaHTTPServer {
                                 return nil
                             }
 
-                        case .continuation:
-                            fatalError("Concurrent invocations to next(). This is illegal.")
+                        case .continuation(_):
+                            fatalError("\(self.poolName) : Concurrent invocations to next(). This is illegal.")
                         }
                     }
 
