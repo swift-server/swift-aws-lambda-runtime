@@ -29,7 +29,7 @@ extension LambdaHTTPServer {
 
         enum State: ~Copyable {
             case buffer(Deque<T>)
-            case continuation(CheckedContinuation<T, any Error>?)
+            case continuation(CheckedContinuation<T, any Error>)
         }
 
         private let lock = Mutex<State>(.buffer([]))
@@ -55,6 +55,16 @@ extension LambdaHTTPServer {
             maybeContinuation?.resume(returning: invocation)
         }
 
+        /// AsyncSequence's standard next() function
+        /// Returns:
+        /// - nil when the task is cancelled
+        /// - an element when there is one in the queue
+        ///
+        /// When there is no element in the queue, the task will be suspended until an element is pushed to the queue
+        /// or the task is cancelled
+        ///
+        /// - Throws: PoolError if the next() function is called twice concurrently
+        @Sendable
         func next() async throws -> T? {
             // exit the async for loop if the task is cancelled
             guard !Task.isCancelled else {
@@ -63,29 +73,34 @@ extension LambdaHTTPServer {
 
             return try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, any Error>) in
-                    let (nextAction, nextError) = self.lock.withLock { state -> (T?, PoolError?) in
+                    let nextAction: Result<T, PoolError>? = self.lock.withLock { state -> Result<T, PoolError>? in
                         switch consume state {
                         case .buffer(var buffer):
                             if let first = buffer.popFirst() {
                                 state = .buffer(buffer)
-                                return (first, nil)
+                                return .success(first)
                             } else {
                                 state = .continuation(continuation)
-                                return (nil, nil)
+                                return nil
                             }
 
                         case .continuation(let previousContinuation):
                             state = .buffer([])
-                            return (nil, PoolError(cause: .nextCalledTwice([previousContinuation, continuation])))
+                            return .failure(PoolError(cause: .nextCalledTwice(previousContinuation)))
                         }
                     }
 
-                    if let nextError,
-                        case let .nextCalledTwice(continuations) = nextError.cause
-                    {
-                        for continuation in continuations { continuation?.resume(throwing: nextError) }
-                    } else if let nextAction {
-                        continuation.resume(returning: nextAction)
+                    switch nextAction {
+                    case .success(let action):
+                        continuation.resume(returning: action)
+                    case .failure(let error):
+                        if case let .nextCalledTwice(continuation) = error.cause {
+                            continuation.resume(throwing: error)
+                        }
+                        continuation.resume(throwing: error)
+                    case .none:
+                        // do nothing
+                        break
                     }
                 }
             } onCancel: {
@@ -95,7 +110,7 @@ extension LambdaHTTPServer {
                         state = .buffer(buffer)
                     case .continuation(let continuation):
                         state = .buffer([])
-                        continuation?.resume(throwing: CancellationError())
+                        continuation.resume(throwing: CancellationError())
                     }
                 }
             }
@@ -115,7 +130,7 @@ extension LambdaHTTPServer {
             }
 
             enum Cause {
-                case nextCalledTwice([CheckedContinuation<T, any Error>?])
+                case nextCalledTwice(CheckedContinuation<T, any Error>)
             }
         }
     }

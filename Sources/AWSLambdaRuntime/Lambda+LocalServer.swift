@@ -583,7 +583,7 @@ internal struct LambdaHTTPServer {
             self.final = final
         }
     }
-    
+
     private struct LocalServerInvocation: Sendable {
         let requestId: String
         let request: ByteBuffer
