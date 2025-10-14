@@ -158,4 +158,32 @@ struct PoolTests {
         #expect(receivedValues.count == producerCount * messagesPerProducer)
         #expect(Set(receivedValues).count == producerCount * messagesPerProducer)
     }
+
+    @Test
+    @available(LambdaSwift 2.0, *)
+    func testConcurrentNext() async throws {
+        let pool = LambdaHTTPServer.Pool<String>()
+
+        // Create two tasks that will both wait for elements to be available
+        await #expect(throws: LambdaHTTPServer.Pool<Swift.String>.PoolError.self) {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+
+                // one of the two task will throw a PoolError
+
+                group.addTask {
+                    for try await _ in pool {
+                    }
+                    Issue.record("Loop 1 should not complete")
+                }
+
+                group.addTask {
+                    for try await _ in pool {
+                    }
+                    Issue.record("Loop 2 should not complete")
+                }
+                try await group.waitForAll()
+            }
+        }
+    }
+
 }

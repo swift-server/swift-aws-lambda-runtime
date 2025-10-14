@@ -391,7 +391,42 @@ internal struct LambdaHTTPServer {
 
             logger.trace("/invoke received invocation, pushing it to the pool and wait for a lambda response")
             // detect concurrent invocations of POST and gently decline the requests while we're processing one.
-            if !self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body)) {
+            self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body))
+
+            // wait for the lambda function to process the request
+            // when POST /invoke is called multiple times before a response is process, the 
+            // `for try await ... in` loop will throw an error and we will return a 400 error to the client
+            do {
+                for try await response in self.responsePool {
+                    logger[metadataKey: "response requestId"] = "\(response.requestId ?? "nil")"
+                    logger.trace("Received response to return to client")
+                    if response.requestId == requestId {
+                        logger.trace("/invoke requestId is valid, sending the response")
+                        // send the response to the client
+                        // if the response is final, we can send it and return
+                        // if the response is not final, we can send it and wait for the next response
+                        try await self.sendResponse(response, outbound: outbound, logger: logger)
+                        if response.final == true {
+                            logger.trace("/invoke returning")
+                            return  // if the response is final, we can return and close the connection
+                        }
+                    } else {
+                        logger.error(
+                            "Received response for a different requestId",
+                            metadata: ["response requestId": "\(response.requestId ?? "")"]
+                        )
+                        let response = LocalServerResponse(
+                            id: requestId,
+                            status: .badRequest,
+                            body: ByteBuffer(string: "The responseId is not equal to the requestId.")
+                        )
+                        try await self.sendResponse(response, outbound: outbound, logger: logger)
+                    }
+                }
+                // What todo when there is no more responses to process?
+                // This should not happen as the async iterator blocks until there is a response to process
+                fatalError("No more responses to process - the async for loop should not return")
+            } catch is LambdaHTTPServer.Pool<LambdaHTTPServer.LocalServerResponse>.PoolError {
                 let response = LocalServerResponse(
                     id: requestId,
                     status: .badRequest,
@@ -401,39 +436,7 @@ internal struct LambdaHTTPServer {
                     )
                 )
                 try await self.sendResponse(response, outbound: outbound, logger: logger)
-                return
             }
-
-            // wait for the lambda function to process the request
-            for try await response in self.responsePool {
-                logger[metadataKey: "response requestId"] = "\(response.requestId ?? "nil")"
-                logger.trace("Received response to return to client")
-                if response.requestId == requestId {
-                    logger.trace("/invoke requestId is valid, sending the response")
-                    // send the response to the client
-                    // if the response is final, we can send it and return
-                    // if the response is not final, we can send it and wait for the next response
-                    try await self.sendResponse(response, outbound: outbound, logger: logger)
-                    if response.final == true {
-                        logger.trace("/invoke returning")
-                        return  // if the response is final, we can return and close the connection
-                    }
-                } else {
-                    logger.error(
-                        "Received response for a different requestId",
-                        metadata: ["response requestId": "\(response.requestId ?? "")"]
-                    )
-                    let response = LocalServerResponse(
-                        id: requestId,
-                        status: .badRequest,
-                        body: ByteBuffer(string: "The responseId is not equal to the requestId.")
-                    )
-                    try await self.sendResponse(response, outbound: outbound, logger: logger)
-                }
-            }
-            // What todo when there is no more responses to process?
-            // This should not happen as the async iterator blocks until there is a response to process
-            fatalError("No more responses to process - the async for loop should not return")
 
         // client uses incorrect HTTP method
         case (_, let url) where url.hasSuffix(self.invocationEndpoint):
@@ -579,9 +582,7 @@ internal struct LambdaHTTPServer {
         private let lock = Mutex<State>(.buffer([]))
 
         /// enqueue an element, or give it back immediately to the iterator if it is waiting for an element
-        /// Returns true when we receive a element and the pool was in "waiting for continuation" state, false otherwise
-        @discardableResult
-        public func push(_ invocation: T) -> Bool {
+        public func push(_ invocation: T) {
 
             // if the iterator is waiting for an element on `next()``, give it to it
             // otherwise, enqueue the element
@@ -598,12 +599,7 @@ internal struct LambdaHTTPServer {
                 }
             }
 
-            if let maybeContinuation {
-                maybeContinuation.resume(returning: invocation)
-                return true
-            } else {
-                return false
-            }
+            maybeContinuation?.resume(returning: invocation)
         }
 
         func next() async throws -> T? {
@@ -614,25 +610,30 @@ internal struct LambdaHTTPServer {
 
             return try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, any Error>) in
-                    let nextAction = self.lock.withLock { state -> T? in
+                    let (nextAction, nextError) = self.lock.withLock { state -> (T?, PoolError?) in
                         switch consume state {
                         case .buffer(var buffer):
                             if let first = buffer.popFirst() {
                                 state = .buffer(buffer)
-                                return first
+                                return (first, nil)
                             } else {
                                 state = .continuation(continuation)
-                                return nil
+                                return (nil, nil)
                             }
 
-                        case .continuation(_):
-                            fatalError("\(self.poolName) : Concurrent invocations to next(). This is not allowed.")
+                        case .continuation(let previousContinuation):
+                            state = .buffer([])
+                            return (nil, PoolError(cause: .nextCalledTwice([previousContinuation, continuation])))
                         }
                     }
 
-                    guard let nextAction else { return }
-
-                    continuation.resume(returning: nextAction)
+                    if let nextError,
+                        case let .nextCalledTwice(continuations) = nextError.cause
+                    {
+                        for continuation in continuations { continuation?.resume(throwing: nextError) }
+                    } else if let nextAction {
+                        continuation.resume(returning: nextAction)
+                    }
                 }
             } onCancel: {
                 self.lock.withLock { state in
@@ -640,8 +641,8 @@ internal struct LambdaHTTPServer {
                     case .buffer(let buffer):
                         state = .buffer(buffer)
                     case .continuation(let continuation):
-                        continuation?.resume(throwing: CancellationError())
                         state = .buffer([])
+                        continuation?.resume(throwing: CancellationError())
                     }
                 }
             }
@@ -649,6 +650,20 @@ internal struct LambdaHTTPServer {
 
         func makeAsyncIterator() -> Pool {
             self
+        }
+
+        struct PoolError: Error {
+            let cause: Cause
+            var message: String {
+                switch self.cause {
+                case .nextCalledTwice:
+                    return "Concurrent invocations to next(). This is not allowed."
+                }
+            }
+
+            enum Cause {
+                case nextCalledTwice([CheckedContinuation<T, any Error>?])
+            }
         }
     }
 
