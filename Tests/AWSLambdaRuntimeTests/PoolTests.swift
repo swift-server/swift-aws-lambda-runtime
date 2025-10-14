@@ -24,8 +24,8 @@ struct PoolTests {
         let pool = LambdaHTTPServer.Pool<String>()
 
         // Push values
-        await pool.push("first")
-        await pool.push("second")
+        pool.push("first")
+        pool.push("second")
 
         // Iterate and verify order
         var values = [String]()
@@ -53,7 +53,9 @@ struct PoolTests {
         task.cancel()
 
         // This should complete without receiving any values
-        try await task.value
+        do {
+            try await task.value
+        } catch is CancellationError {}  // this might happen depending on the order on which the cancellation is handled
     }
 
     @Test
@@ -78,7 +80,7 @@ struct PoolTests {
         try await withThrowingTaskGroup(of: Void.self) { group in
             for i in 0..<iterations {
                 group.addTask {
-                    await pool.push(i)
+                    pool.push(i)
                 }
             }
             try await group.waitForAll()
@@ -110,7 +112,7 @@ struct PoolTests {
         try await Task.sleep(nanoseconds: 100_000_000)  // 0.1 seconds
 
         // Push a value
-        await pool.push(expectedValue)
+        pool.push(expectedValue)
 
         // Wait for consumer to complete
         try await consumer.value
@@ -140,7 +142,7 @@ struct PoolTests {
             for p in 0..<producerCount {
                 group.addTask {
                     for i in 0..<messagesPerProducer {
-                        await pool.push(p * messagesPerProducer + i)
+                        pool.push(p * messagesPerProducer + i)
                     }
                 }
             }

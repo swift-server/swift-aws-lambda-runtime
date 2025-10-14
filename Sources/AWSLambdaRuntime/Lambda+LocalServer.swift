@@ -272,7 +272,7 @@ internal struct LambdaHTTPServer {
 
                             // for streaming requests, push a partial head response
                             if self.isStreamingResponse(requestHead) {
-                                await self.responsePool.push(
+                                self.responsePool.push(
                                     LocalServerResponse(
                                         id: requestId,
                                         status: .ok
@@ -286,7 +286,7 @@ internal struct LambdaHTTPServer {
                             // if this is a request from a Streaming Lambda Handler,
                             // stream the response instead of buffering it
                             if self.isStreamingResponse(requestHead) {
-                                await self.responsePool.push(
+                                self.responsePool.push(
                                     LocalServerResponse(id: requestId, body: body)
                                 )
                             } else {
@@ -298,7 +298,7 @@ internal struct LambdaHTTPServer {
 
                             if self.isStreamingResponse(requestHead) {
                                 // for streaming response, send the final response
-                                await self.responsePool.push(
+                                self.responsePool.push(
                                     LocalServerResponse(id: requestId, final: true)
                                 )
                             } else {
@@ -391,7 +391,7 @@ internal struct LambdaHTTPServer {
 
             logger.trace("/invoke received invocation, pushing it to the pool and wait for a lambda response")
             // detect concurrent invocations of POST and gently decline the requests while we're processing one.
-            if await !self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body)) {
+            if !self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body)) {
                 let response = LocalServerResponse(
                     id: requestId,
                     status: .badRequest,
@@ -475,7 +475,7 @@ internal struct LambdaHTTPServer {
             }
             // enqueue the lambda function response to be served as response to the client /invoke
             logger.trace("/:requestId/response received response", metadata: ["requestId": "\(requestId)"])
-            await self.responsePool.push(
+            self.responsePool.push(
                 LocalServerResponse(
                     id: requestId,
                     status: .accepted,
@@ -506,7 +506,7 @@ internal struct LambdaHTTPServer {
             }
             // enqueue the lambda function response to be served as response to the client /invoke
             logger.trace("/:requestId/response received response", metadata: ["requestId": "\(requestId)"])
-            await self.responsePool.push(
+            self.responsePool.push(
                 LocalServerResponse(
                     id: requestId,
                     status: .internalServerError,
@@ -581,7 +581,7 @@ internal struct LambdaHTTPServer {
         /// enqueue an element, or give it back immediately to the iterator if it is waiting for an element
         /// Returns true when we receive a element and the pool was in "waiting for continuation" state, false otherwise
         @discardableResult
-        public func push(_ invocation: T) async -> Bool {
+        public func push(_ invocation: T) -> Bool {
 
             // if the iterator is waiting for an element on `next()``, give it to it
             // otherwise, enqueue the element
