@@ -420,13 +420,13 @@ internal struct LambdaHTTPServer {
                     }
                 } else {
                     logger.error(
-                        "Received response for a different request id",
+                        "Received response for a different requestId",
                         metadata: ["response requestId": "\(response.requestId ?? "")"]
                     )
                     let response = LocalServerResponse(
                         id: requestId,
                         status: .badRequest,
-                        body: ByteBuffer(string: "The response Id not equal to the request Id.")
+                        body: ByteBuffer(string: "The responseId is not equal to the requestId.")
                     )
                     try await self.sendResponse(response, outbound: outbound, logger: logger)
                 }
@@ -626,7 +626,7 @@ internal struct LambdaHTTPServer {
                             }
 
                         case .continuation(_):
-                            fatalError("\(self.poolName) : Concurrent invocations to next(). This is illegal.")
+                            fatalError("\(self.poolName) : Concurrent invocations to next(). This is not allowed.")
                         }
                     }
 
