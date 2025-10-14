@@ -55,7 +55,9 @@ struct PoolTests {
         // This should complete without receiving any values
         do {
             try await task.value
-        } catch is CancellationError {}  // this might happen depending on the order on which the cancellation is handled
+        } catch is CancellationError {
+            // this might happen depending on the order on which the cancellation is handled
+        }
     }
 
     @Test
