@@ -576,7 +576,7 @@ internal struct LambdaHTTPServer {
 
         enum State: ~Copyable {
             case buffer(Deque<T>)
-            case continuation(CheckedContinuation<T, any Error>?)
+            case continuation(CheckedContinuation<T, any Error>)
         }
 
         private let lock = Mutex<State>(.buffer([]))
@@ -610,29 +610,34 @@ internal struct LambdaHTTPServer {
 
             return try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, any Error>) in
-                    let (nextAction, nextError) = self.lock.withLock { state -> (T?, PoolError?) in
+                    let nextAction: Result<T, PoolError>?  = self.lock.withLock { state -> Result<T, PoolError>? in
                         switch consume state {
                         case .buffer(var buffer):
                             if let first = buffer.popFirst() {
                                 state = .buffer(buffer)
-                                return (first, nil)
+                                return .success(first)
                             } else {
                                 state = .continuation(continuation)
-                                return (nil, nil)
+                                return nil
                             }
 
                         case .continuation(let previousContinuation):
                             state = .buffer([])
-                            return (nil, PoolError(cause: .nextCalledTwice([previousContinuation, continuation])))
+                            return .failure(PoolError(cause: .nextCalledTwice(previousContinuation)))
                         }
                     }
 
-                    if let nextError,
-                        case let .nextCalledTwice(continuations) = nextError.cause
-                    {
-                        for continuation in continuations { continuation?.resume(throwing: nextError) }
-                    } else if let nextAction {
-                        continuation.resume(returning: nextAction)
+                    switch nextAction {
+                    case .success(let action):
+                        continuation.resume(returning: action)
+                    case .failure(let error):
+                        if case let .nextCalledTwice(prevContinuation) = error.cause {
+                            prevContinuation.resume(throwing: error)
+                        }
+                        continuation.resume(throwing: error)
+                    case .none:
+                        // do nothing
+                        break
                     }
                 }
             } onCancel: {
@@ -642,7 +647,7 @@ internal struct LambdaHTTPServer {
                         state = .buffer(buffer)
                     case .continuation(let continuation):
                         state = .buffer([])
-                        continuation?.resume(throwing: CancellationError())
+                        continuation.resume(throwing: CancellationError())
                     }
                 }
             }
@@ -662,7 +667,7 @@ internal struct LambdaHTTPServer {
             }
 
             enum Cause {
-                case nextCalledTwice([CheckedContinuation<T, any Error>?])
+                case nextCalledTwice(CheckedContinuation<T, any Error>)
             }
         }
     }
