@@ -583,7 +583,6 @@ internal struct LambdaHTTPServer {
 
         /// enqueue an element, or give it back immediately to the iterator if it is waiting for an element
         public func push(_ invocation: T) {
-
             // if the iterator is waiting for an element on `next()``, give it to it
             // otherwise, enqueue the element
             let maybeContinuation = self.lock.withLock { state -> CheckedContinuation<T, any Error>? in
@@ -599,6 +598,7 @@ internal struct LambdaHTTPServer {
                 }
             }
 
+            // Resume continuation outside the lock to prevent potential deadlocks
             maybeContinuation?.resume(returning: invocation)
         }
 
@@ -636,20 +636,25 @@ internal struct LambdaHTTPServer {
                         }
                         continuation.resume(throwing: error)
                     case .none:
-                        // do nothing
+                        // do nothing - continuation is stored in state
                         break
                     }
                 }
             } onCancel: {
-                self.lock.withLock { state in
+                // Ensure we properly handle cancellation by checking if we have a stored continuation
+                let continuationToCancel = self.lock.withLock { state -> CheckedContinuation<T, any Error>? in
                     switch consume state {
                     case .buffer(let buffer):
                         state = .buffer(buffer)
+                        return nil
                     case .continuation(let continuation):
                         state = .buffer([])
-                        continuation.resume(throwing: CancellationError())
+                        return continuation
                     }
                 }
+                
+                // Resume the continuation outside the lock to avoid potential deadlocks
+                continuationToCancel?.resume(throwing: CancellationError())
             }
         }
 
