@@ -610,7 +610,7 @@ internal struct LambdaHTTPServer {
 
             return try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, any Error>) in
-                    let nextAction: Result<T, PoolError>?  = self.lock.withLock { state -> Result<T, PoolError>? in
+                    let nextAction: Result<T, PoolError>? = self.lock.withLock { state -> Result<T, PoolError>? in
                         switch consume state {
                         case .buffer(var buffer):
                             if let first = buffer.popFirst() {
