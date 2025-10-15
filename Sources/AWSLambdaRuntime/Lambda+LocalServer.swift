@@ -652,7 +652,7 @@ internal struct LambdaHTTPServer {
                         return continuation
                     }
                 }
-                
+
                 // Resume the continuation outside the lock to avoid potential deadlocks
                 continuationToCancel?.resume(throwing: CancellationError())
             }
