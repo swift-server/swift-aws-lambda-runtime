@@ -481,7 +481,7 @@ struct PoolTests {
 
                 try await group.waitForAll()
             }
-        } 
+        }
 
         // Pool should be back to clean state - verify by pushing and consuming normally
         pool.push(LambdaHTTPServer.LocalServerResponse(id: "new-req", body: ByteBuffer(string: "new-data")))
