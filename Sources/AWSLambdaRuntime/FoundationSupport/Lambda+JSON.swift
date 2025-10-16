@@ -83,7 +83,28 @@ extension LambdaCodableAdapter {
             handler: handler
         )
     }
+
+    /// Initializes an instance given a decoder, and a handler with a `Void` output.
+    ///   - Parameters:
+    ///   - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`. By default, a JSONDecoder is used.
+    ///   - handler: The handler object.
+    public init(
+        decoder: JSONDecoder = JSONDecoder(),
+        handler: sending Handler
+    )
+    where
+        Output == Void,
+        Handler.Output == Void,
+        Decoder == LambdaJSONEventDecoder,
+        Encoder == VoidEncoder
+    {
+        self.init(
+            decoder: LambdaJSONEventDecoder(decoder),
+            handler: handler
+        )
+    }
 }
+
 @available(LambdaSwift 2.0, *)
 extension LambdaResponseStreamWriter {
     /// Writes the HTTP status code and headers to the response stream.
@@ -161,12 +182,41 @@ extension LambdaRuntime {
         self.init(handler: handler, logger: logger)
     }
 
-    /// Initialize an instance directly with a `LambdaHandler`.
+    /// Initialize an instance directly with a `LambdaHandler`, when `Event` is `Decodable` and `Output` is `Void`.
+    /// - Parameters:
+    ///   - decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type. `JSONDecoder()` used as default.
+    ///   - logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
+    ///   - lambdaHandler: A type that conforms to the `LambdaHandler` protocol, whose `Event` is `Decodable` and `Output` is `Void`
+    public convenience init<Event: Decodable, LHandler: LambdaHandler>(
+        decoder: JSONDecoder = JSONDecoder(),
+        logger: Logger = Logger(label: "LambdaRuntime"),
+        lambdaHandler: sending LHandler
+    )
+    where
+        Handler == LambdaCodableAdapter<
+            LambdaHandlerAdapter<Event, Void, LHandler>,
+            Event,
+            Void,
+            LambdaJSONEventDecoder,
+            VoidEncoder
+        >,
+        LHandler.Event == Event,
+        LHandler.Output == Void
+    {
+        let handler = LambdaCodableAdapter(
+            decoder: LambdaJSONEventDecoder(decoder),
+            handler: LambdaHandlerAdapter(handler: lambdaHandler)
+        )
+
+        self.init(handler: handler, logger: logger)
+    }
+
+    /// Initialize an instance directly with a `LambdaHandler`, when `Event` is `Decodable` and `Output` is `Encodable`.
     /// - Parameters:
     ///   - decoder: The decoder object that will be used to decode the incoming `ByteBuffer` event into the generic `Event` type. `JSONDecoder()` used as default.
     ///   - encoder: The encoder object that will be used to encode the generic `Output` into a `ByteBuffer`. `JSONEncoder()` used as default.
     ///   - logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
-    ///   - lambdaHandler: A type that conforms to the `LambdaHandler` protocol, whose `Event` and `Output` types must be `Decodable`/`Encodable`
+    ///   - lambdaHandler: A type that conforms to the `LambdaHandler` protocol, whose `Event` is `Decodable` and `Output` is `Encodable`
     public convenience init<Event: Decodable, Output, LHandler: LambdaHandler>(
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder(),
