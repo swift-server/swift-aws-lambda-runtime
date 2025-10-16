@@ -125,10 +125,6 @@ internal struct LambdaHTTPServer {
         _ closure: sending @escaping () async throws -> Result
     ) async throws -> Result {
 
-        var l = Logger(label: "HTTPServer")
-        l.logLevel = .trace
-        let logger = l
-
         let channel = try await ServerBootstrap(group: eventLoopGroup)
             .serverChannelOption(.backlog, value: 256)
             .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
