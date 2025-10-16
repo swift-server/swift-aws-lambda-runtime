@@ -125,6 +125,11 @@ internal struct LambdaHTTPServer {
         logger: Logger,
         _ closure: sending @escaping () async throws -> Result
     ) async throws -> Result {
+
+        var l = Logger(label: "HTTPServer")
+        l.logLevel = .trace
+        let logger = l
+
         let channel = try await ServerBootstrap(group: eventLoopGroup)
             .serverChannelOption(.backlog, value: 256)
             .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
@@ -165,6 +170,8 @@ internal struct LambdaHTTPServer {
         let closureBox = UnsafeTransferBox(value: closure)
         let result = await withTaskGroup(of: TaskResult<Result>.self, returning: Swift.Result<Result, any Error>.self) {
             group in
+
+            // this Task will run the content of the closure we received, typically the Lambda Runtime Client HTTP
             group.addTask {
                 let c = closureBox.value
                 do {
@@ -175,6 +182,7 @@ internal struct LambdaHTTPServer {
                 }
             }
 
+            // this Task will create one subtask to handle each individual connection
             group.addTask {
                 do {
                     // We are handling each incoming connection in a separate child task. It is important
@@ -397,7 +405,7 @@ internal struct LambdaHTTPServer {
             // the `for try await ... in` loop will throw an error and we will return a 400 error to the client
             do {
                 for try await response in self.responsePool {
-                    logger[metadataKey: "response requestId"] = "\(response.requestId ?? "nil")"
+                    logger[metadataKey: "response_requestId"] = "\(response.requestId ?? "nil")"
                     logger.trace("Received response to return to client")
                     if response.requestId == requestId {
                         logger.trace("/invoke requestId is valid, sending the response")
@@ -426,6 +434,7 @@ internal struct LambdaHTTPServer {
                 // This should not happen as the async iterator blocks until there is a response to process
                 fatalError("No more responses to process - the async for loop should not return")
             } catch is LambdaHTTPServer.Pool<LambdaHTTPServer.LocalServerResponse>.PoolError {
+                logger.trace("PoolError catched")
                 // detect concurrent invocations of POST and gently decline the requests while we're processing one.
                 let response = LocalServerResponse(
                     id: requestId,
@@ -460,7 +469,9 @@ internal struct LambdaHTTPServer {
                 logger[metadataKey: "requestId"] = "\(invocation.requestId)"
                 logger.trace("/next retrieved invocation")
                 // tell the lambda function we accepted the invocation
-                return try await sendResponse(invocation.acceptedResponse(), outbound: outbound, logger: logger)
+                try await sendResponse(invocation.acceptedResponse(), outbound: outbound, logger: logger)
+                logger.trace("/next accepted, returning")
+                return
             }
             // What todo when there is no more tasks to process?
             // This should not happen as the async iterator blocks until there is a task to process
