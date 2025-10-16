@@ -460,7 +460,7 @@ struct PoolTests {
         let pool = LambdaHTTPServer.Pool<LambdaHTTPServer.LocalServerResponse>()
 
         // Test that cancellation properly cleans up all continuations
-        do {
+        await #expect(throws: CancellationError.self) {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 // Start multiple consumers for different requestIds
                 group.addTask {
@@ -481,9 +481,7 @@ struct PoolTests {
 
                 try await group.waitForAll()
             }
-        } catch is CancellationError {
-            // Expected - tasks should be cancelled
-        }
+        } 
 
         // Pool should be back to clean state - verify by pushing and consuming normally
         pool.push(LambdaHTTPServer.LocalServerResponse(id: "new-req", body: ByteBuffer(string: "new-data")))
