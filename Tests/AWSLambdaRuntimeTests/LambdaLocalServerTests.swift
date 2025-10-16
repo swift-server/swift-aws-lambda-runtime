@@ -25,6 +25,12 @@ import FoundationEssentials
 import Foundation
 #endif
 
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#else
+import Foundation
+#endif
+
 extension LambdaRuntimeTests {
 
     @Test("Local server respects LOCAL_LAMBDA_PORT environment variable")
@@ -159,7 +165,11 @@ extension LambdaRuntimeTests {
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw URLError(.badServerResponse)
+            // Create a custom error since URLError might not be available on Linux
+            struct HTTPError: Error {
+                let message: String
+            }
+            throw HTTPError(message: "Bad server response")
         }
 
         return (data, httpResponse)
