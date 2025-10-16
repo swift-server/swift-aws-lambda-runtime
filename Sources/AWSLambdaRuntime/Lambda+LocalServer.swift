@@ -20,6 +20,13 @@ import NIOHTTP1
 import NIOPosix
 import Synchronization
 
+// for UUID
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
 // This functionality is designed for local testing when the LocalServerSupport trait is enabled.
 
 // For example:
@@ -389,7 +396,7 @@ internal struct LambdaHTTPServer {
                 )
             }
             // we always accept the /invoke request and push them to the pool
-            let requestId = "\(LambdaClock().now))"
+            let requestId = "\(UUID().uuidString))"
             logger[metadataKey: "requestId"] = "\(requestId)"
 
             logger.trace("/invoke received invocation, pushing it to the pool and wait for a lambda response")
@@ -412,7 +419,7 @@ internal struct LambdaHTTPServer {
                         isComplete = true
                     }
                 }
-            } catch is LambdaHTTPServer.Pool<LambdaHTTPServer.LocalServerResponse>.PoolError {
+            } catch let error as LambdaHTTPServer.Pool<LambdaHTTPServer.LocalServerResponse>.PoolError {
                 logger.trace("PoolError catched")
                 // detect concurrent invocations of POST and gently decline the requests while we're processing one.
                 let response = LocalServerResponse(
@@ -420,7 +427,7 @@ internal struct LambdaHTTPServer {
                     status: .badRequest,
                     body: ByteBuffer(
                         string:
-                            "It is not allowed to invoke multiple Lambda function executions in parallel. (The Lambda runtime environment on AWS will never do that)"
+                            "\(error): It is not allowed to invoke multiple Lambda function executions in parallel. (The Lambda runtime environment on AWS will never do that)"
                     )
                 )
                 try await self.sendResponse(response, outbound: outbound, logger: logger)
