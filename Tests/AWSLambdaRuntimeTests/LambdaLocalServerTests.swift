@@ -158,14 +158,7 @@ extension LambdaRuntimeTests {
             return first ?? []
         }
 
-        // Verify all requests returned 202 OK (no HTTP 400 errors)
         #expect(results.count == 10, "Expected 10 responses")
-        for result in results {
-            #expect(
-                result.statusCode == 202,
-                "Request \(result.requestIndex) returned \(result.statusCode), expected 202 OK"
-            )
-        }
 
         // Verify that each request was processed correctly by checking response content
         // Sort results by request index to verify proper execution order
@@ -179,6 +172,10 @@ extension LambdaRuntimeTests {
             #expect(
                 result.requestIndex == index,
                 "Request order mismatch: got index \(result.requestIndex), expected \(index)"
+            )
+            #expect(
+                result.statusCode == 202,
+                "Request \(result.requestIndex) returned \(result.statusCode), expected 202 OK"
             )
         }
     }
