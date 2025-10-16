@@ -32,9 +32,7 @@ import FoundationNetworking
 import Foundation
 #endif
 
-@Suite(.serialized)
-struct LambdaStreamingTests {
-
+extension LambdaLocalServerTest {
     @Test("Streaming handler sends multiple chunks and completes successfully")
     @available(LambdaSwift 2.0, *)
     func testStreamingHandlerMultipleChunks() async throws {
