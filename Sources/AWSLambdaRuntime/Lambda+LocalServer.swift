@@ -420,7 +420,7 @@ internal struct LambdaHTTPServer {
                     }
                 }
             } catch let error as LambdaHTTPServer.Pool<LambdaHTTPServer.LocalServerResponse>.PoolError {
-                logger.trace("PoolError catched")
+                logger.trace("PoolError caught")
                 // detect concurrent invocations of POST and gently decline the requests while we're processing one.
                 let response = LocalServerResponse(
                     id: requestId,
