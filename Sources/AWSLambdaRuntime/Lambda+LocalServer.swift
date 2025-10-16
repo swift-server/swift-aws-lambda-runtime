@@ -396,7 +396,7 @@ internal struct LambdaHTTPServer {
                 )
             }
             // we always accept the /invoke request and push them to the pool
-            let requestId = "\(UUID().uuidString))"
+            let requestId = UUID().uuidString
             logger[metadataKey: "requestId"] = "\(requestId)"
 
             logger.trace("/invoke received invocation, pushing it to the pool and wait for a lambda response")
