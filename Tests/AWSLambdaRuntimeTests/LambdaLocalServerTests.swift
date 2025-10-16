@@ -98,7 +98,13 @@ extension LambdaRuntimeTests {
         setenv("LOCAL_LAMBDA_PORT", "\(customPort)", 1)
         defer { unsetenv("LOCAL_LAMBDA_PORT") }
 
-        let results = try await withThrowingTaskGroup(of: [Int].self) { group in
+        struct RequestResult {
+            let requestIndex: Int
+            let statusCode: Int
+            let responseBody: String
+        }
+
+        let results = try await withThrowingTaskGroup(of: [RequestResult].self) { group in
 
             // Start the Lambda runtime with local server
             group.addTask {
@@ -118,39 +124,62 @@ extension LambdaRuntimeTests {
                 try await Task.sleep(for: .milliseconds(200))
 
                 // Make 10 rapid concurrent POST requests to /invoke
-                return try await withThrowingTaskGroup(of: Int.self) { clientGroup in
-                    var statuses: [Int] = []
+                return try await withThrowingTaskGroup(of: RequestResult.self) { clientGroup in
+                    var requestResults: [RequestResult] = []
 
                     for i in 0..<10 {
                         try await Task.sleep(for: .milliseconds(0))
                         clientGroup.addTask {
-                            let (_, response) = try await self.makeInvokeRequest(
+                            let (data, response) = try await self.makeInvokeRequest(
                                 host: "127.0.0.1",
                                 port: customPort,
                                 payload: "\"World\(i)\""
                             )
-                            return response.statusCode
+                            let responseBody = String(data: data, encoding: .utf8) ?? ""
+                            return RequestResult(
+                                requestIndex: i,
+                                statusCode: response.statusCode,
+                                responseBody: responseBody
+                            )
                         }
                     }
 
-                    for try await status in clientGroup {
-                        statuses.append(status)
+                    for try await result in clientGroup {
+                        requestResults.append(result)
                     }
 
-                    return statuses
+                    return requestResults
                 }
             }
 
-            // Get the first result (HTTP statuses) and cancel the runtime
+            // Get the first result (request results) and cancel the runtime
             let first = try await group.next()
             group.cancelAll()
             return first ?? []
         }
 
-        // Verify all requests returned 200 OK (no HTTP 400 errors)
+        // Verify all requests returned 202 OK (no HTTP 400 errors)
         #expect(results.count == 10, "Expected 10 responses")
-        for (index, status) in results.enumerated() {
-            #expect(status == 202, "Request \(index) returned \(status), expected 202 OK")
+        for result in results {
+            #expect(
+                result.statusCode == 202,
+                "Request \(result.requestIndex) returned \(result.statusCode), expected 202 OK"
+            )
+        }
+
+        // Verify that each request was processed correctly by checking response content
+        // Sort results by request index to verify proper execution order
+        let sortedResults = results.sorted { $0.requestIndex < $1.requestIndex }
+        for (index, result) in sortedResults.enumerated() {
+            let expectedResponse = "\"Hello World\(index)\""
+            #expect(
+                result.responseBody == expectedResponse,
+                "Request \(index) response was '\(result.responseBody)', expected '\(expectedResponse)'"
+            )
+            #expect(
+                result.requestIndex == index,
+                "Request order mismatch: got index \(result.requestIndex), expected \(index)"
+            )
         }
     }
 
