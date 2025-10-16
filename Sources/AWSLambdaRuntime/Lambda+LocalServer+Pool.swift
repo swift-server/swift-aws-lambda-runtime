@@ -28,51 +28,36 @@ extension LambdaHTTPServer {
 
         typealias Element = T
 
-        enum State: ~Copyable {
-            case buffer(Deque<T>)
-            // FIFO waiting (for invocations)
-            case waitingForAny(CheckedContinuation<T, any Error>)
-            // RequestId-based waiting (for responses)
-            case waitingForSpecific([String: CheckedContinuation<T, any Error>])
+        struct State {
+            var buffer: Deque<T> = []
+            var waitingForAny: CheckedContinuation<T, any Error>?
+            var waitingForSpecific: [String: CheckedContinuation<T, any Error>] = [:]
         }
 
-        private let lock = Mutex<State>(.buffer([]))
+        private let lock = Mutex<State>(State())
 
         /// enqueue an element, or give it back immediately to the iterator if it is waiting for an element
         public func push(_ item: T) {
             let continuationToResume = self.lock.withLock { state -> CheckedContinuation<T, any Error>? in
-                switch consume state {
-                case .buffer(var buffer):
-                    buffer.append(item)
-                    state = .buffer(buffer)
-                    return nil
+                // First check if there's a waiting continuation that can handle this item
 
-                case .waitingForAny(let continuation):
-                    // Someone is waiting for any item (FIFO)
-                    state = .buffer([])
+                // Check for FIFO waiter first
+                if let continuation = state.waitingForAny {
+                    state.waitingForAny = nil
                     return continuation
-
-                case .waitingForSpecific(var continuations):
-                    // Check if this item matches any waiting continuation
-                    if let response = item as? LocalServerResponse,
-                        let requestId = response.requestId,
-                        let continuation = continuations.removeValue(forKey: requestId)
-                    {
-                        // Found a matching continuation
-                        if continuations.isEmpty {
-                            state = .buffer([])
-                        } else {
-                            state = .waitingForSpecific(continuations)
-                        }
-                        return continuation
-                    } else {
-                        // No matching continuation, add to buffer
-                        var buffer = Deque<T>()
-                        buffer.append(item)
-                        state = .buffer(buffer)
-                        return nil
-                    }
                 }
+
+                // Check for specific waiter
+                if let response = item as? LocalServerResponse,
+                    let requestId = response.requestId,
+                    let continuation = state.waitingForSpecific.removeValue(forKey: requestId)
+                {
+                    return continuation
+                }
+
+                // No waiting continuation, add to buffer
+                state.buffer.append(item)
+                return nil
             }
 
             // Resume continuation outside the lock to prevent potential deadlocks
@@ -89,63 +74,44 @@ extension LambdaHTTPServer {
             return try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, any Error>) in
                     let nextAction: Result<T, PoolError>? = self.lock.withLock { state -> Result<T, PoolError>? in
-                        switch consume state {
-                        case .buffer(var buffer):
-                            if let requestId = requestId {
-                                // Look for oldest (first) item for this requestId in buffer
-                                if let index = buffer.firstIndex(where: { item in
-                                    if let response = item as? LocalServerResponse {
-                                        return response.requestId == requestId
-                                    }
-                                    return false
-                                }) {
-                                    let item = buffer.remove(at: index)
-                                    state = .buffer(buffer)
-                                    return .success(item)
-                                } else {
-                                    // No matching item, wait for it
-                                    var continuations: [String: CheckedContinuation<T, any Error>] = [:]
-                                    continuations[requestId] = continuation
-                                    state = .waitingForSpecific(continuations)
-                                    return nil
+                        if let requestId = requestId {
+                            // Look for oldest (first) item for this requestId in buffer
+                            if let index = state.buffer.firstIndex(where: { item in
+                                if let response = item as? LocalServerResponse {
+                                    return response.requestId == requestId
                                 }
+                                return false
+                            }) {
+                                let item = state.buffer.remove(at: index)
+                                return .success(item)
                             } else {
-                                // FIFO mode - take first item
-                                if let first = buffer.popFirst() {
-                                    state = .buffer(buffer)
-                                    return .success(first)
-                                } else {
-                                    state = .waitingForAny(continuation)
-                                    return nil
+                                // Check for conflicting waiters
+                                if state.waitingForAny != nil {
+                                    return .failure(PoolError(cause: .mixedWaitingModes))
                                 }
-                            }
-
-                        case .waitingForAny(let previousContinuation):
-                            if requestId == nil {
-                                // Another FIFO call while already waiting
-                                state = .buffer([])
-                                return .failure(PoolError(cause: .nextCalledTwice(previousContinuation)))
-                            } else {
-                                // Can't mix FIFO and specific waiting
-                                state = .waitingForAny(previousContinuation)
-                                return .failure(PoolError(cause: .mixedWaitingModes))
-                            }
-
-                        case .waitingForSpecific(var continuations):
-                            if let requestId = requestId {
-                                if continuations[requestId] != nil {
-                                    // Already waiting for this requestId
-                                    state = .waitingForSpecific(continuations)
+                                if state.waitingForSpecific[requestId] != nil {
                                     return .failure(PoolError(cause: .duplicateRequestIdWait(requestId)))
-                                } else {
-                                    continuations[requestId] = continuation
-                                    state = .waitingForSpecific(continuations)
-                                    return nil
                                 }
+
+                                // No matching item, wait for it
+                                state.waitingForSpecific[requestId] = continuation
+                                return nil
+                            }
+                        } else {
+                            // FIFO mode - take first item
+                            if let first = state.buffer.popFirst() {
+                                return .success(first)
                             } else {
-                                // Can't mix FIFO and specific waiting
-                                state = .waitingForSpecific(continuations)
-                                return .failure(PoolError(cause: .mixedWaitingModes))
+                                // Check for conflicting waiters
+                                if !state.waitingForSpecific.isEmpty {
+                                    return .failure(PoolError(cause: .mixedWaitingModes))
+                                }
+                                if state.waitingForAny != nil {
+                                    return .failure(PoolError(cause: .nextCalledTwice(state.waitingForAny!)))
+                                }
+
+                                state.waitingForAny = continuation
+                                return nil
                             }
                         }
                     }
@@ -164,23 +130,25 @@ extension LambdaHTTPServer {
                     }
                 }
             } onCancel: {
-                // Ensure we properly handle cancellation by checking if we have a stored continuation
-                let continuationsToCancel = self.lock.withLock { state -> [String: CheckedContinuation<T, any Error>] in
-                    switch consume state {
-                    case .buffer(let buffer):
-                        state = .buffer(buffer)
-                        return [:]
-                    case .waitingForAny(let continuation):
-                        state = .buffer([])
-                        return ["": continuation]  // Use empty string as key for single continuation
-                    case .waitingForSpecific(let continuations):
-                        state = .buffer([])
-                        return continuations
+                // Ensure we properly handle cancellation by removing stored continuation
+                let continuationsToCancel = self.lock.withLock { state -> [CheckedContinuation<T, any Error>] in
+                    var toCancel: [CheckedContinuation<T, any Error>] = []
+
+                    if let continuation = state.waitingForAny {
+                        toCancel.append(continuation)
+                        state.waitingForAny = nil
                     }
+
+                    for continuation in state.waitingForSpecific.values {
+                        toCancel.append(continuation)
+                    }
+                    state.waitingForSpecific.removeAll()
+
+                    return toCancel
                 }
 
                 // Resume all continuations outside the lock to avoid potential deadlocks
-                for continuation in continuationsToCancel.values {
+                for continuation in continuationsToCancel {
                     continuation.resume(throwing: CancellationError())
                 }
             }
