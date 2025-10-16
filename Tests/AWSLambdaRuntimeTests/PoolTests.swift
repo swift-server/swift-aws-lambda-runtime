@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if LocalServerSupport
+
 import NIOCore
 import Testing
 
@@ -159,6 +161,10 @@ struct PoolTests {
         #expect(receivedValues.count == producerCount * messagesPerProducer)
         #expect(Set(receivedValues).count == producerCount * messagesPerProducer)
     }
+
+// in Swift 6.0, the error returned by #expect(throwing:) macro is a tuple ()
+// I decided to skip these tests on Swift 6.0
+#if swift(>=6.1)
 
     @Test
     @available(LambdaSwift 2.0, *)
@@ -509,5 +515,7 @@ struct PoolTests {
         let third = try await pool.next(for: "req1")
         #expect(String(buffer: third.body!) == "third")
     }
+#endif //swift >= 6.1
 
 }
+#endif // trait
