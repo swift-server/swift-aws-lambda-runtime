@@ -135,11 +135,10 @@ extension LambdaRuntimeTests {
                                 port: customPort,
                                 payload: "\"World\(i)\""
                             )
-                            let responseBody = String(data: data, encoding: .utf8) ?? ""
                             return RequestResult(
                                 requestIndex: i,
                                 statusCode: response.statusCode,
-                                responseBody: responseBody
+                                responseBody: String(decoding: data, as: UTF8.self)
                             )
                         }
                     }
