@@ -21,8 +21,7 @@ import Testing
 
 // serialized to start only one runtime at a time
 @Suite(.serialized)
-struct LambdaLocalServerTest
- {
+struct LambdaLocalServerTest {
     @Test("Local server respects LOCAL_LAMBDA_PORT environment variable")
     @available(LambdaSwift 2.0, *)
     func testLocalServerCustomPort() async throws {
