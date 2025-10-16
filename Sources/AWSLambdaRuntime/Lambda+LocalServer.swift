@@ -401,38 +401,22 @@ internal struct LambdaHTTPServer {
             self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body))
 
             // wait for the lambda function to process the request
-            // when POST /invoke is called multiple times before a response is processed,
-            // the `for try await ... in` loop will throw an error and we will return a 400 error to the client
+            // Handle streaming responses by collecting all chunks for this requestId
             do {
-                for try await response in self.responsePool {
+                var isComplete = false
+                while !isComplete {
+                    let response = try await self.responsePool.next(for: requestId)
                     logger[metadataKey: "response_requestId"] = "\(response.requestId ?? "nil")"
-                    logger.trace("Received response to return to client")
-                    if response.requestId == requestId {
-                        logger.trace("/invoke requestId is valid, sending the response")
-                        // send the response to the client
-                        // if the response is final, we can send it and return
-                        // if the response is not final, we can send it and wait for the next response
-                        try await self.sendResponse(response, outbound: outbound, logger: logger)
-                        if response.final == true {
-                            logger.trace("/invoke returning")
-                            return  // if the response is final, we can return and close the connection
-                        }
-                    } else {
-                        logger.error(
-                            "Received response for a different requestId",
-                            metadata: ["response requestId": "\(response.requestId ?? "")"]
-                        )
-                        let response = LocalServerResponse(
-                            id: requestId,
-                            status: .badRequest,
-                            body: ByteBuffer(string: "The responseId is not equal to the requestId.")
-                        )
-                        try await self.sendResponse(response, outbound: outbound, logger: logger)
+                    logger.trace("Received response chunk to return to client")
+
+                    // send the response chunk to the client
+                    try await self.sendResponse(response, outbound: outbound, logger: logger)
+
+                    if response.final == true {
+                        logger.trace("/invoke complete, returning")
+                        isComplete = true
                     }
                 }
-                // What todo when there is no more responses to process?
-                // This should not happen as the async iterator blocks until there is a response to process
-                fatalError("No more responses to process - the async for loop should not return")
             } catch is LambdaHTTPServer.Pool<LambdaHTTPServer.LocalServerResponse>.PoolError {
                 logger.trace("PoolError catched")
                 // detect concurrent invocations of POST and gently decline the requests while we're processing one.
@@ -587,36 +571,58 @@ internal struct LambdaHTTPServer {
 
         enum State: ~Copyable {
             case buffer(Deque<T>)
-            case continuation(CheckedContinuation<T, any Error>)
+            case waitingForAny(CheckedContinuation<T, any Error>)  // FIFO waiting (for invocations)
+            case waitingForSpecific([String: CheckedContinuation<T, any Error>])  // RequestId-based waiting (for responses)
         }
 
         private let lock = Mutex<State>(.buffer([]))
 
         /// enqueue an element, or give it back immediately to the iterator if it is waiting for an element
-        public func push(_ invocation: T) {
-            // if the iterator is waiting for an element on `next()``, give it to it
-            // otherwise, enqueue the element
-            let maybeContinuation = self.lock.withLock { state -> CheckedContinuation<T, any Error>? in
+        public func push(_ item: T) {
+            let continuationToResume = self.lock.withLock { state -> CheckedContinuation<T, any Error>? in
                 switch consume state {
-                case .continuation(let continuation):
+                case .buffer(var buffer):
+                    buffer.append(item)
+                    state = .buffer(buffer)
+                    return nil
+
+                case .waitingForAny(let continuation):
+                    // Someone is waiting for any item (FIFO)
                     state = .buffer([])
                     return continuation
 
-                case .buffer(var buffer):
-                    buffer.append(invocation)
-                    state = .buffer(buffer)
-                    return nil
+                case .waitingForSpecific(var continuations):
+                    // Check if this item matches any waiting continuation
+                    if let response = item as? LocalServerResponse,
+                        let requestId = response.requestId,
+                        let continuation = continuations.removeValue(forKey: requestId)
+                    {
+                        // Found a matching continuation
+                        if continuations.isEmpty {
+                            state = .buffer([])
+                        } else {
+                            state = .waitingForSpecific(continuations)
+                        }
+                        return continuation
+                    } else {
+                        // No matching continuation, add to buffer
+                        var buffer = Deque<T>()
+                        buffer.append(item)
+                        state = .buffer(buffer)
+                        return nil
+                    }
                 }
             }
 
             // Resume continuation outside the lock to prevent potential deadlocks
-            maybeContinuation?.resume(returning: invocation)
+            continuationToResume?.resume(returning: item)
         }
 
-        func next() async throws -> T? {
-            // exit the async for loop if the task is cancelled
+        /// Unified next() method that handles both FIFO and requestId-specific waiting
+        private func _next(for requestId: String?) async throws -> T {
+            // exit if the task is cancelled
             guard !Task.isCancelled else {
-                return nil
+                throw CancellationError()
             }
 
             return try await withTaskCancellationHandler {
@@ -624,23 +630,68 @@ internal struct LambdaHTTPServer {
                     let nextAction: Result<T, PoolError>? = self.lock.withLock { state -> Result<T, PoolError>? in
                         switch consume state {
                         case .buffer(var buffer):
-                            if let first = buffer.popFirst() {
-                                state = .buffer(buffer)
-                                return .success(first)
+                            if let requestId = requestId {
+                                // Look for oldest (first) item for this requestId in buffer
+                                if let index = buffer.firstIndex(where: { item in
+                                    if let response = item as? LocalServerResponse {
+                                        return response.requestId == requestId
+                                    }
+                                    return false
+                                }) {
+                                    let item = buffer.remove(at: index)
+                                    state = .buffer(buffer)
+                                    return .success(item)
+                                } else {
+                                    // No matching item, wait for it
+                                    var continuations: [String: CheckedContinuation<T, any Error>] = [:]
+                                    continuations[requestId] = continuation
+                                    state = .waitingForSpecific(continuations)
+                                    return nil
+                                }
                             } else {
-                                state = .continuation(continuation)
-                                return nil
+                                // FIFO mode - take first item
+                                if let first = buffer.popFirst() {
+                                    state = .buffer(buffer)
+                                    return .success(first)
+                                } else {
+                                    state = .waitingForAny(continuation)
+                                    return nil
+                                }
                             }
 
-                        case .continuation(let previousContinuation):
-                            state = .buffer([])
-                            return .failure(PoolError(cause: .nextCalledTwice(previousContinuation)))
+                        case .waitingForAny(let previousContinuation):
+                            if requestId == nil {
+                                // Another FIFO call while already waiting
+                                state = .buffer([])
+                                return .failure(PoolError(cause: .nextCalledTwice(previousContinuation)))
+                            } else {
+                                // Can't mix FIFO and specific waiting
+                                state = .waitingForAny(previousContinuation)
+                                return .failure(PoolError(cause: .mixedWaitingModes))
+                            }
+
+                        case .waitingForSpecific(var continuations):
+                            if let requestId = requestId {
+                                if continuations[requestId] != nil {
+                                    // Already waiting for this requestId
+                                    state = .waitingForSpecific(continuations)
+                                    return .failure(PoolError(cause: .duplicateRequestIdWait(requestId)))
+                                } else {
+                                    continuations[requestId] = continuation
+                                    state = .waitingForSpecific(continuations)
+                                    return nil
+                                }
+                            } else {
+                                // Can't mix FIFO and specific waiting
+                                state = .waitingForSpecific(continuations)
+                                return .failure(PoolError(cause: .mixedWaitingModes))
+                            }
                         }
                     }
 
                     switch nextAction {
-                    case .success(let action):
-                        continuation.resume(returning: action)
+                    case .success(let item):
+                        continuation.resume(returning: item)
                     case .failure(let error):
                         if case let .nextCalledTwice(prevContinuation) = error.cause {
                             prevContinuation.resume(throwing: error)
@@ -653,20 +704,35 @@ internal struct LambdaHTTPServer {
                 }
             } onCancel: {
                 // Ensure we properly handle cancellation by checking if we have a stored continuation
-                let continuationToCancel = self.lock.withLock { state -> CheckedContinuation<T, any Error>? in
+                let continuationsToCancel = self.lock.withLock { state -> [String: CheckedContinuation<T, any Error>] in
                     switch consume state {
                     case .buffer(let buffer):
                         state = .buffer(buffer)
-                        return nil
-                    case .continuation(let continuation):
+                        return [:]
+                    case .waitingForAny(let continuation):
                         state = .buffer([])
-                        return continuation
+                        return ["": continuation]  // Use empty string as key for single continuation
+                    case .waitingForSpecific(let continuations):
+                        state = .buffer([])
+                        return continuations
                     }
                 }
 
-                // Resume the continuation outside the lock to avoid potential deadlocks
-                continuationToCancel?.resume(throwing: CancellationError())
+                // Resume all continuations outside the lock to avoid potential deadlocks
+                for continuation in continuationsToCancel.values {
+                    continuation.resume(throwing: CancellationError())
+                }
             }
+        }
+
+        /// Simple FIFO next() method - used by AsyncIteratorProtocol
+        func next() async throws -> T? {
+            try await _next(for: nil)
+        }
+
+        /// RequestId-specific next() method for LocalServerResponse - NOT part of AsyncIteratorProtocol
+        func next(for requestId: String) async throws -> T {
+            try await _next(for: requestId)
         }
 
         func makeAsyncIterator() -> Pool {
@@ -679,11 +745,17 @@ internal struct LambdaHTTPServer {
                 switch self.cause {
                 case .nextCalledTwice:
                     return "Concurrent invocations to next(). This is not allowed."
+                case .duplicateRequestIdWait(let requestId):
+                    return "Already waiting for requestId: \(requestId)"
+                case .mixedWaitingModes:
+                    return "Cannot mix FIFO waiting (next()) with specific waiting (next(for:))"
                 }
             }
 
             enum Cause {
                 case nextCalledTwice(CheckedContinuation<T, any Error>)
+                case duplicateRequestIdWait(String)
+                case mixedWaitingModes
             }
         }
     }
