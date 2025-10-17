@@ -82,7 +82,7 @@ You can test the function locally before deploying:
 swift run 
 
 # In another terminal, test with curl:
-curl -v \
+curl -v --output response.txt \
   --header "Content-Type: application/json" \
   --data '"this is not used"' \
   http://127.0.0.1:7000/invoke
