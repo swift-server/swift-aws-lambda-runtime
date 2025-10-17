@@ -378,7 +378,7 @@ try await runtime.run()
 
 ### Integration with Swift Service LifeCycle
 
-Support for [Swift Service Lifecycle](https://github.com/awslabs/swift-service-lifecycle) is currently being implemented. You can follow https://github.com/awslabs/swift-aws-lambda-runtime/issues/374 for more details and teh current status. Your contributions are welcome.
+Support for [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle) is currently being implemented. You can follow https://github.com/awslabs/swift-aws-lambda-runtime/issues/374 for more details and teh current status. Your contributions are welcome.
 
 ### Use Lambda Background Tasks
 
@@ -536,7 +536,7 @@ The v2 API prioritizes the following principles:
 
 - Readability and Maintainability: Extensive use of `async`/`await` improves code clarity and simplifies maintenance.
 
-- Developer Control: Developers own the `main()` function and have the flexibility to inject dependencies into the `LambdaRuntime`. This allows you to manage service lifecycles efficiently using [Swift Service Lifecycle](https://github.com/awslabs/swift-service-lifecycle) for structured concurrency.
+- Developer Control: Developers own the `main()` function and have the flexibility to inject dependencies into the `LambdaRuntime`. This allows you to manage service lifecycles efficiently using [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle) for structured concurrency.
 
 - Simplified Codable Support: The `LambdaCodableAdapter` struct eliminates the need for verbose boilerplate code when encoding and decoding events and responses.
 
