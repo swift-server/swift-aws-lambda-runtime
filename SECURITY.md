@@ -37,7 +37,7 @@ with the all the required detail.
 * Once the fix has been released we will publish a security advisory on GitHub
   and in the Server → Security Updates category on the [Swift forums][swift-forums-sec].
 
-[sswg]: https://github.com/awslabs/sswg
-[sswg-security]: https://github.com/awslabs/sswg/blob/main/security/README.md
+[sswg]: https://github.com/swift-server/sswg
+[sswg-security]: https://github.com/swift-server/sswg/blob/main/security/README.md
 [swift-forums-sec]: https://forums.swift.org/c/server/security-updates/
 [mitre]: https://cveform.mitre.org/
