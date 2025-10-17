@@ -3,7 +3,7 @@
 This is a simple example of an AWS Lambda function invoked through an Amazon API Gateway V1.
 
 > [!NOTE]
-> This example uses the API Gateway V1 `Rest Api` endpoint type, whereas the [API Gateway V2](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples/APIGateway) example uses the `HttpApi` endpoint type. For more information, see [Choose between REST APIs and HTTP APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-vs-rest.html).
+> This example uses the API Gateway V1 `Rest Api` endpoint type, whereas the [API Gateway V2](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/APIGateway) example uses the `HttpApi` endpoint type. For more information, see [Choose between REST APIs and HTTP APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-vs-rest.html).
 
 ## Code 
 
@@ -17,7 +17,7 @@ The handler is `(event: APIGatewayRequest, context: LambdaContext) -> APIGateway
 
 The function must return a `APIGatewayResponse`.
 
-`APIGatewayRequest` and `APIGatewayResponse` are defined in the [Swift AWS Lambda Events](https://github.com/swift-server/swift-aws-lambda-events) library.
+`APIGatewayRequest` and `APIGatewayResponse` are defined in the [Swift AWS Lambda Events](https://github.com/awslabs/swift-aws-lambda-events) library.
 
 ## Build & Package 
 
@@ -149,4 +149,4 @@ These are example applications for demonstration purposes. When deploying such i
 - Ensure that AWS Lambda function is configured for function-level concurrent execution limit ([concurrency documentation](https://docs.aws.amazon.com/lambda/latest/dg/lambda-concurrency.html), [configuration guide](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html))
 - Check encryption settings for Lambda environment variables ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars-encryption.html))
 - Ensure that AWS Lambda function is configured for a Dead Letter Queue (DLQ) ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html#invocation-dlq))
-- Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html), [code example](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres))
+- Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html), [code example](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres))

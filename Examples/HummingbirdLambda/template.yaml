@@ -16,7 +16,7 @@ Description: SAM Template for Hummingbird Lambda Example
 #   See: https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html#invocation-dlq
 # - Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources
 #   See: https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html
-#   Code Example: https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres
+#   Code Example: https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres
 
 Resources:
   # Lambda function
