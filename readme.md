@@ -1,5 +1,5 @@
 
-You can read [the Swift AWS Lambda Runtime documentation](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/2.0.0/documentation/awslambdaruntime) on the Swift Package Index.
+You can read [the Swift AWS Lambda Runtime documentation](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/2.3.0/documentation/awslambdaruntime) on the Swift Package Index.
 
 This guide contains the following sections:
 
@@ -37,9 +37,9 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 
 ## Getting started
 
-To get started, read [the Swift AWS Lambda runtime tutorial](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/tutorials/table-of-content). It provides developers with detailed step-by-step instructions to develop, build, and deploy a Lambda function.
+To get started, read [the Swift AWS Lambda runtime tutorial](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/2.3.0/tutorials/table-of-content). It provides developers with detailed step-by-step instructions to develop, build, and deploy a Lambda function.
 
-We also wrote a comprehensive [deployment guide](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/documentation/awslambdaruntime/deployment).
+We also wrote a comprehensive [deployment guide](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/2.3.0/documentation/awslambdaruntime/deployment).
 
 Or, if you're impatient to start with runtime v2, try these six steps:
 
@@ -484,7 +484,7 @@ LOCAL_LAMBDA_PORT=8080 LOCAL_LAMBDA_INVOCATION_ENDPOINT=/2015-03-31/functions/fu
 
 ## Deploying your Swift Lambda functions
 
-There is a full deployment guide available in [the documentation](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/documentation/awslambdaruntime/deployment).
+There is a full deployment guide available in [the documentation](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/2.3.0/documentation/awslambdaruntime/deployment).
 
 There are multiple ways to deploy your Swift code to AWS Lambda. The very first time, you'll probably use the AWS Console to create a new Lambda function and upload your code as a zip file. However, as you iterate on your code, you'll want to automate the deployment process.
 
@@ -522,7 +522,7 @@ Value               https://a5q74es3k2.execute-api.us-east-1.amazonaws.com
 -----------------------------------------------------------------------------------------------------------------------------
 ```
 
-Please refer to the full deployment guide available in [the documentation](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/documentation/awslambdaruntime) for more details.
+Please refer to [the full deployment guide available in the documentation](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/2.3.0/documentation/awslambdaruntime/deployment) for more details.
 
 ## Swift AWS Lambda Runtime - Design Principles
 
