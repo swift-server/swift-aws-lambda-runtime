@@ -66,7 +66,7 @@ swift package init --type executable
     2.1 Add the Swift AWS Lambda Runtime as a dependency
 
     ```bash
-    swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --from 2.0.0
+    swift package add-dependency https://github.com/awslabs/swift-aws-lambda-runtime.git --from 2.0.0
     swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime --from 1.0.0
     ```
 
@@ -87,7 +87,7 @@ swift package init --type executable
         name: "MyLambda",
         platforms: [.macOS(.v15)],
         dependencies: [
-            .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0"),
+            .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
         ],
         targets: [
             .executableTarget(
@@ -159,7 +159,7 @@ Be sure to replace <YOUR_ACCOUNT_ID> with your actual AWS account ID (for exampl
 >
 > You can create this role in two ways:
 > 1. Using AWS Console
-> 2. Running the commands in the `create_lambda_execution_role()` function in [`Examples/_MyFirstFunction/create_iam_role.sh`](https://github.com/swift-server/swift-aws-lambda-runtime/blob/8dff649920ab0c66bb039d15ae48d9d5764db71a/Examples/_MyFirstFunction/create_and_deploy_function.sh#L40C1-L40C31)
+> 2. Running the commands in the `create_lambda_execution_role()` function in [`Examples/_MyFirstFunction/create_iam_role.sh`](https://github.com/awslabs/swift-aws-lambda-runtime/blob/8dff649920ab0c66bb039d15ae48d9d5764db71a/Examples/_MyFirstFunction/create_and_deploy_function.sh#L40C1-L40C31)
 
 6. Invoke your Lambda function
 
@@ -378,7 +378,7 @@ try await runtime.run()
 
 ### Integration with Swift Service LifeCycle
 
-Support for [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle) is currently being implemented. You can follow https://github.com/swift-server/swift-aws-lambda-runtime/issues/374 for more details and teh current status. Your contributions are welcome.
+Support for [Swift Service Lifecycle](https://github.com/awslabs/swift-service-lifecycle) is currently being implemented. You can follow https://github.com/awslabs/swift-aws-lambda-runtime/issues/374 for more details and teh current status. Your contributions are welcome.
 
 ### Use Lambda Background Tasks
 
@@ -536,7 +536,7 @@ The v2 API prioritizes the following principles:
 
 - Readability and Maintainability: Extensive use of `async`/`await` improves code clarity and simplifies maintenance.
 
-- Developer Control: Developers own the `main()` function and have the flexibility to inject dependencies into the `LambdaRuntime`. This allows you to manage service lifecycles efficiently using [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle) for structured concurrency.
+- Developer Control: Developers own the `main()` function and have the flexibility to inject dependencies into the `LambdaRuntime`. This allows you to manage service lifecycles efficiently using [Swift Service Lifecycle](https://github.com/awslabs/swift-service-lifecycle) for structured concurrency.
 
 - Simplified Codable Support: The `LambdaCodableAdapter` struct eliminates the need for verbose boilerplate code when encoding and decoding events and responses.
 

@@ -10,7 +10,7 @@ The code creates a `Router` with `AppRequestContext` (which is a type alias for 
 
 The `APIGatewayV2LambdaFunction` wraps the Hummingbird router to make it compatible with AWS Lambda and API Gateway V2 events.
 
-`APIGatewayV2Request` is defined in the [Swift AWS Lambda Events](https://github.com/swift-server/swift-aws-lambda-events) library, and the Hummingbird Lambda integration is provided by the [Hummingbird Lambda](https://github.com/hummingbird-project/hummingbird-lambda) package.
+`APIGatewayV2Request` is defined in the [Swift AWS Lambda Events](https://github.com/awslabs/swift-aws-lambda-events) library, and the Hummingbird Lambda integration is provided by the [Hummingbird Lambda](https://github.com/hummingbird-project/hummingbird-lambda) package.
 
 ## Build & Package 
 
@@ -87,4 +87,4 @@ These are example applications for demonstration purposes. When deploying such i
 - Ensure that AWS Lambda function is configured for function-level concurrent execution limit ([concurrency documentation](https://docs.aws.amazon.com/lambda/latest/dg/lambda-concurrency.html), [configuration guide](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html))
 - Check encryption settings for Lambda environment variables ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars-encryption.html))
 - Ensure that AWS Lambda function is configured for a Dead Letter Queue (DLQ) ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html#invocation-dlq))
-- Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html), [code example](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres))
+- Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html), [code example](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres))

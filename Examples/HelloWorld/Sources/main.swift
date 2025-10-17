@@ -18,7 +18,8 @@ import AWSLambdaRuntime
 
 let runtime = LambdaRuntime {
     (event: String, context: LambdaContext) in
-    "Hello \(event)"
+    try await Task.sleep(for: .seconds(3))
+    return "Hello \(event)"
 }
 
 try await runtime.run()

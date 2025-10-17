@@ -64,7 +64,7 @@ The plugin cannot be invoked without the required dependency on `swift-aws-lambd
 swift package init --type executable --name MyLambda
 
 # Step 2: Add the Swift AWS Lambda Runtime dependency
-swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --branch main
+swift package add-dependency https://github.com/awslabs/swift-aws-lambda-runtime.git --branch main
 swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime
 
 # Step 3: Call the lambda-init plugin
