@@ -428,11 +428,11 @@ internal struct LambdaHTTPServer {
                     }
                 }
             } catch let error as LambdaHTTPServer.Pool<LambdaHTTPServer.LocalServerResponse>.PoolError {
-                logger.trace("PoolError caught")
+                logger.trace("PoolError caught", metadata: ["error": "\(error)"])
                 // detect concurrent invocations of POST and gently decline the requests while we're processing one.
                 let response = LocalServerResponse(
                     id: requestId,
-                    status: .badRequest,
+                    status: .internalServerError,
                     body: ByteBuffer(
                         string:
                             "\(error): It is not allowed to invoke multiple Lambda function executions in parallel. (The Lambda runtime environment on AWS will never do that)"
