@@ -311,6 +311,14 @@ internal struct LambdaHTTPServer {
                                 self.responsePool.push(
                                     LocalServerResponse(id: requestId, final: true)
                                 )
+
+                                // Send acknowledgment back to Lambda runtime client for streaming END
+                                // This is the single HTTP response to the chunked HTTP request
+                                try await self.sendResponse(
+                                    .init(id: requestId, status: .accepted, final: true),
+                                    outbound: outbound,
+                                    logger: logger
+                                )
                             } else {
                                 // process the buffered response for non streaming requests
                                 try await self.processRequestAndSendResponse(
