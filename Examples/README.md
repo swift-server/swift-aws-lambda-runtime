@@ -16,11 +16,11 @@ This directory contains example code for Lambda functions.
 
 ## Examples 
 
-- **[API GatewayV1](APIGatewayV1/README.md)**: an REST API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) and a Lambda function as backend (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
+- **[API Gateway V1](APIGatewayV1/README.md)**: an REST API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) and a Lambda function as backend (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
 
-- **[API Gateway](APIGateway/README.md)**: an HTTPS REST API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) and a Lambda function as backend (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
+- **[API Gateway V2](APIGatewayV2/README.md)**: an HTTPS API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) and a Lambda function as backend (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
 
-- **[API Gateway with Lambda Authorizer](APIGateway+LambdaAuthorizer/README.md)**: an HTTPS REST API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) protected by a Lambda authorizer (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
+- **[API Gateway V2 with Lambda Authorizer](APIGatewayV2+LambdaAuthorizer/README.md)**: an HTTPS API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) protected by a Lambda authorizer (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
 
 - **[BackgroundTasks](BackgroundTasks/README.md)**: a Lambda function that continues to run background tasks after having sent the response (requires [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
 

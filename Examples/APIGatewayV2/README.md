@@ -1,6 +1,9 @@
-# API Gateway 
+# HTTPS API Gateway 
 
-This is a simple example of an AWS Lambda function invoked through an Amazon API Gateway.
+This is a simple example of an AWS Lambda function invoked through an Amazon HTTPS API Gateway.
+
+> [!NOTE]
+> This example uses the API Gateway V2 `Http Api` endpoint type, whereas the [API Gateway V1](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples/APIGatewayV1) example uses the `Rest Api` endpoint type. For more information, see [Choose between REST APIs and HTTP APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-vs-rest.html).
 
 ## Code 
 

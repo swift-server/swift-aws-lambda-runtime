@@ -1,9 +1,9 @@
-# API Gateway 
+# REST API Gateway 
 
 This is a simple example of an AWS Lambda function invoked through an Amazon API Gateway V1.
 
 > [!NOTE]
-> This example uses the API Gateway V1 `Api` endpoint type, whereas the [API Gateway V2](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples/APIGateway) example uses the `HttpApi` endpoint type. For more information, see [Choose between REST AIs and HTTP APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-vs-rest.html).
+> This example uses the API Gateway V1 `Rest Api` endpoint type, whereas the [API Gateway V2](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples/APIGateway) example uses the `HttpApi` endpoint type. For more information, see [Choose between REST APIs and HTTP APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-vs-rest.html).
 
 ## Code 
 
