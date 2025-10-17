@@ -1,4 +1,6 @@
 
+This package makes it easy to run AWS Lambda Functions written in Swift.
+
 You can read [the Swift AWS Lambda Runtime documentation](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/2.3.0/documentation/awslambdaruntime) on the Swift Package Index.
 
 This guide contains the following sections:
@@ -10,6 +12,8 @@ This guide contains the following sections:
 - [Testing Locally](#testing-locally)
 - [Deploying your Swift Lambda functions](#deploying-your-swift-lambda-functions)
 - [Swift AWS Lambda Runtime - Design Principles](#swift-aws-lambda-runtime---design-principles)
+
+The Swift runtime client is an experimental package. It is subject to change and intended only for evaluation purposes.
 
 ## The Swift AWS Lambda Runtime
 

@@ -1,4 +1,4 @@
-name: PR
+name: swift-aws-lambda-runtime-build
 
 on:
   pull_request:
