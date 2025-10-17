@@ -18,7 +18,7 @@ import AWSLambdaRuntime
 
 let runtime = LambdaRuntime {
     (event: String, context: LambdaContext) in
-    return "Hello \(event)"
+    "Hello \(event)"
 }
 
 try await runtime.run()
