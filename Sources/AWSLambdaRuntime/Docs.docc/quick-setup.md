@@ -37,7 +37,7 @@ let package = Package(
         .executable(name: "MyFirstLambdaFunction", targets: ["MyFirstLambdaFunction"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0"),
+        .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
     ],
     targets: [
         .executableTarget(
@@ -55,7 +55,7 @@ let package = Package(
 
 Create an instance of `LambdaRuntime` and pass a function as a closure. The function has this signature: `(_: Event, context: LambdaContext) async throws -> Output` (as defined in the `LambdaHandler` protocol). `Event` must be `Decodable`. `Output` must be `Encodable`.
 
-If your Lambda function is invoked by another AWS service, use the `AWSLambdaEvent` library at [https://github.com/swift-server/swift-aws-lambda-events](https://github.com/swift-server/swift-aws-lambda-events) to represent the input event.
+If your Lambda function is invoked by another AWS service, use the `AWSLambdaEvent` library at [https://github.com/awslabs/swift-aws-lambda-events](https://github.com/awslabs/swift-aws-lambda-events) to represent the input event.
 
 Finally, call `runtime.run()` to start the event loop.
 

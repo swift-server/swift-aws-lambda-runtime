@@ -58,7 +58,7 @@ Here is the content of this guide:
 
 3. A Swift Lambda function to deploy.
 
-   You need a Swift Lambda function to deploy. If you don't have one yet, you can use one of the examples in the [Examples](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples) directory.
+   You need a Swift Lambda function to deploy. If you don't have one yet, you can use one of the examples in the [Examples](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples) directory.
 
    Compile and package the function using the following command
 
@@ -170,7 +170,7 @@ Select the `HelloWorld-role-xxxx` role and select **Delete**. Confirm the deleti
 
 You can deploy your Lambda function using the AWS Command Line Interface (CLI). The CLI is a unified tool to manage your AWS services from the command line and automate your operations through scripts. The CLI is available for Windows, macOS, and Linux. Follow the [installation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html) instructions in the AWS CLI User Guide.
 
-In this example, we're building the HelloWorld example from the [Examples](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples) directory.
+In this example, we're building the HelloWorld example from the [Examples](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples) directory.
 
 #### Create the function 
 
@@ -328,7 +328,7 @@ Outputs:
 EOF
 ```
 
-In this example, the Lambda function must accept an APIGateway v2 JSON payload as input parameter and return a valid APIGAteway v2 JSON response. See the example code in the [APIGateway example README file](https://github.com/swift-server/swift-aws-lambda-runtime/blob/main/Examples/APIGateway/README.md).
+In this example, the Lambda function must accept an APIGateway v2 JSON payload as input parameter and return a valid APIGAteway v2 JSON response. See the example code in the [APIGateway example README file](https://github.com/awslabs/swift-aws-lambda-runtime/blob/main/Examples/APIGateway/README.md).
 
 To deploy the function with SAM, use the `sam deploy` command. The very first time you deploy a function, you should use the `--guided` flag to configure the deployment. The command will ask you a series of questions to configure the deployment.
 
@@ -453,7 +453,7 @@ To use the CDK, you need to [install the CDK CLI](https://docs.aws.amazon.com/cd
 
 Use the CDK when you want to define your infrastructure in code and manage the deployment of your Lambda function and other AWS services.
 
-This example deploys the [APIGateway]((https://github.com/swift-server/swift-aws-lambda-runtime/blob/main/Examples/APIGateway/) example code.  It comprises a Lambda function that implements a REST API and an API Gateway to expose the function over HTTPS.
+This example deploys the [APIGateway]((https://github.com/awslabs/swift-aws-lambda-runtime/blob/main/Examples/APIGateway/) example code.  It comprises a Lambda function that implements a REST API and an API Gateway to expose the function over HTTPS.
 
 #### Create a CDK project
 
@@ -636,4 +636,4 @@ These are example applications for demonstration purposes. When deploying such i
 - Ensure that AWS Lambda function is configured for function-level concurrent execution limit ([concurrency documentation](https://docs.aws.amazon.com/lambda/latest/dg/lambda-concurrency.html), [configuration guide](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html))
 - Check encryption settings for Lambda environment variables ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars-encryption.html))
 - Ensure that AWS Lambda function is configured for a Dead Letter Queue (DLQ) ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html#invocation-dlq))
-- Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html), [code example](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres))
+- Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html), [code example](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres))

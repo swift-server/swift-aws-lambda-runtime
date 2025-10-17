@@ -18,7 +18,7 @@
 export PATH=/home/ubuntu/swift-6.0.3-RELEASE-ubuntu24.04-aarch64/usr/bin:"${PATH}"
 
 # clone a project 
-git clone https://github.com/swift-server/swift-aws-lambda-runtime.git
+git clone https://github.com/awslabs/swift-aws-lambda-runtime.git
 
 # be sure Swift is install.  
 # Youc an install swift with the following command: ./scripts/ubuntu-install-swift.sh
