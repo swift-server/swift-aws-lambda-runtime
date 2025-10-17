@@ -378,7 +378,7 @@ try await runtime.run()
 
 ### Integration with Swift Service LifeCycle
 
-Support for [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle) is currently being implemented. You can follow https://github.com/awslabs/swift-aws-lambda-runtime/issues/374 for more details and teh current status. Your contributions are welcome.
+Support for [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle) is currently being implemented. You can follow https://github.com/awslabs/swift-aws-lambda-runtime/issues/374 for more details and the current status. Your contributions are welcome.
 
 ### Use Lambda Background Tasks
 
