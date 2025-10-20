@@ -1,5 +1,5 @@
 
-You can read [the Swift AWS Lambda Runtime documentation](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/2.0.0/documentation/awslambdaruntime) on the Swift Package Index.
+You can read [the Swift AWS Lambda Runtime documentation](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/2.3.0/documentation/awslambdaruntime) on the Swift Package Index.
 
 This guide contains the following sections:
 
@@ -37,9 +37,9 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 
 ## Getting started
 
-To get started, read [the Swift AWS Lambda runtime tutorial](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/tutorials/table-of-content). It provides developers with detailed step-by-step instructions to develop, build, and deploy a Lambda function.
+To get started, read [the Swift AWS Lambda runtime tutorial](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/2.3.0/tutorials/table-of-content). It provides developers with detailed step-by-step instructions to develop, build, and deploy a Lambda function.
 
-We also wrote a comprehensive [deployment guide](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/documentation/awslambdaruntime/deployment).
+We also wrote a comprehensive [deployment guide](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/2.3.0/documentation/awslambdaruntime/deployment).
 
 Or, if you're impatient to start with runtime v2, try these six steps:
 
@@ -66,7 +66,7 @@ swift package init --type executable
     2.1 Add the Swift AWS Lambda Runtime as a dependency
 
     ```bash
-    swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --from 2.0.0
+    swift package add-dependency https://github.com/awslabs/swift-aws-lambda-runtime.git --from 2.0.0
     swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime --from 1.0.0
     ```
 
@@ -87,7 +87,7 @@ swift package init --type executable
         name: "MyLambda",
         platforms: [.macOS(.v15)],
         dependencies: [
-            .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0"),
+            .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
         ],
         targets: [
             .executableTarget(
@@ -159,7 +159,7 @@ Be sure to replace <YOUR_ACCOUNT_ID> with your actual AWS account ID (for exampl
 >
 > You can create this role in two ways:
 > 1. Using AWS Console
-> 2. Running the commands in the `create_lambda_execution_role()` function in [`Examples/_MyFirstFunction/create_iam_role.sh`](https://github.com/swift-server/swift-aws-lambda-runtime/blob/8dff649920ab0c66bb039d15ae48d9d5764db71a/Examples/_MyFirstFunction/create_and_deploy_function.sh#L40C1-L40C31)
+> 2. Running the commands in the `create_lambda_execution_role()` function in [`Examples/_MyFirstFunction/create_iam_role.sh`](https://github.com/awslabs/swift-aws-lambda-runtime/blob/8dff649920ab0c66bb039d15ae48d9d5764db71a/Examples/_MyFirstFunction/create_and_deploy_function.sh#L40C1-L40C31)
 
 6. Invoke your Lambda function
 
@@ -378,7 +378,7 @@ try await runtime.run()
 
 ### Integration with Swift Service LifeCycle
 
-Support for [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle) is currently being implemented. You can follow https://github.com/swift-server/swift-aws-lambda-runtime/issues/374 for more details and teh current status. Your contributions are welcome.
+Support for [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle) is currently being implemented. You can follow https://github.com/awslabs/swift-aws-lambda-runtime/issues/374 for more details and the current status. Your contributions are welcome.
 
 ### Use Lambda Background Tasks
 
@@ -484,7 +484,7 @@ LOCAL_LAMBDA_PORT=8080 LOCAL_LAMBDA_INVOCATION_ENDPOINT=/2015-03-31/functions/fu
 
 ## Deploying your Swift Lambda functions
 
-There is a full deployment guide available in [the documentation](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/documentation/awslambdaruntime/deployment).
+There is a full deployment guide available in [the documentation](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/2.3.0/documentation/awslambdaruntime/deployment).
 
 There are multiple ways to deploy your Swift code to AWS Lambda. The very first time, you'll probably use the AWS Console to create a new Lambda function and upload your code as a zip file. However, as you iterate on your code, you'll want to automate the deployment process.
 
@@ -522,7 +522,7 @@ Value               https://a5q74es3k2.execute-api.us-east-1.amazonaws.com
 -----------------------------------------------------------------------------------------------------------------------------
 ```
 
-Please refer to the full deployment guide available in [the documentation](https://swiftpackageindex.com/swift-server/swift-aws-lambda-runtime/main/documentation/awslambdaruntime) for more details.
+Please refer to [the full deployment guide available in the documentation](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/2.3.0/documentation/awslambdaruntime/deployment) for more details.
 
 ## Swift AWS Lambda Runtime - Design Principles
 

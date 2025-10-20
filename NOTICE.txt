@@ -4,7 +4,7 @@
 
 Please visit the SwiftAWSLambdaRuntime web site for more information:
 
-  * https://github.com/swift-server/swift-aws-lambda-runtime
+  * https://github.com/awslabs/swift-aws-lambda-runtime
 
 Copyright 2017-2021 The SwiftAWSLambdaRuntime Project
 

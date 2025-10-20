@@ -15,8 +15,8 @@ let package = Package(
         .package(url: "https://github.com/soto-project/soto.git", from: "7.0.0"),
 
         // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0"),
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-events", from: "1.0.0"),
+        .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
+        .package(url: "https://github.com/awslabs/swift-aws-lambda-events", from: "1.0.0"),
     ],
     targets: [
         .executableTarget(
@@ -39,7 +39,7 @@ if let localDepsPath = Context.environment["LAMBDA_USE_LOCAL_DEPS"],
     let indexToRemove = package.dependencies.firstIndex { dependency in
         if case .sourceControl(
             name: _,
-            location: "https://github.com/swift-server/swift-aws-lambda-runtime.git",
+            location: "https://github.com/awslabs/swift-aws-lambda-runtime.git",
             requirement: _
         ) = dependency.kind {
             return true
