@@ -13,12 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #if LocalServerSupport
-import DequeModule
 import Logging
 import NIOCore
 import NIOHTTP1
 import NIOPosix
-import Synchronization
 
 // for UUID
 #if canImport(FoundationEssentials)
