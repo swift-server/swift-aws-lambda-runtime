@@ -16,12 +16,6 @@ import Logging
 import NIOCore
 import Synchronization
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-
 // This is our guardian to ensure only one LambdaRuntime is running at the time
 // We use an Atomic here to ensure thread safety
 @available(LambdaSwift 2.0, *)
