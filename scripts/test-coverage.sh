@@ -15,16 +15,16 @@
 ##===----------------------------------------------------------------------===##
 
 BIN_PATH="$(swift build --show-bin-path)"
-XCTEST_PATH="$(find ${BIN_PATH} -name '*.xctest')"
+XCTEST_PATH=$(find "${BIN_PATH}" -name '*.xctest')
 COV_BIN=$XCTEST_PATH
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-  f="$(basename $XCTEST_PATH .xctest)"
+  f=$(basename "${XCTEST_PATH}" .xctest)
   COV_BIN="${COV_BIN}/Contents/MacOS/$f"
 	LLVM_COV="/opt/homebrew/opt/llvm/bin/llvm-cov"
 else
   echo "Unsupported OS: $OSTYPE"
-	exit -1
+	exit 1
 fi
 
 ${LLVM_COV} report \
