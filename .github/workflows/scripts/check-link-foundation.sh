@@ -25,15 +25,15 @@ LIBS_TO_CHECK="libFoundation.so libFoundationInternationalization.so lib_Foundat
 pushd Examples/${EXAMPLE} || fatal "Failed to change directory to Examples/${EXAMPLE}."
 
 # recompile the example without the --static-swift-stdlib flag
-LAMBDA_USE_LOCAL_DEPS=../.. swift build -c release -Xlinker -s || fatal "Failed to build the example."
+LAMBDA_USE_LOCAL_DEPS=../.. swift build -c release || fatal "Failed to build the example."
 
 # check if the binary exists
 if [ ! -f "${OUTPUT_FILE}" ]; then
-  error "❌ ${OUTPUT_FILE} does not exist."
+  fatal "❌ ${OUTPUT_FILE} does not exist."
 fi
 
 # Checking for Foundation or ICU dependencies
-echo "Checking for Foundation or ICU dependencies in ${OUTPUT_DIR}/${OUTPUT_FILE}."
+echo "Checking for Foundation or ICU dependencies in ${OUTPUT_FILE}."
 LIBRARIES=$(ldd ${OUTPUT_FILE} | awk '{print $1}')
 for LIB in ${LIBS_TO_CHECK}; do
   echo -n "Checking for ${LIB}... "
