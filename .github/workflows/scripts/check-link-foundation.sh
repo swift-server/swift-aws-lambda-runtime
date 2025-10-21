@@ -17,9 +17,9 @@ log() { printf -- "** %s\n" "$*" >&2; }
 error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
 
-EXAMPLE=HelloWorld
+EXAMPLE=APIGatewayV2
 OUTPUT_DIR=.build/release
-OUTPUT_FILE=${OUTPUT_DIR}/MyLambda
+OUTPUT_FILE=${OUTPUT_DIR}/APIGatewayLambda
 LIBS_TO_CHECK="libFoundation.so libFoundationInternationalization.so lib_FoundationICU.so"
 
 pushd Examples/${EXAMPLE} || fatal "Failed to change directory to Examples/${EXAMPLE}."
