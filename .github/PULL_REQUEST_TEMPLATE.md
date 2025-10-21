@@ -1,13 +1,17 @@
-_[One line description of your change]_
+<!--- Provide a general summary of your changes in the Title above -->
 
-### Motivation:
+## Issue \#
+<!--- If it fixes an issue, please link to the issue here -->
 
-_[Explain here the context, and why you're making that change. What is the problem you're trying to solve.]_
+## Description of changes
+<!--- Why is this change required? What problem does it solve? -->
 
-### Modifications:
+## New/existing dependencies impact assessment, if applicable
+<!--- No new dependencies were added to this change. -->
+<!--- If any dependency was added / modified / removed, THIRD-PARTY-LICENSES must be updated accordingly. -->
 
-_[Describe the modifications you've done.]_
+## Conventional Commits
+<!--- Please use conventional commits to let us know what kind of change this is.-->
+<!--- More info can be found here: https://www.conventionalcommits.org/en/v1.0.0/-->
 
-### Result:
-
-_[After your change, what will change.]_
+By submitting this pull request, I confirm that my contribution is made under the terms of the Apache 2.0 license.
