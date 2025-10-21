@@ -1,8 +1,6 @@
 swift-aws-lambda-runtime
 Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved. 
 
-#TODO : question: should we retain the copyright from Apple ?
-
 ---
 
 This product contains a derivation various code and scripts from SwiftNIO.

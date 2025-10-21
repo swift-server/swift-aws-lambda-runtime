@@ -14,16 +14,21 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-# Connect with ssh 
+BIN_PATH="$(swift build --show-bin-path)"
+XCTEST_PATH="$(find ${BIN_PATH} -name '*.xctest')"
+COV_BIN=$XCTEST_PATH
 
-export PATH=/home/ubuntu/swift-6.0.3-RELEASE-ubuntu24.04-aarch64/usr/bin:"${PATH}"
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  f="$(basename $XCTEST_PATH .xctest)"
+  COV_BIN="${COV_BIN}/Contents/MacOS/$f"
+	LLVM_COV="/opt/homebrew/opt/llvm/bin/llvm-cov"
+else
+  echo "Unsupported OS: $OSTYPE"
+	exit -1
+fi
 
-# clone a project 
-git clone https://github.com/awslabs/swift-aws-lambda-runtime.git
-
-# be sure Swift is install.  
-# Youc an install swift with the following command: ./scripts/ubuntu-install-swift.sh
-
-# build the project
-cd swift-aws-lambda-runtime/Examples/ResourcesPackaging/ || exit 1
-LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker                                      
+${LLVM_COV} report \
+  "${COV_BIN}" \
+  -instr-profile=.build/debug/codecov/default.profdata \
+  -ignore-filename-regex=".build|Tests" \
+  -use-color
