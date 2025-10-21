@@ -3,7 +3,8 @@
 ##
 ## This source file is part of the SwiftAWSLambdaRuntime open source project
 ##
-## Copyright (c) 2017-2025 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+## Copyright SwiftAWSLambdaRuntime project authors
+## Copyright (c) Amazon.com, Inc. or its affiliates.
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information

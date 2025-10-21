@@ -7,8 +7,8 @@ needs to be listed here.
 
 ## COPYRIGHT HOLDERS
 
+- Amazon.com, Inc. (all contributors with '@amazon.com')
 - Apple Inc. (all contributors with '@apple.com')
-- Amazon.com, Inc. or its affiliates (all contributors with '@amazon.com')
 
 ### Contributors
 
@@ -16,6 +16,7 @@ needs to be listed here.
 - Adolfo <fitomad@users.noreply.github.com>
 - Alessio Buratti <9006089+Buratti@users.noreply.github.com>
 - Andrea Scuderi <andreascuderi@ymail.com>
+- Ben Rosen <ben@benrosen.me>
 - Bill <3207996+gestrich@users.noreply.github.com>
 - Brendan Kirchner <brendankirchner@me.com>
 - Bryan Bartow <bryanbartow@gmail.com>
@@ -28,6 +29,7 @@ needs to be listed here.
 - DwayneCoussement <dwayne.coussement@gmail.com>
 - DwayneCoussement <dwayne.coussement@showpad.com>
 - Eneko Alonso <eneko.alonso@gmail.com>
+- Erin Sparling <erin@everyplace.net>
 - Fabian Fett <fabianfett@apple.com>
 - Filipp Fediakov <julik103@mail.ru>
 - Florent Morin <florentmorin@icloud.com>
@@ -46,7 +48,7 @@ needs to be listed here.
 - Marwane Koutar <100198937+MarwaneKoutar@users.noreply.github.com>
 - Matt Massicotte <85322+mattmassicotte@users.noreply.github.com>
 - Max Desiatov <max@desiatov.com>
-- Natan Rolnik <me@natanrolnik.me>
+- Natan Rolnik <natanrolnik@gmail.com>
 - Norman Maurer <norman_maurer@apple.com>
 - Paul Toffoloni <69189821+ptoffy@users.noreply.github.com>
 - Ralph Küpper <ralph.kuepper@skelpo.com>
