@@ -14,13 +14,17 @@
 //===----------------------------------------------------------------------===//
 
 #if LocalServerSupport
-import DequeModule
-import Dispatch
 import Logging
 import NIOCore
 import NIOHTTP1
 import NIOPosix
-import Synchronization
+
+// for UUID
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 
 // This functionality is designed for local testing when the LocalServerSupport trait is enabled.
 
@@ -96,8 +100,8 @@ extension Lambda {
 internal struct LambdaHTTPServer {
     private let invocationEndpoint: String
 
-    private let invocationPool = Pool<LocalServerInvocation>()
-    private let responsePool = Pool<LocalServerResponse>()
+    private let invocationPool = Pool<LocalServerInvocation>(name: "Invocation Pool")
+    private let responsePool = Pool<LocalServerResponse>(name: "Response Pool")
 
     private init(
         invocationEndpoint: String?
@@ -126,6 +130,7 @@ internal struct LambdaHTTPServer {
         logger: Logger,
         _ closure: sending @escaping () async throws -> Result
     ) async throws -> Result {
+
         let channel = try await ServerBootstrap(group: eventLoopGroup)
             .serverChannelOption(.backlog, value: 256)
             .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
@@ -166,6 +171,8 @@ internal struct LambdaHTTPServer {
         let closureBox = UnsafeTransferBox(value: closure)
         let result = await withTaskGroup(of: TaskResult<Result>.self, returning: Swift.Result<Result, any Error>.self) {
             group in
+
+            // this Task will run the content of the closure we received, typically the Lambda Runtime Client HTTP
             group.addTask {
                 let c = closureBox.value
                 do {
@@ -176,6 +183,7 @@ internal struct LambdaHTTPServer {
                 }
             }
 
+            // this Task will create one subtask to handle each individual connection
             group.addTask {
                 do {
                     // We are handling each incoming connection in a separate child task. It is important
@@ -273,7 +281,7 @@ internal struct LambdaHTTPServer {
 
                             // for streaming requests, push a partial head response
                             if self.isStreamingResponse(requestHead) {
-                                await self.responsePool.push(
+                                self.responsePool.push(
                                     LocalServerResponse(
                                         id: requestId,
                                         status: .ok
@@ -287,7 +295,7 @@ internal struct LambdaHTTPServer {
                             // if this is a request from a Streaming Lambda Handler,
                             // stream the response instead of buffering it
                             if self.isStreamingResponse(requestHead) {
-                                await self.responsePool.push(
+                                self.responsePool.push(
                                     LocalServerResponse(id: requestId, body: body)
                                 )
                             } else {
@@ -299,7 +307,7 @@ internal struct LambdaHTTPServer {
 
                             if self.isStreamingResponse(requestHead) {
                                 // for streaming response, send the final response
-                                await self.responsePool.push(
+                                self.responsePool.push(
                                     LocalServerResponse(id: requestId, final: true)
                                 )
 
@@ -395,36 +403,42 @@ internal struct LambdaHTTPServer {
                 )
             }
             // we always accept the /invoke request and push them to the pool
-            let requestId = "\(DispatchTime.now().uptimeNanoseconds)"
+            let requestId = UUID().uuidString
             logger[metadataKey: "requestId"] = "\(requestId)"
+
             logger.trace("/invoke received invocation, pushing it to the pool and wait for a lambda response")
-            await self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body))
+            self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body))
 
             // wait for the lambda function to process the request
-            for try await response in self.responsePool {
-                logger[metadataKey: "response requestId"] = "\(response.requestId ?? "nil")"
-                logger.trace("Received response to return to client")
-                if response.requestId == requestId {
-                    logger.trace("/invoke requestId is valid, sending the response")
-                    // send the response to the client
-                    // if the response is final, we can send it and return
-                    // if the response is not final, we can send it and wait for the next response
+            // Handle streaming responses by collecting all chunks for this requestId
+            do {
+                var isComplete = false
+                while !isComplete {
+                    let response = try await self.responsePool.next(for: requestId)
+                    logger[metadataKey: "response_requestId"] = "\(response.requestId ?? "nil")"
+                    logger.trace("Received response chunk to return to client")
+
+                    // send the response chunk to the client
                     try await self.sendResponse(response, outbound: outbound, logger: logger)
+
                     if response.final == true {
-                        logger.trace("/invoke returning")
-                        return  // if the response is final, we can return and close the connection
+                        logger.trace("/invoke complete, returning")
+                        isComplete = true
                     }
-                } else {
-                    logger.error(
-                        "Received response for a different request id",
-                        metadata: ["response requestId": "\(response.requestId ?? "")"]
-                    )
-                    // should we return an error here ? Or crash as this is probably a programming error?
                 }
+            } catch let error as LambdaHTTPServer.Pool<LambdaHTTPServer.LocalServerResponse>.PoolError {
+                logger.trace("PoolError caught", metadata: ["error": "\(error)"])
+                // detect concurrent invocations of POST and gently decline the requests while we're processing one.
+                let response = LocalServerResponse(
+                    id: requestId,
+                    status: .internalServerError,
+                    body: ByteBuffer(
+                        string:
+                            "\(error): It is not allowed to invoke multiple Lambda function executions in parallel. (The Lambda runtime environment on AWS will never do that)"
+                    )
+                )
+                try await self.sendResponse(response, outbound: outbound, logger: logger)
             }
-            // What todo when there is no more responses to process?
-            // This should not happen as the async iterator blocks until there is a response to process
-            fatalError("No more responses to process - the async for loop should not return")
 
         // client uses incorrect HTTP method
         case (_, let url) where url.hasSuffix(self.invocationEndpoint):
@@ -448,7 +462,9 @@ internal struct LambdaHTTPServer {
                 logger[metadataKey: "requestId"] = "\(invocation.requestId)"
                 logger.trace("/next retrieved invocation")
                 // tell the lambda function we accepted the invocation
-                return try await sendResponse(invocation.acceptedResponse(), outbound: outbound, logger: logger)
+                try await sendResponse(invocation.acceptedResponse(), outbound: outbound, logger: logger)
+                logger.trace("/next accepted, returning")
+                return
             }
             // What todo when there is no more tasks to process?
             // This should not happen as the async iterator blocks until there is a task to process
@@ -466,7 +482,7 @@ internal struct LambdaHTTPServer {
             }
             // enqueue the lambda function response to be served as response to the client /invoke
             logger.trace("/:requestId/response received response", metadata: ["requestId": "\(requestId)"])
-            await self.responsePool.push(
+            self.responsePool.push(
                 LocalServerResponse(
                     id: requestId,
                     status: .accepted,
@@ -497,7 +513,7 @@ internal struct LambdaHTTPServer {
             }
             // enqueue the lambda function response to be served as response to the client /invoke
             logger.trace("/:requestId/response received response", metadata: ["requestId": "\(requestId)"])
-            await self.responsePool.push(
+            self.responsePool.push(
                 LocalServerResponse(
                     id: requestId,
                     status: .internalServerError,
@@ -553,86 +569,7 @@ internal struct LambdaHTTPServer {
         }
     }
 
-    /// A shared data structure to store the current invocation or response requests and the continuation objects.
-    /// This data structure is shared between instances of the HTTPHandler
-    /// (one instance to serve requests from the Lambda function and one instance to serve requests from the client invoking the lambda function).
-    internal final class Pool<T>: AsyncSequence, AsyncIteratorProtocol, Sendable where T: Sendable {
-        typealias Element = T
-
-        enum State: ~Copyable {
-            case buffer(Deque<T>)
-            case continuation(CheckedContinuation<T, any Error>?)
-        }
-
-        private let lock = Mutex<State>(.buffer([]))
-
-        /// enqueue an element, or give it back immediately to the iterator if it is waiting for an element
-        public func push(_ invocation: T) async {
-            // if the iterator is waiting for an element, give it to it
-            // otherwise, enqueue the element
-            let maybeContinuation = self.lock.withLock { state -> CheckedContinuation<T, any Error>? in
-                switch consume state {
-                case .continuation(let continuation):
-                    state = .buffer([])
-                    return continuation
-
-                case .buffer(var buffer):
-                    buffer.append(invocation)
-                    state = .buffer(buffer)
-                    return nil
-                }
-            }
-
-            maybeContinuation?.resume(returning: invocation)
-        }
-
-        func next() async throws -> T? {
-            // exit the async for loop if the task is cancelled
-            guard !Task.isCancelled else {
-                return nil
-            }
-
-            return try await withTaskCancellationHandler {
-                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, any Error>) in
-                    let nextAction = self.lock.withLock { state -> T? in
-                        switch consume state {
-                        case .buffer(var buffer):
-                            if let first = buffer.popFirst() {
-                                state = .buffer(buffer)
-                                return first
-                            } else {
-                                state = .continuation(continuation)
-                                return nil
-                            }
-
-                        case .continuation:
-                            fatalError("Concurrent invocations to next(). This is illegal.")
-                        }
-                    }
-
-                    guard let nextAction else { return }
-
-                    continuation.resume(returning: nextAction)
-                }
-            } onCancel: {
-                self.lock.withLock { state in
-                    switch consume state {
-                    case .buffer(let buffer):
-                        state = .buffer(buffer)
-                    case .continuation(let continuation):
-                        continuation?.resume(throwing: CancellationError())
-                        state = .buffer([])
-                    }
-                }
-            }
-        }
-
-        func makeAsyncIterator() -> Pool {
-            self
-        }
-    }
-
-    private struct LocalServerResponse: Sendable {
+    struct LocalServerResponse: Sendable {
         let requestId: String?
         let status: HTTPResponseStatus?
         let headers: HTTPHeaders?
@@ -653,7 +590,7 @@ internal struct LambdaHTTPServer {
         }
     }
 
-    private struct LocalServerInvocation: Sendable {
+    struct LocalServerInvocation: Sendable {
         let requestId: String
         let request: ByteBuffer
 
