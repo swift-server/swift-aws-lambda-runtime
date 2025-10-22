@@ -2,7 +2,8 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2024 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright SwiftAWSLambdaRuntime project authors
+// Copyright (c) Amazon.com, Inc. or its affiliates.
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -212,7 +213,7 @@ struct Builder {
                         // On Linux, when the build has been done with Docker,
                         // the source file are owned by root
                         // this causes a permission error **after** the files have been copied
-                        // see https://github.com/swift-server/swift-aws-lambda-runtime/issues/449
+                        // see https://github.com/awslabs/swift-aws-lambda-runtime/issues/449
                         // see https://forums.swift.org/t/filemanager-copyitem-on-linux-fails-after-copying-the-files/77282
 
                         // because this error happens after the files have been copied, we can ignore it

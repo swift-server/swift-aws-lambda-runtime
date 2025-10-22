@@ -1,6 +1,9 @@
-# API Gateway 
+# HTTPS API Gateway 
 
-This is a simple example of an AWS Lambda function invoked through an Amazon API Gateway.
+This is a simple example of an AWS Lambda function invoked through an Amazon HTTPS API Gateway.
+
+> [!NOTE]
+> This example uses the API Gateway V2 `Http Api` endpoint type, whereas the [API Gateway V1](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/APIGatewayV1) example uses the `Rest Api` endpoint type. For more information, see [Choose between REST APIs and HTTP APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-vs-rest.html).
 
 ## Code 
 
@@ -14,7 +17,7 @@ The handler is `(event: APIGatewayV2Request, context: LambdaContext) -> APIGatew
 
 The function must return a `APIGatewayV2Response`.
 
-`APIGatewayV2Request` and `APIGatewayV2Response` are defined in the [Swift AWS Lambda Events](https://github.com/swift-server/swift-aws-lambda-events) library.
+`APIGatewayV2Request` and `APIGatewayV2Response` are defined in the [Swift AWS Lambda Events](https://github.com/awslabs/swift-aws-lambda-events) library.
 
 ## Build & Package 
 
@@ -122,3 +125,13 @@ When done testing, you can delete the infrastructure with this command.
 ```bash
 sam delete 
 ```
+
+## ⚠️ Security and Reliability Notice
+
+These are example applications for demonstration purposes. When deploying such infrastructure in production environments, we strongly encourage you to follow these best practices for improved security and resiliency:
+
+- Enable access logging on API Gateway ([documentation](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-logging.html))
+- Ensure that AWS Lambda function is configured for function-level concurrent execution limit ([concurrency documentation](https://docs.aws.amazon.com/lambda/latest/dg/lambda-concurrency.html), [configuration guide](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html))
+- Check encryption settings for Lambda environment variables ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars-encryption.html))
+- Ensure that AWS Lambda function is configured for a Dead Letter Queue (DLQ) ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html#invocation-dlq))
+- Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html), [code example](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres))

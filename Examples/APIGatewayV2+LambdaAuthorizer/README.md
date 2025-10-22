@@ -1,6 +1,6 @@
-# Lambda Authorizer with API Gateway 
+# Lambda Authorizer with HTTPS API Gateway 
 
-This is an example of a Lambda Authorizer function.  There are two Lambda functions in this example. The first one is the authorizer function. The second one is the business function. The business function is exposed through a REST API using the API Gateway. The API Gateway is configured to use the authorizer function to implement a custom logic to authorize the requests. 
+This is an example of a Lambda Authorizer function.  There are two Lambda functions in this example. The first one is the authorizer function. The second one is the business function. The business function is exposed through a REST API using the HTTPS API Gateway. The API Gateway is configured to use the authorizer function to implement a custom logic to authorize the requests. 
 
 >[!NOTE]
 > If your application is protected by JWT tokens, it's recommended to use [the native JWT authorizer provided by the API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html). The Lambda authorizer is useful when you need to implement a custom authorization logic. See the [OAuth 2.0/JWT authorizer example for AWS SAM](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-controlling-access-to-apis-oauth2-authorizer.html) to learn how to use the native JWT authorizer with SAM.
@@ -110,3 +110,13 @@ When done testing, you can delete the infrastructure with this command.
 ```bash
 sam delete --stack-name APIGatewayWithLambdaAuthorizer
 ```
+
+## ⚠️ Security and Reliability Notice
+
+These are example applications for demonstration purposes. When deploying such infrastructure in production environments, we strongly encourage you to follow these best practices for improved security and resiliency:
+
+- Enable access logging on API Gateway ([documentation](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-logging.html))
+- Ensure that AWS Lambda function is configured for function-level concurrent execution limit ([concurrency documentation](https://docs.aws.amazon.com/lambda/latest/dg/lambda-concurrency.html), [configuration guide](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html))
+- Check encryption settings for Lambda environment variables ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars-encryption.html))
+- Ensure that AWS Lambda function is configured for a Dead Letter Queue (DLQ) ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html#invocation-dlq))
+- Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html), [code example](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres))

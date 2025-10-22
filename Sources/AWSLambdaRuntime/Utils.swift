@@ -2,7 +2,8 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright SwiftAWSLambdaRuntime project authors
+// Copyright (c) Amazon.com, Inc. or its affiliates.
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -24,7 +25,6 @@ enum Consts {
     static let postResponseURLSuffix = "/response"
     static let postErrorURLSuffix = "/error"
     static let postInitErrorURL = "\(apiPrefix)/runtime/init/error"
-    static let functionError = "FunctionError"
     static let initializationError = "InitializationError"
 }
 

@@ -9,13 +9,12 @@ let package = Package(
     name: "swift-aws-lambda-runtime-example",
     platforms: [.macOS(.v15)],
     products: [
-        .executable(name: "APIGatewayLambda", targets: ["APIGatewayLambda"]),
-        .executable(name: "AuthorizerLambda", targets: ["AuthorizerLambda"]),
+        .executable(name: "APIGatewayLambda", targets: ["APIGatewayLambda"])
     ],
     dependencies: [
         // during CI, the dependency on local version of swift-aws-lambda-runtime is added dynamically below
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0"),
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-events.git", from: "1.0.0"),
+        .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
+        .package(url: "https://github.com/awslabs/swift-aws-lambda-events.git", from: "1.0.0"),
     ],
     targets: [
         .executableTarget(
@@ -23,15 +22,9 @@ let package = Package(
             dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
                 .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
-            ]
-        ),
-        .executableTarget(
-            name: "AuthorizerLambda",
-            dependencies: [
-                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-                .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
-            ]
-        ),
+            ],
+            path: "Sources"
+        )
     ]
 )
 
@@ -44,7 +37,7 @@ if let localDepsPath = Context.environment["LAMBDA_USE_LOCAL_DEPS"],
     let indexToRemove = package.dependencies.firstIndex { dependency in
         if case .sourceControl(
             name: _,
-            location: "https://github.com/swift-server/swift-aws-lambda-runtime.git",
+            location: "https://github.com/awslabs/swift-aws-lambda-runtime.git",
             requirement: _
         ) = dependency.kind {
             return true

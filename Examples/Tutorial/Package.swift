@@ -9,7 +9,7 @@ let package = Package(
     name: "Palindrome",
     platforms: [.macOS(.v15)],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0")
+        .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -32,7 +32,7 @@ if let localDepsPath = Context.environment["LAMBDA_USE_LOCAL_DEPS"],
     let indexToRemove = package.dependencies.firstIndex { dependency in
         if case .sourceControl(
             name: _,
-            location: "https://github.com/swift-server/swift-aws-lambda-runtime.git",
+            location: "https://github.com/awslabs/swift-aws-lambda-runtime.git",
             requirement: _
         ) = dependency.kind {
             return true

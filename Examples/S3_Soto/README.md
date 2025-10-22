@@ -14,7 +14,7 @@ The handler is `(event: APIGatewayV2Request, context: LambdaContext) -> APIGatew
 
 The function must return a `APIGatewayV2Response`.
 
-`APIGatewayV2Request` and `APIGatewayV2Response` are defined in the [Swift AWS Lambda Events](https://github.com/swift-server/swift-aws-lambda-events) library.
+`APIGatewayV2Request` and `APIGatewayV2Response` are defined in the [Swift AWS Lambda Events](https://github.com/awslabs/swift-aws-lambda-events) library.
 
 The handler creates two clients : an AWS client that manages the communication with AWS API and and the S3 client that expose the S3 API. Then, the handler calls `listBuckets()` on the S3 client and receives an output response.
 Finally, the handler extracts the list of bucket names from the output to create a `\n`-separated list of names, as a `String`.
@@ -87,3 +87,13 @@ When done testing, you can delete the infrastructure with this command.
 ```bash
 sam delete 
 ```
+
+## ⚠️ Security and Reliability Notice
+
+These are example applications for demonstration purposes. When deploying such infrastructure in production environments, we strongly encourage you to follow these best practices for improved security and resiliency:
+
+- Enable access logging on API Gateway ([documentation](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-logging.html))
+- Ensure that AWS Lambda function is configured for function-level concurrent execution limit ([concurrency documentation](https://docs.aws.amazon.com/lambda/latest/dg/lambda-concurrency.html), [configuration guide](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html))
+- Check encryption settings for Lambda environment variables ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars-encryption.html))
+- Ensure that AWS Lambda function is configured for a Dead Letter Queue (DLQ) ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html#invocation-dlq))
+- Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html), [code example](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres))

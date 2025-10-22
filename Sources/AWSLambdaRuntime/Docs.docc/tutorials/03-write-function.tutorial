@@ -69,7 +69,7 @@
             @Step {
                 Add the `dependencies` section.
 
-                It defines what external libraries your code depends on. To run code within AWS Lambda you'll need a runtime that handles the communication with the [Lambda Runtime Interface](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html). This is what the `AWSLambdaRuntime` is for. You import it by specifying its GitHub url: `https://github.com/swift-server/swift-aws-lambda-runtime.git`.
+                It defines what external libraries your code depends on. To run code within AWS Lambda you'll need a runtime that handles the communication with the [Lambda Runtime Interface](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html). This is what the `AWSLambdaRuntime` is for. You import it by specifying its GitHub url: `https://github.com/awslabs/swift-aws-lambda-runtime.git`.
 
                 @Code(name: "Package.swift", file: 03-02-03-package.swift)
             }
@@ -104,7 +104,7 @@
 
                 Input parameters must conform to the `Decodable` protocol. This ensures that your Lambda function accepts any JSON input.
 
-                > When your function is triggered by another AWS service, we modeled most of the input and output data format for you. You can add the dependency on [https://github.com/swift-server/swift-aws-lambda-events](https://github.com/swift-server/swift-aws-lambda-events) and import `AWSLambdaEvents` in your code.
+                > When your function is triggered by another AWS service, we modeled most of the input and output data format for you. You can add the dependency on [https://github.com/awslabs/swift-aws-lambda-events](https://github.com/awslabs/swift-aws-lambda-events) and import `AWSLambdaEvents` in your code.
 
                 @Code(name: "main.swift", file: 03-03-01-main.swift)
             }
@@ -114,7 +114,7 @@
 
                 Output parameters must conform to the `Encodable` protocol. This ensures that your Lambda function returns a valid JSON output. Your function might also return `Void` if it does not return any value.
 
-                > You can also write function that stream a response back to the caller. This is useful when you have a large amount of data to return. See the [Lambda Streaming example](https://github.com/swift-server/swift-aws-lambda-runtime/tree/main/Examples/Streaming) for more information.
+                > You can also write function that stream a response back to the caller. This is useful when you have a large amount of data to return. See the [Lambda Streaming example](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/Streaming) for more information.
 
                 @Code(name: "main.swift", file: 03-03-02-main.swift)
             }

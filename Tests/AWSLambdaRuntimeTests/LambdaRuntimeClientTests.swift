@@ -2,7 +2,8 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2024 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright SwiftAWSLambdaRuntime project authors
+// Copyright (c) Amazon.com, Inc. or its affiliates.
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -327,6 +328,80 @@ struct LambdaRuntimeClientTests {
                 } catch {
                     Issue.record("Unexpected error type: \(error)")
                 }
+            }
+        }
+    }
+
+    @Test(
+        "reportError() sends the correct errorType for different Error types"
+    )
+    @available(LambdaSwift 2.0, *)
+    func testReportErrorReturnsProperErrorType() async throws {
+        // Custom error types for testing
+        struct MyCustomError: Error {
+            let message: String
+        }
+
+        enum MyEnumError: Error {
+            case anotherCase(String)
+        }
+
+        struct ErrorReportingBehavior: LambdaServerBehavior {
+            let requestId = UUID().uuidString
+            let event = "error-testing"
+            let expectedErrorType: String
+
+            func getInvocation() -> GetInvocationResult {
+                .success((self.requestId, self.event))
+            }
+
+            func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
+                Issue.record("should not process response, expecting error report")
+                return .failure(.internalServerError)
+            }
+
+            func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                #expect(self.requestId == requestId)
+                #expect(
+                    error.errorType == self.expectedErrorType,
+                    "Expected errorType '\(self.expectedErrorType)' but got '\(error.errorType)'"
+                )
+                return .success(())
+            }
+
+            func processInitError(error: ErrorResponse) -> Result<Void, ProcessErrorError> {
+                Issue.record("should not report init error")
+                return .failure(.internalServerError)
+            }
+        }
+
+        // Test with MyCustomError
+        try await withMockServer(behaviour: ErrorReportingBehavior(expectedErrorType: "MyCustomError")) { port in
+            let configuration = LambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: port)
+
+            try await LambdaRuntimeClient.withRuntimeClient(
+                configuration: configuration,
+                eventLoop: NIOSingletons.posixEventLoopGroup.next(),
+                logger: self.logger
+            ) { runtimeClient in
+                let (_, writer) = try await runtimeClient.nextInvocation()
+                let error = MyCustomError(message: "Something went wrong")
+                try await writer.reportError(error)
+            }
+        }
+
+        // Test with MyEnumError
+        try await withMockServer(behaviour: ErrorReportingBehavior(expectedErrorType: "MyEnumError")) { port in
+            let configuration = LambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: port)
+
+            try await LambdaRuntimeClient.withRuntimeClient(
+                configuration: configuration,
+                eventLoop: NIOSingletons.posixEventLoopGroup.next(),
+                logger: self.logger
+            ) { runtimeClient in
+                let (_, writer) = try await runtimeClient.nextInvocation()
+                let error = MyEnumError.anotherCase("test")
+                try await writer.reportError(error)
             }
         }
     }

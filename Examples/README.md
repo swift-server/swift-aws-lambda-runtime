@@ -16,9 +16,11 @@ This directory contains example code for Lambda functions.
 
 ## Examples 
 
-- **[API Gateway](APIGateway/README.md)**: an HTTPS REST API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) and a Lambda function as backend (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
+- **[API Gateway V1](APIGatewayV1/README.md)**: an REST API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) and a Lambda function as backend (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
 
-- **[API Gateway with Lambda Authorizer](APIGateway+LambdaAuthorizer/README.md)**: an HTTPS REST API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) protected by a Lambda authorizer (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
+- **[API Gateway V2](APIGatewayV2/README.md)**: an HTTPS API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) and a Lambda function as backend (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
+
+- **[API Gateway V2 with Lambda Authorizer](APIGatewayV2+LambdaAuthorizer/README.md)**: an HTTPS API with [Amazon API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) protected by a Lambda authorizer (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
 
 - **[BackgroundTasks](BackgroundTasks/README.md)**: a Lambda function that continues to run background tasks after having sent the response (requires [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
 
@@ -71,3 +73,13 @@ To obtain these keys, you need an AWS account:
 4. **(Optional) Generate Temporary Security Credentials**: If you’re using temporary credentials (which are more secure for short-term access), use AWS Security Token Service (STS). You can call the `GetSessionToken` or `AssumeRole` API to generate temporary credentials, including a session token.
 
 With these in hand, you can use AWS SigV4 to securely sign your requests and interact with AWS services from your Swift app.
+
+## ⚠️ Security and Reliability Notice
+
+These are example applications for demonstration purposes. When deploying such infrastructure in production environments, we strongly encourage you to follow these best practices for improved security and resiliency:
+
+- Enable access logging on API Gateway ([documentation](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-logging.html))
+- Ensure that AWS Lambda function is configured for function-level concurrent execution limit ([concurrency documentation](https://docs.aws.amazon.com/lambda/latest/dg/lambda-concurrency.html), [configuration guide](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html))
+- Check encryption settings for Lambda environment variables ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars-encryption.html))
+- Ensure that AWS Lambda function is configured for a Dead Letter Queue (DLQ) ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html#invocation-dlq))
+- Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources ([documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html), [code example](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres))

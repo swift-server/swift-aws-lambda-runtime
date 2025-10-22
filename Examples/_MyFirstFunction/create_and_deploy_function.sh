@@ -3,7 +3,8 @@
 ##
 ## This source file is part of the SwiftAWSLambdaRuntime open source project
 ##
-## Copyright (c) 2017-2024 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+## Copyright SwiftAWSLambdaRuntime project authors
+## Copyright (c) Amazon.com, Inc. or its affiliates.
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -79,8 +80,8 @@ create_swift_project() {
 
     echo "📦 Add the AWS Lambda Swift runtime to your project"
     # The following commands are commented out until the `lambad-init` plugin will be release
-    # swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --from 2.0.0
-    # swift package add-dependency https://github.com/swift-server/swift-aws-lambda-events.git --from 1.0.0
+    # swift package add-dependency https://github.com/awslabs/swift-aws-lambda-runtime.git --from 2.0.0
+    # swift package add-dependency https://github.com/awslabs/swift-aws-lambda-events.git --from 1.0.0
     # swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime
     # swift package add-target-dependency AWSLambdaEvents MyLambda --package swift-aws-lambda-events
     cat <<EOF > Package.swift
@@ -95,7 +96,7 @@ let package = Package(
         .executable(name: "MyLambda", targets: ["MyLambda"])
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server/swift-aws-lambda-runtime.git", from: "2.0.0")
+        .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0")
     ],
     targets: [
         .executableTarget(

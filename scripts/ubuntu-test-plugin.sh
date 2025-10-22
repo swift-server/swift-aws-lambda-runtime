@@ -3,7 +3,8 @@
 ##
 ## This source file is part of the SwiftAWSLambdaRuntime open source project
 ##
-## Copyright (c) 2025 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+## Copyright SwiftAWSLambdaRuntime project authors
+## Copyright (c) Amazon.com, Inc. or its affiliates.
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -18,7 +19,7 @@
 export PATH=/home/ubuntu/swift-6.0.3-RELEASE-ubuntu24.04-aarch64/usr/bin:"${PATH}"
 
 # clone a project 
-git clone https://github.com/swift-server/swift-aws-lambda-runtime.git
+git clone https://github.com/awslabs/swift-aws-lambda-runtime.git
 
 # be sure Swift is install.  
 # Youc an install swift with the following command: ./scripts/ubuntu-install-swift.sh

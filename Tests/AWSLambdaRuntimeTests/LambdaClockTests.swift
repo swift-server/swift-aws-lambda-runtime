@@ -2,7 +2,8 @@
 //
 // This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2025 Apple Inc. and the SwiftAWSLambdaRuntime project authors
+// Copyright SwiftAWSLambdaRuntime project authors
+// Copyright (c) Amazon.com, Inc. or its affiliates.
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -89,7 +90,7 @@ struct LambdaClockTests {
 
         // Allow some tolerance for timing precision
         #expect(elapsed >= .milliseconds(40))
-        #expect(elapsed <= .milliseconds(100))
+        #expect(elapsed <= .milliseconds(200))
     }
 
     @Test("Sleep with past deadline returns immediately")

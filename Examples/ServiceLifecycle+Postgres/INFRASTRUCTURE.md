@@ -56,7 +56,7 @@ The infrastructure consists of a secure VPC setup with private subnets only, con
 ### Service Lifecycle Lambda
 - **Runtime**: Custom runtime (provided.al2)
 - **Architecture**: ARM64
-- **Memory**: 512MB
+- **Memory**: 128MB
 - **Timeout**: 60 seconds
 - **Network**: Deployed in private subnets with access to database within VPC
 - **Environment Variables**:
