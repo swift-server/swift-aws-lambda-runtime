@@ -358,7 +358,7 @@ You can learn how to deploy and invoke this function in [the streaming codable e
 
  Most Lambda functions are triggered by events originating in other AWS services such as `Amazon SNS`, `Amazon SQS` or `AWS APIGateway`.
 
- The [Swift AWS Lambda Events](http://github.com/swift-server/swift-aws-lambda-events) package includes an `AWSLambdaEvents` module that provides implementations for most common AWS event types further simplifying writing Lambda functions.
+ The [Swift AWS Lambda Events](http://github.com/awslabs/swift-aws-lambda-events) package includes an `AWSLambdaEvents` module that provides implementations for most common AWS event types further simplifying writing Lambda functions.
 
 > [!IMPORTANT]
 > This library has no dependencies on the AWS Lambda Events library. It is safe to use AWS Lambda v1.x with this Lambda Runtime v2.
