@@ -132,7 +132,7 @@ Outputs:
   ApiGatewayUrl:
     Description: API Gateway endpoint URL
     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
-  
+
   ALBUrl:
     Description: Application Load Balancer URL
     Value: !Sub "http://${ApplicationLoadBalancer.DNSName}"
