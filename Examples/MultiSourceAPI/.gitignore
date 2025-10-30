@@ -7,3 +7,5 @@ DerivedData/
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
 Package.resolved
+aws-sam
+samconfig.toml
