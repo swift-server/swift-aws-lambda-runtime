@@ -62,7 +62,7 @@ Otherwise, continue reading.
 
 ```bash
 mkdir MyLambda && cd MyLambda
-swift package init --type executable
+swift package init --type executable --name MyLambda
 ```
 
 2. Prepare your `Package.swift` file
@@ -71,7 +71,7 @@ swift package init --type executable
 
     ```bash
     swift package add-dependency https://github.com/awslabs/swift-aws-lambda-runtime.git --from 2.0.0
-    swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime --from 1.0.0
+    swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime
     ```
 
     2.2 (Optional - only on macOS) Add `platforms` after `name`
