@@ -1,8 +1,7 @@
 #!/bin/sh
 
 # check if docker is installed
-which docker > /dev/null
-if [[ $? != 0 ]]; then
+if ! which docker > /dev/null; then
     echo "Docker is not installed.  Please install Docker and try again."
     exit 1
 fi
@@ -13,11 +12,12 @@ echo "This script creates and deploys a Lambda function on your AWS Account.
 You must have an AWS account and know an AWS access key, secret access key, and an optional session token.  These values are read from '~/.aws/credentials' or asked interactively.
 "
 
-read -p "Are you ready to create your first Lambda function in Swift? [y/n] " continue
-if [[ continue != ^[Yy]$ ]]; then
-  echo "OK, try again later when you feel ready"
-  exit 1
-fi
+printf "Are you ready to create your first Lambda function in Swift? [y/n] "
+read -r continue
+case $continue in
+    [Yy]*) ;;
+    *) echo "OK, try again later when you feel ready"; exit 1 ;;
+esac
 
 echo "⚡️ Create your Swift command line project"
 swift package init --type executable --name MyLambda
