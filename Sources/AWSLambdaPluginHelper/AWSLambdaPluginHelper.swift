@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 @main
+@available(LambdaSwift 2.0, *)
 struct AWSLambdaPluginHelper {
 
     private enum Command: String {

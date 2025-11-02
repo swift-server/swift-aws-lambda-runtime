@@ -145,7 +145,8 @@ let package = Package(
             dependencies: [
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOCore", package: "swift-nio"),
-            ]
+            ],
+            swiftSettings: defaultSwiftSettings
         ),
         .testTarget(
             name: "AWSLambdaRuntimeTests",
@@ -173,7 +174,8 @@ let package = Package(
             dependencies: [
                 .byName(name: "AWSLambdaPluginHelper"),
                 .product(name: "Logging", package: "swift-log"),
-            ]
+            ],
+            swiftSettings: defaultSwiftSettings
         ),
 
     ]
