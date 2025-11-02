@@ -171,7 +171,8 @@ let package = Package(
         .testTarget(
             name: "AWSLambdaPluginHelperTests",
             dependencies: [
-                .byName(name: "AWSLambdaPluginHelper")
+                .byName(name: "AWSLambdaPluginHelper"),
+                .product(name: "Logging", package: "swift-log"),
             ]
         ),
 
