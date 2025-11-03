@@ -384,7 +384,48 @@ try await runtime.run()
 
 ### Integration with Swift Service LifeCycle
 
-Support for [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle) is currently being implemented. You can follow https://github.com/awslabs/swift-aws-lambda-runtime/issues/374 for more details and the current status. Your contributions are welcome.
+The Swift AWS Lambda Runtime provides built-in support for [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle), allowing you to manage the lifecycle of your Lambda runtime alongside other services like database clients, HTTP clients, or any other resources that need proper initialization and cleanup.
+
+Here's how to integrate your Lambda function with ServiceLifecycle to manage multiple services:
+
+```swift
+import AWSLambdaRuntime
+import ServiceLifecycle
+import PostgresNIO
+
+@main
+struct LambdaFunction {
+    private func start() async throws {
+        // Create a database client 
+        let pgClient = PostgresClient(configuration: /* your config */)
+
+        // Create the Lambda runtime
+        let lambdaRuntime = LambdaRuntime(body: self.handler)
+
+        // Use ServiceLifecycle to manage both the database client and Lambda runtime
+        let serviceGroup = ServiceGroup(
+            services: [pgClient, lambdaRuntime],
+            gracefulShutdownSignals: [.sigterm],
+            cancellationSignals: [.sigint],
+            logger: self.logger
+        )
+
+        // Start all services - this will handle initialization and cleanup
+        try await serviceGroup.run()
+    }
+
+    private func handler(event: String, context: LambdaContext) async throws -> String {
+        // Your Lambda function logic here
+        return "Hello, World!"
+    }
+
+    static func main() async throws {
+        try await LambdaFunction().start()
+    }
+}
+```
+
+You can see a complete working example in the [ServiceLifecycle+Postgres example](Examples/ServiceLifecycle+Postgres/README.md), which demonstrates how to manage a PostgreSQL client alongside the Lambda runtime using ServiceLifecycle.
 
 ### Use Lambda Background Tasks
 
