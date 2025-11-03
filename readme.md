@@ -6,14 +6,16 @@ You can read [the Swift AWS Lambda Runtime documentation](https://swiftpackagein
 This guide contains the following sections:
 
 - [The Swift AWS Lambda Runtime](#the-swift-aws-lambda-runtime)
-- [Pre-requisites](#pre-requisites)
+- [Prerequisites](#prerequisites)
 - [Getting started](#getting-started)
 - [Developing your Swift Lambda functions](#developing-your-swift-lambda-functions)
 - [Testing Locally](#testing-locally)
 - [Deploying your Swift Lambda functions](#deploying-your-swift-lambda-functions)
 - [Swift AWS Lambda Runtime - Design Principles](#swift-aws-lambda-runtime---design-principles)
 
-The Swift runtime client is an experimental package. It is subject to change and intended only for evaluation purposes.
+The Swift runtime client is [an incubated packages as part of the Swift Server Workgroup incubation process](https://www.swift.org/sswg/incubated-packages.html). It is an experimental package, subject to change, and intended only for evaluation purposes.
+
+Open [issues on GitHub for support requests](https://github.com/awslabs/swift-aws-lambda-runtime/issues).
 
 ## The Swift AWS Lambda Runtime
 
@@ -27,7 +29,7 @@ Combine this with Swift's developer friendliness, expressiveness, and emphasis o
 
 Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift simple and safe. The library is an implementation of the [AWS Lambda Runtime API](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-custom.html) and uses an embedded asynchronous HTTP Client based on [SwiftNIO](http://github.com/apple/swift-nio) that is fine-tuned for performance in the AWS Runtime context. The library provides a multi-tier API that allows building a range of Lambda functions: From quick and simple closures to complex, performance-sensitive event handlers.
 
-## Pre-requisites
+## Prerequisites
 
 - Ensure you have the Swift 6.x toolchain installed.  You can [install Swift toolchains](https://www.swift.org/install/macos/) from Swift.org
 
@@ -378,7 +380,7 @@ let runtime = LambdaRuntime {
 try await runtime.run()
 ```
 
- You can learn how to deploy and invoke this function in [the API Gateway example README file](Examples/APIGateway/README.md).
+ You can learn how to deploy and invoke this function in [the API Gateway example README file](Examples/APIGatewayV2/README.md).
 
 ### Integration with Swift Service LifeCycle
 
@@ -530,9 +532,9 @@ Please refer to [the full deployment guide available in the documentation](https
 
 ## Swift AWS Lambda Runtime - Design Principles
 
-The [design document](Sources/AWSLambdaRuntime/Documentation.docc/Proposals/0001-v2-api.md) details the v2 API proposal for the swift-aws-lambda-runtime library, which aims to enhance the developer experience for building serverless functions in Swift.
+The [design document](Sources/AWSLambdaRuntime/Docs.docc/Proposals/0001-v2-api.md) details the v2 API proposal for the swift-aws-lambda-runtime library, which aims to enhance the developer experience for building serverless functions in Swift.
 
-The proposal has been reviewed and [incorporated feedback from the community](https://forums.swift.org/t/aws-lambda-v2-api-proposal/73819). The full v2 API design document is available [in this repository](Sources/AWSLambdaRuntime/Documentation.docc/Proposals/0001-v2-api.md).
+The proposal has been reviewed and [incorporated feedback from the community](https://forums.swift.org/t/aws-lambda-v2-api-proposal/73819). The full v2 API design document is available [in this repository](Sources/AWSLambdaRuntime/Docs.docc/Proposals/0001-v2-api.md).
 
 ### Key Design Principles
 
