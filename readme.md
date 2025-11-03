@@ -13,7 +13,7 @@ This guide contains the following sections:
 - [Deploying your Swift Lambda functions](#deploying-your-swift-lambda-functions)
 - [Swift AWS Lambda Runtime - Design Principles](#swift-aws-lambda-runtime---design-principles)
 
-The Swift runtime client is [an incubated packages as part of the Swift Server Workgroup incubation process](https://www.swift.org/sswg/incubated-packages.html). It is an experimental package, subject to change, and intended only for evaluation purposes.
+The Swift runtime client is [incubating as part of the Swift Server Workgroup incubation process](https://www.swift.org/sswg/incubated-packages.html). It is an experimental package, subject to change, and intended only for evaluation purposes.
 
 Open [issues on GitHub for support requests](https://github.com/awslabs/swift-aws-lambda-runtime/issues).
 
