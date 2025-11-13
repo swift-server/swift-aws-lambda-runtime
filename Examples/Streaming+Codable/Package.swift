@@ -20,7 +20,7 @@ let package = Package(
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
                 .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
             ],
-            swiftSettings: [ .enableExperimentalFeature("NonisolatedNonsendingByDefault")]
+            swiftSettings: [.enableExperimentalFeature("NonisolatedNonsendingByDefault")]
         ),
         .testTarget(
             name: "Streaming+CodableTests",
@@ -28,7 +28,7 @@ let package = Package(
                 "StreamingCodable",
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
             ],
-            swiftSettings: [ .enableExperimentalFeature("NonisolatedNonsendingByDefault")]
+            swiftSettings: [.enableExperimentalFeature("NonisolatedNonsendingByDefault")]
         ),
     ]
 )
