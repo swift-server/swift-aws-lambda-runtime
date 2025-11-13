@@ -500,7 +500,8 @@ struct LambdaResponseStreamWriterHeadersTests {
 
         // Verify events (we know the first two buffers are headers)
         let eventBuffers = [
-            await writer.writtenBuffers[2], await writer.writtenBuffers[3], await writer.writtenBuffers[4], await writer.writtenBuffers[5],
+            await writer.writtenBuffers[2], await writer.writtenBuffers[3], await writer.writtenBuffers[4],
+            await writer.writtenBuffers[5],
         ]
         let eventStrings = eventBuffers.map { String(buffer: $0) }
         #expect(eventStrings[0] == "data: Event 1\n\n")
