@@ -28,7 +28,7 @@ let package = Package(
                 "StreamingCodable",
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
             ],
-            swiftSettings: [.enableExperimentalFeature("NonisolatedNonsendingByDefault")]
+            swiftSettings: [.enableUpcomingFeature("NonisolatedNonsendingByDefault")]
         ),
     ]
 )
