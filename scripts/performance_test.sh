@@ -19,7 +19,7 @@ error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
 
 export HOST=127.0.0.1
-export PORT=7000
+export PORT=7777
 export AWS_LAMBDA_RUNTIME_API="$HOST:$PORT"
 export LOG_LEVEL=error # important, otherwise log becomes a bottleneck
 
