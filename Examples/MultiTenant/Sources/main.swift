@@ -24,8 +24,6 @@ import Foundation
 
 let tenants = TenantDataStore()
 
-// let runtime = LambdaRuntime {
-//     (event: APIGatewayV2Request, context: LambdaContext) -> APIGatewayV2Response in
 let runtime = LambdaRuntime {
     (event: APIGatewayRequest, context: LambdaContext) -> APIGatewayResponse in
 
