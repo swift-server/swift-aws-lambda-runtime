@@ -73,6 +73,7 @@ public enum Lambda {
                         context: LambdaContext(
                             requestID: invocation.metadata.requestID,
                             traceID: invocation.metadata.traceID,
+                            tenantID: invocation.metadata.tenantID,
                             invokedFunctionARN: invocation.metadata.invokedFunctionARN,
                             deadline: LambdaClock.Instant(
                                 millisecondsSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch

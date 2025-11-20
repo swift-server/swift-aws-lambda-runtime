@@ -89,6 +89,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     final class _Storage: Sendable {
         let requestID: String
         let traceID: String
+        let tenantID: String?
         let invokedFunctionARN: String
         let deadline: LambdaClock.Instant
         let cognitoIdentity: String?
@@ -98,6 +99,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         init(
             requestID: String,
             traceID: String,
+            tenantID: String?,
             invokedFunctionARN: String,
             deadline: LambdaClock.Instant,
             cognitoIdentity: String?,
@@ -106,6 +108,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         ) {
             self.requestID = requestID
             self.traceID = traceID
+            self.tenantID = tenantID
             self.invokedFunctionARN = invokedFunctionARN
             self.deadline = deadline
             self.cognitoIdentity = cognitoIdentity
@@ -124,6 +127,11 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     /// The AWS X-Ray tracing header.
     public var traceID: String {
         self.storage.traceID
+    }
+
+    /// The Tenant ID.
+    public var tenantID: String? {
+        self.storage.tenantID
     }
 
     /// The ARN of the Lambda function, version, or alias that's specified in the invocation.
@@ -156,6 +164,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     public init(
         requestID: String,
         traceID: String,
+        tenantID: String? = nil,
         invokedFunctionARN: String,
         deadline: LambdaClock.Instant,
         cognitoIdentity: String? = nil,
@@ -165,6 +174,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         self.storage = _Storage(
             requestID: requestID,
             traceID: traceID,
+            tenantID: tenantID,
             invokedFunctionARN: invokedFunctionARN,
             deadline: deadline,
             cognitoIdentity: cognitoIdentity,
@@ -187,6 +197,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     package static func __forTestsOnly(
         requestID: String,
         traceID: String,
+        tenantID: String? = nil,
         invokedFunctionARN: String,
         timeout: Duration,
         logger: Logger
@@ -194,6 +205,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         LambdaContext(
             requestID: requestID,
             traceID: traceID,
+            tenantID: tenantID,
             invokedFunctionARN: invokedFunctionARN,
             deadline: LambdaClock().now.advanced(by: timeout),
             logger: logger
