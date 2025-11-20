@@ -34,7 +34,7 @@ The example consists of:
 1. **TenantData** - Immutable struct tracking tenant information:
    - `tenantID`: Unique identifier for the tenant
    - `requestCount`: Total number of requests from this tenant
-   - `firstRequest`: ISO 8601 timestamp of the first request
+   - `firstRequest`: Unix timestamp (seconds since epoch) of the first request
    - `requests`: Array of individual request records
 
 2. **TenantDataStore** - Actor-based storage providing thread-safe access to tenant data across invocations
@@ -71,10 +71,10 @@ actor TenantDataStore {
 
 // Lambda handler extracts tenant ID from context
 let runtime = LambdaRuntime {
-    (event: APIGatewayV2Request, context: LambdaContext) -> APIGatewayV2Response in
+    (event: APIGatewayRequest, context: LambdaContext) -> APIGatewayResponse in
     
     guard let tenantID = context.tenantID else {
-        return APIGatewayV2Response(statusCode: .badRequest, body: "No Tenant ID provided")
+        return APIGatewayResponse(statusCode: .badRequest, body: "No Tenant ID provided")
     }
     
     // Process request for this tenant
@@ -82,7 +82,7 @@ let runtime = LambdaRuntime {
     let updatedData = currentData.addingRequest()
     await tenants.update(id: tenantID, data: updatedData)
     
-    return try APIGatewayV2Response(statusCode: .ok, encodableBody: updatedData)
+    return try APIGatewayResponse(statusCode: .ok, encodableBody: updatedData)
 }
 ```
 
@@ -90,10 +90,33 @@ let runtime = LambdaRuntime {
 
 ### SAM Template (template.yaml)
 
-The function is configured with tenant isolation mode in the SAM template:
+The function is configured with tenant isolation mode and API Gateway parameter mapping in the SAM template:
 
 ```yaml
-APIGatewayLambda:
+# API Gateway REST API with parameter mapping
+MultiTenantApi:
+  Type: AWS::Serverless::Api
+  Properties:
+    StageName: Prod
+    DefinitionBody:
+      openapi: 3.0.1
+      paths:
+        /:
+          get:
+            parameters:
+              - name: tenant-id
+                in: query
+                required: true
+            x-amazon-apigateway-integration:
+              type: aws_proxy
+              httpMethod: POST
+              uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MultiTenantLambda.Arn}/invocations
+              # Map query parameter to Lambda tenant header
+              requestParameters:
+                integration.request.header.X-Amz-Tenant-Id: method.request.querystring.tenant-id
+
+# Lambda function with tenant isolation
+MultiTenantLambda:
   Type: AWS::Serverless::Function
   Properties:
     Runtime: provided.al2023
@@ -102,16 +125,30 @@ APIGatewayLambda:
     # Enable tenant isolation mode
     TenancyConfig:
       TenantIsolationMode: PER_TENANT
-    Events:
-      HttpApiEvent:
-        Type: HttpApi
 ```
 
 ### Key Configuration Points
 
 - **TenancyConfig.TenantIsolationMode**: Set to `PER_TENANT` to enable tenant isolation
+- **Parameter Mapping**: API Gateway maps the `tenant-id` query parameter to the `X-Amz-Tenant-Id` header required by Lambda
+- **REST API**: Uses REST API (not HTTP API) to support request parameter mapping
+- **OpenAPI Definition**: Defines the integration using OpenAPI 3.0 specification for fine-grained control
 - **Immutable property**: Tenant isolation can only be enabled when creating a new function
 - **Required tenant-id**: All invocations must include a tenant identifier
+
+### Why Parameter Mapping is Required
+
+Lambda's tenant isolation feature requires the tenant ID to be passed via the `X-Amz-Tenant-Id` header. When using API Gateway:
+
+1. **Client sends request** with `tenant-id` as a query parameter
+2. **API Gateway transforms** the query parameter into the `X-Amz-Tenant-Id` header
+3. **Lambda receives** the header and routes to the appropriate tenant-isolated environment
+
+This mapping is configured in the `x-amazon-apigateway-integration` section using:
+```yaml
+requestParameters:
+  integration.request.header.X-Amz-Tenant-Id: method.request.querystring.tenant-id
+```
 
 ## Deployment
 
@@ -140,14 +177,34 @@ APIGatewayLambda:
 
 ### Using API Gateway
 
-The tenant ID is passed as a query parameter:
+The tenant ID is passed as a query parameter. API Gateway automatically maps it to the `X-Amz-Tenant-Id` header:
 
 ```bash
 # Request from tenant "alice"
-curl "https://your-api-id.execute-api.us-east-1.amazonaws.com?tenant-id=alice"
+curl "https://your-api-id.execute-api.us-east-1.amazonaws.com/Prod?tenant-id=alice"
 
-# Request from tenant "bob"
-curl "https://your-api-id.execute-api.us-east-1.amazonaws.com?tenant-id=bob"
+# Request from tenant "bob"  
+curl "https://your-api-id.execute-api.us-east-1.amazonaws.com/Prod?tenant-id=bob"
+
+# Multiple requests from the same tenant will reuse the execution environment
+for i in {1..5}; do
+  curl "https://your-api-id.execute-api.us-east-1.amazonaws.com/Prod?tenant-id=alice"
+done
+```
+
+### Using AWS CLI (Direct Lambda Invocation)
+
+For direct Lambda invocation without API Gateway:
+
+```bash
+# Synchronous invocation
+aws lambda invoke \
+    --function-name MultiTenantLambda \
+    --tenant-id alice \
+    response.json
+
+# View the response
+cat response.json
 ```
 
 ### Expected Response
@@ -156,23 +213,25 @@ curl "https://your-api-id.execute-api.us-east-1.amazonaws.com?tenant-id=bob"
 {
   "tenantID": "alice",
   "requestCount": 3,
-  "firstRequest": "2024-01-15T10:30:00Z",
+  "firstRequest": "1705320000.123456",
   "requests": [
     {
       "requestNumber": 1,
-      "timestamp": "2024-01-15T10:30:00Z"
+      "timestamp": "1705320000.123456"
     },
     {
       "requestNumber": 2,
-      "timestamp": "2024-01-15T10:31:15Z"
+      "timestamp": "1705320075.789012"
     },
     {
       "requestNumber": 3,
-      "timestamp": "2024-01-15T10:32:30Z"
+      "timestamp": "1705320150.345678"
     }
   ]
 }
 ```
+
+**Note**: Timestamps are Unix epoch times (seconds since January 1, 1970) for cross-platform compatibility.
 
 ## How Tenant Isolation Works
 
