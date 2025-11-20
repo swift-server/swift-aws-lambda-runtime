@@ -61,7 +61,7 @@ Resources:
       MemorySize: 128
       Architectures:
         - arm64
-      # https://docs.aws.amazon.com/lambda/latest/dg/tenant-isolation-configure.html#tenant-isolation-cfn  
+      # https://docs.aws.amazon.com/lambda/latest/dg/tenant-isolation-configure.html#tenant-isolation-cfn
       TenancyConfig:
         TenantIsolationMode: PER_TENANT
       Environment:
@@ -92,4 +92,4 @@ Outputs:
   APIGatewayEndpoint:
     Description: API Gateway endpoint URL
     # https://docs.aws.amazon.com/lambda/latest/dg/tenant-isolation-invoke.html#tenant-isolation-invoke-apigateway
-    Value: !Sub "https://${MultiTenantApi}.execute-api.${AWS::Region}.amazonaws.com/Prod?tenant-id=seb"    
+    Value: !Sub "https://${MultiTenantApi}.execute-api.${AWS::Region}.amazonaws.com/Prod?tenant-id=seb"
