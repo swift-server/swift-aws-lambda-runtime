@@ -87,7 +87,7 @@ public struct ClientContext: Codable, Sendable {
 @available(LambdaSwift 2.0, *)
 public struct LambdaContext: CustomDebugStringConvertible, Sendable {
 
-    // use a final class a storage to have value type semantic with
+    // use a final class as storage to have value type semantic with
     // low overhead of class for copy on write operations
     // https://www.youtube.com/watch?v=iLDldae64xE
     final class _Storage: Sendable {
