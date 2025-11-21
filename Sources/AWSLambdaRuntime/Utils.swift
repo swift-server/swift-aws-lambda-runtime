@@ -28,7 +28,7 @@ enum Consts {
     static let initializationError = "InitializationError"
 }
 
-/// AWS Lambda HTTP Headers, used to populate the `LambdaContext` object.
+/// AWS Lambda HTTP Headers, used to populate the `LambdaContext` object. E.g.
 /// Content-Type: application/json;
 /// Lambda-Runtime-Aws-Request-Id: bfcc9017-7f34-4154-9699-ff0229e9ad2b;
 /// Lambda-Runtime-Aws-Tenant-Id: seb;
