@@ -194,7 +194,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     public init(
         requestID: String,
         traceID: String,
-        tenantID: String? = nil,
+        tenantID: String?,
         invokedFunctionARN: String,
         deadline: LambdaClock.Instant,
         cognitoIdentity: String? = nil,
@@ -227,7 +227,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     package static func __forTestsOnly(
         requestID: String,
         traceID: String,
-        tenantID: String? = nil,
+        tenantID: String?,
         invokedFunctionARN: String,
         timeout: Duration,
         logger: Logger
