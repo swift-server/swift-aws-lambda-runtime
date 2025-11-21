@@ -86,6 +86,10 @@ public struct ClientContext: Codable, Sendable {
 /// The Lambda runtime generates and passes the `LambdaContext` to the Lambda handler as an argument.
 @available(LambdaSwift 2.0, *)
 public struct LambdaContext: CustomDebugStringConvertible, Sendable {
+
+    // use a final class a storage to have value type semantic with 
+    // low overhead of class for copy on write operations 
+    // https://www.youtube.com/watch?v=iLDldae64xE
     final class _Storage: Sendable {
         let requestID: String
         let traceID: String
