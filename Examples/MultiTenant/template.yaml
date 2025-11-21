@@ -30,8 +30,28 @@ Resources:
           title: MultiTenant API
           version: 1.0.0
         paths:
+          /{proxy+}:
+            x-amazon-apigateway-any-method:
+              parameters:
+                - name: tenant-id
+                  in: query
+                  required: true
+                  schema:
+                    type: string
+                - name: proxy
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+              x-amazon-apigateway-request-validator: params-only
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MultiTenantLambda.Arn}/invocations
+                requestParameters:
+                  integration.request.header.X-Amz-Tenant-Id: method.request.querystring.tenant-id
           /:
-            get:
+            x-amazon-apigateway-any-method:
               parameters:
                 - name: tenant-id
                   in: query
@@ -71,12 +91,18 @@ Resources:
           # use `LOG_LEVEL: trace` for detailed input event information
           LOG_LEVEL: trace
       Events:
-        GetRoot:
+        RootPath:
           Type: Api
           Properties:
             RestApiId: !Ref MultiTenantApi
             Path: /
-            Method: GET
+            Method: ANY
+        ProxyPath:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MultiTenantApi
+            Path: /{proxy+}
+            Method: ANY
 
   # Permission for API Gateway to invoke Lambda
   MultiTenantLambdaPermission:
