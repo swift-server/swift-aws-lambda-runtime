@@ -165,6 +165,32 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         self.storage.logger
     }
 
+    @available(
+        *,
+        deprecated,
+        message:
+            "This method will be removed in a future major version update. Use init(requestID:traceID:tenantID:invokedFunctionARN:deadline:cognitoIdentity:clientContext:logger) instead."
+    )
+    public init(
+        requestID: String,
+        traceID: String,
+        invokedFunctionARN: String,
+        deadline: LambdaClock.Instant,
+        cognitoIdentity: String? = nil,
+        clientContext: ClientContext? = nil,
+        logger: Logger
+    ) {
+        self.init(
+            requestID: requestID,
+            traceID: traceID,
+            tenantID: nil,
+            invokedFunctionARN: invokedFunctionARN,
+            deadline: deadline,
+            cognitoIdentity: cognitoIdentity,
+            clientContext: clientContext,
+            logger: logger
+        )
+    }
     public init(
         requestID: String,
         traceID: String,
