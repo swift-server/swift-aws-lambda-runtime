@@ -89,7 +89,7 @@ Outputs:
   ApiUrl:
     Description: API Gateway endpoint URL for streaming
     Value: !Sub "https://${StreamingApi}.execute-api.${AWS::Region}.amazonaws.com/prod/stream"
-  
+
   # Lambda function ARN
   LambdaArn:
     Description: Lambda Function ARN
