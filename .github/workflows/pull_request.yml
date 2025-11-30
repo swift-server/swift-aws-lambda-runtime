@@ -44,10 +44,6 @@ jobs:
       archive_plugin_examples: "[ 'HelloWorld', 'ResourcesPackaging' ]"
       archive_plugin_enabled: true
 
-  swift-6-language-mode:
-    name: Swift 6 Language Mode
-    uses: apple/swift-nio/.github/workflows/swift_6_language_mode.yml@main
-
   semver-label-check:
     name: Semantic Version label check
     runs-on: ubuntu-latest
