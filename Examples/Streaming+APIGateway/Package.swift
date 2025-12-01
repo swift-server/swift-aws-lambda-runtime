@@ -20,7 +20,8 @@ let package = Package(
         .executableTarget(
             name: "StreamingNumbers",
             dependencies: [
-                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime")
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+                .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
             ],
             path: "Sources"
         )
