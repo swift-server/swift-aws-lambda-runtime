@@ -30,11 +30,11 @@ struct SendNumbersWithPause: StreamingLambdaHandler {
         context: LambdaContext
     ) async throws {
 
-        // The payload here is a FunctionURLRequest.  
+        // The payload here is a FunctionURLRequest.
         // Check the body parameters for the business event
         let payload = try JSONDecoder().decode(FunctionURLRequest.self, from: Data(event.readableBytesView))
         let _ = payload.body
-        
+
         // Send HTTP status code and headers before streaming the response body
         try await responseWriter.writeStatusAndHeaders(
             StreamingLambdaStatusAndHeadersResponse(
