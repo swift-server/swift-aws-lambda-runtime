@@ -11,7 +11,7 @@ let package = Package(
         .package(name: "swift-aws-lambda-runtime", path: "../.."),
 
         // For standalone usage, comment the line above and uncomment below:
-        // .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "1.0.0"),
+        // .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
 
         .package(
             url: "https://github.com/hummingbird-project/hummingbird-lambda.git",
